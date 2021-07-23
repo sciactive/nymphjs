@@ -1,0 +1,30 @@
+{
+  "name": "nymphjs",
+  "version": "1.0.0",
+  "description": "An ORM for Node.js.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sciactive/nymphjs.git"
+  },
+  "keywords": [
+    "nymph",
+    "ORM",
+    "object relational mapper"
+  ],
+  "author": "Hunter Perrin <hperrin@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/sciactive/nymphjs/issues"
+  },
+  "homepage": "https://github.com/sciactive/nymphjs#readme",
+  "devDependencies": {
+    "@commitlint/cli": "^12.1.4",
+    "@commitlint/config-conventional": "^12.1.4",
+    "husky": "^7.0.1",
+    "lerna": "^4.0.0"
+  }
+}
