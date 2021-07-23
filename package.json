@@ -4,6 +4,9 @@
   "description": "An ORM for Node.js.",
   "main": "index.js",
   "scripts": {
+    "lint:format": "npx prettier --write .",
+    "lint:check": "npx prettier --check .",
+    "prepare": "husky install && npm run lint:check",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -25,6 +28,11 @@
     "@commitlint/cli": "^12.1.4",
     "@commitlint/config-conventional": "^12.1.4",
     "husky": "^7.0.1",
-    "lerna": "^4.0.0"
+    "lerna": "^4.0.0",
+    "lint-staged": "^11.1.0",
+    "prettier": "2.3.2"
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
   }
 }
