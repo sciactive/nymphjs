@@ -2,14 +2,17 @@
   "name": "@nymphjs/nymph",
   "version": "1.0.0-alpha.0",
   "description": "NymphJS - Nymph ORM",
-  "type": "module",
-  "module": "index.js",
+  "type": "commonjs",
+  "module": "dist/index.js",
   "keywords": [
     "nymph",
     "ORM",
     "object relational mapper"
   ],
   "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepare": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "publishConfig": {
@@ -23,5 +26,18 @@
   "bugs": {
     "url": "https://github.com/sciactive/nymphjs/issues"
   },
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "luxon": "^2.0.1",
+    "nanoid": "^3.1.23",
+    "sha1": "^1.1.1"
+  },
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.1",
+    "@types/lodash": "^4.14.171",
+    "@types/luxon": "^1.27.1",
+    "@types/sha1": "^1.1.3",
+    "typescript": "^4.3.5"
+  }
 }
