@@ -8,7 +8,7 @@ import {
   EntityPatch,
   EntityReference,
   SerializedDataObject,
-} from './d';
+} from './Entity.d';
 import {
   ClassNotAvailableError,
   EntityConflictError,
@@ -91,8 +91,18 @@ import {
  * will fill its data from the DB. You can call clearCache() to turn all the
  * entities back into sleeping references.
  */
-class Entity implements EntityInterface {
+class Entity<T extends DataObject = DataObject> implements EntityInterface {
+  /**
+   * A unique name for this type of entity used to separate its data from other
+   * types of entities in the database.
+   */
   public static ETYPE = 'entity';
+  /**
+   * The lookup name for this entity.
+   *
+   * This is used for reference arrays (and sleeping references) and client
+   * requests.
+   */
   public static class = 'Entity';
 
   /**
@@ -110,7 +120,7 @@ class Entity implements EntityInterface {
   /**
    * Array of the entity's tags.
    */
-  protected tags: string[] = [];
+  public tags: string[] = [];
   /**
    * The data proxy handler.
    */
@@ -118,7 +128,7 @@ class Entity implements EntityInterface {
   /**
    * The actual data store.
    */
-  protected $dataStore: DataObject;
+  protected $dataStore: T;
   /**
    * The actual sdata store.
    */
@@ -126,7 +136,7 @@ class Entity implements EntityInterface {
   /**
    * The data proxy object.
    */
-  protected $data: DataObject;
+  protected $data: T;
   /**
    * Whether this instance is a sleeping reference.
    */
@@ -250,14 +260,14 @@ class Entity implements EntityInterface {
         return true;
       },
     };
-    this.$dataStore = {};
+    this.$dataStore = {} as T;
     this.$sdata = {};
 
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
     if (guid) {
       const entity = Nymph.getEntity(
-        { class: (this.constructor as any).class as string },
+        { class: this.constructor as new () => Entity },
         { type: '&', guid: guid }
       );
       if (entity) {
@@ -332,7 +342,11 @@ class Entity implements EntityInterface {
       getPrototypeOf: (entity: Entity) => {
         return entity.constructor.prototype;
       },
-    });
+    }) as Entity<T>;
+  }
+
+  public static factory(guid?: string) {
+    return new Entity(guid);
   }
 
   /**
@@ -416,7 +430,7 @@ class Entity implements EntityInterface {
     return this.$clientEnabledMethods;
   }
 
-  public $delete() {
+  public $delete(): boolean {
     if (this.$isASleepingReference) {
       this.$referenceWake();
     }
@@ -557,7 +571,7 @@ class Entity implements EntityInterface {
     // Accept the modified date.
     const mdate = input.mdate ?? 0;
     const thismdate = this.mdate ?? 0;
-    if (Math.abs(mdate - thismdate) >= 0.001 && !allowConflict) {
+    if (mdate < thismdate && !allowConflict) {
       throw new EntityConflictError('This entity is newer than JSON input.');
     }
     this.mdate = input.mdate;
@@ -592,7 +606,7 @@ class Entity implements EntityInterface {
       protectedProps.push('user');
       protectedProps.push('group');
     }
-    for (const name in protectedProps) {
+    for (const name of protectedProps) {
       if (name in this.$data) {
         protectedData[name] = this.$data[name];
       }
@@ -601,11 +615,11 @@ class Entity implements EntityInterface {
       }
     }
 
-    let nonallowlistData: DataObject = [];
+    let nonAllowlistData: DataObject = {};
     if (this.$allowlistData != null) {
-      nonallowlistData = { ...this.$getData(true) };
+      nonAllowlistData = { ...this.$getData(true) };
       for (const name of this.$allowlistData) {
-        delete nonallowlistData[name];
+        delete nonAllowlistData[name];
       }
       for (const name in data) {
         if (this.$allowlistData.indexOf(name) === -1) {
@@ -615,7 +629,7 @@ class Entity implements EntityInterface {
     }
 
     this.$putData({
-      ...nonallowlistData,
+      ...nonAllowlistData,
       ...data,
       ...protectedData,
       ...privateData,
@@ -636,7 +650,7 @@ class Entity implements EntityInterface {
     // Accept the modified date.
     const mdate = patch.mdate ?? 0;
     const thismdate = this.mdate ?? 0;
-    if (Math.abs(mdate - thismdate) >= 0.001 && !allowConflict) {
+    if (mdate < thismdate && !allowConflict) {
       throw new EntityConflictError('This entity is newer than JSON patch.');
     }
     this.mdate = patch.mdate;
@@ -656,7 +670,7 @@ class Entity implements EntityInterface {
       );
     }
 
-    for (const name in patch.unset) {
+    for (const name of patch.unset) {
       if (
         (this.$allowlistData != null &&
           this.$allowlistData.indexOf(name) === -1) ||
@@ -752,14 +766,18 @@ class Entity implements EntityInterface {
     if (!this.$isASleepingReference || this.$sleepingReference == null) {
       return true;
     }
-    if (!Nymph.getEntityClass(this.$sleepingReference[2])) {
+    const EntityClass = Nymph.getEntityClass(this.$sleepingReference[2]);
+    if (!EntityClass) {
       throw new ClassNotAvailableError(
         'Tried to wake sleeping reference entity that refers to a class ' +
           `that can't be found, ${this.$sleepingReference[2]}.`
       );
     }
     const entity = Nymph.getEntity(
-      { class: this.$sleepingReference[2], skipAc: this.$skipAc },
+      {
+        class: EntityClass,
+        skipAc: this.$skipAc,
+      },
       { type: '&', guid: this.$sleepingReference[1] }
     );
     if (entity == null) {
@@ -784,7 +802,7 @@ class Entity implements EntityInterface {
     }
     const refresh = Nymph.getEntity(
       {
-        class: (this.constructor as any).class as string,
+        class: this.constructor as new () => Entity,
         skipCache: true,
         skipAc: this.$skipAc,
       },
@@ -807,7 +825,7 @@ class Entity implements EntityInterface {
     this.tags = difference(this.tags, tags);
   }
 
-  public $save() {
+  public $save(): boolean {
     if (this.$isASleepingReference) {
       this.$referenceWake();
     }

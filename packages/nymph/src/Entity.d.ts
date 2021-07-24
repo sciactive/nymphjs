@@ -1,5 +1,3 @@
-import Entity from './Entity';
-
 export type ACProperties = {
   user: any;
   group: any;
@@ -114,12 +112,6 @@ export interface DataObjectInterface {
  */
 export interface EntityInterface extends DataObjectInterface {
   /**
-   * Set whether to use "skipAc" when accessing entity references.
-   *
-   * @param useSkipAc True or false, whether to use it.
-   */
-  $useSkipAc(useSkipAc: boolean): void;
-  /**
    * Add one or more tags.
    *
    * @param tags List of tags.
@@ -140,7 +132,7 @@ export interface EntityInterface extends DataObjectInterface {
    * @param includeSData Whether to include the serialized data as well.
    * @returns The entity's data object.
    */
-  $getData(includeSData: boolean): DataObject;
+  $getData(includeSData?: boolean): DataObject;
   /**
    * Used to retrieve the serialized data object.
    *
@@ -176,6 +168,34 @@ export interface EntityInterface extends DataObjectInterface {
    */
   $hasTag(...tags: string[]): boolean;
   /**
+   * Accept JSON data from the client.
+   *
+   * This function uses the security protection lists:
+   *
+   * - $protectedTags
+   * - $protectedData
+   * - $allowlistTags
+   * - $allowlistData
+   *
+   * @param input The input data. Please note, this will be modified (destroyed).
+   * @param allowConflict Allow to accept data that is older than the current data.
+   */
+  $jsonAcceptData(input: EntityJson, allowConflict = false): void;
+  /**
+   * Accept JSON patch from the client.
+   *
+   * This function uses the security protection lists:
+   *
+   * - $protectedTags
+   * - $protectedData
+   * - $allowlistTags
+   * - $allowlistData
+   *
+   * @param patch The patch data. Please note, this will be modified (destroyed).
+   * @param allowConflict Allow to accept data that is older than the current data.
+   */
+  $jsonAcceptPatch(patch: EntityPatch, allowConflict = false): void;
+  /**
    * Used to set the data.
    *
    * This should only be used by Nymph to push the data from storage.
@@ -202,4 +222,10 @@ export interface EntityInterface extends DataObjectInterface {
    * @returns A Nymph Entity Reference array as an unsaved entity.
    */
   $toReference(): EntityReference | EntityInterface;
+  /**
+   * Set whether to use "skipAc" when accessing entity references.
+   *
+   * @param useSkipAc True or false, whether to use it.
+   */
+  $useSkipAc(useSkipAc: boolean): void;
 }

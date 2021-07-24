@@ -1,4 +1,4 @@
-import { EntityReference } from './d';
+import { EntityReference } from './Entity.d';
 import { ClassNotAvailableError } from './errors';
 import { default as Nymph } from './Nymph';
 

@@ -13,7 +13,8 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "prepare": "npm run build",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -28,6 +29,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "locutus": "^2.0.15",
     "lodash": "^4.17.21",
     "luxon": "^2.0.1",
     "nanoid": "^3.1.23",
@@ -35,9 +37,12 @@
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
+    "@types/jest": "^26.0.24",
     "@types/lodash": "^4.14.171",
     "@types/luxon": "^1.27.1",
     "@types/sha1": "^1.1.3",
+    "jest": "^27.0.6",
+    "ts-jest": "^27.0.4",
     "typescript": "^4.3.5"
   }
 }

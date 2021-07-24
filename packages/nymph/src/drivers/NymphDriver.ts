@@ -1,4 +1,5 @@
-import Entity from '../Entity';
+import { EntityInterface } from '../Entity.d';
+import { Selector, Options } from '../Nymph.d';
 
 /**
  * A Nymph database driver.
@@ -30,17 +31,21 @@ export default abstract class NymphDriver {
   protected sortProperty: string = 'cdate';
 
   abstract connect(): boolean;
-  abstract deleteEntity(entity: Entity): boolean;
+  abstract deleteEntity(entity: EntityInterface): boolean;
   abstract deleteEntityByID(guid: string, className?: string): boolean;
   abstract deleteUID(name: string): boolean;
   abstract disconnect(): boolean;
   abstract export(filename: string): boolean;
   abstract exportPrint(): boolean;
-  abstract getEntities(options?: any, ...selectors: any[]): Entity[];
-  abstract getEntity(options?: any, ...selectors: any[]): Entity;
+  abstract getEntities<
+    T extends new () => EntityInterface = new () => EntityInterface
+  >(options?: Options<T>, ...selectors: Selector[]): InstanceType<T> | null;
+  abstract getEntity<
+    T extends new () => EntityInterface = new () => EntityInterface
+  >(options?: Options<T>, ...selectors: Selector[]): InstanceType<T> | null;
   abstract getUID(name: string): number | null;
   abstract hsort(
-    array: Entity[],
+    array: EntityInterface[],
     property: string,
     parentProperty: string,
     caseSensitive?: boolean,
@@ -49,17 +54,17 @@ export default abstract class NymphDriver {
   abstract import(filename: string): boolean;
   abstract newUID(name: string): number | null;
   abstract psort(
-    array: Entity[],
+    array: EntityInterface[],
     property: string,
     parentProperty: string,
     caseSensitive?: boolean,
     reverse?: boolean
   ): void;
   abstract renameUID(oldName: string, newName: string): boolean;
-  abstract saveEntity(entity: Entity): boolean;
+  abstract saveEntity(entity: EntityInterface): boolean;
   abstract setUID(name: string, value: number): boolean;
   abstract sort(
-    array: Entity[],
+    array: EntityInterface[],
     property: string,
     caseSensitive?: boolean,
     reverse?: boolean
