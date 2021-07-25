@@ -314,7 +314,7 @@ export default class Nymph {
   public static getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): InstanceType<T> | null {
+  ): InstanceType<T>[] | null {
     return this.driver.getEntities(options, ...selectors);
   }
 

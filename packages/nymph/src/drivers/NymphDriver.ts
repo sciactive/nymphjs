@@ -62,7 +62,7 @@ export default abstract class NymphDriver {
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): InstanceType<T> | null;
+  ): InstanceType<T>[] | null;
   abstract getUID(name: string): number | null;
   abstract hsort(
     array: EntityInterface[],
@@ -493,7 +493,7 @@ export default abstract class NymphDriver {
     }
     options.limit = 1;
     const entities = this.getEntities(options, ...(selectors as Selector[]));
-    if (!entities) {
+    if (!entities || !entities.length) {
       return null;
     }
     return entities[0];
