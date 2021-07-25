@@ -1,7 +1,9 @@
+import { NymphDriverConfig } from '../../NymphDriver.d';
+
 /**
  * SQLite3 Driver Config
  */
-export interface SQLite3DriverConfig {
+export interface SQLite3DriverConfig extends NymphDriverConfig {
   /**
    * Filename
    * The filename of the SQLite3 DB. Use ':memory:' for an in-memory DB.

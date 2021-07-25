@@ -1,11 +1,17 @@
+import fs from 'fs';
+import ReadLines from 'n-readlines';
+
 import {
   EntityConstructor,
   EntityData,
   EntityInterface,
   SerializedEntityData,
 } from '../Entity.d';
+import { InvalidParametersError } from '../errors';
 import Nymph from '../Nymph';
 import { Selector, Options, FormattedSelector } from '../Nymph.d';
+
+import { NymphDriverConfig } from './NymphDriver.d';
 
 function xor(a: any, b: any): boolean {
   return !!(a && !b) || (!a && b);
@@ -25,6 +31,10 @@ export default abstract class NymphDriver {
    */
   public connected = false;
   /**
+   * Nymph driver configuration object.
+   */
+  protected config: NymphDriverConfig;
+  /**
    * A cache to make entity retrieval faster.
    */
   protected entityCache: {
@@ -40,57 +50,29 @@ export default abstract class NymphDriver {
    * A counter for the entity cache to determine the most accessed entities.
    */
   protected entityCount: { [k: string]: number } = {};
-  /**
-   * Sort case sensitively.
-   */
-  protected sortCaseSensitive = false;
-  /**
-   * Parent property to sort by.
-   */
-  protected sortParent: string | null = null;
-  /**
-   * Property to sort by.
-   */
-  protected sortProperty: string = 'cdate';
 
   abstract connect(): boolean;
   abstract deleteEntityByID(guid: string, className?: string): boolean;
   abstract deleteUID(name: string): boolean;
   abstract disconnect(): boolean;
-  abstract export(filename: string): boolean;
-  abstract exportPrint(): boolean;
+  protected abstract exportEntities(writeLine: (line: string) => void): void;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
   ): InstanceType<T>[] | null;
   abstract getUID(name: string): number | null;
-  abstract hsort(
-    array: EntityInterface[],
-    property: string,
-    parentProperty: string,
-    caseSensitive?: boolean,
-    reverse?: boolean
-  ): void;
   abstract import(filename: string): boolean;
   abstract newUID(name: string): number | null;
-  abstract psort(
-    array: EntityInterface[],
-    property: string,
-    parentProperty: string,
-    caseSensitive?: boolean,
-    reverse?: boolean
-  ): void;
   abstract renameUID(oldName: string, newName: string): boolean;
   abstract saveEntity(entity: EntityInterface): boolean;
   abstract setUID(name: string, value: number): boolean;
-  abstract sort(
-    array: EntityInterface[],
-    property: string,
-    caseSensitive?: boolean,
-    reverse?: boolean
-  ): void;
 
-  private posixRegexMatch(
+  constructor(config: NymphDriverConfig) {
+    this.config = config;
+    this.connect();
+  }
+
+  protected posixRegexMatch(
     pattern: string,
     subject: string,
     caseInsensitive = false
@@ -142,6 +124,100 @@ export default abstract class NymphDriver {
     let re = new RegExp(newPattern, caseInsensitive ? 'mi' : 'm');
 
     return re.test(subject);
+  }
+
+  public export(filename: string) {
+    try {
+      const fhandle = fs.openSync(filename, 'w');
+      if (!fhandle) {
+        throw new InvalidParametersError('Provided filename is not writeable.');
+      }
+      this.exportEntities((line: string) => {
+        fs.writeSync(fhandle, line);
+      });
+      fs.closeSync(fhandle);
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+
+  public exportPrint() {
+    this.exportEntities((line: string) => {
+      console.log(line);
+    });
+    return true;
+  }
+
+  protected importFromFile(
+    filename: string,
+    saveEntityCallback: (
+      guid: string,
+      tags: string[],
+      data: EntityData,
+      etype: string
+    ) => void,
+    saveUIDCallback: (name: string, value: number) => void,
+    startTransactionCallback: (() => void) | null = null,
+    commitTransactionCallback: (() => void) | null = null
+  ) {
+    let rl: ReadLines;
+    try {
+      rl = new ReadLines(filename);
+    } catch (e) {
+      throw new InvalidParametersError('Provided filename is unreadable.');
+    }
+    let guid: string | null = null;
+    let line: Buffer | false = false;
+    let data: EntityData = {};
+    let tags: string[] = [];
+    let etype = '__undefined';
+    if (startTransactionCallback) {
+      startTransactionCallback();
+    }
+    while ((line = rl.next())) {
+      const text = line.toString('utf8');
+      if (text.match(/^\s*#/)) {
+        continue;
+      }
+      const entityMatch = text.match(
+        /^\s*{([0-9A-Fa-f]+)}<([-\w_]+)>\[([^\]]*)\]\s*$/
+      );
+      const propMatch = text.match(/^\s*([^=]+)\s*=\s*(.*\S)\s*$/);
+      const uidMatch = text.match(/^\s*<([^>]+)>\[(\d+)\]\s*$/);
+      if (entityMatch) {
+        // Save the current entity.
+        if (guid) {
+          saveEntityCallback(guid, tags, data, etype);
+          guid = null;
+          tags = [];
+          data = {};
+          etype = '__undefined';
+        }
+        // Record the new entity's info.
+        guid = entityMatch[1];
+        etype = entityMatch[2];
+        tags = entityMatch[3].split(',').map((t) => t.replace(/^\s*|\s*$/, ''));
+      } else if (propMatch) {
+        // Add the variable to the new entity.
+        if (guid) {
+          data[propMatch[1]] = JSON.parse(propMatch[2]);
+        }
+      } else if (uidMatch) {
+        // Add the UID.
+        saveUIDCallback(uidMatch[1], Number(uidMatch[2]));
+      }
+      // Clear the entity cache.
+      this.entityCache = {};
+    }
+    // Save the last entity.
+    if (guid) {
+      saveEntityCallback(guid, tags, data, etype);
+    }
+    if (commitTransactionCallback) {
+      commitTransactionCallback();
+    }
+    return true;
   }
 
   public checkData(
@@ -481,6 +557,52 @@ export default abstract class NymphDriver {
     }
 
     return newSelectors;
+  }
+
+  protected iterateSelectorsForQuery(
+    selectors: Selector[],
+    recurseCallback: (value: any) => string,
+    callback: (
+      curQuery: string,
+      key: string,
+      value: any,
+      typeIsOr: boolean,
+      typeIsNot: boolean
+    ) => string
+  ) {
+    const queryParts = [];
+    for (const curSelector of selectors) {
+      let curSelectorQuery = '';
+      let type: string = curSelector.type;
+      let typeIsNot: boolean = type === '!&' || type === '!|';
+      let typeIsOr: boolean = type === '|' || type === '!|';
+      for (const key in curSelector) {
+        const value: any = (curSelector as any)[key];
+        if (key === 'type') {
+          continue;
+        }
+        let curQuery = '';
+        if (key === 'selector') {
+          if (curQuery.length) {
+            curQuery += typeIsOr ? ' OR ' : ' AND ';
+          }
+          curQuery += recurseCallback(value);
+        } else {
+          curQuery = callback(curQuery, key, value, typeIsOr, typeIsNot);
+        }
+        if (curQuery) {
+          if (curSelectorQuery) {
+            curSelectorQuery += typeIsOr ? ' OR ' : ' AND ';
+          }
+          curSelectorQuery += curQuery;
+        }
+      }
+      if (curSelectorQuery) {
+        queryParts.push(curSelectorQuery);
+      }
+    }
+
+    return queryParts;
   }
 
   public getEntity<T extends EntityConstructor = EntityConstructor>(
