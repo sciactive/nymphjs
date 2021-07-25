@@ -2,6 +2,7 @@ import { difference, intersection, isEqual } from 'lodash';
 
 import {
   ACProperties,
+  EntityConstructor,
   EntityData,
   EntityInterface,
   EntityJson,
@@ -267,7 +268,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
 
     if (guid) {
       const entity = Nymph.getEntity(
-        { class: this.constructor as new () => Entity },
+        { class: this.constructor as EntityConstructor },
         { type: '&', guid: guid }
       );
       if (entity) {
@@ -802,7 +803,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
     }
     const refresh = Nymph.getEntity(
       {
-        class: this.constructor as new () => Entity,
+        class: this.constructor as EntityConstructor,
         skipCache: true,
         skipAc: this.$skipAc,
       },

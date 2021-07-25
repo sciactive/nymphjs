@@ -1,4 +1,10 @@
-import { EntityData, EntityInterface, SerializedEntityData } from '../Entity.d';
+import {
+  EntityConstructor,
+  EntityData,
+  EntityInterface,
+  SerializedEntityData,
+} from '../Entity.d';
+import Nymph from '../Nymph';
 import { Selector, Options, FormattedSelector } from '../Nymph.d';
 
 function xor(a: any, b: any): boolean {
@@ -21,11 +27,19 @@ export default abstract class NymphDriver {
   /**
    * A cache to make entity retrieval faster.
    */
-  protected entityCache = [];
+  protected entityCache: {
+    [k: string]: {
+      cdate: number;
+      mdate: number;
+      tags: string[];
+      data: EntityData;
+      sdata: SerializedEntityData;
+    };
+  } = {};
   /**
    * A counter for the entity cache to determine the most accessed entities.
    */
-  protected entityCount = {};
+  protected entityCount: { [k: string]: number } = {};
   /**
    * Sort case sensitively.
    */
@@ -40,18 +54,15 @@ export default abstract class NymphDriver {
   protected sortProperty: string = 'cdate';
 
   abstract connect(): boolean;
-  abstract deleteEntity(entity: EntityInterface): boolean;
   abstract deleteEntityByID(guid: string, className?: string): boolean;
   abstract deleteUID(name: string): boolean;
   abstract disconnect(): boolean;
   abstract export(filename: string): boolean;
   abstract exportPrint(): boolean;
-  abstract getEntities<
-    T extends new () => EntityInterface = new () => EntityInterface
-  >(options?: Options<T>, ...selectors: Selector[]): InstanceType<T> | null;
-  abstract getEntity<
-    T extends new () => EntityInterface = new () => EntityInterface
-  >(options?: Options<T>, ...selectors: Selector[]): InstanceType<T> | null;
+  abstract getEntities<T extends EntityConstructor = EntityConstructor>(
+    options?: Options<T>,
+    ...selectors: Selector[]
+  ): InstanceType<T> | null;
   abstract getUID(name: string): number | null;
   abstract hsort(
     array: EntityInterface[],
@@ -131,41 +142,6 @@ export default abstract class NymphDriver {
     let re = new RegExp(newPattern, caseInsensitive ? 'mi' : 'm');
 
     return re.test(subject);
-  }
-
-  public formatSelectors(selectors: Selector[]): FormattedSelector[] {
-    const newSelectors: FormattedSelector[] = [];
-
-    for (const curSelector of selectors) {
-      const newSelector: FormattedSelector = {
-        type: curSelector.type,
-      };
-
-      for (const k in curSelector) {
-        const key = k as keyof Selector;
-        const value = curSelector[key];
-
-        if (key === 'type') {
-          continue;
-        }
-
-        if (key === 'selector') {
-          const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-          newSelector[key] = this.formatSelectors(tmpArr);
-        } else if (!Array.isArray(value)) {
-          // @ts-ignore
-          newSelector[key] = [[value]];
-        } else if (!Array.isArray(value[0])) {
-          // @ts-ignore
-          newSelector[key] = [value];
-        } else {
-          // @ts-ignore
-          newSelector[key] = value;
-        }
-      }
-    }
-
-    return newSelectors;
   }
 
   public checkData(
@@ -409,11 +385,31 @@ export default abstract class NymphDriver {
   }
 
   /**
+   * Remove all copies of an entity from the cache.
+   *
+   * @param guid The GUID of the entity to remove.
+   */
+  protected cleanCache(guid: string) {
+    delete this.entityCache[guid];
+  }
+
+  public deleteEntity(entity: EntityInterface) {
+    const className = (entity.constructor as any).class as string;
+    const ret = this.deleteEntityByID(entity.guid, className);
+    if (ret) {
+      entity.guid = null;
+      entity.cdate = null;
+      entity.mdate = null;
+    }
+    return ret;
+  }
+
+  /**
    * Search through a value for an entity reference.
    *
    * @param value Any value to search.
    * @param entity An entity, GUID, or array of either to search for.
-   * @return True if the reference is found, false otherwise.
+   * @returns True if the reference is found, false otherwise.
    */
   protected entityReferenceSearch(
     value: any,
@@ -450,5 +446,149 @@ export default abstract class NymphDriver {
       }
     }
     return false;
+  }
+
+  public formatSelectors(selectors: Selector[]): FormattedSelector[] {
+    const newSelectors: FormattedSelector[] = [];
+
+    for (const curSelector of selectors) {
+      const newSelector: FormattedSelector = {
+        type: curSelector.type,
+      };
+
+      for (const k in curSelector) {
+        const key = k as keyof Selector;
+        const value = curSelector[key];
+
+        if (key === 'type') {
+          continue;
+        }
+
+        if (key === 'selector') {
+          const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
+          newSelector[key] = this.formatSelectors(tmpArr);
+        } else if (!Array.isArray(value)) {
+          // @ts-ignore
+          newSelector[key] = [[value]];
+        } else if (!Array.isArray(value[0])) {
+          // @ts-ignore
+          newSelector[key] = [value];
+        } else {
+          // @ts-ignore
+          newSelector[key] = value;
+        }
+      }
+    }
+
+    return newSelectors;
+  }
+
+  public getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> = {},
+    ...selectors: Selector[] | [string]
+  ): InstanceType<T> | null {
+    // Set up options and selectors.
+    if (typeof selectors[0] === 'string') {
+      selectors[0] = { type: '&', guid: selectors[0] };
+    }
+    options.limit = 1;
+    const entities = this.getEntities(options, ...(selectors as Selector[]));
+    if (!entities) {
+      return null;
+    }
+    return entities[0];
+  }
+
+  /**
+   * Pull an entity from the cache.
+   *
+   * @param guid The entity's GUID.
+   * @param className The entity's class.
+   * @param useSkipAc Whether to tell the entity to use skip_ac.
+   * @returns The entity or null if it's not cached.
+   */
+  protected pullCache(
+    guid: string,
+    className: string,
+    useSkipAc = false
+  ): EntityInterface | null {
+    // Increment the entity access count.
+    if (!(guid in this.entityCount)) {
+      this.entityCount[guid] = 0;
+    }
+    this.entityCount[guid]++;
+    if (guid in this.entityCache) {
+      const entity = Nymph.getEntityClass(className)?.factory();
+      if (entity) {
+        entity.$useSkipAc(!!useSkipAc);
+        entity.guid = guid;
+        entity.cdate = this.entityCache[guid]['cdate'];
+        entity.mdate = this.entityCache[guid]['mdate'];
+        entity.tags = this.entityCache[guid]['tags'];
+        entity.$putData(
+          this.entityCache[guid]['data'],
+          this.entityCache[guid]['sdata']
+        );
+        return entity;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Push an entity onto the cache.
+   *
+   * @param guid The entity's GUID.
+   * @param cdate The entity's cdate.
+   * @param mdate The entity's mdate.
+   * @param tags The entity's tags.
+   * @param data The entity's data.
+   * @param sdata The entity's sdata.
+   */
+  protected pushCache(
+    guid: string,
+    cdate: number,
+    mdate: number,
+    tags: string[],
+    data: EntityData,
+    sdata: SerializedEntityData
+  ) {
+    if (guid == null) {
+      return;
+    }
+    // Increment the entity access count.
+    if (!(guid in this.entityCount)) {
+      this.entityCount[guid] = 0;
+    }
+    this.entityCount[guid]++;
+    // Check the threshold.
+    if (this.entityCount[guid] < Nymph.config.cacheThreshold) {
+      return;
+    }
+    // Cache the entity.
+    this.entityCache[guid] = {
+      cdate: cdate,
+      mdate: mdate,
+      tags: tags,
+      data: data,
+      sdata: sdata,
+    };
+    while (
+      Nymph.config.cacheLimit &&
+      Object.keys(this.entityCache).length >= Nymph.config.cacheLimit
+    ) {
+      // Find which entity has been accessed the least.
+      const least =
+        Object.entries(this.entityCount)
+          .sort(([guidA, countA], [guidB, countB]) => countA - countB)
+          .pop()?.[0] ?? null;
+      if (least == null) {
+        // This should never happen.
+        return;
+      }
+      // Remove it.
+      delete this.entityCache[least];
+      delete this.entityCount[least];
+    }
   }
 }

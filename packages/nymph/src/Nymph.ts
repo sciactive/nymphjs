@@ -1,6 +1,6 @@
 import { Config, ConfigDefaults as defaults } from './conf';
 import { NymphDriver } from './drivers';
-import { EntityInterface } from './Entity.d';
+import { EntityConstructor, EntityInterface } from './Entity.d';
 import { Selector, Options } from './Nymph.d';
 
 /**
@@ -15,19 +15,17 @@ import { Selector, Options } from './Nymph.d';
 export default class Nymph {
   public static config: Config;
   public static driver: NymphDriver;
-  public static entityClasses: { [k: string]: new () => EntityInterface } = {};
+  public static entityClasses: { [k: string]: EntityConstructor } = {};
   public static Tilmeld: any = undefined;
 
   public static setEntityClass(
     className: string,
-    entityClass: new () => EntityInterface
+    entityClass: EntityConstructor
   ) {
     this.entityClasses[className] = entityClass;
   }
 
-  public static getEntityClass(
-    className: string
-  ): (new () => EntityInterface) | null {
+  public static getEntityClass(className: string): EntityConstructor | null {
     if (className in this.entityClasses) {
       return this.entityClasses[className];
     }
@@ -313,9 +311,10 @@ export default class Nymph {
    * @todo An option to place a total count in a var.
    * @todo Use an asterisk to specify any variable.
    */
-  public static getEntities<
-    T extends new () => EntityInterface = new () => EntityInterface
-  >(options?: Options<T>, ...selectors: Selector[]): InstanceType<T> | null {
+  public static getEntities<T extends EntityConstructor = EntityConstructor>(
+    options?: Options<T>,
+    ...selectors: Selector[]
+  ): InstanceType<T> | null {
     return this.driver.getEntities(options, ...selectors);
   }
 
@@ -329,12 +328,13 @@ export default class Nymph {
    * getEntities() would return an empty array.
    *
    * @param options The options.
-   * @param selectors Unlimited optional selectors to search for. If none are given, all entities are searched for the given options.
+   * @param selectors Unlimited optional selectors to search for, or a single GUID. If none are given, all entities are searched for the given options.
    * @returns An entity, or null on failure or nothing found.
    */
-  public static getEntity<
-    T extends new () => EntityInterface = new () => EntityInterface
-  >(options?: Options<T>, ...selectors: Selector[]): InstanceType<T> | null {
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> = {},
+    ...selectors: Selector[] | [string]
+  ): InstanceType<T> | null {
     return this.driver.getEntity(options, ...selectors);
   }
 

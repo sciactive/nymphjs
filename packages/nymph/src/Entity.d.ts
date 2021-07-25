@@ -229,3 +229,12 @@ export interface EntityInterface extends DataObjectInterface {
    */
   $useSkipAc(useSkipAc: boolean): void;
 }
+
+export type EntityConstructor = (new () => EntityInterface) & {
+  /**
+   * Create a new entity instance.
+   *
+   * @param guid An optional GUID to retrieve.
+   */
+  factory(guid?: string): EntityInterface;
+};
