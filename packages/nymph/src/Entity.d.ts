@@ -232,6 +232,18 @@ export interface EntityInterface extends DataObjectInterface {
 
 export type EntityConstructor = (new () => EntityInterface) & {
   /**
+   * A unique name for this type of entity used to separate its data from other
+   * types of entities in the database.
+   */
+  ETYPE: string;
+  /**
+   * The lookup name for this entity.
+   *
+   * This is used for reference arrays (and sleeping references) and client
+   * requests.
+   */
+  class: string;
+  /**
    * Create a new entity instance.
    *
    * @param guid An optional GUID to retrieve.

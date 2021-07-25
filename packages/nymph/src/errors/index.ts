@@ -5,3 +5,5 @@ export * from './EntityConflictError';
 export * from './EntityIsSleepingReferenceError';
 
 export * from './InvalidParametersError';
+
+export * from './UnableToConnectError';

@@ -7,7 +7,7 @@ import {
   EntityInterface,
   SerializedEntityData,
 } from '../Entity.d';
-import { InvalidParametersError } from '../errors';
+import { InvalidParametersError, UnableToConnectError } from '../errors';
 import Nymph from '../Nymph';
 import { Selector, Options, FormattedSelector } from '../Nymph.d';
 
@@ -33,7 +33,7 @@ export default abstract class NymphDriver {
   /**
    * Nymph driver configuration object.
    */
-  protected config: NymphDriverConfig;
+  public config: NymphDriverConfig;
   /**
    * A cache to make entity retrieval faster.
    */
@@ -62,7 +62,17 @@ export default abstract class NymphDriver {
   ): InstanceType<T>[] | null;
   abstract getUID(name: string): number | null;
   abstract import(filename: string): boolean;
+  protected abstract makeEntityQuery(
+    options: Options,
+    formattedSelectors: FormattedSelector[],
+    etypeDirty: string
+  ): {
+    query: string;
+    fullCoverage: boolean;
+    limitOffsetCoverage: boolean;
+  };
   abstract newUID(name: string): number | null;
+  protected abstract query(query: string, etypeDirty: string): any;
   abstract renameUID(oldName: string, newName: string): boolean;
   abstract saveEntity(entity: EntityInterface): boolean;
   abstract setUID(name: string, value: number): boolean;
@@ -603,6 +613,188 @@ export default abstract class NymphDriver {
     }
 
     return queryParts;
+  }
+
+  protected getEntitesRowLike(
+    options: Options,
+    selectors: Selector[],
+    typesAlreadyChecked: (keyof Selector)[],
+    rowFetchCallback: (result: any) => void,
+    freeResultCallback: (result: any) => void,
+    getGUIDCallback: (row: any) => string,
+    getTagsAndDatesCallback: (row: any) => {
+      tags: string[];
+      cdate: number;
+      mdate: number;
+    },
+    getDataNameAndSValueCallback: (row: any) => {
+      name: string;
+      svalue: string;
+    }
+  ) {
+    if (!this.connected) {
+      throw new UnableToConnectError('not connected to DB');
+    }
+    for (const key in selectors) {
+      const selector = selectors[key];
+      if (
+        !selector ||
+        (Object.keys(selector).length === 1 &&
+          'type' in selector &&
+          ['&', '!&', '|', '!|'].indexOf(selector.type) !== -1)
+      ) {
+        delete selectors[key];
+        continue;
+      }
+      if (
+        !('type' in selector) ||
+        ['&', '!&', '|', '!|'].indexOf(selector.type) === -1
+      ) {
+        throw new InvalidParametersError(
+          'Invalid query selector passed: ' + JSON.stringify(selector)
+        );
+      }
+    }
+
+    const entities = [];
+    const EntityClass =
+      options.class ?? (Nymph.getEntityClass('Entity') as EntityConstructor);
+    const etypeDirty = EntityClass.ETYPE;
+    const ret = options.return ?? 'entity';
+
+    let count = 0;
+    let ocount = 0;
+
+    // Check if the requested entity is cached.
+    if (
+      Nymph.config.cache &&
+      !options.skipCache &&
+      'guid' in selectors[0] &&
+      typeof selectors[0].guid === 'number'
+    ) {
+      // Only safe to use the cache option with no other selectors than a GUID
+      // and tags.
+      if (
+        selectors.length === 1 &&
+        selectors[0].type === '&' &&
+        (Object.keys(selectors[0]).length === 2 ||
+          (Object.keys(selectors[0]).length === 3 && 'tag' in selectors[0]))
+      ) {
+        const entity = this.pullCache(
+          selectors[0]['guid'],
+          EntityClass.class,
+          !!options.skipAc
+        );
+        if (
+          entity != null &&
+          (!('tag' in selectors[0]) ||
+            entity.hasTag(
+              ...(Array.isArray(selectors[0].tag)
+                ? selectors[0].tag
+                : [selectors[0].tag])
+            ))
+        ) {
+          return [entity];
+        }
+      }
+    }
+
+    const formattedSelectors = this.formatSelectors(selectors);
+    const query = this.makeEntityQuery(options, formattedSelectors, etypeDirty);
+    const result = this.query(query.query, etypeDirty);
+
+    let row = rowFetchCallback(result);
+    while (row != null) {
+      const guid = getGUIDCallback(row);
+      const tagsAndDates = getTagsAndDatesCallback(row);
+      const tags = tagsAndDates.tags;
+      const cdate = tagsAndDates.cdate;
+      const mdate = tagsAndDates.mdate;
+      let dataNameAndSValue = getDataNameAndSValueCallback(row);
+      // Data.
+      const data: EntityData = {};
+      // Serialized data.
+      const sdata: SerializedEntityData = {};
+      if (dataNameAndSValue.name !== '') {
+        // This do will keep going and adding the data until the
+        // next entity is reached. $row will end on the next entity.
+        do {
+          dataNameAndSValue = getDataNameAndSValueCallback(row);
+          sdata[dataNameAndSValue.name] = dataNameAndSValue.svalue;
+          row = rowFetchCallback(result);
+        } while (row != null && getGUIDCallback(row) === guid);
+      } else {
+        // Make sure that $row is incremented :)
+        row = rowFetchCallback(result);
+      }
+      // Check all conditions.
+      let passed: boolean;
+      if (query.fullCoverage) {
+        passed = true;
+      } else {
+        passed = this.checkData(
+          data,
+          sdata,
+          selectors,
+          null,
+          null,
+          typesAlreadyChecked
+        );
+      }
+      if (passed) {
+        if (
+          typeof options.offset === 'number' &&
+          !query.limitOffsetCoverage &&
+          ocount < options.offset
+        ) {
+          // We must be sure this entity is actually a match before
+          // incrementing the offset.
+          ocount++;
+          continue;
+        }
+        switch (ret) {
+          case 'entity':
+          default:
+            let entity: EntityInterface | null = null;
+            // if (Nymph.config.cache && !(options.skipCache)) {
+            //   entity = this.pullCache(
+            //     guid,
+            //     EntityClass.class,
+            //     !!options.skipAc
+            //   );
+            // }
+            // if (entity == null || mdate > entity.mdate) {
+            entity = EntityClass.factory();
+            if (options.skipAc != null) {
+              entity.$useSkipAc(!!options.skipAc);
+            }
+            entity.guid = guid;
+            entity.cdate = cdate;
+            entity.mdate = mdate;
+            entity.tags = tags;
+            entity.$putData(data, sdata);
+            if (Nymph.config.cache) {
+              this.pushCache(guid, cdate, mdate, tags, data, sdata);
+            }
+            // }
+            entities.push(entity);
+            break;
+          case 'guid':
+            entities.push(guid);
+            break;
+        }
+        if (!query.limitOffsetCoverage) {
+          count++;
+          if (options.limit != null && count >= options.limit) {
+            break;
+          }
+        }
+      }
+    }
+
+    freeResultCallback(result);
+
+    return entities;
   }
 
   public getEntity<T extends EntityConstructor = EntityConstructor>(

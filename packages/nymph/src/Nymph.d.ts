@@ -1,8 +1,6 @@
-import { EntityInterface } from './Entity.d';
+import { EntityConstructor, EntityInterface } from './Entity.d';
 
-export type Options<
-  T extends new () => EntityInterface = new () => EntityInterface
-> = {
+export type Options<T extends EntityConstructor = EntityConstructor> = {
   class?: T;
   limit?: number;
   offset?: number;
