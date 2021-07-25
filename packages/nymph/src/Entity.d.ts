@@ -11,11 +11,11 @@ export type ACProperties = {
 
 export type EntityReference = ['nymph_entity_reference', string, string];
 
-export type DataObject = {
+export type EntityData = {
   [k: string]: any;
 };
 
-export type SerializedDataObject = {
+export type SerializedEntityData = {
   [k: string]: string;
 };
 
@@ -25,14 +25,14 @@ export type EntityJson = {
   cdate: number | null;
   mdate: number | null;
   tags: string[];
-  data: DataObject;
+  data: EntityData;
 };
 
 export type EntityPatch = {
   class: string;
   guid: string;
   mdate: number | null;
-  set: DataObject;
+  set: EntityData;
   unset: string[];
   addTags: string[];
   removeTags: string[];
@@ -132,7 +132,7 @@ export interface EntityInterface extends DataObjectInterface {
    * @param includeSData Whether to include the serialized data as well.
    * @returns The entity's data object.
    */
-  $getData(includeSData?: boolean): DataObject;
+  $getData(includeSData?: boolean): EntityData;
   /**
    * Used to retrieve the serialized data object.
    *
@@ -145,7 +145,7 @@ export interface EntityInterface extends DataObjectInterface {
    *
    * @returns The entity's serialized data object.
    */
-  $getSData(): SerializedDataObject;
+  $getSData(): SerializedEntityData;
   /**
    * Get the original values of the AC properties.
    *
@@ -206,7 +206,7 @@ export interface EntityInterface extends DataObjectInterface {
    * @param data The data object.
    * @param sdata The serialized data object.
    */
-  $putData(data: DataObject, sdata?: SerializedDataObject): void;
+  $putData(data: EntityData, sdata?: SerializedEntityData): void;
   /**
    * Remove one or more tags.
    *

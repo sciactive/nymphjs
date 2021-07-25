@@ -2,12 +2,12 @@ import { difference, intersection, isEqual } from 'lodash';
 
 import {
   ACProperties,
-  DataObject,
+  EntityData,
   EntityInterface,
   EntityJson,
   EntityPatch,
   EntityReference,
-  SerializedDataObject,
+  SerializedEntityData,
 } from './Entity.d';
 import {
   ClassNotAvailableError,
@@ -91,7 +91,7 @@ import {
  * will fill its data from the DB. You can call clearCache() to turn all the
  * entities back into sleeping references.
  */
-class Entity<T extends DataObject = DataObject> implements EntityInterface {
+class Entity<T extends EntityData = EntityData> implements EntityInterface {
   /**
    * A unique name for this type of entity used to separate its data from other
    * types of entities in the database.
@@ -132,7 +132,7 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
   /**
    * The actual sdata store.
    */
-  protected $sdata: SerializedDataObject;
+  protected $sdata: SerializedEntityData;
   /**
    * The data proxy object.
    */
@@ -212,14 +212,14 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
    */
   public constructor(guid?: string) {
     this.$dataHandler = {
-      has: (data: DataObject, name: string) => {
+      has: (data: EntityData, name: string) => {
         if (this.$isASleepingReference) {
           this.$referenceWake();
         }
         return data.hasOwnProperty(name) || this.$sdata.hasOwnProperty(name);
       },
 
-      get: (data: DataObject, name: string) => {
+      get: (data: EntityData, name: string) => {
         if (this.$isASleepingReference) {
           this.$referenceWake();
         }
@@ -236,7 +236,7 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
         return undefined;
       },
 
-      set: (data: DataObject, name: string, value: any) => {
+      set: (data: EntityData, name: string, value: any) => {
         if (this.$isASleepingReference) {
           this.$referenceWake();
         }
@@ -247,7 +247,7 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
         return true;
       },
 
-      deleteProperty: (data: DataObject, name: string) => {
+      deleteProperty: (data: EntityData, name: string) => {
         if (this.$isASleepingReference) {
           this.$referenceWake();
         }
@@ -590,7 +590,7 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
 
     // Accept the data.
     const data = input.data;
-    const privateData: DataObject = {};
+    const privateData: EntityData = {};
     for (const name of this.$privateData) {
       if (name in this.$data) {
         privateData[name] = this.$data[name];
@@ -600,7 +600,7 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
       }
     }
 
-    const protectedData: DataObject = {};
+    const protectedData: EntityData = {};
     const protectedProps = [...this.$protectedData];
     if (Nymph.Tilmeld && !Nymph.Tilmeld.gatekeeper('tilmeld/admin')) {
       protectedProps.push('user');
@@ -615,7 +615,7 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
       }
     }
 
-    let nonAllowlistData: DataObject = {};
+    let nonAllowlistData: EntityData = {};
     if (this.$allowlistData != null) {
       nonAllowlistData = { ...this.$getData(true) };
       for (const name of this.$allowlistData) {
@@ -705,7 +705,7 @@ class Entity<T extends DataObject = DataObject> implements EntityInterface {
     }
   }
 
-  public $putData(data: DataObject, sdata?: SerializedDataObject) {
+  public $putData(data: EntityData, sdata?: SerializedEntityData) {
     if (this.$isASleepingReference) {
       this.$referenceWake();
     }
