@@ -1,5 +1,8 @@
 import fs from 'fs';
+import { difference } from 'lodash';
 import ReadLines from 'n-readlines';
+
+import newGUID from '../newGUID';
 
 import {
   EntityConstructor,
@@ -811,6 +814,107 @@ export default abstract class NymphDriver {
       return null;
     }
     return entities[0];
+  }
+
+  protected saveEntityRowLike(
+    entity: EntityInterface,
+    formatEtypeCallback: (etypeDirty: string) => string,
+    checkGUIDCallback: (guid: string) => boolean,
+    saveNewEntityCallback: (
+      entity: EntityInterface,
+      guid: string,
+      tags: string[],
+      data: EntityData,
+      sdata: SerializedEntityData,
+      cdate: number,
+      etype: string,
+      etypeDirty: string
+    ) => boolean,
+    saveExistingEntityCallback: (
+      entity: EntityInterface,
+      guid: string,
+      tags: string[],
+      data: EntityData,
+      sdata: SerializedEntityData,
+      mdate: number,
+      etype: string,
+      etypeDirty: string
+    ) => boolean,
+    startTransactionCallback: (() => void) | null = null,
+    commitTransactionCallback: (() => boolean) | null = null
+  ) {
+    // Get a modified date.
+    const mdate = Date.now();
+    const tags = difference(entity.tags, ['']);
+    const data = entity.$getData();
+    const sdata = entity.$getSData();
+    const varlist = [...Object.keys(data), ...Object.keys(sdata)];
+    const EntityClass = entity.constructor as EntityConstructor;
+    const className = EntityClass.class;
+    const etypeDirty = EntityClass.ETYPE;
+    const etype = formatEtypeCallback(etypeDirty);
+    if (startTransactionCallback) {
+      startTransactionCallback();
+    }
+    let success = false;
+    if (entity.guid == null) {
+      const cdate = mdate;
+      let newId: string;
+      while (true) {
+        newId = newGUID();
+        if (checkGUIDCallback(newId)) {
+          break;
+        }
+      }
+      success = saveNewEntityCallback(
+        entity,
+        newId,
+        tags,
+        data,
+        sdata,
+        cdate,
+        etype,
+        etypeDirty
+      );
+      if (success) {
+        entity.guid = newId;
+        entity.cdate = cdate;
+        entity.mdate = mdate;
+      }
+    } else {
+      // Removed any cached versions of this entity.
+      if (Nymph.config.cache) {
+        this.cleanCache(entity.guid);
+      }
+      success = saveExistingEntityCallback(
+        entity,
+        entity.guid,
+        tags,
+        data,
+        sdata,
+        mdate,
+        etype,
+        etypeDirty
+      );
+      if (success) {
+        entity.mdate = mdate;
+      }
+    }
+    if (commitTransactionCallback) {
+      success = success && commitTransactionCallback();
+    }
+    // Cache the entity.
+    if (success && Nymph.config.cache) {
+      this.pushCache(
+        entity.guid,
+        entity.cdate,
+        entity.mdate,
+        entity.tags,
+        data,
+        sdata
+      );
+    }
+    return success;
   }
 
   /**
