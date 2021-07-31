@@ -9,13 +9,17 @@ export type TestModelData = {
   array?: any[];
   match?: string;
   number?: number;
+  numberString?: string;
+  timestamp?: Number;
   boolean?: boolean;
-  reference?: TestModel;
-  refArray?: TestModel[];
+  reference?: TestModel & TestModelData;
+  refArray?: (TestModel & TestModelData)[];
   refObject?: {
-    [k: string]: TestModel;
+    [k: string]: TestModel & TestModelData;
   };
-  parent?: TestModel;
+  parent?: TestModel & TestModelData;
+  // For Import/Export Tests.
+  index?: string;
 };
 
 /**
@@ -70,4 +74,10 @@ Nymph.setEntityClass(TestModel.class, TestModel);
  */
 export class TestBModel extends TestModel {
   static ETYPE = 'test_b_model';
+  static class = 'TestBModel';
+
+  static factory(guid?: string): TestBModel & TestModelData {
+    return new TestBModel(guid);
+  }
 }
+Nymph.setEntityClass(TestBModel.class, TestBModel);

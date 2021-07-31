@@ -214,16 +214,14 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   public constructor(guid?: string) {
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         return data.hasOwnProperty(name) || this.$sdata.hasOwnProperty(name);
       },
 
       get: (data: EntityData, name: string) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         if (this.$sdata.hasOwnProperty(name)) {
           data[name] = referencesToEntities(
             JSON.parse(this.$sdata[name]),
@@ -238,9 +236,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
       },
 
       set: (data: EntityData, name: string, value: any) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         if (this.$sdata.hasOwnProperty(name)) {
           delete this.$sdata[name];
         }
@@ -249,9 +246,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
       },
 
       deleteProperty: (data: EntityData, name: string) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         if (this.$sdata.hasOwnProperty(name)) {
           return delete this.$sdata[name];
         }
@@ -282,9 +278,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
 
     return new Proxy(this, {
       has: (entity: Entity, name: string) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         if (
           typeof name !== 'string' ||
           name in entity ||
@@ -296,9 +291,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
       },
 
       get: (entity: Entity, name: string) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         if (
           typeof name !== 'string' ||
           name in entity ||
@@ -313,9 +307,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
       },
 
       set: (entity: Entity, name: string, value: any) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         if (
           typeof name !== 'string' ||
           name in entity ||
@@ -329,9 +322,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
       },
 
       deleteProperty: (entity: Entity, name: string) => {
-        if (this.$isASleepingReference) {
-          this.$referenceWake();
-        }
+        this.$referenceWake();
+
         if (name in entity) {
           return delete (entity as any)[name];
         } else if (name in entity.$data) {
@@ -394,9 +386,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $addTag(...tags: string[]) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     if (tags.length < 1) {
       return;
     }
@@ -404,9 +395,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $arraySearch(array: any[], strict = false) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     if (!Array.isArray(array)) {
       return -1;
     }
@@ -420,9 +410,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $clearCache() {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
 
     this.$putData(this.$getData(), this.$getSData());
   }
@@ -432,16 +420,14 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $delete(): boolean {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     return Nymph.deleteEntity(this);
   }
 
   public $equals(object: any) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     if (!(object instanceof Entity)) {
       return false;
     }
@@ -465,26 +451,26 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $getData(includeSData = false) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     if (includeSData) {
       // Access all the serialized properties to initialize them.
       for (const key in this.$sdata) {
         const unused: any = (this as any)[key];
       }
     }
-    return entitiesToReferences({ ...this.$data });
+    return entitiesToReferences({ ...this.$dataStore });
   }
 
   public $getSData() {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     return this.$sdata;
   }
 
   public $getOriginalAcValues() {
+    this.$referenceWake();
+
     return (
       this.$originalAcValues ?? {
         user: this.$data.user,
@@ -500,9 +486,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $getValidatable() {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     // Access all the serialized properties to initialize them.
     for (const key in this.$sdata) {
       const unused: any = (this as any)[key];
@@ -517,13 +502,14 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $getTags() {
+    this.$referenceWake();
+
     return this.tags;
   }
 
   public $hasTag(...tags: string[]) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     if (!tags.length) {
       return false;
     }
@@ -540,9 +526,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $is(object: any) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     if (!(object instanceof Entity)) {
       return false;
     }
@@ -559,9 +544,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
     // TODO: Do this without causing everything to become unserialized.
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
 
     if (this.guid != input.guid) {
       throw new EntityConflictError(
@@ -638,9 +621,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
 
     if (this.guid != patch.guid) {
       throw new EntityConflictError(
@@ -707,9 +688,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $putData(data: EntityData, sdata?: SerializedEntityData) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     const mySdata = sdata ?? this.$getSData();
     for (const name in data) {
       delete mySdata[name];
@@ -795,9 +775,8 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $refresh() {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     if (this.guid == null) {
       return false;
     }
@@ -820,16 +799,14 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   }
 
   public $removeTag(...tags: string[]) {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     this.tags = difference(this.tags, tags);
   }
 
   public $save(): boolean {
-    if (this.$isASleepingReference) {
-      this.$referenceWake();
-    }
+    this.$referenceWake();
+
     return Nymph.saveEntity(this);
   }
 

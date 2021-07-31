@@ -45,7 +45,7 @@ export default class Nymph {
     Tilmeld?: any
   ) {
     this.config = { ...defaults, ...config };
-    if (this.driver && this.driver.connected) {
+    if (this.driver && this.driver.isConnected()) {
       this.driver.disconnect();
     }
     this.driver = driver;
@@ -161,8 +161,8 @@ export default class Nymph {
    * - offset - The offset from the oldest matching entity to start retrieving.
    * - reverse - If true, entities will be retrieved from newest to oldest.
    *   Therefore, offset will be from the newest entity.
-   * - sort - How to sort the entities. Accepts "guid", "cdate", and "mdate".
-   *   Defaults to "cdate".
+   * - sort - How to sort the entities. Accepts "cdate" or "mdate". Defaults to
+   *   "cdate".
    * - return - What to return. "entity" or "guid". Defaults to "entity".
    * - source - Will be 'client' if the query came from a REST call.
    * - skipCache - If true, Nymph will skip the cache and retrieve the entity
@@ -193,10 +193,9 @@ export default class Nymph {
    * - truthy - A name. True if the named property is defined and truthy.
    * - equal - An array with a name, then value. True if the named property is
    *   defined and equal (their JSON strings are identical).
-   * - array - An array with a name, then value. True if the named property is
-   *   an array containing the value.
-   * - contains - An array with a name, then value. True if the named property
-   *   contains the value (its JSON string is found within the property's).
+   * - contain - An array with a name, then value. True if the named property
+   *   contains the value (its JSON string is found within the property's JSON
+   *   string).
    * - match - An array with a name, then regular expression. True if the
    *   named property matches. Uses POSIX RegExp. Case sensitive. Must *not* be
    *   surrounded by any delimiters.
@@ -307,14 +306,22 @@ export default class Nymph {
    *
    * @param options The options.
    * @param selectors Unlimited optional selectors to search for. If none are given, all entities are retrieved for the given options.
-   * @returns An array of entities, or null on failure.
+   * @returns An array of entities.
    * @todo An option to place a total count in a var.
    * @todo Use an asterisk to specify any variable.
    */
   public static getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    ...selectors: Selector[]
+  ): string[];
+  public static getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): InstanceType<T>[] | null {
+  ): ReturnType<T['factory']>[];
+  public static getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> = {},
+    ...selectors: Selector[]
+  ): ReturnType<T['factory']>[] | string[] {
     return this.driver.getEntities(options, ...selectors);
   }
 
@@ -332,10 +339,38 @@ export default class Nymph {
    * @returns An entity, or null on failure or nothing found.
    */
   public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    ...selectors: Selector[]
+  ): string | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    ...selectors: Selector[]
+  ): ReturnType<T['factory']> | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    guid: string
+  ): string | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    guid: string
+  ): ReturnType<T['factory']> | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
-    ...selectors: Selector[] | [string]
-  ): InstanceType<T> | null {
-    return this.driver.getEntity(options, ...selectors);
+    ...selectors: Selector[] | string[]
+  ): ReturnType<T['factory']> | string | null {
+    // Set up options and selectors.
+    if (typeof selectors[0] === 'string') {
+      selectors = [{ type: '&', guid: selectors[0] }];
+    }
+    options.limit = 1;
+    const entities = this.driver.getEntities(
+      options,
+      ...(selectors as Selector[])
+    );
+    if (!entities || !entities.length) {
+      return null;
+    }
+    return entities[0];
   }
 
   /**

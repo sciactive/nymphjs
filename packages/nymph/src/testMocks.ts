@@ -1,22 +1,20 @@
-import { EntityInterface, EntityJson } from './Entity.d';
+import { EntityConstructor, EntityInterface, EntityJson } from './Entity.d';
 import { Options, Selector } from './Nymph.d';
 import newGUID from './newGUID';
 
 export class MockNymph {
   private static entities: { [k: string]: EntityJson } = {};
-  public static entityClasses: { [k: string]: new () => EntityInterface } = {};
+  public static entityClasses: { [k: string]: EntityConstructor } = {};
   public static Tilmeld: any = undefined;
 
   public static setEntityClass(
     className: string,
-    entityClass: new () => EntityInterface
+    entityClass: EntityConstructor
   ) {
     this.entityClasses[className] = entityClass;
   }
 
-  public static getEntityClass(
-    className: string
-  ): (new () => EntityInterface) | null {
+  public static getEntityClass(className: string): EntityConstructor | null {
     if (className in this.entityClasses) {
       return this.entityClasses[className];
     }
@@ -31,7 +29,7 @@ export class MockNymph {
       entity.cdate = Date.now();
     } else if (
       entity.guid in this.entities &&
-      entity.mdate < (this.entities[entity.guid].mdate ?? 0)
+      (entity.mdate ?? 0) < (this.entities[entity.guid].mdate ?? 0)
     ) {
       return false;
     }
@@ -51,10 +49,28 @@ export class MockNymph {
     return true;
   }
 
-  public static getEntity<
-    T extends new () => EntityInterface = new () => EntityInterface
-  >(options?: Options<T>, ...selectors: Selector[]): InstanceType<T> | null {
-    const guid = selectors[0].guid;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    ...selectors: Selector[]
+  ): string | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    ...selectors: Selector[]
+  ): ReturnType<T['factory']> | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    guid: string
+  ): string | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    guid: string
+  ): ReturnType<T['factory']> | null;
+  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> = {},
+    ...selectors: Selector[] | string[]
+  ): ReturnType<T['factory']> | string | null {
+    const guid =
+      typeof selectors[0] === 'string' ? selectors[0] : selectors[0].guid;
     if (
       !options ||
       !guid ||
@@ -65,8 +81,7 @@ export class MockNymph {
     }
 
     const entity: EntityInterface = (
-      (options.class as T & { factory(): InstanceType<T> }) ??
-      this.getEntityClass('Entity')
+      (options.class as T) ?? this.getEntityClass('Entity')
     ).factory();
     const entityJson = this.entities[guid];
     entity.guid = guid;
@@ -75,7 +90,7 @@ export class MockNymph {
     entity.tags = entityJson.tags;
     entity.$putData(entityJson.data, {});
 
-    return entity as InstanceType<T>;
+    return entity as ReturnType<T['factory']>;
   }
 
   public static deleteEntity(entity: EntityInterface): boolean {

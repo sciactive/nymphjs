@@ -2,8 +2,9 @@ import { SQLite3DriverConfig } from './d';
 
 export default {
   filename: ':memory:',
+  fileMustExist: false,
   prefix: 'nymph_',
-  busyTimeout: 10000,
-  openFlags: null,
-  encryptionKey: null,
+  timeout: 10000,
+  readonly: false,
+  verbose: undefined,
 } as SQLite3DriverConfig;

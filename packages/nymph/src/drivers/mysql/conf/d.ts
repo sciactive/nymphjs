@@ -1,9 +1,7 @@
-import { NymphDriverConfig } from '../../NymphDriver.d';
-
 /**
  * MySQL Driver Config
  */
-export interface MySQLDriverConfig extends NymphDriverConfig {
+export interface MySQLDriverConfig {
   /**
    * Host
    * The host on which to connect to MySQL. Can include a port, like

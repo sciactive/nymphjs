@@ -2,6 +2,10 @@ import { EntityReference } from './Entity.d';
 import { ClassNotAvailableError } from './errors';
 import { default as Nymph } from './Nymph';
 
+export function xor(a: any, b: any): boolean {
+  return !!(a && !b) || (!a && b);
+}
+
 export function uniqueStrings(array: string[]) {
   const obj: { [k: string]: true } = {};
   for (let i = 0; i < array.length; ++i) {
@@ -73,7 +77,7 @@ export function sortObj<T extends { [k: string]: any }>(obj: T): T {
   for (let i = 0; i < tempArray.length; i++) {
     const temp = obj[tempArray[i]];
     delete obj[tempArray[i]];
-    // @ts-ignore
+    // @ts-ignore: string can't be used to index type T?? yes, it can.
     obj[tempArray[i]] = temp;
   }
   return obj;

@@ -1,34 +1,31 @@
-import { NymphDriverConfig } from '../../NymphDriver.d';
-
 /**
  * SQLite3 Driver Config
  */
-export interface SQLite3DriverConfig extends NymphDriverConfig {
+export interface SQLite3DriverConfig {
   /**
-   * Filename
    * The filename of the SQLite3 DB. Use ':memory:' for an in-memory DB.
    */
   filename: string;
   /**
-   * Table Prefix
+   * If the file does not exist, an Error will be thrown instead of creating a new file.
+   *
+   * This option is ignored for in-memory, temporary, or readonly database connections.
+   */
+  fileMustExist: boolean;
+  /**
    * The SQLite3 table name prefix.
    */
   prefix: string;
   /**
-   * Busy Timeout
    * The timeout to use for waiting for the DB to become available.
-   * See SQLite3::busyTimeout
    */
-  busyTimeout: number;
+  timeout: number;
   /**
-   * Open Flags
-   * The flags used to open the SQLite3 db. (Can be used to programmatically
-   * open for readonly, which is needed for PubSub.)
+   * Open for readonly, which is needed for PubSub.
    */
-  openFlags: null;
+  readonly: boolean;
   /**
-   * Encryption Key
-   * The encryption key to use to open the database.
+   * Function that gets called with every SQL string executed.
    */
-  encryptionKey: string | null;
+  verbose: ((message?: any, ...additionalArgs: any[]) => void) | undefined;
 }

@@ -8,7 +8,7 @@ import {
  * The MySQL Nymph database driver.
  */
 export default class MySQLDriver extends NymphDriver {
-  protected config: MySQLDriverConfig;
+  public config: MySQLDriverConfig;
 
   constructor(config: Partial<MySQLDriverConfig>) {
     super();

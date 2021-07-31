@@ -8,7 +8,7 @@ import {
  * The PostgreSQL Nymph database driver.
  */
 export default class PostgreSQLDriver extends NymphDriver {
-  protected config: PostgreSQLDriverConfig;
+  public config: PostgreSQLDriverConfig;
 
   constructor(config: Partial<PostgreSQLDriverConfig>) {
     super();

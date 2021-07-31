@@ -10,9 +10,10 @@
     "object relational mapper"
   ],
   "scripts": {
+    "clean": "rm -r dist",
     "build": "tsc",
     "watch": "tsc --watch",
-    "prepare": "npm run build",
+    "prepare": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch"
   },
@@ -29,6 +30,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "better-sqlite3": "^7.4.3",
     "locutus": "^2.0.15",
     "lodash": "^4.17.21",
     "luxon": "^2.0.1",
@@ -38,7 +40,9 @@
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
+    "@types/better-sqlite3": "^5.4.3",
     "@types/jest": "^26.0.24",
+    "@types/locutus": "^0.0.6",
     "@types/lodash": "^4.14.171",
     "@types/luxon": "^1.27.1",
     "@types/n-readlines": "^1.0.2",

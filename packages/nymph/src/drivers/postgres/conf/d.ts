@@ -1,9 +1,7 @@
-import { NymphDriverConfig } from '../../NymphDriver.d';
-
 /**
  * PostgreSQL Driver Config
  */
-export interface PostgreSQLDriverConfig extends NymphDriverConfig {
+export interface PostgreSQLDriverConfig {
   /**
    * Connection Type
    * The type of connection to establish with PostreSQL. Choosing socket will

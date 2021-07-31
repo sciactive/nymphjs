@@ -5,7 +5,7 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
   limit?: number;
   offset?: number;
   reverse?: boolean;
-  sort?: 'guid' | 'cdate' | 'mdate';
+  sort?: 'cdate' | 'mdate';
   return?: 'entity' | 'guid';
   source?: string;
   skipCache?: boolean;
@@ -29,14 +29,11 @@ type PrimitiveSelector = {
   truthy?: string;
   '!truthy'?: PrimitiveSelector['truthy'];
 
-  equal?: OrWithTime<[string, any]>;
+  equal?: [string, any];
   '!equal'?: PrimitiveSelector['equal'];
 
-  array?: OrWithTime<[string, any]>;
-  '!array'?: PrimitiveSelector['array'];
-
-  contains?: OrWithTime<[string, any]>;
-  '!contains'?: PrimitiveSelector['contains'];
+  contain?: [string, any];
+  '!contain'?: PrimitiveSelector['contain'];
 
   match?: [string, string];
   '!match'?: PrimitiveSelector['match'];
@@ -50,19 +47,19 @@ type PrimitiveSelector = {
   ilike?: [string, string];
   '!ilike'?: PrimitiveSelector['ilike'];
 
-  gt?: OrWithTime<[string, number]>;
+  gt?: [string, number];
   '!gt'?: PrimitiveSelector['gt'];
 
-  gte?: OrWithTime<[string, number]>;
+  gte?: [string, number];
   '!gte'?: PrimitiveSelector['gte'];
 
-  lt?: OrWithTime<[string, number]>;
+  lt?: [string, number];
   '!lt'?: PrimitiveSelector['lt'];
 
-  lte?: OrWithTime<[string, number]>;
+  lte?: [string, number];
   '!lte'?: PrimitiveSelector['lte'];
 
-  ref?: [string, Entity | string];
+  ref?: [string, EntityInterface | string];
   '!ref'?: PrimitiveSelector['ref'];
 
   qref?: [string, [Options, ...PrimitiveSelector]];
@@ -87,14 +84,11 @@ export type Selector = {
   truthy?: Clause<PrimitiveSelector['truthy']>;
   '!truthy'?: Clause<PrimitiveSelector['truthy']>;
 
-  equal?: Clause<PrimitiveSelector['equal']>;
-  '!equal'?: Clause<PrimitiveSelector['equal']>;
+  equal?: Clause<OrWithTime<PrimitiveSelector['equal']>>;
+  '!equal'?: Clause<OrWithTime<PrimitiveSelector['equal']>>;
 
-  array?: Clause<PrimitiveSelector['array']>;
-  '!array'?: Clause<PrimitiveSelector['array']>;
-
-  contains?: Clause<PrimitiveSelector['contains']>;
-  '!contains'?: Clause<PrimitiveSelector['contains']>;
+  contain?: Clause<OrWithTime<PrimitiveSelector['contain']>>;
+  '!contain'?: Clause<OrWithTime<PrimitiveSelector['contain']>>;
 
   match?: Clause<PrimitiveSelector['match']>;
   '!match'?: Clause<PrimitiveSelector['match']>;
@@ -108,17 +102,17 @@ export type Selector = {
   ilike?: Clause<PrimitiveSelector['ilike']>;
   '!ilike'?: Clause<PrimitiveSelector['ilike']>;
 
-  gt?: Clause<PrimitiveSelector['gt']>;
-  '!gt'?: Clause<PrimitiveSelector['gt']>;
+  gt?: Clause<OrWithTime<PrimitiveSelector['gt']>>;
+  '!gt'?: Clause<OrWithTime<PrimitiveSelector['gt']>>;
 
-  gte?: Clause<PrimitiveSelector['gte']>;
-  '!gte'?: Clause<PrimitiveSelector['gte']>;
+  gte?: Clause<OrWithTime<PrimitiveSelector['gte']>>;
+  '!gte'?: Clause<OrWithTime<PrimitiveSelector['gte']>>;
 
-  lt?: Clause<PrimitiveSelector['lt']>;
-  '!lt'?: Clause<PrimitiveSelector['lt']>;
+  lt?: Clause<OrWithTime<PrimitiveSelector['lt']>>;
+  '!lt'?: Clause<OrWithTime<PrimitiveSelector['lt']>>;
 
-  lte?: Clause<PrimitiveSelector['lte']>;
-  '!lte'?: Clause<PrimitiveSelector['lte']>;
+  lte?: Clause<OrWithTime<PrimitiveSelector['lte']>>;
+  '!lte'?: Clause<OrWithTime<PrimitiveSelector['lte']>>;
 
   ref?: Clause<PrimitiveSelector['ref']>;
   '!ref'?: Clause<PrimitiveSelector['ref']>;
@@ -126,7 +120,7 @@ export type Selector = {
   qref?: [string, [Options, ...Selector]];
   '!qref'?: Selector['qref'];
 
-  selector?: Selector;
+  selector?: Clause<Selector>;
   '!selector'?: Selector['selector'];
 };
 
@@ -148,11 +142,8 @@ export type FormattedSelector = {
   equal?: PrimitiveSelector['equal'][];
   '!equal'?: PrimitiveSelector['equal'][];
 
-  array?: PrimitiveSelector['array'][];
-  '!array'?: PrimitiveSelector['array'][];
-
-  contains?: PrimitiveSelector['contains'][];
-  '!contains'?: PrimitiveSelector['contains'][];
+  contain?: PrimitiveSelector['contain'][];
+  '!contain'?: PrimitiveSelector['contain'][];
 
   match?: PrimitiveSelector['match'][];
   '!match'?: PrimitiveSelector['match'][];

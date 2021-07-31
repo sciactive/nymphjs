@@ -111,6 +111,10 @@ export interface DataObjectInterface {
  * Entity interface.
  */
 export interface EntityInterface extends DataObjectInterface {
+  guid: string | null;
+  cdate: number | null;
+  mdate: number | null;
+  tags: string[];
   /**
    * Add one or more tags.
    *
