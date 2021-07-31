@@ -3,14 +3,15 @@
   "version": "1.0.0-alpha.0",
   "description": "NymphJS - Nymph ORM",
   "type": "commonjs",
-  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "keywords": [
     "nymph",
     "ORM",
     "object relational mapper"
   ],
   "scripts": {
-    "clean": "rm -r dist",
+    "clean": "test -d dist && rm -r dist || true",
     "build": "tsc",
     "watch": "tsc --watch",
     "prepare": "npm run clean && npm run build",
