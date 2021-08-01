@@ -16,7 +16,11 @@
     "watch": "tsc --watch",
     "prepare": "npm run clean && npm run build",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "test:mysql:run": "npm run test:mysql:start && npm run test:mysql:clean",
+    "test:mysql:clean": "docker container rm nymph",
+    "test:mysql:start": "docker run --name nymph -e MYSQL_ROOT_PASSWORD=123nymphroot -e MYSQL_DATABASE=nymph -e MYSQL_USER=nymph -e MYSQL_PASSWORD=nymph -p 3306:3306 mysql",
+    "test:mysql:stop": "docker kill -s TERM nymph"
   },
   "publishConfig": {
     "access": "public"
@@ -35,6 +39,7 @@
     "locutus": "^2.0.15",
     "lodash": "^4.17.21",
     "luxon": "^2.0.1",
+    "mysql2": "^2.2.5",
     "n-readlines": "^1.0.1",
     "nanoid": "^3.1.23",
     "sha1": "^1.1.1"
