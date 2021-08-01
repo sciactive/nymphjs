@@ -1,6 +1,7 @@
 import { Config, ConfigDefaults as defaults } from './conf';
 import { NymphDriver } from './drivers';
 import { EntityConstructor, EntityInterface } from './Entity.d';
+import { ClassNotAvailableError } from './errors';
 import { Selector, Options } from './Nymph.d';
 
 /**
@@ -25,11 +26,11 @@ export default class Nymph {
     this.entityClasses[className] = entityClass;
   }
 
-  public static getEntityClass(className: string): EntityConstructor | null {
+  public static getEntityClass(className: string): EntityConstructor {
     if (className in this.entityClasses) {
       return this.entityClasses[className];
     }
-    return null;
+    throw new ClassNotAvailableError('Tried to use class: ' + className);
   }
 
   /**
@@ -57,8 +58,8 @@ export default class Nymph {
    *
    * @returns Whether the instance is connected to the database.
    */
-  public static connect() {
-    return this.driver.connect();
+  public static async connect(): Promise<boolean> {
+    return await this.driver.connect();
   }
 
   /**
@@ -66,8 +67,8 @@ export default class Nymph {
    *
    * @returns Whether the instance is connected to the database.
    */
-  public static disconnect(): boolean {
-    return this.driver.disconnect();
+  public static async disconnect(): Promise<boolean> {
+    return await this.driver.disconnect();
   }
 
   /**
@@ -91,8 +92,8 @@ export default class Nymph {
    * @param name The UID's name.
    * @returns The UID's new value, or null on failure.
    */
-  public static newUID(name: string): number | null {
-    return this.driver.newUID(name);
+  public static async newUID(name: string): Promise<number | null> {
+    return await this.driver.newUID(name);
   }
 
   /**
@@ -100,8 +101,8 @@ export default class Nymph {
    * @param name The UID's name.
    * @returns The UID's value, or null on failure and if it doesn't exist.
    */
-  public static getUID(name: string): number | null {
-    return this.driver.getUID(name);
+  public static async getUID(name: string): Promise<number | null> {
+    return await this.driver.getUID(name);
   }
 
   /**
@@ -111,8 +112,8 @@ export default class Nymph {
    * @param value The value.
    * @returns True on success, false on failure.
    */
-  public static setUID(name: string, value: number): boolean {
-    return this.driver.setUID(name, value);
+  public static async setUID(name: string, value: number): Promise<boolean> {
+    return await this.driver.setUID(name, value);
   }
 
   /**
@@ -121,8 +122,8 @@ export default class Nymph {
    * @param name The UID's name.
    * @returns True on success, false on failure.
    */
-  public static deleteUID(name: string): boolean {
-    return this.driver.deleteUID(name);
+  public static async deleteUID(name: string): Promise<boolean> {
+    return await this.driver.deleteUID(name);
   }
 
   /**
@@ -132,8 +133,11 @@ export default class Nymph {
    * @param newName The new name.
    * @returns True on success, false on failure.
    */
-  public static renameUID(oldName: string, newName: string): boolean {
-    return this.driver.renameUID(oldName, newName);
+  public static async renameUID(
+    oldName: string,
+    newName: string
+  ): Promise<boolean> {
+    return await this.driver.renameUID(oldName, newName);
   }
 
   /**
@@ -147,8 +151,8 @@ export default class Nymph {
    * @param entity The entity.
    * @returns True on success, false on failure.
    */
-  public static saveEntity(entity: EntityInterface): boolean {
-    return this.driver.saveEntity(entity);
+  public static async saveEntity(entity: EntityInterface): Promise<boolean> {
+    return await this.driver.saveEntity(entity);
   }
 
   /**
@@ -310,19 +314,25 @@ export default class Nymph {
    * @todo An option to place a total count in a var.
    * @todo Use an asterisk to specify any variable.
    */
-  public static getEntities<T extends EntityConstructor = EntityConstructor>(
+  public static async getEntities<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
-  ): string[];
-  public static getEntities<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<string[]>;
+  public static async getEntities<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factory']>[];
-  public static getEntities<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<ReturnType<T['factory']>[]>;
+  public static async getEntities<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): ReturnType<T['factory']>[] | string[] {
-    return this.driver.getEntities(options, ...selectors);
+  ): Promise<ReturnType<T['factory']>[] | string[]> {
+    return await this.driver.getEntities(options, ...selectors);
   }
 
   /**
@@ -338,32 +348,42 @@ export default class Nymph {
    * @param selectors Unlimited optional selectors to search for, or a single GUID. If none are given, all entities are searched for the given options.
    * @returns An entity, or null on failure or nothing found.
    */
-  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
-  ): string | null;
-  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<string | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factory']> | null;
-  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<ReturnType<T['factory']> | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options: Options<T> & { return: 'guid' },
     guid: string
-  ): string | null;
-  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<string | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options: Options<T>,
     guid: string
-  ): ReturnType<T['factory']> | null;
-  public static getEntity<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<ReturnType<T['factory']> | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): ReturnType<T['factory']> | string | null {
+  ): Promise<ReturnType<T['factory']> | string | null> {
     // Set up options and selectors.
     if (typeof selectors[0] === 'string') {
       selectors = [{ type: '&', guid: selectors[0] }];
     }
     options.limit = 1;
-    const entities = this.driver.getEntities(
+    const entities = await this.driver.getEntities(
       options,
       ...(selectors as Selector[])
     );
@@ -379,8 +399,8 @@ export default class Nymph {
    * @param entity The entity.
    * @returns True on success, false on failure.
    */
-  public static deleteEntity(entity: EntityInterface): boolean {
-    return this.driver.deleteEntity(entity);
+  public static async deleteEntity(entity: EntityInterface): Promise<boolean> {
+    return await this.driver.deleteEntity(entity);
   }
 
   /**
@@ -390,8 +410,11 @@ export default class Nymph {
    * @param className The entity's class name.
    * @returns True on success, false on failure.
    */
-  public static deleteEntityByID(guid: string, className?: string): boolean {
-    return this.driver.deleteEntityByID(guid, className);
+  public static async deleteEntityByID(
+    guid: string,
+    className?: string
+  ): Promise<boolean> {
+    return await this.driver.deleteEntityByID(guid, className);
   }
 
   /**
@@ -400,6 +423,8 @@ export default class Nymph {
    * This is the file format:
    *
    * ```
+   * #nex2
+   * # The above line must be the first thing in the file.
    * # Comments begin with #
    *    # And can have white space before them.
    * # This defines a UID.
@@ -414,22 +439,22 @@ export default class Nymph {
    * #  brackets ([]).
    * # Properties are stored like this:
    * # propname=JSON.stringify(value)
-   *     abilities="[\"system/all\"]"
-   *     groups="[]"
-   *     inheritAbilities="false"
-   *     name="\"admin\""
+   *     abilities=["system/all"]
+   *     groups=[]
+   *     inheritAbilities=false
+   *     name="admin"
    * # White space before/after "=" and at beginning/end of line is ignored.
-   *         username  =     "\"admin\""
+   *         username  =     "admin"
    * {2}<entity_etype>[tag,list]
-   *     another="\"This is another entity.\""
-   *     newline="\"\\n\""
+   *     another="This is another entity."
+   *     newline="\n"
    * ```
    *
    * @param filename The file to export to.
    * @returns True on success, false on failure.
    */
-  public static export(filename: string): boolean {
-    return this.driver.export(filename);
+  public static async export(filename: string): Promise<boolean> {
+    return await this.driver.export(filename);
   }
 
   /**
@@ -437,8 +462,8 @@ export default class Nymph {
    *
    * @returns True on success, false on failure.
    */
-  public static exportPrint(): boolean {
-    return this.driver.exportPrint();
+  public static async exportPrint(): Promise<boolean> {
+    return await this.driver.exportPrint();
   }
 
   /**
@@ -447,7 +472,7 @@ export default class Nymph {
    * @param filename The file to import from.
    * @returns True on success, false on failure.
    */
-  public static import(filename: string): boolean {
-    return this.driver.import(filename);
+  public static async import(filename: string): Promise<boolean> {
+    return await this.driver.import(filename);
   }
 }

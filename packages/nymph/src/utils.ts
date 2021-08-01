@@ -1,5 +1,4 @@
 import { EntityReference } from './Entity.d';
-import { ClassNotAvailableError } from './errors';
 import { default as Nymph } from './Nymph';
 
 export function xor(a: any, b: any): boolean {
@@ -17,11 +16,7 @@ export function uniqueStrings(array: string[]) {
 export function entitiesToReferences(item: any): any {
   const EntityClass = Nymph.getEntityClass('Entity');
 
-  if (
-    EntityClass &&
-    item instanceof EntityClass &&
-    typeof item.$toReference === 'function'
-  ) {
+  if (item instanceof EntityClass && typeof item.$toReference === 'function') {
     // Convert entities to references.
     return item.$toReference();
   } else if (Array.isArray(item)) {
@@ -44,14 +39,15 @@ export function referencesToEntities(item: any, useSkipAc = false): any {
   if (Array.isArray(item)) {
     // Check if it's a reference.
     if (item[0] === 'nymph_entity_reference') {
-      const EntityClass = Nymph.getEntityClass(item[2]);
-      if (!EntityClass) {
-        throw new ClassNotAvailableError(item[2] + ' class cannot be found.');
+      try {
+        const EntityClass = Nymph.getEntityClass(item[2]);
+        const entity = new EntityClass();
+        entity.$referenceSleep(item as EntityReference);
+        entity.$useSkipAc(useSkipAc);
+        return entity;
+      } catch (e) {
+        return item;
       }
-      const entity = new EntityClass();
-      entity.$referenceSleep(item as EntityReference);
-      entity.$useSkipAc(useSkipAc);
-      return entity;
     } else {
       // Recurse into lower arrays.
       return item.map((item) => referencesToEntities(item, useSkipAc));

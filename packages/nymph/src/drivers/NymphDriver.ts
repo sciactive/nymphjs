@@ -25,10 +25,6 @@ function escapeRegExp(string: string): string {
  */
 export default abstract class NymphDriver {
   /**
-   * Whether this instance is currently connected to a database.
-   */
-  protected connected = false;
-  /**
    * A cache to make entity retrieval faster.
    */
   protected entityCache: {
@@ -45,43 +41,49 @@ export default abstract class NymphDriver {
    */
   protected entityCount: { [k: string]: number } = {};
 
-  abstract connect(): boolean;
+  abstract connect(): Promise<boolean>;
   abstract isConnected(): boolean;
   abstract deleteEntityByID(
     guid: string,
     classConstructor: EntityConstructor
-  ): boolean;
-  abstract deleteEntityByID(guid: string, className?: string): boolean;
-  abstract deleteUID(name: string): boolean;
-  abstract disconnect(): boolean;
+  ): Promise<boolean>;
+  abstract deleteEntityByID(guid: string, className?: string): Promise<boolean>;
+  abstract deleteUID(name: string): Promise<boolean>;
+  abstract disconnect(): Promise<boolean>;
   protected abstract exportEntities(writeLine: (line: string) => void): void;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
-  ): string[];
+  ): Promise<string[]>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factory']>[];
+  ): Promise<ReturnType<T['factory']>[]>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
+    options?: Options<T>,
+    ...selectors: Selector[]
+  ): Promise<ReturnType<T['factory']>[] | string[]>;
+  protected abstract getEntitiesSync<
+    T extends EntityConstructor = EntityConstructor
+  >(
+    options: Options<T> & { return: 'guid' },
+    ...selectors: Selector[]
+  ): string[];
+  protected abstract getEntitiesSync<
+    T extends EntityConstructor = EntityConstructor
+  >(options?: Options<T>, ...selectors: Selector[]): ReturnType<T['factory']>[];
+  protected abstract getEntitiesSync<
+    T extends EntityConstructor = EntityConstructor
+  >(
     options?: Options<T>,
     ...selectors: Selector[]
   ): ReturnType<T['factory']>[] | string[];
-  abstract getUID(name: string): number | null;
-  abstract import(filename: string): boolean;
-  protected abstract performQuery(
-    options: Options,
-    formattedSelectors: FormattedSelector[],
-    etype: string
-  ): {
-    result: any;
-    fullCoverage: boolean;
-    limitOffsetCoverage: boolean;
-  };
-  abstract newUID(name: string): number | null;
-  abstract renameUID(oldName: string, newName: string): boolean;
-  abstract saveEntity(entity: EntityInterface): boolean;
-  abstract setUID(name: string, value: number): boolean;
+  abstract getUID(name: string): Promise<number | null>;
+  abstract import(filename: string): Promise<boolean>;
+  abstract newUID(name: string): Promise<number | null>;
+  abstract renameUID(oldName: string, newName: string): Promise<boolean>;
+  abstract saveEntity(entity: EntityInterface): Promise<boolean>;
+  abstract setUID(name: string, value: number): Promise<boolean>;
 
   protected posixRegexMatch(
     pattern: string,
@@ -137,7 +139,7 @@ export default abstract class NymphDriver {
     return re.test(subject);
   }
 
-  public export(filename: string) {
+  public async export(filename: string) {
     try {
       const fhandle = fs.openSync(filename, 'w');
       if (!fhandle) {
@@ -153,24 +155,24 @@ export default abstract class NymphDriver {
     return true;
   }
 
-  public exportPrint() {
+  public async exportPrint() {
     this.exportEntities((line: string) => {
       console.log(line);
     });
     return true;
   }
 
-  protected importFromFile(
+  protected async importFromFile(
     filename: string,
     saveEntityCallback: (
       guid: string,
       tags: string[],
       sdata: SerializedEntityData,
       etype: string
-    ) => void,
-    saveUIDCallback: (name: string, value: number) => void,
-    startTransactionCallback: (() => void) | null = null,
-    commitTransactionCallback: (() => void) | null = null
+    ) => Promise<void>,
+    saveUIDCallback: (name: string, value: number) => Promise<void>,
+    startTransactionCallback: (() => Promise<void>) | null = null,
+    commitTransactionCallback: (() => Promise<void>) | null = null
   ) {
     let rl: ReadLines;
     try {
@@ -184,7 +186,7 @@ export default abstract class NymphDriver {
     let tags: string[] = [];
     let etype = '__undefined';
     if (startTransactionCallback) {
-      startTransactionCallback();
+      await startTransactionCallback();
     }
     while ((line = rl.next())) {
       const text = line.toString('utf8');
@@ -198,11 +200,11 @@ export default abstract class NymphDriver {
       const uidMatch = text.match(/^\s*<([^>]+)>\[(\d+)\]\s*$/);
       if (uidMatch) {
         // Add the UID.
-        saveUIDCallback(uidMatch[1], Number(uidMatch[2]));
+        await saveUIDCallback(uidMatch[1], Number(uidMatch[2]));
       } else if (entityMatch) {
         // Save the current entity.
         if (guid) {
-          saveEntityCallback(guid, tags, sdata, etype);
+          await saveEntityCallback(guid, tags, sdata, etype);
           guid = null;
           tags = [];
           sdata = {};
@@ -223,10 +225,10 @@ export default abstract class NymphDriver {
     }
     // Save the last entity.
     if (guid) {
-      saveEntityCallback(guid, tags, sdata, etype);
+      await saveEntityCallback(guid, tags, sdata, etype);
     }
     if (commitTransactionCallback) {
-      commitTransactionCallback();
+      await commitTransactionCallback();
     }
     return true;
   }
@@ -480,12 +482,12 @@ export default abstract class NymphDriver {
     delete this.entityCache[guid];
   }
 
-  public deleteEntity(entity: EntityInterface) {
+  public async deleteEntity(entity: EntityInterface) {
     const className = (entity.constructor as any).class as string;
     if (entity.guid == null) {
       return false;
     }
-    const ret = this.deleteEntityByID(entity.guid, className);
+    const ret = await this.deleteEntityByID(entity.guid, className);
     if (ret) {
       entity.guid = null;
       entity.cdate = null;
@@ -637,12 +639,67 @@ export default abstract class NymphDriver {
     return queryParts;
   }
 
+  /**
+   * Get the first entity to match all options/selectors, synchronously.
+   *
+   * This should really only be used internally by the Entity class. It's a bad
+   * idea to get entities synchronously. The Entity class uses this to load
+   * sleeping references.
+   *
+   * @param options The options.
+   * @param selectors Unlimited optional selectors to search for, or a single GUID. If none are given, all entities are searched for the given options.
+   * @returns An entity, or null on failure or nothing found.
+   */
+  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    ...selectors: Selector[]
+  ): string | null;
+  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    ...selectors: Selector[]
+  ): ReturnType<T['factory']> | null;
+  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    guid: string
+  ): string | null;
+  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    guid: string
+  ): ReturnType<T['factory']> | null;
+  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> = {},
+    ...selectors: Selector[] | string[]
+  ): ReturnType<T['factory']> | string | null {
+    // Set up options and selectors.
+    if (typeof selectors[0] === 'string') {
+      selectors = [{ type: '&', guid: selectors[0] }];
+    }
+    options.limit = 1;
+    const entities = this.getEntitiesSync(
+      options,
+      ...(selectors as Selector[])
+    );
+    if (!entities || !entities.length) {
+      return null;
+    }
+    return entities[0];
+  }
+
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     selectors: Selector[],
     typesAlreadyChecked: (keyof Selector)[],
-    rowFetchCallback: (result: any) => any,
-    freeResultCallback: (result: any) => void,
+    performQueryCallback: (
+      options: Options<T>,
+      formattedSelectors: FormattedSelector[],
+      etype: string
+    ) => {
+      result: any;
+      fullCoverage: boolean;
+      limitOffsetCoverage: boolean;
+    },
+    rowFetchCallback: () => any,
+    freeResultCallback: () => void,
     getGUIDCallback: (row: any) => string,
     getTagsAndDatesCallback: (row: any) => {
       tags: string[];
@@ -653,13 +710,22 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): string[];
+  ): { result: any; process: () => string[] };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
     typesAlreadyChecked: (keyof Selector)[],
-    rowFetchCallback: (result: any) => any,
-    freeResultCallback: (result: any) => void,
+    performQueryCallback: (
+      options: Options<T>,
+      formattedSelectors: FormattedSelector[],
+      etype: string
+    ) => {
+      result: any;
+      fullCoverage: boolean;
+      limitOffsetCoverage: boolean;
+    },
+    rowFetchCallback: () => any,
+    freeResultCallback: () => void,
     getGUIDCallback: (row: any) => string,
     getTagsAndDatesCallback: (row: any) => {
       tags: string[];
@@ -670,13 +736,22 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): ReturnType<T['factory']>[];
+  ): { result: any; process: () => ReturnType<T['factory']>[] };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
     typesAlreadyChecked: (keyof Selector)[],
-    rowFetchCallback: (result: any) => any,
-    freeResultCallback: (result: any) => void,
+    performQueryCallback: (
+      options: Options<T>,
+      formattedSelectors: FormattedSelector[],
+      etype: string
+    ) => {
+      result: any;
+      fullCoverage: boolean;
+      limitOffsetCoverage: boolean;
+    },
+    rowFetchCallback: () => any,
+    freeResultCallback: () => void,
     getGUIDCallback: (row: any) => string,
     getTagsAndDatesCallback: (row: any) => {
       tags: string[];
@@ -687,8 +762,8 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): ReturnType<T['factory']>[] | string[] {
-    if (!this.connected) {
+  ): { result: any; process: () => ReturnType<T['factory']>[] | string[] } {
+    if (!this.isConnected()) {
       throw new UnableToConnectError('not connected to DB');
     }
     for (const key in selectors) {
@@ -749,101 +824,110 @@ export default abstract class NymphDriver {
                 : [selectors[0].tag])
             ))
         ) {
-          return options.return === 'guid' ? [entity.guid] : [entity];
+          const guid = entity.guid;
+          return {
+            result: Promise.resolve(null),
+            process: () => (options.return === 'guid' ? [guid] : [entity]),
+          };
         }
       }
     }
 
     const formattedSelectors = this.formatSelectors(selectors);
-    const { result, fullCoverage, limitOffsetCoverage } = this.performQuery(
+    const { result, fullCoverage, limitOffsetCoverage } = performQueryCallback(
       options,
       formattedSelectors,
       etype
     );
 
-    let row = rowFetchCallback(result);
-    while (row != null) {
-      const guid = getGUIDCallback(row);
-      const tagsAndDates = getTagsAndDatesCallback(row);
-      const tags = tagsAndDates.tags;
-      const cdate = tagsAndDates.cdate;
-      const mdate = tagsAndDates.mdate;
-      let dataNameAndSValue = getDataNameAndSValueCallback(row);
-      // Data.
-      const data: EntityData = {};
-      // Serialized data.
-      const sdata: SerializedEntityData = {};
-      if (dataNameAndSValue.name !== '') {
-        // This do will keep going and adding the data until the
-        // next entity is reached. $row will end on the next entity.
-        do {
-          dataNameAndSValue = getDataNameAndSValueCallback(row);
-          sdata[dataNameAndSValue.name] = dataNameAndSValue.svalue;
-          row = rowFetchCallback(result);
-        } while (row != null && getGUIDCallback(row) === guid);
-      } else {
-        // Make sure that $row is incremented :)
-        row = rowFetchCallback(result);
-      }
-      // Check all conditions.
-      let passed: boolean;
-      if (fullCoverage) {
-        passed = true;
-      } else {
-        passed = this.checkData(
-          data,
-          sdata,
-          selectors,
-          null,
-          null,
-          typesAlreadyChecked
-        );
-      }
-      if (passed) {
-        if (
-          typeof options.offset === 'number' &&
-          !limitOffsetCoverage &&
-          ocount < options.offset
-        ) {
-          // We must be sure this entity is actually a match before
-          // incrementing the offset.
-          ocount++;
-          continue;
-        }
-        if (options.return === 'guid') {
-          // @ts-ignore: ts doesn't know the return type here.
-          entities.push(guid);
-        } else {
-          const entity = EntityClass.factory() as ReturnType<T['factory']>;
-          if (options.skipAc != null) {
-            entity.$useSkipAc(!!options.skipAc);
+    return {
+      result,
+      process: () => {
+        let row = rowFetchCallback();
+        while (row != null) {
+          const guid = getGUIDCallback(row);
+          const tagsAndDates = getTagsAndDatesCallback(row);
+          const tags = tagsAndDates.tags;
+          const cdate = tagsAndDates.cdate;
+          const mdate = tagsAndDates.mdate;
+          let dataNameAndSValue = getDataNameAndSValueCallback(row);
+          // Data.
+          const data: EntityData = {};
+          // Serialized data.
+          const sdata: SerializedEntityData = {};
+          if (dataNameAndSValue.name !== '') {
+            // This do will keep going and adding the data until the
+            // next entity is reached. $row will end on the next entity.
+            do {
+              dataNameAndSValue = getDataNameAndSValueCallback(row);
+              sdata[dataNameAndSValue.name] = dataNameAndSValue.svalue;
+              row = rowFetchCallback();
+            } while (row != null && getGUIDCallback(row) === guid);
+          } else {
+            // Make sure that $row is incremented :)
+            row = rowFetchCallback();
           }
-          entity.guid = guid;
-          entity.cdate = cdate;
-          entity.mdate = mdate;
-          entity.tags = tags;
-          entity.$putData(data, sdata);
-          if (Nymph.config.cache) {
-            this.pushCache(guid, cdate, mdate, tags, data, sdata);
+          // Check all conditions.
+          let passed: boolean;
+          if (fullCoverage) {
+            passed = true;
+          } else {
+            passed = this.checkData(
+              data,
+              sdata,
+              selectors,
+              null,
+              null,
+              typesAlreadyChecked
+            );
           }
-          // @ts-ignore: ts doesn't know the return type here.
-          entities.push(entity);
-        }
-        if (!limitOffsetCoverage) {
-          count++;
-          if (options.limit != null && count >= options.limit) {
-            break;
+          if (passed) {
+            if (
+              typeof options.offset === 'number' &&
+              !limitOffsetCoverage &&
+              ocount < options.offset
+            ) {
+              // We must be sure this entity is actually a match before
+              // incrementing the offset.
+              ocount++;
+              continue;
+            }
+            if (options.return === 'guid') {
+              // @ts-ignore: ts doesn't know the return type here.
+              entities.push(guid);
+            } else {
+              const entity = EntityClass.factory() as ReturnType<T['factory']>;
+              if (options.skipAc != null) {
+                entity.$useSkipAc(!!options.skipAc);
+              }
+              entity.guid = guid;
+              entity.cdate = cdate;
+              entity.mdate = mdate;
+              entity.tags = tags;
+              entity.$putData(data, sdata);
+              if (Nymph.config.cache) {
+                this.pushCache(guid, cdate, mdate, tags, data, sdata);
+              }
+              // @ts-ignore: ts doesn't know the return type here.
+              entities.push(entity);
+            }
+            if (!limitOffsetCoverage) {
+              count++;
+              if (options.limit != null && count >= options.limit) {
+                break;
+              }
+            }
           }
         }
-      }
-    }
 
-    freeResultCallback(result);
+        freeResultCallback();
 
-    return entities;
+        return entities;
+      },
+    };
   }
 
-  protected saveEntityRowLike(
+  protected async saveEntityRowLike(
     entity: EntityInterface,
     saveNewEntityCallback: (
       entity: EntityInterface,
@@ -853,7 +937,7 @@ export default abstract class NymphDriver {
       sdata: SerializedEntityData,
       cdate: number,
       etype: string
-    ) => boolean,
+    ) => Promise<boolean>,
     saveExistingEntityCallback: (
       entity: EntityInterface,
       guid: string,
@@ -862,9 +946,11 @@ export default abstract class NymphDriver {
       sdata: SerializedEntityData,
       mdate: number,
       etype: string
-    ) => boolean,
-    startTransactionCallback: (() => void) | null = null,
-    commitTransactionCallback: ((success: boolean) => boolean) | null = null
+    ) => Promise<boolean>,
+    startTransactionCallback: (() => Promise<void>) | null = null,
+    commitTransactionCallback:
+      | ((success: boolean) => Promise<boolean>)
+      | null = null
   ) {
     // Get a modified date.
     const mdate = Date.now();
@@ -874,13 +960,13 @@ export default abstract class NymphDriver {
     const EntityClass = entity.constructor as EntityConstructor;
     const etype = EntityClass.ETYPE;
     if (startTransactionCallback) {
-      startTransactionCallback();
+      await startTransactionCallback();
     }
     let success = false;
     if (entity.guid == null) {
       const cdate = mdate;
       const newId = newGUID();
-      success = saveNewEntityCallback(
+      success = await saveNewEntityCallback(
         entity,
         newId,
         tags,
@@ -899,7 +985,7 @@ export default abstract class NymphDriver {
       if (Nymph.config.cache) {
         this.cleanCache(entity.guid);
       }
-      success = saveExistingEntityCallback(
+      success = await saveExistingEntityCallback(
         entity,
         entity.guid,
         tags,
@@ -913,7 +999,7 @@ export default abstract class NymphDriver {
       }
     }
     if (commitTransactionCallback) {
-      success = commitTransactionCallback(success);
+      success = await commitTransactionCallback(success);
     }
     // Cache the entity.
     if (success && Nymph.config.cache) {
@@ -948,7 +1034,7 @@ export default abstract class NymphDriver {
     }
     this.entityCount[guid]++;
     if (guid in this.entityCache) {
-      const entity = Nymph.getEntityClass(className)?.factory() as T;
+      const entity = Nymph.getEntityClass(className).factory() as T;
       if (entity) {
         entity.$useSkipAc(!!useSkipAc);
         entity.guid = guid;

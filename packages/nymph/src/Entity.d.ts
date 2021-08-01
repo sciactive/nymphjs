@@ -60,7 +60,7 @@ export interface DataObjectInterface {
    *
    * @returns True on success, false on failure.
    */
-  $delete(): boolean;
+  $delete(): Promise<boolean>;
   /**
    * Perform a more strict comparison of this object to another.
    *
@@ -100,7 +100,7 @@ export interface DataObjectInterface {
    *
    * @returns True on success, false on failure.
    */
-  $save(): boolean;
+  $save(): Promise<boolean>;
   /**
    * The object's data.
    */

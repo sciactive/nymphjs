@@ -20,7 +20,7 @@ describe('Entity', () => {
     expect(testEntity.boolean).toEqual(true);
   });
 
-  it('assignments work', () => {
+  it('assignments work', async () => {
     // Assign some variables.
     testEntity.name = 'Entity Test';
     testEntity.null = null;
@@ -34,22 +34,22 @@ describe('Entity', () => {
     expect(testEntity.array).toEqual(['full', 'of', 'values', 500]);
     expect(testEntity.number).toEqual(30);
 
-    expect(testEntity.$save()).toEqual(true);
+    expect(await testEntity.$save()).toEqual(true);
     expect(typeof testEntity.guid).toEqual('string');
 
     entityReferenceTest = TestModel.factory();
     entityReferenceTest.string = 'wrong';
-    expect(entityReferenceTest.$save()).toEqual(true);
+    expect(await entityReferenceTest.$save()).toEqual(true);
     entityReferenceGuid = entityReferenceTest.guid as string;
     testEntity.reference = entityReferenceTest;
     testEntity.refArray = [entityReferenceTest];
     testEntity.refObject = {
       entity: entityReferenceTest,
     };
-    expect(testEntity.$save()).toEqual(true);
+    expect(await testEntity.$save()).toEqual(true);
 
     entityReferenceTest.test = 'good';
-    expect(entityReferenceTest.$save()).toEqual(true);
+    expect(await entityReferenceTest.$save()).toEqual(true);
   });
 
   it('comparisons work', () => {
@@ -105,27 +105,27 @@ describe('Entity', () => {
     expect(testEntity.boolean).toEqual(true);
   });
 
-  it('refresh updates', () => {
+  it('refresh updates', async () => {
     expect(testEntity.string).toEqual('test');
     testEntity.string = 'updated';
-    expect(testEntity.$save()).toEqual(true);
+    expect(await testEntity.$save()).toEqual(true);
     testEntity.$refresh();
-    expect(testEntity.$save()).toEqual(true);
+    expect(await testEntity.$save()).toEqual(true);
 
     const retrieve = TestModel.factory(testEntity.guid as string);
     expect(retrieve.string).toEqual('updated');
     retrieve.string = 'test';
-    expect(retrieve.$save()).toBe(true);
+    expect(await retrieve.$save()).toBe(true);
 
     testEntity.$refresh();
     expect(testEntity.string).toEqual('test');
   });
 
-  it('conflict fails to save', () => {
+  it('conflict fails to save', async () => {
     const testEntityCopy = TestModel.factory(testEntity.guid as string);
-    expect(testEntityCopy.$save()).toEqual(true);
+    expect(await testEntityCopy.$save()).toEqual(true);
 
-    expect(testEntity.$save()).toEqual(false);
+    expect(await testEntity.$save()).toEqual(false);
 
     testEntity.$refresh();
 
@@ -144,7 +144,7 @@ describe('Entity', () => {
     ]);
   });
 
-  it('tags work', () => {
+  it('tags work', async () => {
     expect(testEntity.$hasTag('test')).toEqual(true);
     testEntity.$addTag('test', 'test2');
     expect(testEntity.$hasTag('test', 'test2')).toEqual(true);
@@ -162,12 +162,12 @@ describe('Entity', () => {
 
     // Remove all tags.
     testEntity.$removeTag('test');
-    expect(testEntity.$save()).toEqual(true);
+    expect(await testEntity.$save()).toEqual(true);
     expect(testEntity.$refresh()).toEqual(true);
     expect(testEntity.$hasTag('test')).toEqual(false);
     expect(testEntity.$getTags()).toEqual([]);
     testEntity.$addTag('test');
-    expect(testEntity.$save()).toEqual(true);
+    expect(await testEntity.$save()).toEqual(true);
     expect(testEntity.$hasTag('test')).toEqual(true);
   });
 
@@ -349,11 +349,11 @@ describe('Entity', () => {
     expect(testEntity.$refresh()).toEqual(true);
   });
 
-  it("conflicting JSON doesn't work", () => {
+  it("conflicting JSON doesn't work", async () => {
     // Test that an old JSON payload causes a conflict.
     const json = JSON.stringify(testEntity);
 
-    expect(testEntity.$save()).toEqual(true);
+    expect(await testEntity.$save()).toEqual(true);
 
     let thrown = false;
     let thrownName: string = '';

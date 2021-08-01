@@ -8,7 +8,6 @@ import {
   SerializedEntityData,
 } from '../../Entity.d';
 import {
-  ClassNotAvailableError,
   InvalidParametersError,
   NotConfiguredError,
   QueryFailedError,
@@ -18,7 +17,6 @@ import {
   SQLite3DriverConfig,
   SQLite3DriverConfigDefaults as defaults,
 } from './conf';
-import { version } from '../../../package.json';
 import { FormattedSelector, Options, Selector } from '../../Nymph.d';
 import { xor } from '../../utils';
 import Nymph from '../../Nymph';
@@ -32,6 +30,36 @@ export default class SQLite3Driver extends NymphDriver {
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: SQLite3.Database;
+  protected typesAlreadyChecked: (keyof Selector)[] = [
+    'guid',
+    '!guid',
+    'tag',
+    '!tag',
+    'ref',
+    '!ref',
+    'defined',
+    '!defined',
+    'truthy',
+    '!truthy',
+    'equal',
+    '!equal',
+    'like',
+    '!like',
+    'ilike',
+    '!ilike',
+    'match',
+    '!match',
+    'imatch',
+    '!imatch',
+    'gt',
+    '!gt',
+    'gte',
+    '!gte',
+    'lt',
+    '!lt',
+    'lte',
+    '!lte',
+  ];
 
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
@@ -55,7 +83,7 @@ export default class SQLite3Driver extends NymphDriver {
    *
    * @returns Whether this instance is connected to a SQLite3 database after the method has run.
    */
-  public connect() {
+  public async connect() {
     const { filename, fileMustExist, timeout, readonly, verbose } = this.config;
     // Connecting
     if (!this.connected) {
@@ -97,7 +125,7 @@ export default class SQLite3Driver extends NymphDriver {
    *
    * @returns Whether this instance is connected to a SQLite3 database after the method has run.
    */
-  public disconnect() {
+  public async disconnect() {
     if (this.connected) {
       this.link.exec('PRAGMA optimize;');
       this.link.close();
@@ -347,18 +375,13 @@ export default class SQLite3Driver extends NymphDriver {
     return this.query(() => this.link.prepare(query).run(params), query, etype);
   }
 
-  public deleteEntityByID(
+  public async deleteEntityByID(
     guid: string,
     className?: EntityConstructor | string | null
   ) {
     let EntityClass: EntityConstructor;
     if (typeof className === 'string' || className == null) {
       const GetEntityClass = Nymph.getEntityClass(className ?? 'Entity');
-      if (GetEntityClass == null) {
-        throw new ClassNotAvailableError(
-          'Tried to delete entity with an unavailable class: ' + className
-        );
-      }
       EntityClass = GetEntityClass;
     } else {
       EntityClass = className;
@@ -418,7 +441,7 @@ export default class SQLite3Driver extends NymphDriver {
     return true;
   }
 
-  public deleteUID(name: string) {
+  public async deleteUID(name: string) {
     if (!name) {
       throw new InvalidParametersError('Name not given for UID');
     }
@@ -436,10 +459,9 @@ export default class SQLite3Driver extends NymphDriver {
     return true;
   }
 
-  protected exportEntities(writeLine: (line: string) => void) {
+  protected async exportEntities(writeLine: (line: string) => void) {
     writeLine('#nex2');
     writeLine('# Nymph Entity Exchange v2');
-    writeLine('# Nymph.js v' + version);
     writeLine('# http://nymph.io');
     writeLine('#');
     writeLine('# Generation Time: ' + new Date().toLocaleString());
@@ -1238,56 +1260,44 @@ export default class SQLite3Driver extends NymphDriver {
     };
   }
 
-  public getEntities<T extends EntityConstructor = EntityConstructor>(
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'guid' },
+    ...selectors: Selector[]
+  ): Promise<string[]>;
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options?: Options<T>,
+    ...selectors: Selector[]
+  ): Promise<ReturnType<T['factory']>[]>;
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> = {},
+    ...selectors: Selector[]
+  ): Promise<ReturnType<T['factory']>[] | string[]> {
+    return this.getEntitiesSync(options, ...selectors);
+  }
+
+  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): string[];
-  public getEntities<T extends EntityConstructor = EntityConstructor>(
+  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
   ): ReturnType<T['factory']>[];
-  public getEntities<T extends EntityConstructor = EntityConstructor>(
+  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
   ): ReturnType<T['factory']>[] | string[] {
-    return this.getEntitesRowLike(
+    const { result, process } = this.getEntitesRowLike<T>(
       options,
       selectors,
-      [
-        'guid',
-        '!guid',
-        'tag',
-        '!tag',
-        'ref',
-        '!ref',
-        'defined',
-        '!defined',
-        'truthy',
-        '!truthy',
-        'equal',
-        '!equal',
-        'like',
-        '!like',
-        'ilike',
-        '!ilike',
-        'match',
-        '!match',
-        'imatch',
-        '!imatch',
-        'gt',
-        '!gt',
-        'gte',
-        '!gte',
-        'lt',
-        '!lt',
-        'lte',
-        '!lte',
-      ],
-      (result) => {
-        const next = result.next();
+      this.typesAlreadyChecked,
+      (options, formattedSelectors, etype) =>
+        this.performQuery(options, formattedSelectors, etype),
+      () => {
+        const next: any = result.next();
         return next.done ? null : next.value;
       },
-      (_result) => undefined,
+      () => undefined,
       (row) => row.guid,
       (row) => ({
         tags: row.tags.length > 2 ? row.tags.slice(1, -1).split(',') : [],
@@ -1299,9 +1309,10 @@ export default class SQLite3Driver extends NymphDriver {
         svalue: row.value,
       })
     );
+    return process();
   }
 
-  public getUID(name: string) {
+  public async getUID(name: string) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
@@ -1318,11 +1329,11 @@ export default class SQLite3Driver extends NymphDriver {
     return (result?.cur_uid as number | null) ?? null;
   }
 
-  public import(filename: string) {
+  public async import(filename: string) {
     this.checkReadOnlyMode();
     return this.importFromFile(
       filename,
-      (guid, tags, sdata, etype) => {
+      async (guid, tags, sdata, etype) => {
         this.queryRun(
           `DELETE FROM ${SQLite3Driver.escape(
             `${this.prefix}entities_${etype}`
@@ -1432,7 +1443,7 @@ export default class SQLite3Driver extends NymphDriver {
           }
         }
       },
-      (name, curUid) => {
+      async (name, curUid) => {
         this.queryRun(
           `DELETE FROM ${SQLite3Driver.escape(
             `${this.prefix}uids`
@@ -1455,16 +1466,16 @@ export default class SQLite3Driver extends NymphDriver {
           }
         );
       },
-      () => {
+      async () => {
         this.queryRun("SAVEPOINT 'import';");
       },
-      () => {
+      async () => {
         this.queryRun("RELEASE 'import';");
       }
     );
   }
 
-  public newUID(name: string) {
+  public async newUID(name: string) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
@@ -1512,7 +1523,7 @@ export default class SQLite3Driver extends NymphDriver {
     return curUid as number;
   }
 
-  public renameUID(oldName: string, newName: string) {
+  public async renameUID(oldName: string, newName: string) {
     if (oldName == null || newName == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
@@ -1531,7 +1542,7 @@ export default class SQLite3Driver extends NymphDriver {
     return true;
   }
 
-  public saveEntity(entity: EntityInterface) {
+  public async saveEntity(entity: EntityInterface) {
     this.checkReadOnlyMode();
     const insertData = (
       guid: string,
@@ -1594,7 +1605,7 @@ export default class SQLite3Driver extends NymphDriver {
     };
     return this.saveEntityRowLike(
       entity,
-      (_entity, guid, tags, data, sdata, cdate, etype) => {
+      async (_entity, guid, tags, data, sdata, cdate, etype) => {
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
             `${this.prefix}entities_${etype}`
@@ -1611,7 +1622,7 @@ export default class SQLite3Driver extends NymphDriver {
         insertData(guid, data, sdata, etype);
         return true;
       },
-      (entity, guid, tags, data, sdata, mdate, etype) => {
+      async (entity, guid, tags, data, sdata, mdate, etype) => {
         const info = this.queryRun(
           `UPDATE ${SQLite3Driver.escape(
             `${this.prefix}entities_${etype}`
@@ -1666,10 +1677,10 @@ export default class SQLite3Driver extends NymphDriver {
         }
         return success;
       },
-      () => {
+      async () => {
         this.queryRun("SAVEPOINT 'save';");
       },
-      (success) => {
+      async (success) => {
         if (success) {
           this.queryRun("RELEASE 'save';");
         } else {
@@ -1680,7 +1691,7 @@ export default class SQLite3Driver extends NymphDriver {
     );
   }
 
-  public setUID(name: string, curUid: number) {
+  public async setUID(name: string, curUid: number) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }

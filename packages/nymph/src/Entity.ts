@@ -10,11 +10,7 @@ import {
   EntityReference,
   SerializedEntityData,
 } from './Entity.d';
-import {
-  ClassNotAvailableError,
-  EntityConflictError,
-  InvalidParametersError,
-} from './errors';
+import { EntityConflictError, InvalidParametersError } from './errors';
 import Nymph from './Nymph';
 import {
   entitiesToReferences,
@@ -263,7 +259,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
     if (guid) {
-      const entity = Nymph.getEntity(
+      const entity = Nymph.driver.getEntitySync(
         { class: this.constructor as EntityConstructor },
         { type: '&', guid: guid }
       );
@@ -354,11 +350,6 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
   public static factoryReference(reference: EntityReference) {
     const className = reference[2];
     const EntityClass = Nymph.getEntityClass(className);
-    if (!EntityClass) {
-      throw new ClassNotAvailableError(
-        `factoryReference called for a class that can't be found, ${className}.`
-      );
-    }
     const entity = new EntityClass();
     entity.$referenceSleep(reference);
     return entity;
@@ -419,10 +410,10 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
     return this.$clientEnabledMethods;
   }
 
-  public $delete(): boolean {
+  public async $delete(): Promise<boolean> {
     this.$referenceWake();
 
-    return Nymph.deleteEntity(this);
+    return await Nymph.deleteEntity(this);
   }
 
   public $equals(object: any) {
@@ -748,13 +739,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
       return true;
     }
     const EntityClass = Nymph.getEntityClass(this.$sleepingReference[2]);
-    if (!EntityClass) {
-      throw new ClassNotAvailableError(
-        'Tried to wake sleeping reference entity that refers to a class ' +
-          `that can't be found, ${this.$sleepingReference[2]}.`
-      );
-    }
-    const entity = Nymph.getEntity(
+    const entity = Nymph.driver.getEntitySync(
       {
         class: EntityClass,
         skipAc: this.$skipAc,
@@ -780,7 +765,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
     if (this.guid == null) {
       return false;
     }
-    const refresh = Nymph.getEntity(
+    const refresh = Nymph.driver.getEntitySync(
       {
         class: this.constructor as EntityConstructor,
         skipCache: true,
@@ -804,10 +789,10 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
     this.tags = difference(this.tags, tags);
   }
 
-  public $save(): boolean {
+  public async $save(): Promise<boolean> {
     this.$referenceWake();
 
-    return Nymph.saveEntity(this);
+    return await Nymph.saveEntity(this);
   }
 
   public $toReference() {
