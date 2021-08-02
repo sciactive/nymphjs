@@ -1,5 +1,5 @@
-import { QueriesTest, UIDTest, ExportImportTest } from '../testArtifacts';
-import Nymph from '../../Nymph';
+import Nymph, { QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+
 import SQLite3Driver from './SQLite3Driver';
 
 const sqliteConfig = {

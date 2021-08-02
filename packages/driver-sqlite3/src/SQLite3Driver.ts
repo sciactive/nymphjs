@@ -1,21 +1,20 @@
 import SQLite3 from 'better-sqlite3';
-
-import { NymphDriver } from '..';
-import {
+import Nymph, {
+  NymphDriver,
   EntityConstructor,
   EntityData,
   EntityInterface,
   SerializedEntityData,
-} from '../../Entity.d';
-import {
   InvalidParametersError,
   NotConfiguredError,
   QueryFailedError,
   UnableToConnectError,
-} from '../../errors';
-import { FormattedSelector, Options, Selector } from '../../Nymph.d';
-import { xor } from '../../utils';
-import Nymph from '../../Nymph';
+  FormattedSelector,
+  Options,
+  Selector,
+  xor,
+} from '@nymphjs/nymph';
+
 import {
   SQLite3DriverConfig,
   SQLite3DriverConfigDefaults as defaults,

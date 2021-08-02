@@ -3,23 +3,22 @@ import cp from 'child_process';
 import { default as MySQLType } from '@types/mysql';
 // @ts-ignore: replace with mysql once https://github.com/mysqljs/mysql/pull/2233 is merged.
 import vlaskyMysql from '@vlasky/mysql';
-
-import { NymphDriver } from '..';
-import {
+import Nymph, {
+  NymphDriver,
   EntityConstructor,
   EntityData,
   EntityInterface,
   SerializedEntityData,
-} from '../../Entity.d';
-import {
   InvalidParametersError,
   NotConfiguredError,
   QueryFailedError,
   UnableToConnectError,
-} from '../../errors';
-import { FormattedSelector, Options, Selector } from '../../Nymph.d';
-import { xor } from '../../utils';
-import Nymph from '../../Nymph';
+  FormattedSelector,
+  Options,
+  Selector,
+  xor,
+} from '@nymphjs/nymph';
+
 import {
   MySQLDriverConfig,
   MySQLDriverConfigDefaults as defaults,
@@ -115,7 +114,7 @@ export default class MySQLDriver extends NymphDriver {
    */
   public async disconnect() {
     if (this.connected) {
-      await this.link.end();
+      await new Promise((resolve) => this.link.end(() => resolve(0)));
       this.connected = false;
     }
     return this.connected;

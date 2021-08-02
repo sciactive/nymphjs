@@ -184,7 +184,7 @@ export interface EntityInterface extends DataObjectInterface {
    * @param input The input data. Please note, this will be modified (destroyed).
    * @param allowConflict Allow to accept data that is older than the current data.
    */
-  $jsonAcceptData(input: EntityJson, allowConflict = false): void;
+  $jsonAcceptData(input: EntityJson, allowConflict?: boolean): void;
   /**
    * Accept JSON patch from the client.
    *
@@ -198,7 +198,7 @@ export interface EntityInterface extends DataObjectInterface {
    * @param patch The patch data. Please note, this will be modified (destroyed).
    * @param allowConflict Allow to accept data that is older than the current data.
    */
-  $jsonAcceptPatch(patch: EntityPatch, allowConflict = false): void;
+  $jsonAcceptPatch(patch: EntityPatch, allowConflict?: boolean): void;
   /**
    * Used to set the data.
    *

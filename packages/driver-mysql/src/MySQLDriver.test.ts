@@ -1,5 +1,5 @@
-import { QueriesTest, UIDTest, ExportImportTest } from '../testArtifacts';
-import Nymph from '../../Nymph';
+import Nymph, { QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+
 import MySQLDriver from './MySQLDriver';
 
 const mysqlConfig = {
@@ -15,4 +15,8 @@ describe('MySQLDriver', () => {
   QueriesTest(it);
   UIDTest(it);
   ExportImportTest(it);
+
+  afterAll(async () => {
+    await Nymph.driver.disconnect(); // avoid jest open handle error
+  });
 });

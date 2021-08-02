@@ -1,8 +1,8 @@
 import { Config, ConfigDefaults as defaults } from './conf';
-import { NymphDriver } from './drivers';
-import { EntityConstructor, EntityInterface } from './Entity.d';
+import { NymphDriver } from './driver';
+import { EntityConstructor, EntityInterface } from './Entity.types';
 import { ClassNotAvailableError } from './errors';
-import { Selector, Options } from './Nymph.d';
+import { Selector, Options } from './Nymph.types';
 
 /**
  * An object relational mapper for Node.js.

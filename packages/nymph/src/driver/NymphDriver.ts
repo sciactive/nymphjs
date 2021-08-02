@@ -9,10 +9,10 @@ import {
   EntityData,
   EntityInterface,
   SerializedEntityData,
-} from '../Entity.d';
+} from '../Entity.types';
 import { InvalidParametersError, UnableToConnectError } from '../errors';
 import Nymph from '../Nymph';
-import { Selector, Options, FormattedSelector } from '../Nymph.d';
+import { Selector, Options, FormattedSelector } from '../Nymph.types';
 import { xor } from '../utils';
 
 // from: https://stackoverflow.com/a/6969486/664915

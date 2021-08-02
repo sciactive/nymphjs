@@ -1,4 +1,4 @@
-import { EntityReference } from './Entity.d';
+import { EntityReference } from './Entity.types';
 import { default as Nymph } from './Nymph';
 
 export function xor(a: any, b: any): boolean {

@@ -1,5 +1,5 @@
-import { EntityConstructor, EntityInterface, EntityJson } from './Entity.d';
-import { Options, Selector } from './Nymph.d';
+import { EntityConstructor, EntityInterface, EntityJson } from './Entity.types';
+import { Options, Selector } from './Nymph.types';
 import newGUID from './newGUID';
 import { ClassNotAvailableError } from './errors';
 

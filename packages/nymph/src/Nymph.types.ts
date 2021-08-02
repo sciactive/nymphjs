@@ -1,4 +1,4 @@
-import { EntityConstructor, EntityInterface } from './Entity.d';
+import { EntityConstructor, EntityInterface } from './Entity.types';
 
 export type Options<T extends EntityConstructor = EntityConstructor> = {
   class?: T;
@@ -62,7 +62,7 @@ type PrimitiveSelector = {
   ref?: [string, EntityInterface | string];
   '!ref'?: PrimitiveSelector['ref'];
 
-  qref?: [string, [Options, ...PrimitiveSelector]];
+  qref?: [string, [Options, ...PrimitiveSelector[]]];
   '!qref'?: PrimitiveSelector['qref'];
 
   selector?: PrimitiveSelector;
@@ -117,7 +117,7 @@ export type Selector = {
   ref?: Clause<PrimitiveSelector['ref']>;
   '!ref'?: Clause<PrimitiveSelector['ref']>;
 
-  qref?: [string, [Options, ...Selector]];
+  qref?: [string, [Options, ...Selector[]]];
   '!qref'?: Selector['qref'];
 
   selector?: Clause<Selector>;
@@ -172,7 +172,7 @@ export type FormattedSelector = {
   ref?: PrimitiveSelector['ref'][];
   '!ref'?: PrimitiveSelector['ref'][];
 
-  qref?: [string, [Options, ...FormattedSelector]][];
+  qref?: [string, [Options, ...FormattedSelector[]]][];
   '!qref'?: FormattedSelector['qref'];
 
   selector?: FormattedSelector[];

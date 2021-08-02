@@ -9,7 +9,7 @@ import {
   EntityPatch,
   EntityReference,
   SerializedEntityData,
-} from './Entity.d';
+} from './Entity.types';
 import { EntityConflictError, InvalidParametersError } from './errors';
 import Nymph from './Nymph';
 import {
