@@ -1452,6 +1452,7 @@ This one's zip code is 92064.`;
 export function UIDTest(it: (name: string, fn: () => void) => void) {
   it('delete old test data', async () => {
     expect(await Nymph.deleteUID('TestUID')).toEqual(true);
+    expect(await Nymph.deleteUID('NewUID')).toEqual(true);
   });
 
   it('new UID', async () => {

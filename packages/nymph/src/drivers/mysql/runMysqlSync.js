@@ -15,10 +15,9 @@ process.stdin.on('end', () => {
 async function run() {
   try {
     const { mysqlConfig, query, params } = JSON.parse(stdin);
-    const connection = mysql.createConnection(mysqlConfig);
-    connection.connect();
+    const pool = mysql.createPool(mysqlConfig);
     const [results, fields] = await new Promise((resolve, reject) =>
-      connection.query(query, params, (error, results, fields) => {
+      pool.query(query, params, (error, results, fields) => {
         if (error) {
           reject(error);
         }
@@ -32,7 +31,7 @@ async function run() {
       }),
       'utf8',
       () => {
-        connection.end(() => {
+        pool.end(() => {
           process.exit(0);
         });
       }

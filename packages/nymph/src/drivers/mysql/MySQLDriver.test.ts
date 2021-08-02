@@ -12,10 +12,6 @@ const mysqlConfig = {
 Nymph.init({ pubsub: false }, new MySQLDriver(mysqlConfig));
 
 describe('MySQLDriver', () => {
-  if (Nymph.driver.isConnected()) {
-    Nymph.driver.disconnect();
-    Nymph.driver.connect();
-  }
   QueriesTest(it);
   UIDTest(it);
   ExportImportTest(it);

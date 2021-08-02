@@ -6,7 +6,7 @@ export default {
   user: 'nymph',
   password: 'password',
   database: 'nymph',
-  link: null,
+  customPoolConfig: null,
   prefix: 'nymph_',
   engine: 'InnoDB',
   transactions: true,
