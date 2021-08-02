@@ -30,36 +30,6 @@ export default class SQLite3Driver extends NymphDriver {
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: SQLite3.Database;
-  protected typesAlreadyChecked: (keyof Selector)[] = [
-    'guid',
-    '!guid',
-    'tag',
-    '!tag',
-    'ref',
-    '!ref',
-    'defined',
-    '!defined',
-    'truthy',
-    '!truthy',
-    'equal',
-    '!equal',
-    'like',
-    '!like',
-    'ilike',
-    '!ilike',
-    'match',
-    '!match',
-    'imatch',
-    '!imatch',
-    'gt',
-    '!gt',
-    'gte',
-    '!gte',
-    'lt',
-    '!lt',
-    'lte',
-    '!lte',
-  ];
 
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
@@ -554,7 +524,6 @@ export default class SQLite3Driver extends NymphDriver {
     params: { [k: string]: any } = {},
     subquery = false
   ) {
-    let fullCoverage = true;
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -1137,7 +1106,6 @@ export default class SQLite3Driver extends NymphDriver {
                 params,
                 true
               );
-              fullCoverage = fullCoverage && subquery.fullCoverage;
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
               }
@@ -1173,11 +1141,11 @@ export default class SQLite3Driver extends NymphDriver {
         query = '(' + queryParts.join(') AND (') + ')';
       } else {
         let limit = '';
-        if (fullCoverage && 'limit' in options) {
+        if ('limit' in options) {
           limit = ` LIMIT ${Math.floor(Number(options.limit))}`;
         }
         let offset = '';
-        if (fullCoverage && 'offset' in options) {
+        if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
         const whereClause = queryParts.join(') AND (');
@@ -1199,11 +1167,11 @@ export default class SQLite3Driver extends NymphDriver {
         query = '';
       } else {
         let limit = '';
-        if (fullCoverage && 'limit' in options) {
+        if ('limit' in options) {
           limit = ` LIMIT ${Math.floor(Number(options.limit))}`;
         }
         let offset = '';
-        if (fullCoverage && 'offset' in options) {
+        if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
         if (limit || offset) {
@@ -1232,7 +1200,6 @@ export default class SQLite3Driver extends NymphDriver {
     return {
       query,
       params,
-      fullCoverage,
     };
   }
 
@@ -1242,10 +1209,8 @@ export default class SQLite3Driver extends NymphDriver {
     etype: string
   ): {
     result: any;
-    fullCoverage: boolean;
-    limitOffsetCoverage: boolean;
   } {
-    const { query, params, fullCoverage } = this.makeEntityQuery(
+    const { query, params } = this.makeEntityQuery(
       options,
       formattedSelectors,
       etype
@@ -1253,8 +1218,6 @@ export default class SQLite3Driver extends NymphDriver {
     const result = this.queryIter(query, { etype, params })[Symbol.iterator]();
     return {
       result,
-      fullCoverage,
-      limitOffsetCoverage: fullCoverage,
     };
   }
 
@@ -1288,7 +1251,6 @@ export default class SQLite3Driver extends NymphDriver {
     const { result, process } = this.getEntitesRowLike<T>(
       options,
       selectors,
-      this.typesAlreadyChecked,
       (options, formattedSelectors, etype) =>
         this.performQuery(options, formattedSelectors, etype),
       () => {

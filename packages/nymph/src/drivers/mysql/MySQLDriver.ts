@@ -37,36 +37,6 @@ export default class MySQLDriver extends NymphDriver {
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: MySQLType.Pool;
-  protected typesAlreadyChecked: (keyof Selector)[] = [
-    'guid',
-    '!guid',
-    'tag',
-    '!tag',
-    'ref',
-    '!ref',
-    'defined',
-    '!defined',
-    'truthy',
-    '!truthy',
-    'equal',
-    '!equal',
-    'like',
-    '!like',
-    'ilike',
-    '!ilike',
-    'match',
-    '!match',
-    'imatch',
-    '!imatch',
-    'gt',
-    '!gt',
-    'gte',
-    '!gte',
-    'lt',
-    '!lt',
-    'lte',
-    '!lte',
-  ];
 
   static escape(input: string) {
     return mysql.escapeId(input);
@@ -744,7 +714,6 @@ export default class MySQLDriver extends NymphDriver {
     params: { [k: string]: any } = {},
     subquery = false
   ) {
-    let fullCoverage = true;
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -1372,7 +1341,6 @@ export default class MySQLDriver extends NymphDriver {
                 params,
                 true
               );
-              fullCoverage = fullCoverage && subquery.fullCoverage;
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
               }
@@ -1408,13 +1376,13 @@ export default class MySQLDriver extends NymphDriver {
         query = '(' + queryParts.join(') AND (') + ')';
       } else {
         let limit = '';
-        if (fullCoverage && 'limit' in options) {
+        if ('limit' in options) {
           limit = ` LIMIT ${Math.floor(
             isNaN(Number(options.limit)) ? 0 : Number(options.limit)
           )}`;
         }
         let offset = '';
-        if (fullCoverage && 'offset' in options) {
+        if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(
             isNaN(Number(options.offset)) ? 0 : Number(options.offset)
           )}`;
@@ -1438,13 +1406,13 @@ export default class MySQLDriver extends NymphDriver {
         query = '';
       } else {
         let limit = '';
-        if (fullCoverage && 'limit' in options) {
+        if ('limit' in options) {
           limit = ` LIMIT ${Math.floor(
             isNaN(Number(options.limit)) ? 0 : Number(options.limit)
           )}`;
         }
         let offset = '';
-        if (fullCoverage && 'offset' in options) {
+        if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(
             isNaN(Number(options.offset)) ? 0 : Number(options.offset)
           )}`;
@@ -1475,7 +1443,6 @@ export default class MySQLDriver extends NymphDriver {
     return {
       query,
       params,
-      fullCoverage,
     };
   }
 
@@ -1485,10 +1452,8 @@ export default class MySQLDriver extends NymphDriver {
     etype: string
   ): {
     result: any;
-    fullCoverage: boolean;
-    limitOffsetCoverage: boolean;
   } {
-    const { query, params, fullCoverage } = this.makeEntityQuery(
+    const { query, params } = this.makeEntityQuery(
       options,
       formattedSelectors,
       etype
@@ -1498,8 +1463,6 @@ export default class MySQLDriver extends NymphDriver {
     );
     return {
       result,
-      fullCoverage,
-      limitOffsetCoverage: fullCoverage,
     };
   }
 
@@ -1509,10 +1472,8 @@ export default class MySQLDriver extends NymphDriver {
     etype: string
   ): {
     result: any;
-    fullCoverage: boolean;
-    limitOffsetCoverage: boolean;
   } {
-    const { query, params, fullCoverage } = this.makeEntityQuery(
+    const { query, params } = this.makeEntityQuery(
       options,
       formattedSelectors,
       etype
@@ -1522,8 +1483,6 @@ export default class MySQLDriver extends NymphDriver {
     ]();
     return {
       result,
-      fullCoverage,
-      limitOffsetCoverage: fullCoverage,
     };
   }
 
@@ -1543,7 +1502,6 @@ export default class MySQLDriver extends NymphDriver {
       // @ts-ignore: options is correct here.
       options,
       selectors,
-      this.typesAlreadyChecked,
       (options, formattedSelectors, etype) =>
         this.performQuery(options, formattedSelectors, etype),
       () => {
@@ -1583,7 +1541,6 @@ export default class MySQLDriver extends NymphDriver {
       // @ts-ignore: options is correct here.
       options,
       selectors,
-      this.typesAlreadyChecked,
       (options, formattedSelectors, etype) =>
         this.performQuerySync(options, formattedSelectors, etype),
       () => {

@@ -238,8 +238,7 @@ export default abstract class NymphDriver {
     sdata: SerializedEntityData,
     selectors: Selector[],
     guid: string | null = null,
-    tags: string[] | null = null,
-    typesAlreadyChecked: (keyof Selector)[] = []
+    tags: string[] | null = null
   ) {
     const formattedSelectors = this.formatSelectors(selectors);
 
@@ -256,22 +255,15 @@ export default abstract class NymphDriver {
           continue;
         }
 
-        if (key === 'selector') {
+        const clauseNot = key.substr(0, 1) === '!';
+        if (key === 'selector' || key === '!selector') {
           const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-          pass = this.checkData(
-            data,
-            sdata,
-            tmpArr,
-            guid,
-            tags,
-            typesAlreadyChecked
+          pass = xor(
+            this.checkData(data, sdata, tmpArr, guid, tags),
+            xor(typeIsNot, clauseNot)
           );
         } else {
-          const clauseNot = key.substr(0, 1) === '!';
-          if (typesAlreadyChecked.indexOf(key) !== -1) {
-            // Skip because it has already been checked. (By the query.)
-            pass = true;
-          } else if (key === 'qref') {
+          if (key === 'qref' || key === '!qref') {
             // TODO: implement qref clauses
             throw new Error('not implemented');
           } else {
@@ -688,15 +680,12 @@ export default abstract class NymphDriver {
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     selectors: Selector[],
-    typesAlreadyChecked: (keyof Selector)[],
     performQueryCallback: (
       options: Options<T>,
       formattedSelectors: FormattedSelector[],
       etype: string
     ) => {
       result: any;
-      fullCoverage: boolean;
-      limitOffsetCoverage: boolean;
     },
     rowFetchCallback: () => any,
     freeResultCallback: () => void,
@@ -714,15 +703,12 @@ export default abstract class NymphDriver {
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
-    typesAlreadyChecked: (keyof Selector)[],
     performQueryCallback: (
       options: Options<T>,
       formattedSelectors: FormattedSelector[],
       etype: string
     ) => {
       result: any;
-      fullCoverage: boolean;
-      limitOffsetCoverage: boolean;
     },
     rowFetchCallback: () => any,
     freeResultCallback: () => void,
@@ -740,15 +726,12 @@ export default abstract class NymphDriver {
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
-    typesAlreadyChecked: (keyof Selector)[],
     performQueryCallback: (
       options: Options<T>,
       formattedSelectors: FormattedSelector[],
       etype: string
     ) => {
       result: any;
-      fullCoverage: boolean;
-      limitOffsetCoverage: boolean;
     },
     rowFetchCallback: () => any,
     freeResultCallback: () => void,
@@ -791,9 +774,6 @@ export default abstract class NymphDriver {
     const EntityClass = options.class ?? (Nymph.getEntityClass('Entity') as T);
     const etype = EntityClass.ETYPE;
 
-    let count = 0;
-    let ocount = 0;
-
     // Check if the requested entity is cached.
     if (
       Nymph.config.cache &&
@@ -834,11 +814,7 @@ export default abstract class NymphDriver {
     }
 
     const formattedSelectors = this.formatSelectors(selectors);
-    const { result, fullCoverage, limitOffsetCoverage } = performQueryCallback(
-      options,
-      formattedSelectors,
-      etype
-    );
+    const { result } = performQueryCallback(options, formattedSelectors, etype);
 
     return {
       result,
@@ -867,56 +843,24 @@ export default abstract class NymphDriver {
             // Make sure that $row is incremented :)
             row = rowFetchCallback();
           }
-          // Check all conditions.
-          let passed: boolean;
-          if (fullCoverage) {
-            passed = true;
+          if (options.return === 'guid') {
+            // @ts-ignore: ts doesn't know the return type here.
+            entities.push(guid);
           } else {
-            passed = this.checkData(
-              data,
-              sdata,
-              selectors,
-              null,
-              null,
-              typesAlreadyChecked
-            );
-          }
-          if (passed) {
-            if (
-              typeof options.offset === 'number' &&
-              !limitOffsetCoverage &&
-              ocount < options.offset
-            ) {
-              // We must be sure this entity is actually a match before
-              // incrementing the offset.
-              ocount++;
-              continue;
+            const entity = EntityClass.factory() as ReturnType<T['factory']>;
+            if (options.skipAc != null) {
+              entity.$useSkipAc(!!options.skipAc);
             }
-            if (options.return === 'guid') {
-              // @ts-ignore: ts doesn't know the return type here.
-              entities.push(guid);
-            } else {
-              const entity = EntityClass.factory() as ReturnType<T['factory']>;
-              if (options.skipAc != null) {
-                entity.$useSkipAc(!!options.skipAc);
-              }
-              entity.guid = guid;
-              entity.cdate = cdate;
-              entity.mdate = mdate;
-              entity.tags = tags;
-              entity.$putData(data, sdata);
-              if (Nymph.config.cache) {
-                this.pushCache(guid, cdate, mdate, tags, data, sdata);
-              }
-              // @ts-ignore: ts doesn't know the return type here.
-              entities.push(entity);
+            entity.guid = guid;
+            entity.cdate = cdate;
+            entity.mdate = mdate;
+            entity.tags = tags;
+            entity.$putData(data, sdata);
+            if (Nymph.config.cache) {
+              this.pushCache(guid, cdate, mdate, tags, data, sdata);
             }
-            if (!limitOffsetCoverage) {
-              count++;
-              if (options.limit != null && count >= options.limit) {
-                break;
-              }
-            }
+            // @ts-ignore: ts doesn't know the return type here.
+            entities.push(entity);
           }
         }
 
