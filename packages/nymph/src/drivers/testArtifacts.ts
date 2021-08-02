@@ -457,9 +457,16 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by contain...
-    const resultEntity = await Nymph.getEntities(
+    let resultEntity = await Nymph.getEntities(
       { class: TestModel },
       { type: '&', contain: ['array', 'values'] }
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+
+    // Retrieving entity by contain with full match...
+    resultEntity = await Nymph.getEntities(
+      { class: TestModel },
+      { type: '&', contain: ['string', 'test'] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -480,9 +487,16 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong contain...
-    const resultEntity = await Nymph.getEntities(
+    let resultEntity = await Nymph.getEntities(
       { class: TestModel },
       { type: '&', contain: ['array', 'pickles'] }
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(false);
+
+    // Testing wrong contain...
+    resultEntity = await Nymph.getEntities(
+      { class: TestModel },
+      { type: '&', contain: ['string', 'pickles'] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });

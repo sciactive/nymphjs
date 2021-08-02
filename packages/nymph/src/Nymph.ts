@@ -46,9 +46,6 @@ export default class Nymph {
     Tilmeld?: any
   ) {
     this.config = { ...defaults, ...config };
-    if (this.driver && this.driver.isConnected()) {
-      this.driver.disconnect();
-    }
     this.driver = driver;
     this.Tilmeld = Tilmeld;
   }

@@ -145,7 +145,7 @@ export default abstract class NymphDriver {
       if (!fhandle) {
         throw new InvalidParametersError('Provided filename is not writeable.');
       }
-      this.exportEntities((line: string) => {
+      await this.exportEntities((line: string) => {
         fs.writeSync(fhandle, `${line}\n`);
       });
       fs.closeSync(fhandle);
@@ -156,7 +156,7 @@ export default abstract class NymphDriver {
   }
 
   public async exportPrint() {
-    this.exportEntities((line: string) => {
+    await this.exportEntities((line: string) => {
       console.log(line);
     });
     return true;
@@ -1106,5 +1106,14 @@ export default abstract class NymphDriver {
       delete this.entityCache[least];
       delete this.entityCount[least];
     }
+  }
+
+  protected findReferences(svalue: string): string[] {
+    const re = /\["nymph_entity_reference","([0-9a-fA-F]+)",/g;
+    const matches = svalue.match(re);
+    if (matches == null) {
+      return [];
+    }
+    return matches.map((match) => match.replace(re, '$1'));
   }
 }

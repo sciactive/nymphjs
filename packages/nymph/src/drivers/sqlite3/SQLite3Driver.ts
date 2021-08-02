@@ -13,13 +13,13 @@ import {
   QueryFailedError,
   UnableToConnectError,
 } from '../../errors';
+import { FormattedSelector, Options, Selector } from '../../Nymph.d';
+import { xor } from '../../utils';
+import Nymph from '../../Nymph';
 import {
   SQLite3DriverConfig,
   SQLite3DriverConfigDefaults as defaults,
 } from './conf';
-import { FormattedSelector, Options, Selector } from '../../Nymph.d';
-import { xor } from '../../utils';
-import Nymph from '../../Nymph';
 
 /**
  * The SQLite3 Nymph database driver.
@@ -81,7 +81,7 @@ export default class SQLite3Driver extends NymphDriver {
   /**
    * Connect to the SQLite3 database.
    *
-   * @returns Whether this instance is connected to a SQLite3 database after the method has run.
+   * @returns Whether this instance is connected to a SQLite3 database.
    */
   public async connect() {
     const { filename, fileMustExist, timeout, readonly, verbose } = this.config;
@@ -123,7 +123,7 @@ export default class SQLite3Driver extends NymphDriver {
   /**
    * Disconnect from the SQLite3 database.
    *
-   * @returns Whether this instance is connected to a SQLite3 database after the method has run.
+   * @returns Whether this instance is connected to a SQLite3 database.
    */
   public async disconnect() {
     if (this.connected) {
@@ -519,7 +519,7 @@ export default class SQLite3Driver extends NymphDriver {
         writeLine(`\tmdate=${JSON.stringify(mdate)}`);
         if (datum.value.dname != null) {
           // This do will keep going and adding the data until the
-          // next entity is reached. $row will end on the next entity.
+          // next entity is reached. datum will end on the next entity.
           do {
             writeLine(
               `\t${datum.value.dname}=${JSON.stringify(datum.value.dvalue)}`
@@ -527,11 +527,13 @@ export default class SQLite3Driver extends NymphDriver {
             datum = dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
         } else {
-          // Make sure that $row is incremented :)
+          // Make sure that datum is incremented :)
           datum = dataIterator.next();
         }
       }
     }
+
+    return;
   }
 
   /**
@@ -559,8 +561,6 @@ export default class SQLite3Driver extends NymphDriver {
       (key, value, typeIsOr, typeIsNot) => {
         const clauseNot = key.startsWith('!');
         let curQuery = '';
-        // Any options having to do with data only return if the
-        // entity has the specified variables.
         for (const curValue of value) {
           switch (key) {
             case 'guid':
@@ -706,9 +706,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'instr(ie."cdate", @' +
-                  cdate +
-                  ')';
+                  'ie."cdate"=' +
+                  cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
               } else if (curValue[0] === 'mdate') {
@@ -718,9 +717,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'instr(ie."mdate", @' +
-                  mdate +
-                  ')';
+                  'ie."mdate"=' +
+                  mdate;
                 params[mdate] = Number(curValue[1]);
                 break;
               } else {
@@ -1686,7 +1684,7 @@ export default class SQLite3Driver extends NymphDriver {
         } else {
           this.queryRun("ROLLBACK TO 'save';");
         }
-        return true;
+        return success;
       }
     );
   }
@@ -1718,14 +1716,5 @@ export default class SQLite3Driver extends NymphDriver {
       }
     );
     return true;
-  }
-
-  private findReferences(svalue: string): string[] {
-    const re = /\["nymph_entity_reference","([0-9a-fA-F]+)",/g;
-    const matches = svalue.match(re);
-    if (matches == null) {
-      return [];
-    }
-    return matches.map((match) => match.replace(re, '$1'));
   }
 }

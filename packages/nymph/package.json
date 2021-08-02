@@ -12,11 +12,11 @@
   ],
   "scripts": {
     "clean": "test -d dist && rm -r dist || true",
-    "build": "tsc",
+    "build": "tsc; cp src/drivers/mysql/runMysqlSync.js dist/drivers/mysql/runMysqlSync.js",
     "watch": "tsc --watch",
     "prepare": "npm run clean && npm run build",
     "test": "jest",
-    "test:watch": "jest --watch",
+    "test:watch": "jest --watch --detectOpenHandles",
     "test:mysql:run": "npm run test:mysql:start && npm run test:mysql:clean",
     "test:mysql:clean": "docker container rm nymph",
     "test:mysql:start": "docker run --name nymph -e MYSQL_ROOT_PASSWORD=123nymphroot -e MYSQL_DATABASE=nymph -e MYSQL_USER=nymph -e MYSQL_PASSWORD=nymph -p 3306:3306 mysql",
@@ -35,14 +35,15 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@vlasky/mysql": "^2.18.5",
     "better-sqlite3": "^7.4.3",
     "locutus": "^2.0.15",
     "lodash": "^4.17.21",
     "luxon": "^2.0.1",
-    "mysql2": "^2.2.5",
     "n-readlines": "^1.0.1",
     "nanoid": "^3.1.23",
-    "sha1": "^1.1.1"
+    "sha1": "^1.1.1",
+    "sqlstring": "^2.3.2"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
@@ -51,8 +52,10 @@
     "@types/locutus": "^0.0.6",
     "@types/lodash": "^4.14.171",
     "@types/luxon": "^1.27.1",
+    "@types/mysql": "^2.15.19",
     "@types/n-readlines": "^1.0.2",
     "@types/sha1": "^1.1.3",
+    "@types/sqlstring": "^2.3.0",
     "jest": "^27.0.6",
     "ts-jest": "^27.0.4",
     "typescript": "^4.3.5"
