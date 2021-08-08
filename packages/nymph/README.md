@@ -12,7 +12,7 @@ npm install --save @nymphjs/nymph
 
 ## Drivers
 
-To use Nymph, you need a database driver. Nymph has drivers available for [MySQL](../driver-mysql/README.md) and [SQLite3](../driver-sqlite3/README.md).
+To use Nymph, you need a database driver. Nymph provides a [MySQL driver](../driver-mysql/README.md) and a [SQLite3 driver](../driver-sqlite3/README.md).
 
 ## Usage
 
