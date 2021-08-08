@@ -10,13 +10,11 @@ Note: this library is being migrated from a PHP backend with JS frontend to a No
 npm install --save @nymphjs/nymph
 ```
 
+## Drivers
+
+To use Nymph, you need a database driver. Nymph has drivers available for [MySQL](../driver-mysql/README.md) and [SQLite3](../driver-sqlite3/README.md).
+
 ## Usage
-
-For detailed docs, check out the wiki:
-
-- [Entity Class](https://github.com/sciactive/nymph/wiki/Entity-Class)
-- [Entity Querying](https://github.com/sciactive/nymph/wiki/Entity-Querying)
-- [Extending the Entity Class](https://github.com/sciactive/nymph/wiki/Extending-the-Entity-Class)
 
 Here's an overview:
 
