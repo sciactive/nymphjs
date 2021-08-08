@@ -105,10 +105,6 @@ let subscription = PubSub.subscribeEntities(
 subscription.unsubscribe();
 ```
 
-## API Docs
-
-Check out the [API Docs in the wiki](https://github.com/sciactive/nymph/wiki/API-Docs).
-
 # License
 
 Copyright 2021 SciActive Inc

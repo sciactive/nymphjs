@@ -1,6 +1,32 @@
 # Nymph.js
 
-The Nymph ORM, written for Node.js.
+Powerful object data storage and querying.
+
+Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+
+# Getting Started
+
+All you need to start using Nymph is the `@nymphjs/nymph` package and one of the drivers, `@nymphjs/driver-mysql` or `@nymphjs/driver-sqlite3`. Check out the [readme for the Nymph package](packages/nymph/README.md).
+
+## REST Server
+
+(TODO)
+
+## PubSub Server
+
+(TODO)
+
+## Client
+
+(TODO)
+
+## Node Client
+
+(TODO)
+
+## Tilmeld
+
+(TODO)
 
 # License
 
