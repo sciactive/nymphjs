@@ -69,6 +69,40 @@ export default class Nymph {
   }
 
   /**
+   * Start an atomic transaction.
+   *
+   * If this function returns true, all proceeding changes will wait to be
+   * written to the database's permanent storage until commit() is called. You
+   * can also undo all the changes since this function ran with rollback().
+   *
+   * If it returns false instead of throwing an error, that probably means the
+   * driver or the database doesn't support transaction.
+   *
+   * @returns True on success, false on failure.
+   */
+  public static async startTransaction(): Promise<boolean> {
+    return await this.driver.startTransaction();
+  }
+
+  /**
+   * Commit the current transaction.
+   *
+   * @returns True on success, false on failure.
+   */
+  public static async commit(): Promise<boolean> {
+    return await this.driver.commit();
+  }
+
+  /**
+   * Rollback the current transaction.
+   *
+   * @returns True on success, false on failure.
+   */
+  public static async rollback(): Promise<boolean> {
+    return await this.driver.rollback();
+  }
+
+  /**
    * Increment or create a unique ID and return the new value.
    *
    * Unique IDs, or UIDs are similar to GUIDs, but numeric and sequential.

@@ -36,6 +36,7 @@ export default class MySQLDriver extends NymphDriver {
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: MySQLType.Pool;
+  protected connection: MySQLType.PoolConnection | null = null;
 
   static escape(input: string) {
     return mysql.escapeId(input);
@@ -62,6 +63,9 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   private getConnection(): Promise<MySQLType.PoolConnection> {
+    if (this.connection != null) {
+      return Promise.resolve(this.connection);
+    }
     return new Promise((resolve, reject) =>
       this.link.getConnection((err, con) => (err ? reject(err) : resolve(con)))
     );
@@ -77,7 +81,11 @@ export default class MySQLDriver extends NymphDriver {
     try {
       if (this.connected) {
         const connection = await this.getConnection();
-        await connection.ping();
+        await new Promise((resolve) =>
+          connection.ping(() => {
+            resolve(0);
+          })
+        );
         connection.release();
       }
     } catch (e) {
@@ -352,7 +360,7 @@ export default class MySQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: any = await new Promise((resolve, reject) =>
-          (connection ?? this.link).query(
+          (this.connection ?? connection ?? this.link).query(
             newQuery,
             newParams,
             (error, results) => {
@@ -429,7 +437,7 @@ export default class MySQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: any = await new Promise((resolve, reject) =>
-          (connection ?? this.link).query(
+          (this.connection ?? connection ?? this.link).query(
             newQuery,
             newParams,
             (error, results) => {
@@ -466,7 +474,7 @@ export default class MySQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: any = await new Promise((resolve, reject) => {
-          (connection ?? this.link).query(
+          (this.connection ?? connection ?? this.link).query(
             newQuery,
             newParams,
             (error, results) => {
@@ -538,58 +546,74 @@ export default class MySQLDriver extends NymphDriver {
     const etype = EntityClass.ETYPE;
     const connection = await this.getConnection();
     if (this.config.transactions) {
-      await this.queryRun('BEGIN;', { connection });
+      await this.queryRun(
+        this.connection ? 'SAVEPOINT `delete`;' : 'START TRANSACTION;',
+        { connection }
+      );
     }
-    await this.queryRun(
-      `DELETE FROM ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`
-      )} WHERE \`guid\`=UNHEX(@guid);`,
-      {
-        etype,
-        connection,
-        params: {
-          guid,
-        },
+    try {
+      await this.queryRun(
+        `DELETE FROM ${MySQLDriver.escape(
+          `${this.prefix}entities_${etype}`
+        )} WHERE \`guid\`=UNHEX(@guid);`,
+        {
+          etype,
+          connection,
+          params: {
+            guid,
+          },
+        }
+      );
+      await this.queryRun(
+        `DELETE FROM ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}`
+        )} WHERE \`guid\`=UNHEX(@guid);`,
+        {
+          etype,
+          connection,
+          params: {
+            guid,
+          },
+        }
+      );
+      await this.queryRun(
+        `DELETE FROM ${MySQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`
+        )} WHERE \`guid\`=UNHEX(@guid);`,
+        {
+          etype,
+          connection,
+          params: {
+            guid,
+          },
+        }
+      );
+      await this.queryRun(
+        `DELETE FROM ${MySQLDriver.escape(
+          `${this.prefix}references_${etype}`
+        )} WHERE \`guid\`=UNHEX(@guid);`,
+        {
+          etype,
+          connection,
+          params: {
+            guid,
+          },
+        }
+      );
+      if (this.config.transactions) {
+        await this.queryRun(
+          this.connection ? 'RELEASE SAVEPOINT `delete`;' : 'COMMIT;',
+          {
+            connection,
+          }
+        );
       }
-    );
-    await this.queryRun(
-      `DELETE FROM ${MySQLDriver.escape(
-        `${this.prefix}data_${etype}`
-      )} WHERE \`guid\`=UNHEX(@guid);`,
-      {
-        etype,
-        connection,
-        params: {
-          guid,
-        },
-      }
-    );
-    await this.queryRun(
-      `DELETE FROM ${MySQLDriver.escape(
-        `${this.prefix}comparisons_${etype}`
-      )} WHERE \`guid\`=UNHEX(@guid);`,
-      {
-        etype,
-        connection,
-        params: {
-          guid,
-        },
-      }
-    );
-    await this.queryRun(
-      `DELETE FROM ${MySQLDriver.escape(
-        `${this.prefix}references_${etype}`
-      )} WHERE \`guid\`=UNHEX(@guid);`,
-      {
-        etype,
-        connection,
-        params: {
-          guid,
-        },
-      }
-    );
-    if (this.config.transactions) {
-      await this.queryRun('COMMIT;', { connection });
+    } catch (e) {
+      await this.queryRun(
+        this.connection ? 'ROLLBACK TO `delete`;' : 'ROLLBACK;',
+        { connection }
+      );
+      throw e;
     }
     // Remove any cached versions of this entity.
     if (Nymph.config.cache) {
@@ -597,6 +621,15 @@ export default class MySQLDriver extends NymphDriver {
     }
     connection.release();
     return true;
+  }
+
+  public async commit() {
+    if (this.config.transactions) {
+      this.queryRun('COMMIT;');
+      this.connection = null;
+      return true;
+    }
+    return false;
   }
 
   public async deleteUID(name: string) {
@@ -659,11 +692,14 @@ export default class MySQLDriver extends NymphDriver {
       // Export entities.
       const dataIterator = (
         await this.queryIter(
-          `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\` AS \`dname\`, d.\`value\` AS \`dvalue\`
+          `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\` AS \`dname\`, d.\`value\` AS \`dvalue\`, c.\`string\`, c.\`number\`
         FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
         LEFT JOIN ${MySQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} d ON e.\`guid\`=d.\`guid\`
+        INNER JOIN ${MySQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`
+        )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
         ORDER BY e.\`guid\`;`
         )
       )[Symbol.iterator]();
@@ -680,9 +716,13 @@ export default class MySQLDriver extends NymphDriver {
           // This do will keep going and adding the data until the
           // next entity is reached. $row will end on the next entity.
           do {
-            writeLine(
-              `\t${datum.value.dname}=${JSON.stringify(datum.value.dvalue)}`
-            );
+            const value =
+              datum.value.dvalue === 'N'
+                ? JSON.stringify(datum.value.number)
+                : datum.value.dvalue === 'S'
+                ? JSON.stringify(datum.value.string)
+                : datum.value.dvalue;
+            writeLine(`\t${datum.value.dname}=${value}`);
             datum = dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
         } else {
@@ -713,6 +753,9 @@ export default class MySQLDriver extends NymphDriver {
     params: { [k: string]: any } = {},
     subquery = false
   ) {
+    if (typeof options.class?.alterOptions === 'function') {
+      options = options.class.alterOptions(options);
+    }
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -844,6 +887,40 @@ export default class MySQLDriver extends NymphDriver {
                   ? null
                   : Number(curValue[1]);
                 break;
+              } else if (typeof curValue[1] === 'number') {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+                const name = `param${++count.i}`;
+                const value = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
+                  ' WHERE `name`=@' +
+                  name +
+                  ' AND `number`=@' +
+                  value +
+                  ')';
+                params[name] = curValue[0];
+                params[value] = curValue[1];
+              } else if (typeof curValue[1] === 'string') {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+                const name = `param${++count.i}`;
+                const value = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
+                  ' WHERE `name`=@' +
+                  name +
+                  ' AND `string`=@' +
+                  value +
+                  ')';
+                params[name] = curValue[0];
+                params[value] = curValue[1];
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -905,25 +982,48 @@ export default class MySQLDriver extends NymphDriver {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
                 let svalue: string;
+                let stringValue: string;
                 if (
                   curValue[1] instanceof Object &&
                   typeof curValue[1].toReference === 'function'
                 ) {
                   svalue = JSON.stringify(curValue[1].toReference());
+                  stringValue = `${curValue[1].toReference()}`;
                 } else {
                   svalue = JSON.stringify(curValue[1]);
+                  stringValue = `${curValue[1]}`;
                 }
                 const name = `param${++count.i}`;
                 const value = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `name`=@' +
-                  name +
-                  ' AND INSTR(`value`, @' +
-                  value +
-                  '))';
+                if (typeof curValue[1] === 'string') {
+                  const stringParam = `param${++count.i}`;
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                    '(ie.`guid` IN (SELECT `guid` FROM ' +
+                    MySQLDriver.escape(this.prefix + 'data_' + etype) +
+                    ' WHERE `name`=@' +
+                    name +
+                    ' AND INSTR(`value`, @' +
+                    value +
+                    ')) OR ie.`guid` IN (SELECT `guid` FROM ' +
+                    MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
+                    ' WHERE `name`=@' +
+                    name +
+                    ' AND `string`=@' +
+                    stringParam +
+                    '))';
+                  params[stringParam] = stringValue;
+                } else {
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                    'ie.`guid` IN (SELECT `guid` FROM ' +
+                    MySQLDriver.escape(this.prefix + 'data_' + etype) +
+                    ' WHERE `name`=@' +
+                    name +
+                    ' AND INSTR(`value`, @' +
+                    value +
+                    '))';
+                }
                 params[name] = curValue[0];
                 params[value] = svalue;
               }
@@ -1387,11 +1487,14 @@ export default class MySQLDriver extends NymphDriver {
           )}`;
         }
         const whereClause = queryParts.join(') AND (');
-        query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`
+        query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
           FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${MySQLDriver.escape(
             `${this.prefix}data_${etype}`
           )} d ON e.\`guid\`=d.\`guid\`
+          INNER JOIN ${MySQLDriver.escape(
+            `${this.prefix}comparisons_${etype}`
+          )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
           INNER JOIN (
             SELECT ie.\`guid\`
             FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
@@ -1417,11 +1520,14 @@ export default class MySQLDriver extends NymphDriver {
           )}`;
         }
         if (limit || offset) {
-          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`
+          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
             FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
             LEFT JOIN ${MySQLDriver.escape(
               `${this.prefix}data_${etype}`
             )} d ON e.\`guid\`=d.\`guid\`
+            INNER JOIN ${MySQLDriver.escape(
+              `${this.prefix}comparisons_${etype}`
+            )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
             INNER JOIN (
               SELECT ie.\`guid\`
               FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
@@ -1429,11 +1535,14 @@ export default class MySQLDriver extends NymphDriver {
             ) f ON e.\`guid\`=f.\`guid\`
             ORDER BY e.${sortBy};`;
         } else {
-          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`
+          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
             FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
             LEFT JOIN ${MySQLDriver.escape(
               `${this.prefix}data_${etype}`
             )} d ON e.\`guid\`=d.\`guid\`
+            INNER JOIN ${MySQLDriver.escape(
+              `${this.prefix}comparisons_${etype}`
+            )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
             ORDER BY e.${sortBy};`;
         }
       }
@@ -1492,11 +1601,11 @@ export default class MySQLDriver extends NymphDriver {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factory']>[]>;
+  ): Promise<ReturnType<T['factorySync']>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factory']>[] | string[]> {
+  ): Promise<ReturnType<T['factorySync']>[] | string[]> {
     const { result: resultPromise, process } = this.getEntitesRowLike<T>(
       // @ts-ignore: options is correct here.
       options,
@@ -1516,7 +1625,12 @@ export default class MySQLDriver extends NymphDriver {
       }),
       (row) => ({
         name: row.name,
-        svalue: row.value,
+        svalue:
+          row.value === 'N'
+            ? JSON.stringify(row.number)
+            : row.value === 'S'
+            ? JSON.stringify(row.string)
+            : row.value,
       })
     );
 
@@ -1531,11 +1645,11 @@ export default class MySQLDriver extends NymphDriver {
   protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factory']>[];
+  ): ReturnType<T['factorySync']>[];
   protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): ReturnType<T['factory']>[] | string[] {
+  ): ReturnType<T['factorySync']>[] | string[] {
     const { result, process } = this.getEntitesRowLike<T>(
       // @ts-ignore: options is correct here.
       options,
@@ -1555,7 +1669,12 @@ export default class MySQLDriver extends NymphDriver {
       }),
       (row) => ({
         name: row.name,
-        svalue: row.value,
+        svalue:
+          row.value === 'N'
+            ? JSON.stringify(row.number)
+            : row.value === 'S'
+            ? JSON.stringify(row.string)
+            : row.value,
       })
     );
     return process();
@@ -1651,19 +1770,25 @@ export default class MySQLDriver extends NymphDriver {
         for (const name in sdata) {
           const value = sdata[name];
           const uvalue = JSON.parse(value);
+          const storageValue =
+            typeof uvalue === 'number'
+              ? 'N'
+              : typeof uvalue === 'string'
+              ? 'S'
+              : value;
           const promises = [];
           promises.push(
             this.queryRun(
               `INSERT INTO ${MySQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @value);`,
+              )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
               {
                 etype,
                 connection,
                 params: {
                   guid,
                   name,
-                  value,
+                  storageValue,
                 },
               }
             )
@@ -1692,7 +1817,7 @@ export default class MySQLDriver extends NymphDriver {
               this.queryRun(
                 `INSERT INTO ${MySQLDriver.escape(
                   `${this.prefix}references_${etype}`
-                )} (\`guid\`, \`name\`, \`reference\`) VALUES {UNHEX(@guid), @name, UNHEX(@reference)};`,
+                )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
                 {
                   etype,
                   connection,
@@ -1724,12 +1849,18 @@ export default class MySQLDriver extends NymphDriver {
       },
       this.config.transactions
         ? async () => {
-            await this.queryRun('BEGIN;', { connection });
+            await this.queryRun(
+              this.connection ? 'SAVEPOINT `import`;' : 'START TRANSACTION;',
+              { connection }
+            );
           }
         : null,
       this.config.transactions
         ? async () => {
-            await this.queryRun('COMMIT;', { connection });
+            await this.queryRun(
+              this.connection ? 'RELEASE SAVEPOINT `import`;' : 'COMMIT;',
+              { connection }
+            );
           }
         : null
     );
@@ -1753,32 +1884,48 @@ export default class MySQLDriver extends NymphDriver {
       throw new QueryFailedError("Couldn't get lock for UID: " + name);
     }
     if (this.config.transactions) {
-      await this.queryRun('BEGIN;', { connection });
+      await this.queryRun(
+        this.connection ? 'SAVEPOINT `newuid`;' : 'START TRANSACTION;',
+        { connection }
+      );
     }
-    await this.queryRun(
-      `INSERT INTO ${MySQLDriver.escape(
-        `${this.prefix}uids`
-      )} (\`name\`, \`cur_uid\`) VALUES (@name, 1) ON DUPLICATE KEY UPDATE \`cur_uid\`=\`cur_uid\`+1;`,
-      {
-        connection,
-        params: {
-          name,
-        },
+    let curUid: number | null = null;
+    try {
+      await this.queryRun(
+        `INSERT INTO ${MySQLDriver.escape(
+          `${this.prefix}uids`
+        )} (\`name\`, \`cur_uid\`) VALUES (@name, 1) ON DUPLICATE KEY UPDATE \`cur_uid\`=\`cur_uid\`+1;`,
+        {
+          connection,
+          params: {
+            name,
+          },
+        }
+      );
+      const result = await this.queryGet(
+        `SELECT \`cur_uid\` FROM ${MySQLDriver.escape(
+          `${this.prefix}uids`
+        )} WHERE \`name\`=@name;`,
+        {
+          connection,
+          params: {
+            name,
+          },
+        }
+      );
+      if (this.config.transactions) {
+        await this.queryRun(
+          this.connection ? 'RELEASE SAVEPOINT `newuid`;' : 'COMMIT;',
+          { connection }
+        );
       }
-    );
-    const result = await this.queryGet(
-      `SELECT \`cur_uid\` FROM ${MySQLDriver.escape(
-        `${this.prefix}uids`
-      )} WHERE \`name\`=@name;`,
-      {
-        connection,
-        params: {
-          name,
-        },
-      }
-    );
-    if (this.config.transactions) {
-      await this.queryRun('COMMIT;', { connection });
+      curUid = result.cur_uid ?? null;
+    } catch (e) {
+      await this.queryRun(
+        this.connection ? 'ROLLBACK TO `newuid`;' : 'ROLLBACK;',
+        { connection }
+      );
+      throw e;
     }
     await this.queryRun(
       `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
@@ -1787,7 +1934,7 @@ export default class MySQLDriver extends NymphDriver {
       { connection }
     );
     connection.release();
-    return result.cur_uid ?? null;
+    return curUid;
   }
 
   public async renameUID(oldName: string, newName: string) {
@@ -1808,6 +1955,15 @@ export default class MySQLDriver extends NymphDriver {
     return true;
   }
 
+  public async rollback() {
+    if (this.config.transactions) {
+      this.queryRun('ROLLBACK;');
+      this.connection = null;
+      return true;
+    }
+    return false;
+  }
+
   public async saveEntity(entity: EntityInterface) {
     const connection = await this.getConnection();
     const insertData = async (
@@ -1821,19 +1977,25 @@ export default class MySQLDriver extends NymphDriver {
         value: any,
         svalue: string
       ) => {
+        const storageValue =
+          typeof value === 'number'
+            ? 'N'
+            : typeof value === 'string'
+            ? 'S'
+            : svalue;
         const promises = [];
         promises.push(
           this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
               `${this.prefix}data_${etype}`
-            )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @svalue);`,
+            )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
             {
               etype,
               connection,
               params: {
                 guid,
                 name,
-                svalue,
+                storageValue,
               },
             }
           )
@@ -2050,15 +2212,24 @@ export default class MySQLDriver extends NymphDriver {
       },
       this.config.transactions
         ? async () => {
-            await this.queryRun('BEGIN;', { connection });
+            await this.queryRun(
+              this.connection ? 'SAVEPOINT `save`;' : 'START TRANSACTION;',
+              { connection }
+            );
           }
         : null,
       this.config.transactions
         ? async (success) => {
             if (success) {
-              await this.queryRun('COMMIT;', { connection });
+              await this.queryRun(
+                this.connection ? 'RELEASE SAVEPOINT `save`;' : 'COMMIT;',
+                { connection }
+              );
             } else {
-              await this.queryRun('ROLLBACK;', { connection });
+              await this.queryRun(
+                this.connection ? 'ROLLBACK TO `save`;' : 'ROLLBACK;',
+                { connection }
+              );
             }
             return success;
           }
@@ -2085,5 +2256,15 @@ export default class MySQLDriver extends NymphDriver {
       }
     );
     return true;
+  }
+
+  public async startTransaction() {
+    if (this.config.transactions) {
+      // Lock to one connection.
+      this.connection = await this.getConnection();
+      this.queryRun('START TRANSACTION;');
+      return true;
+    }
+    return false;
   }
 }

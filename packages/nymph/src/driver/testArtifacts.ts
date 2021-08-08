@@ -115,11 +115,68 @@ This one's zip code is 92064.`;
 
     // Testing wrong GUID...
     resultEntity = await Nymph.getEntity({ class: TestModel }, newGUID());
-    // if (resultEntity == null) {
-    //   expect(resultEntity).toBeNull();
-    // } else {
     expect(testEntity.$is(resultEntity)).toEqual(false);
-    // }
+  });
+
+  it('transactions', async () => {
+    await createTestEntities();
+
+    const transaction = await Nymph.startTransaction();
+
+    if (!transaction) {
+      console.log(
+        'This Nymph driver or database seems to not support transactions. Skipping transaction tests.'
+      );
+      return;
+    }
+
+    // Change a value in the test entity.
+    testEntity.string = 'bad value';
+    expect(await testEntity.$save()).toEqual(true);
+
+    // Rollback the transaction.
+    await Nymph.rollback();
+
+    // Verify the value is correct.
+    await testEntity.$refresh();
+    expect(testEntity.string).toEqual('test');
+
+    // Start a new transaction.
+    await Nymph.startTransaction();
+
+    // Delete the entity.
+    expect(await testEntity.$delete()).toEqual(true);
+    const resultEntity = await Nymph.getEntity({ class: TestModel }, testGuid);
+    expect(resultEntity).toBeNull();
+
+    // Rollback the transaction.
+    await Nymph.rollback();
+
+    // Verify it's back.
+    testEntity = (await Nymph.getEntity(
+      { class: TestModel },
+      testGuid
+    )) as TestModel & TestModelData;
+
+    expect(testEntity.guid).toEqual(testGuid);
+
+    // Start a new transaction.
+    await Nymph.startTransaction();
+
+    // Make a change.
+    testEntity.string = 'fish';
+    expect(await testEntity.$save()).toEqual(true);
+
+    // Commit the transaction.
+    await Nymph.commit();
+
+    // Verify the value is correct.
+    await testEntity.$refresh();
+    expect(testEntity.string).toEqual('fish');
+
+    // Finally, change it back.
+    testEntity.string = 'test';
+    expect(await testEntity.$save()).toEqual(true);
   });
 
   it('options', async () => {

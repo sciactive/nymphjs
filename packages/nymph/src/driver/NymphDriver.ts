@@ -43,6 +43,9 @@ export default abstract class NymphDriver {
 
   abstract connect(): Promise<boolean>;
   abstract isConnected(): boolean;
+  abstract startTransaction(): Promise<boolean>;
+  abstract commit(): Promise<boolean>;
+  abstract rollback(): Promise<boolean>;
   abstract deleteEntityByID(
     guid: string,
     classConstructor: EntityConstructor
@@ -434,18 +437,6 @@ export default abstract class NymphDriver {
                       xor(typeIsNot, clauseNot)
                     );
                     break;
-                  // case 'array':
-                  // case '!array':
-                  //   const testArrayValue = (
-                  //     curValue as [string, any]
-                  //   )[1] as any;
-                  //   pass = xor(
-                  //     propName in data &&
-                  //       Array.isArray(data[propName]) &&
-                  //       data[propName].indexOf(testArrayValue) !== -1,
-                  //     xor(typeIsNot, clauseNot)
-                  //   );
-                  //   break;
                 }
               }
               if (!xor(typeIsOr, pass)) {
