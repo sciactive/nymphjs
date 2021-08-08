@@ -18,7 +18,7 @@ export function QueriesTest(it: (name: string, fn: () => void) => void) {
     }
 
     // Creating entity...
-    testEntity = TestModel.factory();
+    testEntity = await TestModel.factory();
 
     // Saving entity...
     testEntity.name = 'Entity Test ' + new Date().toLocaleString();
@@ -72,7 +72,7 @@ This one's zip code is 92064.`;
       createdMultiple = true;
       // Creating 100 entities...
       for (let i = 0; i < 100; i++) {
-        const testEntity = TestModel.factory();
+        const testEntity = await TestModel.factory();
         testEntity.name = `Multi Test ${i}`;
         testEntity.$removeTag('test');
         testEntity.$addTag('multiTest');
@@ -110,7 +110,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$is(resultEntity)).toEqual(true);
 
     // Using class constructor...
-    resultEntity = TestModel.factory(testGuid);
+    resultEntity = await TestModel.factory(testGuid);
     expect(testEntity.$is(resultEntity)).toEqual(true);
 
     // Testing wrong GUID...
@@ -391,7 +391,7 @@ This one's zip code is 92064.`;
   it('not equal', async () => {
     await createTestEntities();
 
-    const referenceEntity = TestModel.factory(refGuid);
+    const referenceEntity = await TestModel.factory(refGuid);
     expect(referenceEntity.guid).toEqual(refGuid);
 
     // Retrieving entity by !equal...
@@ -417,7 +417,7 @@ This one's zip code is 92064.`;
   it('not like', async () => {
     await createTestEntities();
 
-    const referenceEntity = TestModel.factory(refGuid);
+    const referenceEntity = await TestModel.factory(refGuid);
     expect(referenceEntity.guid).toEqual(refGuid);
 
     // Retrieving entity by !like...
@@ -443,7 +443,7 @@ This one's zip code is 92064.`;
   it('not ilike', async () => {
     await createTestEntities();
 
-    const referenceEntity = TestModel.factory(refGuid);
+    const referenceEntity = await TestModel.factory(refGuid);
     expect(referenceEntity.guid).toEqual(refGuid);
 
     // Retrieving entity by !ilike...
@@ -1041,7 +1041,7 @@ This one's zip code is 92064.`;
   it('time selector', async () => {
     await createTestEntities();
 
-    const referenceEntity = TestModel.factory(refGuid);
+    const referenceEntity = await TestModel.factory(refGuid);
 
     // Retrieving entity by relative time...
     let resultEntity = await Nymph.getEntities(
@@ -1085,7 +1085,7 @@ This one's zip code is 92064.`;
   it('wrong time selector', async () => {
     await createTestEntities();
 
-    const referenceEntity = TestModel.factory(refGuid);
+    const referenceEntity = await TestModel.factory(refGuid);
 
     // Retrieving entity by relative time...
     let resultEntity = await Nymph.getEntities(
@@ -1609,7 +1609,7 @@ export function ExportImportTest(it: (name: string, fn: () => void) => void) {
       const EntityClass = i < 15 ? TestModel : TestBModel;
 
       // Creating entity...
-      const testEntity = EntityClass.factory();
+      const testEntity = await EntityClass.factory();
 
       // Saving entity...
       testEntity.name = 'Entity Test ' + new Date().toLocaleString();
@@ -1620,7 +1620,7 @@ export function ExportImportTest(it: (name: string, fn: () => void) => void) {
       testEntity.timestamp = Date.now();
       testEntity.index = i + 'a';
 
-      const entityReferenceTest = EntityClass.factory();
+      const entityReferenceTest = await EntityClass.factory();
       entityReferenceTest.string = 'another';
       entityReferenceTest.index = i + 'b';
 

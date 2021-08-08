@@ -1,3 +1,5 @@
+import { Options } from './Nymph.types';
+
 export type ACProperties = {
   user: any;
   group: any;
@@ -94,7 +96,7 @@ export interface DataObjectInterface {
    *
    * @returns False if the data has not been saved, 0 if it can't be refreshed, true on success.
    */
-  $refresh(): boolean | 0;
+  $refresh(): Promise<boolean | 0>;
   /**
    * Save the object to storage.
    *
@@ -111,9 +113,24 @@ export interface DataObjectInterface {
  * Entity interface.
  */
 export interface EntityInterface extends DataObjectInterface {
+  /**
+   * The entity's Globally Unique ID.
+   *
+   * This is a 12 byte number represented as a lower case HEX string (24
+   * characters).
+   */
   guid: string | null;
+  /**
+   * The creation date of the entity as a Unix timestamp in milliseconds.
+   */
   cdate: number | null;
+  /**
+   * The modified date of the entity as a Unix timestamp in milliseconds.
+   */
   mdate: number | null;
+  /**
+   * Array of the entity's tags.
+   */
   tags: string[];
   /**
    * Add one or more tags.
@@ -128,6 +145,12 @@ export interface EntityInterface extends DataObjectInterface {
    * accessed, it will be retrieved from the DB (unless it is in Nymph's cache).
    */
   $clearCache(): void;
+  /**
+   * Get the client enabled methods.
+   *
+   * @returns The names of methods allowed to be called by the frontend with serverCall.
+   */
+  $getClientEnabledMethods(): string[];
   /**
    * Used to retrieve the data object.
    *
@@ -164,6 +187,15 @@ export interface EntityInterface extends DataObjectInterface {
    * @returns A pure object representation of the entity.
    */
   $getValidatable(): Object;
+  /**
+   * Get the entity's tags.
+   *
+   * Using this instead of accessing the `tags` prop directly will wake sleeping
+   * references.
+   *
+   * @returns The entity's tags.
+   */
+  $getTags(): string[];
   /**
    * Check that the entity has all of the given tags.
    *
@@ -234,7 +266,7 @@ export interface EntityInterface extends DataObjectInterface {
   $useSkipAc(useSkipAc: boolean): void;
 }
 
-export type EntityConstructor = (new () => EntityInterface) & {
+export type EntityConstructor = (new (guid?: string) => EntityInterface) & {
   /**
    * A unique name for this type of entity used to separate its data from other
    * types of entities in the database.
@@ -248,9 +280,43 @@ export type EntityConstructor = (new () => EntityInterface) & {
    */
   class: string;
   /**
+   * Properties that will not be searchable from the frontend. If the frontend
+   * includes any of these properties in any of their clauses, they will be
+   * filtered out before the search is executed.
+   */
+  searchRestrictedData: string[];
+  /**
+   * The names of static methods allowed to be called by the frontend with
+   * serverCallStatic.
+   */
+  clientEnabledStaticMethods: string[];
+  /**
    * Create a new entity instance.
    *
    * @param guid An optional GUID to retrieve.
    */
-  factory(guid?: string): EntityInterface;
+  factory(guid?: string): Promise<EntityInterface>;
+  /**
+   * Create a new entity instance.
+   *
+   * @param guid An optional GUID to retrieve.
+   */
+  factorySync(guid?: string): EntityInterface;
+  /**
+   * Create a new sleeping reference instance.
+   *
+   * Sleeping references won't retrieve their data from the database until it
+   * is actually used.
+   *
+   * @param reference The Nymph Entity Reference to use to wake.
+   * @returns The new instance.
+   */
+  factoryReference(reference: EntityReference): EntityInterface;
+  /**
+   * Alter the options for a query for this entity.
+   *
+   * @param options The current options.
+   * @returns The altered options.
+   */
+  alterOptions?<T extends Options>(options: T): T;
 };

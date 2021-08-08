@@ -1,5 +1,5 @@
 import { EntityReference } from './Entity.types';
-import { default as Nymph } from './Nymph';
+import Nymph from './Nymph';
 
 export function xor(a: any, b: any): boolean {
   return !!(a && !b) || (!a && b);
@@ -41,8 +41,7 @@ export function referencesToEntities(item: any, useSkipAc = false): any {
     if (item[0] === 'nymph_entity_reference') {
       try {
         const EntityClass = Nymph.getEntityClass(item[2]);
-        const entity = new EntityClass();
-        entity.$referenceSleep(item as EntityReference);
+        const entity = EntityClass.factoryReference(item as EntityReference);
         entity.$useSkipAc(useSkipAc);
         return entity;
       } catch (e) {

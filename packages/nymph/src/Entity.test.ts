@@ -9,7 +9,7 @@ jest.mock('./Nymph', () => ({
 import { TestModel, TestModelData } from './testArtifacts';
 import { cloneDeep } from 'lodash';
 
-let testEntity = TestModel.factory();
+let testEntity = TestModel.factorySync();
 let entityReferenceTest: TestModel & TestModelData;
 let entityReferenceGuid: string;
 
@@ -37,7 +37,7 @@ describe('Entity', () => {
     expect(await testEntity.$save()).toEqual(true);
     expect(typeof testEntity.guid).toEqual('string');
 
-    entityReferenceTest = TestModel.factory();
+    entityReferenceTest = await TestModel.factory();
     entityReferenceTest.string = 'wrong';
     expect(await entityReferenceTest.$save()).toEqual(true);
     entityReferenceGuid = entityReferenceTest.guid as string;
@@ -52,12 +52,12 @@ describe('Entity', () => {
     expect(await entityReferenceTest.$save()).toEqual(true);
   });
 
-  it('comparisons work', () => {
-    const compare = TestModel.factory(testEntity.guid as string);
+  it('comparisons work', async () => {
+    const compare = await TestModel.factory(testEntity.guid as string);
 
     expect(testEntity.$is(compare)).toEqual(true);
-    testEntity.$refresh();
-    compare.$refresh();
+    await testEntity.$refresh();
+    await compare.$refresh();
     expect(testEntity.$equals(compare)).toEqual(true);
 
     compare.string = 'different';
@@ -66,16 +66,16 @@ describe('Entity', () => {
     expect(testEntity.$equals(compare)).toEqual(false);
   });
 
-  it('array searching work', () => {
-    const testInArray = TestModel.factory(testEntity.guid as string);
+  it('array searching work', async () => {
+    const testInArray = await TestModel.factory(testEntity.guid as string);
     const array: (string | (TestModel & TestModelData))[] = [
       'thing',
       testInArray,
     ];
 
     expect(testEntity.$inArray(array)).toEqual(true);
-    testEntity.$refresh();
-    testInArray.$refresh();
+    await testEntity.$refresh();
+    await testInArray.$refresh();
     expect(testEntity.$inArray(array, true)).toEqual(true);
     expect(testEntity.$inArray([0, 1, 2, 3, 4, 5])).toEqual(false);
     expect(testEntity.$inArray([0, 1, 2, 3, 4, 5], true)).toEqual(false);
@@ -86,8 +86,8 @@ describe('Entity', () => {
     expect(testEntity.$inArray(array, true)).toEqual(false);
 
     expect(testEntity.$arraySearch(array)).toEqual(1);
-    testEntity.$refresh();
-    testInArray.$refresh();
+    await testEntity.$refresh();
+    await testInArray.$refresh();
     expect(testEntity.$arraySearch(array, true)).toEqual(1);
     expect(testEntity.$arraySearch([0, 1, 2, 3, 4, 5])).toEqual(-1);
     expect(testEntity.$arraySearch([0, 1, 2, 3, 4, 5], true)).toEqual(-1);
@@ -98,10 +98,10 @@ describe('Entity', () => {
     expect(testEntity.$arraySearch(array, true)).toEqual(-1);
   });
 
-  it('refresh work', () => {
+  it('refresh work', async () => {
     testEntity.boolean = false;
     expect(testEntity.boolean).toEqual(false);
-    expect(testEntity.$refresh()).toEqual(true);
+    expect(await testEntity.$refresh()).toEqual(true);
     expect(testEntity.boolean).toEqual(true);
   });
 
@@ -109,25 +109,25 @@ describe('Entity', () => {
     expect(testEntity.string).toEqual('test');
     testEntity.string = 'updated';
     expect(await testEntity.$save()).toEqual(true);
-    testEntity.$refresh();
+    await testEntity.$refresh();
     expect(await testEntity.$save()).toEqual(true);
 
-    const retrieve = TestModel.factory(testEntity.guid as string);
+    const retrieve = await TestModel.factory(testEntity.guid as string);
     expect(retrieve.string).toEqual('updated');
     retrieve.string = 'test';
     expect(await retrieve.$save()).toBe(true);
 
-    testEntity.$refresh();
+    await testEntity.$refresh();
     expect(testEntity.string).toEqual('test');
   });
 
   it('conflict fails to save', async () => {
-    const testEntityCopy = TestModel.factory(testEntity.guid as string);
+    const testEntityCopy = await TestModel.factory(testEntity.guid as string);
     expect(await testEntityCopy.$save()).toEqual(true);
 
     expect(await testEntity.$save()).toEqual(false);
 
-    testEntity.$refresh();
+    await testEntity.$refresh();
 
     expect(testEntityCopy.mdate ?? Infinity).toBeLessThanOrEqual(
       testEntity.mdate ?? 0
@@ -163,7 +163,7 @@ describe('Entity', () => {
     // Remove all tags.
     testEntity.$removeTag('test');
     expect(await testEntity.$save()).toEqual(true);
-    expect(testEntity.$refresh()).toEqual(true);
+    expect(await testEntity.$refresh()).toEqual(true);
     expect(testEntity.$hasTag('test')).toEqual(false);
     expect(testEntity.$getTags()).toEqual([]);
     testEntity.$addTag('test');
@@ -171,14 +171,14 @@ describe('Entity', () => {
     expect(testEntity.$hasTag('test')).toEqual(true);
   });
 
-  it('references works', () => {
-    testEntity.$refresh();
+  it('references works', async () => {
+    await testEntity.$refresh();
 
     expect(testEntity.reference?.guid).toEqual(entityReferenceGuid);
     expect(testEntity.refArray?.[0].guid).toEqual(entityReferenceGuid);
     expect(testEntity.refObject?.entity.guid).toEqual(entityReferenceGuid);
 
-    const entity = TestModel.factory(testEntity.guid as string);
+    const entity = await TestModel.factory(testEntity.guid as string);
 
     expect(entity.reference?.guid).toEqual(entityReferenceGuid);
     expect(entity.refArray?.[0].guid).toEqual(entityReferenceGuid);
@@ -232,7 +232,7 @@ describe('Entity', () => {
     });
   });
 
-  it('incoming JSON works', () => {
+  it('incoming JSON works', async () => {
     // Test that a property can be deleted.
     let json = JSON.stringify(testEntity);
 
@@ -244,7 +244,7 @@ describe('Entity', () => {
 
     expect(testEntity.string).toBeUndefined();
 
-    expect(testEntity.$refresh()).toEqual(true);
+    expect(await testEntity.$refresh()).toEqual(true);
 
     // Test whitelisted data.
     json = JSON.stringify(testEntity);
@@ -280,7 +280,7 @@ describe('Entity', () => {
     expect(testEntity.refArray?.[0].guid).toEqual(entityReferenceGuid);
     expect(testEntity.refObject?.entity.guid).toEqual(entityReferenceGuid);
 
-    expect(testEntity.$refresh()).toEqual(true);
+    expect(await testEntity.$refresh()).toEqual(true);
 
     testEntity.cdate = 13;
     testEntity.mdate = 14;
@@ -302,7 +302,7 @@ describe('Entity', () => {
     expect(testEntity.reference?.guid).toEqual(entityReferenceGuid);
     expect(testEntity.refArray?.[0].guid).toEqual(entityReferenceGuid);
 
-    expect(testEntity.$refresh()).toEqual(true);
+    expect(await testEntity.$refresh()).toEqual(true);
 
     // Test no whitelist, but protected data instead.
     const undo = testEntity.$useProtectedData();
@@ -324,7 +324,7 @@ describe('Entity', () => {
     expect(testEntity.refArray).toEqual([]);
     expect(testEntity.refObject).toEqual({});
 
-    expect(testEntity.$refresh()).toEqual(true);
+    expect(await testEntity.$refresh()).toEqual(true);
 
     testEntity.cdate = 13;
     testEntity.mdate = 14;
@@ -346,7 +346,7 @@ describe('Entity', () => {
     expect(testEntity.null).toBeUndefined();
 
     undo();
-    expect(testEntity.$refresh()).toEqual(true);
+    expect(await testEntity.$refresh()).toEqual(true);
   });
 
   it("conflicting JSON doesn't work", async () => {

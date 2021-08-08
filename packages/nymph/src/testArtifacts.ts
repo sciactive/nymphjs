@@ -30,13 +30,17 @@ export class TestModel extends Entity<TestModelData> {
   static class = 'TestModel';
 
   protected $privateData = ['boolean'];
-  public static $searchRestrictedData = ['fish'];
+  public static searchRestrictedData = ['fish'];
   protected $allowlistData? = ['string', 'array', 'mdate'];
   protected $protectedTags = ['test', 'notag'];
   protected $allowlistTags? = ['newtag'];
 
-  static factory(guid?: string): TestModel & TestModelData {
-    return new TestModel(guid);
+  static async factory(guid?: string): Promise<TestModel & TestModelData> {
+    return (await super.factory(guid)) as TestModel & TestModelData;
+  }
+
+  static factorySync(guid?: string): TestModel & TestModelData {
+    return super.factorySync(guid) as TestModel & TestModelData;
   }
 
   constructor(guid?: string) {
@@ -67,6 +71,7 @@ export class TestModel extends Entity<TestModelData> {
     };
   }
 }
+
 Nymph.setEntityClass(TestModel.class, TestModel);
 
 /**
@@ -76,8 +81,13 @@ export class TestBModel extends TestModel {
   static ETYPE = 'test_b_model';
   static class = 'TestBModel';
 
-  static factory(guid?: string): TestBModel & TestModelData {
-    return new TestBModel(guid);
+  static async factory(guid?: string): Promise<TestBModel & TestModelData> {
+    return (await super.factory(guid)) as TestBModel & TestModelData;
+  }
+
+  static factorySync(guid?: string): TestBModel & TestModelData {
+    return super.factorySync(guid) as TestBModel & TestModelData;
   }
 }
+
 Nymph.setEntityClass(TestBModel.class, TestBModel);

@@ -88,7 +88,9 @@ import {
  * will fill its data from the DB. You can call clearCache() to turn all the
  * entities back into sleeping references.
  */
-class Entity<T extends EntityData = EntityData> implements EntityInterface {
+export default class Entity<T extends EntityData = EntityData>
+  implements EntityInterface
+{
   /**
    * A unique name for this type of entity used to separate its data from other
    * types of entities in the database.
@@ -102,21 +104,9 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
    */
   public static class = 'Entity';
 
-  /**
-   * The entity's Globally Unique ID.
-   */
   public guid: string | null = null;
-  /**
-   * The creation date of the entity as a high precision Unix timestamp.
-   */
   public cdate: number | null = null;
-  /**
-   * The modified date of the entity as a high precision Unix timestamp.
-   */
   public mdate: number | null = null;
-  /**
-   * Array of the entity's tags.
-   */
   public tags: string[] = [];
   /**
    * The data proxy handler.
@@ -193,7 +183,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
    * The names of static methods allowed to be called by the frontend with
    * serverCallStatic.
    */
-  public static $clientEnabledStaticMethods: string[] = [];
+  public static clientEnabledStaticMethods: string[] = [];
   /**
    * Whether to use "skipAc" when accessing entity references.
    */
@@ -258,10 +248,10 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
 
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
-    if (guid) {
+    if (guid != null) {
       const entity = Nymph.driver.getEntitySync(
         { class: this.constructor as EntityConstructor },
-        { type: '&', guid: guid }
+        { type: '&', guid }
       );
       if (entity) {
         this.guid = entity.guid;
@@ -334,23 +324,28 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
     }) as Entity<T>;
   }
 
-  public static factory(guid?: string) {
-    return new Entity(guid);
+  public static async factory(guid?: string) {
+    const entity = new this();
+    if (guid != null) {
+      const entity = await Nymph.getEntity(
+        {
+          class: this as any as EntityConstructor,
+        },
+        { type: '&', guid }
+      );
+      if (entity != null) {
+        return entity;
+      }
+    }
+    return entity;
   }
 
-  /**
-   * Create a new sleeping reference instance.
-   *
-   * Sleeping references won't retrieve their data from the database until it
-   * is actually used.
-   *
-   * @param reference The Nymph Entity Reference to use to wake.
-   * @returns The new instance.
-   */
+  public static factorySync(guid?: string) {
+    return new this(guid);
+  }
+
   public static factoryReference(reference: EntityReference) {
-    const className = reference[2];
-    const EntityClass = Nymph.getEntityClass(className);
-    const entity = new EntityClass();
+    const entity = new this();
     entity.$referenceSleep(reference);
     return entity;
   }
@@ -705,7 +700,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
    * Set up a sleeping reference.
    * @param array $reference The reference to use to wake.
    */
-  public $referenceSleep(reference: EntityReference) {
+  protected $referenceSleep(reference: EntityReference) {
     if (
       reference.length !== 3 ||
       reference[0] !== 'nymph_entity_reference' ||
@@ -734,7 +729,7 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
    *
    * @returns True on success, false on failure.
    */
-  private $referenceWake() {
+  protected $referenceWake() {
     if (!this.$isASleepingReference || this.$sleepingReference == null) {
       return true;
     }
@@ -759,13 +754,13 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
     return true;
   }
 
-  public $refresh() {
+  public async $refresh() {
     this.$referenceWake();
 
     if (this.guid == null) {
       return false;
     }
-    const refresh = Nymph.driver.getEntitySync(
+    const refresh = await Nymph.getEntity(
       {
         class: this.constructor as EntityConstructor,
         skipCache: true,
@@ -815,4 +810,3 @@ class Entity<T extends EntityData = EntityData> implements EntityInterface {
 }
 
 Nymph.setEntityClass(Entity.class, Entity);
-export default Entity;

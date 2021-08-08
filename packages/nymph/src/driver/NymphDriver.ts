@@ -61,11 +61,11 @@ export default abstract class NymphDriver {
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factory']>[]>;
+  ): Promise<ReturnType<T['factorySync']>[]>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factory']>[] | string[]>;
+  ): Promise<ReturnType<T['factorySync']>[] | string[]>;
   protected abstract getEntitiesSync<
     T extends EntityConstructor = EntityConstructor
   >(
@@ -74,13 +74,16 @@ export default abstract class NymphDriver {
   ): string[];
   protected abstract getEntitiesSync<
     T extends EntityConstructor = EntityConstructor
-  >(options?: Options<T>, ...selectors: Selector[]): ReturnType<T['factory']>[];
+  >(
+    options?: Options<T>,
+    ...selectors: Selector[]
+  ): ReturnType<T['factorySync']>[];
   protected abstract getEntitiesSync<
     T extends EntityConstructor = EntityConstructor
   >(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factory']>[] | string[];
+  ): ReturnType<T['factorySync']>[] | string[];
   abstract getUID(name: string): Promise<number | null>;
   abstract import(filename: string): Promise<boolean>;
   abstract newUID(name: string): Promise<number | null>;
@@ -640,7 +643,7 @@ export default abstract class NymphDriver {
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factory']> | null;
+  ): ReturnType<T['factorySync']> | null;
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
@@ -648,11 +651,11 @@ export default abstract class NymphDriver {
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string
-  ): ReturnType<T['factory']> | null;
+  ): ReturnType<T['factorySync']> | null;
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): ReturnType<T['factory']> | string | null {
+  ): ReturnType<T['factorySync']> | string | null {
     // Set up options and selectors.
     if (typeof selectors[0] === 'string') {
       selectors = [{ type: '&', guid: selectors[0] }];
@@ -713,7 +716,7 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): { result: any; process: () => ReturnType<T['factory']>[] };
+  ): { result: any; process: () => ReturnType<T['factorySync']>[] };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
@@ -736,7 +739,7 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): { result: any; process: () => ReturnType<T['factory']>[] | string[] } {
+  ): { result: any; process: () => ReturnType<T['factorySync']>[] | string[] } {
     if (!this.isConnected()) {
       throw new UnableToConnectError('not connected to DB');
     }
@@ -761,7 +764,7 @@ export default abstract class NymphDriver {
       }
     }
 
-    let entities: ReturnType<T['factory']>[] | string[] = [];
+    let entities: ReturnType<T['factorySync']>[] | string[] = [];
     const EntityClass = options.class ?? (Nymph.getEntityClass('Entity') as T);
     const etype = EntityClass.ETYPE;
 
@@ -780,7 +783,7 @@ export default abstract class NymphDriver {
         (Object.keys(selectors[0]).length === 2 ||
           (Object.keys(selectors[0]).length === 3 && 'tag' in selectors[0]))
       ) {
-        const entity = this.pullCache<ReturnType<T['factory']>>(
+        const entity = this.pullCache<ReturnType<T['factorySync']>>(
           selectors[0]['guid'],
           EntityClass.class,
           !!options.skipAc
@@ -838,7 +841,9 @@ export default abstract class NymphDriver {
             // @ts-ignore: ts doesn't know the return type here.
             entities.push(guid);
           } else {
-            const entity = EntityClass.factory() as ReturnType<T['factory']>;
+            const entity = EntityClass.factorySync() as ReturnType<
+              T['factorySync']
+            >;
             if (options.skipAc != null) {
               entity.$useSkipAc(!!options.skipAc);
             }
@@ -969,7 +974,7 @@ export default abstract class NymphDriver {
     }
     this.entityCount[guid]++;
     if (guid in this.entityCache) {
-      const entity = Nymph.getEntityClass(className).factory() as T;
+      const entity = Nymph.getEntityClass(className).factorySync() as T;
       if (entity) {
         entity.$useSkipAc(!!useSkipAc);
         entity.guid = guid;

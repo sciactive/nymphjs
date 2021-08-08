@@ -356,13 +356,13 @@ export default class Nymph {
   >(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factory']>[]>;
+  ): Promise<ReturnType<T['factorySync']>[]>;
   public static async getEntities<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factory']>[] | string[]> {
+  ): Promise<ReturnType<T['factorySync']>[] | string[]> {
     return await this.driver.getEntities(options, ...selectors);
   }
 
@@ -390,7 +390,7 @@ export default class Nymph {
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factory']> | null>;
+  ): Promise<ReturnType<T['factorySync']> | null>;
   public static async getEntity<
     T extends EntityConstructor = EntityConstructor
   >(
@@ -402,13 +402,13 @@ export default class Nymph {
   >(
     options: Options<T>,
     guid: string
-  ): Promise<ReturnType<T['factory']> | null>;
+  ): Promise<ReturnType<T['factorySync']> | null>;
   public static async getEntity<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<ReturnType<T['factory']> | string | null> {
+  ): Promise<ReturnType<T['factorySync']> | string | null> {
     // Set up options and selectors.
     if (typeof selectors[0] === 'string') {
       selectors = [{ type: '&', guid: selectors[0] }];

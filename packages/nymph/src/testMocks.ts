@@ -13,7 +13,7 @@ export class MockNymphDriver {
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factory']> | null;
+  ): ReturnType<T['factorySync']> | null;
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
@@ -21,11 +21,11 @@ export class MockNymphDriver {
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string
-  ): ReturnType<T['factory']> | null;
+  ): ReturnType<T['factorySync']> | null;
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): ReturnType<T['factory']> | string | null {
+  ): ReturnType<T['factorySync']> | string | null {
     const guid =
       typeof selectors[0] === 'string' ? selectors[0] : selectors[0].guid;
     if (!options || !guid || typeof guid !== 'string' || !(guid in entities)) {
@@ -34,7 +34,7 @@ export class MockNymphDriver {
 
     const entity: EntityInterface = (
       (options.class as T) ?? MockNymph.getEntityClass('Entity')
-    ).factory();
+    ).factorySync();
     const entityJson = entities[guid];
     entity.guid = guid;
     entity.cdate = entityJson.cdate;
@@ -42,7 +42,7 @@ export class MockNymphDriver {
     entity.tags = entityJson.tags;
     entity.$putData(entityJson.data, {});
 
-    return entity as ReturnType<T['factory']>;
+    return entity as ReturnType<T['factorySync']>;
   }
 }
 
@@ -63,6 +63,40 @@ export class MockNymph {
       return this.entityClasses[className];
     }
     throw new ClassNotAvailableError('Tried to use class: ' + className);
+  }
+
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
+    options: Options<T> & { return: 'guid' },
+    ...selectors: Selector[]
+  ): Promise<string | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
+    options: Options<T>,
+    ...selectors: Selector[]
+  ): Promise<ReturnType<T['factorySync']> | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
+    options: Options<T> & { return: 'guid' },
+    guid: string
+  ): Promise<string | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
+    options: Options<T>,
+    guid: string
+  ): Promise<ReturnType<T['factorySync']> | null>;
+  public static async getEntity<
+    T extends EntityConstructor = EntityConstructor
+  >(
+    options: Options<T> = {},
+    ...selectors: Selector[] | string[]
+  ): Promise<ReturnType<T['factorySync']> | string | null> {
+    // @ts-ignore: The selector type is correct here.
+    return this.driver.getEntitySync(options, ...selectors);
   }
 
   public static async saveEntity(entity: EntityInterface): Promise<boolean> {
