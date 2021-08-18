@@ -5,7 +5,7 @@
     "noImplicitAny": true,
     "removeComments": true,
     "sourceMap": true,
-    "outDir": "dist",
+    "outDir": "lib",
     "resolveJsonModule": true,
     "rootDir": "src/",
     "declaration": true

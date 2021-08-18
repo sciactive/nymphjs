@@ -2,8 +2,9 @@ const path = require('path');
 
 module.exports = {
   mode: 'production',
+  devtool: 'source-map',
   entry: {
-    NymphClient: './src/index.ts',
+    NymphClient: './lib/index.js',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),

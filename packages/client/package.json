@@ -2,16 +2,20 @@
   "name": "@nymphjs/client",
   "version": "1.0.0-alpha.0",
   "description": "NymphJS - Client",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "browser": "dist/index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "keywords": [
     "nymph",
     "ORM",
     "object relational mapper"
   ],
   "scripts": {
-    "build": "webpack",
-    "watch": "webpack --watch",
+    "build": "npm run build:ts && npm run build:js",
+    "build:ts": "tsc",
+    "build:js": "webpack",
+    "watch:ts": "tsc --watch",
+    "watch:js": "webpack --watch",
     "prepare": "npm run build",
     "test": "jest --detectOpenHandles",
     "test:watch": "jest --watch"

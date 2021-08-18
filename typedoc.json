@@ -1,0 +1,12 @@
+{
+  "packages": [
+    "./packages/client/",
+    "./packages/client-node/",
+    "./packages/driver-mysql/",
+    "./packages/driver-sqlite3/",
+    "./packages/nymph/"
+  ],
+  "out": "docs",
+  "name": "Nymph.js",
+  "includeVersion": true
+}
