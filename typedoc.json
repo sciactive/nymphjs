@@ -5,6 +5,7 @@
     "./packages/driver-mysql/",
     "./packages/driver-sqlite3/",
     "./packages/nymph/",
+    "./packages/pubsub/",
     "./packages/server/"
   ],
   "out": "docs",
