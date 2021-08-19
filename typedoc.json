@@ -4,7 +4,8 @@
     "./packages/client-node/",
     "./packages/driver-mysql/",
     "./packages/driver-sqlite3/",
-    "./packages/nymph/"
+    "./packages/nymph/",
+    "./packages/server/"
   ],
   "out": "docs",
   "name": "Nymph.js",
