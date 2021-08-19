@@ -6,29 +6,40 @@ import NymphServer, {
 import { Nymph } from '@nymphjs/client-node';
 import { Entity } from '@nymphjs/client';
 
-export type EmployeeData = {
+export type EmployeeBaseData<T> = {
   name?: string;
   id?: number;
   title?: string;
   department?: string;
-  subordinates?: EmployeeModel[];
+  subordinates?: T[];
   salary?: number;
   current?: boolean;
   startDate?: number;
   endDate?: number;
   phone?: string;
+
+  building?: string;
+
+  thing?: string;
+  other?: string;
 };
+
+export type EmployeeModelData = EmployeeBaseData<EmployeeModel>;
 
 const IS_MANAGER = true;
 
 /**
  * This class is a test class that extends the Entity class.
  */
-export class EmployeeModel extends EntityServer<EmployeeData> {
+export class EmployeeModel extends EntityServer<EmployeeModelData> {
   static ETYPE = 'employee';
   static class = 'Employee';
 
-  protected $clientEnabledMethods = ['throwError'];
+  protected $clientEnabledMethods = [
+    '$testMethodStateless',
+    '$testMethod',
+    '$throwError',
+  ];
   public static clientEnabledStaticMethods = ['testStatic', 'throwErrorStatic'];
   protected $protectedTags = ['employee'];
   protected $allowlistTags? = ['boss', 'bigcheese'];
@@ -47,12 +58,14 @@ export class EmployeeModel extends EntityServer<EmployeeData> {
     'building',
   ];
 
-  static async factory(guid?: string): Promise<EmployeeModel & EmployeeData> {
-    return (await super.factory(guid)) as EmployeeModel & EmployeeData;
+  static async factory(
+    guid?: string
+  ): Promise<EmployeeModel & EmployeeModelData> {
+    return (await super.factory(guid)) as EmployeeModel & EmployeeModelData;
   }
 
-  static factorySync(guid?: string): EmployeeModel & EmployeeData {
-    return super.factorySync(guid) as EmployeeModel & EmployeeData;
+  static factorySync(guid?: string): EmployeeModel & EmployeeModelData {
+    return super.factorySync(guid) as EmployeeModel & EmployeeModelData;
   }
 
   constructor(guid?: string) {
@@ -81,7 +94,7 @@ export class EmployeeModel extends EntityServer<EmployeeData> {
     if (this.$data.startDate == null) {
       error.addField('startDate');
     }
-    if (error.getFields()) {
+    if (error.getFields().length) {
       throw error;
     }
     // Generate employee ID.
@@ -89,6 +102,16 @@ export class EmployeeModel extends EntityServer<EmployeeData> {
       this.$data.id = (await NymphServer.newUID('employee')) ?? undefined;
     }
     return await super.$save();
+  }
+
+  public $testMethodStateless(value: number) {
+    this.$data.name = 'bad name';
+    return value + 1;
+  }
+
+  public $testMethod(value: number) {
+    this.$data.current = false;
+    return value + 2;
   }
 
   public static testStatic(value: number) {
@@ -100,7 +123,7 @@ export class EmployeeModel extends EntityServer<EmployeeData> {
   }
 
   public $throwError() {
-    throw new InvalidParametersError('This function only throws errors.');
+    throw new BadFunctionCallError('This function only throws errors.');
   }
 
   public static inaccessibleMethod() {
@@ -117,6 +140,8 @@ export class BadFunctionCallError extends Error {
   }
 }
 
+export type EmployeeData = EmployeeBaseData<Employee>;
+
 export class Employee extends Entity<EmployeeData> {
   constructor(guid?: string) {
     super(guid);
@@ -132,8 +157,20 @@ export class Employee extends Entity<EmployeeData> {
     return (await super.factory(guid)) as Employee & EmployeeData;
   }
 
+  static factorySync(guid?: string): Employee & EmployeeData {
+    return super.factorySync(guid) as Employee & EmployeeData;
+  }
+
+  $testMethod(value: number) {
+    return this.$serverCall('$testMethod', [value]);
+  }
+
+  $testMethodStateless(value: number) {
+    return this.$serverCall('$testMethodStateless', [value], true);
+  }
+
   $throwError() {
-    return this.$serverCall('throwError', []);
+    return this.$serverCall('$throwError', []);
   }
 
   static testStatic(value: number) {

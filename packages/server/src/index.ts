@@ -186,7 +186,7 @@ rest.post('/', async (request, response) => {
       response.send(created);
     }
   } else if (action === 'method') {
-    data.params = referenceToEntity(data.params);
+    data.params = referencesToEntities(data.params);
     if (data.static) {
       let EntityClass: EntityConstructor;
       try {
@@ -210,12 +210,16 @@ rest.post('/', async (request, response) => {
         return;
       }
       try {
-        const ret = method.call(EntityClass, ...data.params);
+        const result = method.call(EntityClass, ...data.params);
+        let ret = result;
+        if (result instanceof Promise) {
+          ret = await result;
+        }
         response.status(200);
         response.setHeader('Content-Type', 'application/json');
         response.send({ return: ret });
-      } catch ($e) {
-        httpError(response, 500, 'Internal Server Error', $e);
+      } catch (e) {
+        httpError(response, 500, 'Internal Server Error', e);
         return;
       }
     } else {
@@ -248,7 +252,11 @@ rest.post('/', async (request, response) => {
         return;
       }
       try {
-        const ret = entity[data.method](...data.params);
+        const result = entity[data.method](...data.params);
+        let ret = result;
+        if (result instanceof Promise) {
+          ret = await result;
+        }
         response.status(200);
         response.setHeader('Content-Type', 'application/json');
         if (data.stateless) {
@@ -444,13 +452,25 @@ rest.delete('/', async (request, response) => {
       response.send(deleted);
     }
   } else {
-    if (!(await Nymph.deleteUID(`${data}`))) {
+    if (typeof data !== 'string') {
+      httpError(response, 400, 'Bad Request');
+      return;
+    }
+    let result: boolean;
+    try {
+      result = await Nymph.deleteUID(data);
+    } catch ($e) {
+      httpError(response, 500, 'Internal Server Error', $e);
+      return;
+    }
+    if (!result) {
       httpError(response, 500, 'Internal Server Error');
       return;
     }
-    response.status(204);
+    response.status(200);
+    response.setHeader('Content-Type', 'application/json');
+    response.send(JSON.stringify(result));
   }
-  return true;
 });
 
 async function loadEntity(
@@ -496,12 +516,12 @@ async function loadEntity(
 /**
  * Check if an item is a reference, and if it is, convert it to an entity.
  *
- * This function will recurse into deeper arrays.
+ * This function will recurse into deeper arrays and objects.
  *
  * @param item The item to check.
  * @returns The item, converted.
  */
-function referenceToEntity(item: any): any {
+function referencesToEntities(item: any): any {
   if (Array.isArray(item)) {
     if (item.length === 3 && item[0] === 'nymph_entity_reference') {
       try {
@@ -511,12 +531,12 @@ function referenceToEntity(item: any): any {
         return item;
       }
     } else {
-      return item.map((entry) => referenceToEntity(item));
+      return item.map((entry) => referencesToEntities(entry));
     }
   } else if (typeof item === 'object' && !(item instanceof Entity)) {
     // Only do this for non-entity objects.
     for (let curProperty in item) {
-      item[curProperty] = referenceToEntity(curProperty);
+      item[curProperty] = referencesToEntities(curProperty);
     }
   }
   return item;
