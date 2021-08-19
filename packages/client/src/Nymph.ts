@@ -198,7 +198,7 @@ export default class Nymph {
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<InstanceType<T> | null>;
+  ): Promise<ReturnType<T['factorySync']> | null>;
   public static async getEntity<
     T extends EntityConstructor = EntityConstructor
   >(
@@ -207,13 +207,16 @@ export default class Nymph {
   ): Promise<string | null>;
   public static async getEntity<
     T extends EntityConstructor = EntityConstructor
-  >(options: Options<T>, guid: string): Promise<InstanceType<T> | null>;
+  >(
+    options: Options<T>,
+    guid: string
+  ): Promise<ReturnType<T['factorySync']> | null>;
   public static async getEntity<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[] | string[]
-  ): Promise<InstanceType<T> | string | null> {
+  ): Promise<ReturnType<T['factorySync']> | string | null> {
     // @ts-ignore: Implementation signatures of overloads are not externally visible.
     const data = (await this.getEntityData(options, ...selectors)) as
       | EntityJson<T>
@@ -271,7 +274,7 @@ export default class Nymph {
       dataType: 'json',
       data: {
         action: 'entity',
-        data: [{ ...options, class: options.class }, ...selectors],
+        data: [{ ...options, class: options.class.class }, ...selectors],
       },
     });
 
@@ -289,19 +292,22 @@ export default class Nymph {
   ): Promise<string[]>;
   public static async getEntities<
     T extends EntityConstructor = EntityConstructor
-  >(options: Options<T>, ...selectors: Selector[]): Promise<InstanceType<T>[]>;
+  >(
+    options: Options<T>,
+    ...selectors: Selector[]
+  ): Promise<ReturnType<T['factorySync']>[]>;
   public static async getEntities<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<InstanceType<T>[] | string[]> {
+  ): Promise<ReturnType<T['factorySync']>[] | string[]> {
     const data = await requester.GET({
       url: this.restURL,
       dataType: 'json',
       data: {
         action: 'entities',
-        data: [{ ...options, class: options.class }, ...selectors],
+        data: [{ ...options, class: options.class.class }, ...selectors],
       },
     });
 
@@ -313,15 +319,15 @@ export default class Nymph {
 
   public static initEntity<T extends EntityConstructor = EntityConstructor>(
     entityJSON: EntityJson<T>
-  ): InstanceType<T> {
+  ): ReturnType<T['factorySync']> {
     const EntityClass = this.getEntityClass(entityJSON.class);
     if (!EntityClass) {
       throw new ClassNotAvailableError(
         entityJSON.class + ' class cannot be found.'
       );
     }
-    const entity = new EntityClass();
-    return entity.$init(entityJSON) as InstanceType<T>;
+    const entity = EntityClass.factorySync();
+    return entity.$init(entityJSON) as ReturnType<T['factorySync']>;
   }
 
   public static initEntitiesFromData<T extends any>(item: T): T {

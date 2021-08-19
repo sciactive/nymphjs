@@ -84,25 +84,25 @@ export default class PubSub {
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<InstanceType<T>[]>;
+  ): PubSubSubscribable<ReturnType<T['factorySync']>[]>;
   public static subscribeEntities<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<InstanceType<T>[] | string[]> {
+  ): PubSubSubscribable<ReturnType<T['factorySync']>[] | string[]> {
     const promise = Nymph.getEntities(options, ...selectors);
     const query = JSON.stringify([options, ...selectors]);
     const subscribe = (
-      resolve?: PubSubResolveCallback<InstanceType<T>[] | string[]> | undefined,
+      resolve?:
+        | PubSubResolveCallback<ReturnType<T['factorySync']>[] | string[]>
+        | undefined,
       reject?: PubSubRejectCallback | undefined,
       count?: PubSubCountCallback | undefined
     ) => {
-      const callbacks: PubSubCallbacks<InstanceType<T>[] | string[]> = [
-        resolve,
-        reject,
-        count,
-      ];
+      const callbacks: PubSubCallbacks<
+        ReturnType<T['factorySync']>[] | string[]
+      > = [resolve, reject, count];
 
       promise.then(resolve, reject);
 
@@ -125,19 +125,19 @@ export default class PubSub {
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<InstanceType<T> | null>;
+  ): PubSubSubscribable<ReturnType<T['factorySync']> | null>;
   public static subscribeEntity<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<InstanceType<T> | string | null> {
+  ): PubSubSubscribable<ReturnType<T['factorySync']> | string | null> {
     const promise = Nymph.getEntity(options, ...selectors);
     options.limit = 1;
     const query = JSON.stringify([options, ...selectors]);
     const subscribe = (
       resolve?:
-        | PubSubResolveCallback<InstanceType<T> | string | null>
+        | PubSubResolveCallback<ReturnType<T['factorySync']> | string | null>
         | undefined,
       reject?: PubSubRejectCallback | undefined,
       count?: PubSubCountCallback | undefined
@@ -153,11 +153,9 @@ export default class PubSub {
           }
         }
       };
-      const callbacks: PubSubCallbacks<InstanceType<T> | string | null> = [
-        newResolve,
-        reject,
-        count,
-      ];
+      const callbacks: PubSubCallbacks<
+        ReturnType<T['factorySync']> | string | null
+      > = [newResolve, reject, count];
 
       promise.then(resolve, reject);
 

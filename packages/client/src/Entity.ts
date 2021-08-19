@@ -207,6 +207,10 @@ export default class Entity<T extends EntityData = EntityData>
     return entity;
   }
 
+  public static factorySync(guid?: string) {
+    return new this(guid);
+  }
+
   public static factoryReference(reference: EntityReference) {
     const entity = new this();
     entity.$referenceSleep(reference);
