@@ -94,12 +94,12 @@ export default class Nymph {
     });
   }
 
-  public static saveEntity(entity: EntityInterface) {
+  public static async saveEntity(entity: EntityInterface) {
     let method: 'POST' | 'PUT' = entity.guid == null ? 'POST' : 'PUT';
-    return this.requestWithMethod(entity, method, entity, false);
+    return await this.requestWithMethod(entity, method, entity, false);
   }
 
-  public static saveEntities(entities: EntityInterface[]) {
+  public static async saveEntities(entities: EntityInterface[]) {
     if (!entities.length) {
       return Promise.resolve(false);
     }
@@ -116,10 +116,10 @@ export default class Nymph {
         );
       }
     });
-    return this.requestWithMethod(entities, method, entities, true);
+    return await this.requestWithMethod(entities, method, entities, true);
   }
 
-  public static patchEntity(entity: EntityInterface) {
+  public static async patchEntity(entity: EntityInterface) {
     if (entity.guid == null) {
       throw new InvalidRequestError(
         "You can't patch an entity that hasn't yet been saved."
@@ -127,10 +127,10 @@ export default class Nymph {
     }
 
     let patch = entity.$getPatch();
-    return this.requestWithMethod(entity, 'PATCH', patch, false);
+    return await this.requestWithMethod(entity, 'PATCH', patch, false);
   }
 
-  public static patchEntities(entities: EntityInterface[]) {
+  public static async patchEntities(entities: EntityInterface[]) {
     if (!entities.length) {
       return Promise.resolve(false);
     }
@@ -144,7 +144,7 @@ export default class Nymph {
       }
     });
     let patch = entities.map((e) => e.$getPatch());
-    return this.requestWithMethod(entities, 'PATCH', patch, true);
+    return await this.requestWithMethod(entities, 'PATCH', patch, true);
   }
 
   private static async requestWithMethod<T extends EntityInterface>(

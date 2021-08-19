@@ -7,7 +7,6 @@ import {
   EntityJson,
   EntityPatch,
   EntityReference,
-  ServerCallResponse,
 } from './Entity.types';
 import Nymph from './Nymph';
 import {
@@ -422,12 +421,10 @@ export default class Entity<T extends EntityData = EntityData>
       throw new EntityIsSleepingReferenceError(sleepErr);
     }
 
-    try {
-      await Nymph.patchEntity(this);
-      return !!this.guid;
-    } catch (e) {
-      return false;
-    }
+    const mdate = this.mdate;
+
+    await Nymph.patchEntity(this);
+    return mdate === this.mdate;
   }
 
   public $ready() {
@@ -548,12 +545,8 @@ export default class Entity<T extends EntityData = EntityData>
       throw new EntityIsSleepingReferenceError(sleepErr);
     }
 
-    try {
-      await Nymph.saveEntity(this);
-      return !!this.guid;
-    } catch (e) {
-      return false;
-    }
+    await Nymph.saveEntity(this);
+    return !!this.guid;
   }
 
   public async $serverCall(

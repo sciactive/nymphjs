@@ -81,27 +81,27 @@ export default class HttpRequester {
     this.xsrfToken = xsrfToken;
   }
 
-  GET(opt: HttpRequesterRequestOptions) {
-    return this._httpRequest('GET', opt);
+  async GET(opt: HttpRequesterRequestOptions) {
+    return await this._httpRequest('GET', opt);
   }
 
-  POST(opt: HttpRequesterRequestOptions) {
-    return this._httpRequest('POST', opt);
+  async POST(opt: HttpRequesterRequestOptions) {
+    return await this._httpRequest('POST', opt);
   }
 
-  PUT(opt: HttpRequesterRequestOptions) {
-    return this._httpRequest('PUT', opt);
+  async PUT(opt: HttpRequesterRequestOptions) {
+    return await this._httpRequest('PUT', opt);
   }
 
-  PATCH(opt: HttpRequesterRequestOptions) {
-    return this._httpRequest('PATCH', opt);
+  async PATCH(opt: HttpRequesterRequestOptions) {
+    return await this._httpRequest('PATCH', opt);
   }
 
-  DELETE(opt: HttpRequesterRequestOptions) {
-    return this._httpRequest('DELETE', opt);
+  async DELETE(opt: HttpRequesterRequestOptions) {
+    return await this._httpRequest('DELETE', opt);
   }
 
-  _httpRequest(
+  async _httpRequest(
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     opt: HttpRequesterRequestOptions
   ) {
@@ -133,55 +133,49 @@ export default class HttpRequester {
         this.xsrfToken;
     }
 
-    return this.fetch(url, options)
-      .then((response) => {
-        if (response.ok) {
-          for (let i = 0; i < this.responseCallbacks.length; i++) {
-            this.responseCallbacks[i] &&
-              this.responseCallbacks[i](this, response);
-          }
-          return response.text();
+    const response = await this.fetch(url, options);
+    if (!response.ok) {
+      const text = await response.text();
+      let errObj;
+      try {
+        errObj = JSON.parse(text);
+      } catch (e) {
+        if (!(e instanceof SyntaxError)) {
+          throw e;
         }
-        return response.text().then((text) => {
-          let errObj;
-          try {
-            errObj = JSON.parse(text);
-          } catch (e) {
-            if (!(e instanceof SyntaxError)) {
-              throw e;
-            }
-          }
+      }
 
-          if (typeof errObj !== 'object') {
-            errObj = {
-              textStatus: response.statusText,
-            };
-          }
-          errObj.status = response.status;
-          throw response.status < 500
-            ? new ClientError(errObj)
-            : new ServerError(errObj);
-        });
-      })
-      .then((response) => {
-        if (opt.dataType === 'json') {
-          if (!response.length) {
-            throw new InvalidResponseError('Server response was empty.');
-          }
-          try {
-            return JSON.parse(response);
-          } catch (e) {
-            if (!(e instanceof SyntaxError)) {
-              throw e;
-            }
-            throw new InvalidResponseError(
-              'Server response was invalid: ' + JSON.stringify(response)
-            );
-          }
-        } else {
-          return response;
+      if (typeof errObj !== 'object') {
+        errObj = {
+          textStatus: response.statusText,
+        };
+      }
+      errObj.status = response.status;
+      throw response.status < 500
+        ? new ClientError(errObj)
+        : new ServerError(errObj);
+    }
+    for (let i = 0; i < this.responseCallbacks.length; i++) {
+      this.responseCallbacks[i] && this.responseCallbacks[i](this, response);
+    }
+    const text = await response.text();
+    if (opt.dataType === 'json') {
+      if (!text.length) {
+        throw new InvalidResponseError('Server response was empty.');
+      }
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        if (!(e instanceof SyntaxError)) {
+          throw e;
         }
-      });
+        throw new InvalidResponseError(
+          'Server response was invalid: ' + JSON.stringify(text)
+        );
+      }
+    } else {
+      return text;
+    }
   }
 }
 
