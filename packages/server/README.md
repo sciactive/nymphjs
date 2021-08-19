@@ -12,7 +12,49 @@ npm install --save @nymphjs/server
 
 ## Usage
 
-TODO...
+You need to install Express, Nymph, and a Nymph driver, then you can use the REST server with an optional path. For this example, I'll use the SQLite3 driver with an in-memory database.
+
+```ts
+import express from 'express';
+import SQLite3Driver from '@nymphjs/driver-sqlite3';
+import Nymph from '@nymphjs/nymph';
+import rest from '@nymphjs/server';
+
+// Import all the entities you will be using on the server.
+import './entities/MyEntity';
+
+// Configure Nymph.
+const sqliteConfig = {
+  filename: ':memory:',
+};
+
+NymphServer.init({ pubsub: false }, new SQLite3Driver(sqliteConfig));
+
+// Create your Express app.
+const app = express();
+
+// Use the REST server (with an optional path).
+app.use('/nymphrest', rest);
+
+// Do anything else you need to do...
+
+// Start your server.
+app.listen(80);
+```
+
+You will need to import any entities you use on the server, so they are available to Nymph.
+
+Now you can configure your client using your server's address (and the optional path, if set).
+
+```ts
+import { Nymph } from '@nymphjs/client';
+
+Nymph.init({
+  // You should configure your Express server to
+  // use HTTPS, but you don't have to.
+  restURL: 'https://mydomain.tld/nymphrest/',
+});
+```
 
 # License
 

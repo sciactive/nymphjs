@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import cookieParser from 'cookie-parser';
+// import cookieParser from 'cookie-parser';
 // import safeJsonStringify from 'safe-json-stringify';
 import Nymph, {
   Entity,
@@ -14,7 +14,7 @@ import Nymph, {
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
 const rest = express();
-rest.use(cookieParser());
+// rest.use(cookieParser());
 rest.use(express.json());
 
 function getActionData(request: Request): { action: string; data: any } {
