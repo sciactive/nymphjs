@@ -30,7 +30,7 @@ export type RequestCallback = (url: string, options: RequestInit) => void;
 export type ResponseCallback = (response: Response) => void;
 
 export type Options<T extends EntityConstructor = EntityConstructor> = {
-  class?: T;
+  class: T;
   limit?: number;
   offset?: number;
   reverse?: boolean;
