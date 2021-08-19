@@ -307,7 +307,9 @@ export default class Entity<T extends EntityData = EntityData>
       throw new EntityIsSleepingReferenceError(sleepErr);
     }
 
-    return await Nymph.deleteEntity(this);
+    const guid = this.guid;
+
+    return (await Nymph.deleteEntity(this)) === guid;
   }
 
   public $equals(object: any) {
