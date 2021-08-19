@@ -11,6 +11,7 @@ import Nymph, {
   EntityReference,
   InvalidParametersError,
 } from '@nymphjs/nymph';
+import { EntityInvalidDataError } from '@nymphjs/nymph';
 
 const rest = express();
 rest.use(cookieParser());
@@ -121,12 +122,12 @@ rest.post('/', async (request, response) => {
     }
     const created = [];
     let hadSuccess = false;
-    let invalidData = false;
+    let invalidRequest = false;
     let conflict = false;
     let lastException = null;
     for (let entData of data) {
       if (entData.guid) {
-        invalidData = true;
+        invalidRequest = true;
         created.push(null);
         continue;
       }
@@ -137,11 +138,15 @@ rest.post('/', async (request, response) => {
         if (e instanceof EntityConflictError) {
           conflict = true;
         }
+        if (e instanceof InvalidParametersError) {
+          invalidRequest = true;
+          lastException = e;
+        }
         created.push(null);
         continue;
       }
       if (!entity) {
-        invalidData = true;
+        invalidRequest = true;
         created.push(null);
         continue;
       }
@@ -153,8 +158,8 @@ rest.post('/', async (request, response) => {
           created.push(false);
         }
       } catch (e) {
-        if (e instanceof InvalidParametersError) {
-          invalidData = true;
+        if (e instanceof EntityInvalidDataError) {
+          invalidRequest = true;
         } else {
           lastException = e;
         }
@@ -162,8 +167,8 @@ rest.post('/', async (request, response) => {
       }
     }
     if (!hadSuccess) {
-      if (invalidData) {
-        httpError(response, 400, 'Bad Request');
+      if (invalidRequest) {
+        httpError(response, 400, 'Bad Request', lastException);
         return;
       } else if (conflict) {
         httpError(response, 409, 'Conflict');
@@ -220,6 +225,8 @@ rest.post('/', async (request, response) => {
       } catch (e) {
         if (e instanceof EntityConflictError) {
           httpError(response, 409, 'Conflict');
+        } else if (e instanceof InvalidParametersError) {
+          httpError(response, 400, 'Bad Request', e);
         } else {
           httpError(response, 500, 'Internal Server Error');
         }
@@ -321,13 +328,13 @@ async function doPutOrPatch(
     }
     const saved = [];
     let hadSuccess = false;
-    let invalidData = false;
+    let invalidRequest = false;
     let conflict = false;
     let notfound = false;
     let lastException = null;
     for (let entData of data) {
       if (entData.guid && entData.guid.length != 24) {
-        invalidData = true;
+        invalidRequest = true;
         saved.push(null);
         continue;
       }
@@ -338,11 +345,15 @@ async function doPutOrPatch(
         if (e instanceof EntityConflictError) {
           conflict = true;
         }
+        if (e instanceof InvalidParametersError) {
+          invalidRequest = true;
+          lastException = e;
+        }
         saved.push(null);
         continue;
       }
       if (!entity) {
-        invalidData = true;
+        invalidRequest = true;
         saved.push(null);
         continue;
       }
@@ -354,8 +365,8 @@ async function doPutOrPatch(
           saved.push(false);
         }
       } catch (e) {
-        if (e instanceof InvalidParametersError) {
-          invalidData = true;
+        if (e instanceof EntityInvalidDataError) {
+          invalidRequest = true;
         } else {
           lastException = e;
         }
@@ -363,8 +374,8 @@ async function doPutOrPatch(
       }
     }
     if (!hadSuccess) {
-      if (invalidData) {
-        httpError(response, 400, 'Bad Request');
+      if (invalidRequest) {
+        httpError(response, 400, 'Bad Request', lastException);
         return;
       } else if (conflict) {
         httpError(response, 409, 'Conflict');
@@ -400,12 +411,12 @@ rest.delete('/', async (request, response) => {
     }
     const deleted = [];
     let failures = false;
-    let invalidData = false;
+    let invalidRequest = false;
     for (let delEnt of data) {
       try {
         const guid = delEnt.guid;
         if (!delEnt.guid) {
-          invalidData = true;
+          invalidRequest = true;
           continue;
         }
         if (await Nymph.deleteEntityByID(guid, delEnt.class)) {
@@ -418,7 +429,7 @@ rest.delete('/', async (request, response) => {
       }
     }
     if (deleted.length === 0) {
-      if (invalidData || !failures) {
+      if (invalidRequest || !failures) {
         httpError(response, 400, 'Bad Request');
       } else {
         httpError(response, 500, 'Internal Server Error');
@@ -449,7 +460,9 @@ async function loadEntity(
 ): Promise<EntityInterface> {
   if (entityData.class === 'Entity') {
     // Don't let clients use the `Entity` class, since it has no validity/AC checks.
-    throw new Error("Can't use Entity class directly from the front end.");
+    throw new InvalidParametersError(
+      "Can't use Entity class directly from the front end."
+    );
   }
   let EntityClass: EntityConstructor;
   try {
@@ -525,13 +538,13 @@ function httpError(
   if (res.headersSent) {
     return;
   }
-  res.status(500);
+  res.status(errorCode);
   res.setHeader('Content-Type', 'application/json');
   if (error) {
     res.send({
       textStatus: `${errorCode} ${message}`,
-      exception: error.constructor.name,
       message: error.message,
+      error,
     });
   } else {
     res.send({ textStatus: `${errorCode} ${message}` });
