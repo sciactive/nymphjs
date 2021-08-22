@@ -280,7 +280,7 @@ export default class PubSub {
   private static _attemptConnect() {
     // Attempt to connect.
     if (this.pubsubURL != null) {
-      this.connection = new this.WebSocket(this.pubsubURL);
+      this.connection = new this.WebSocket(this.pubsubURL, 'nymph');
       this.connection.onopen = this._onopen.bind(this);
       this.connection.onmessage = this._onmessage.bind(this);
     }

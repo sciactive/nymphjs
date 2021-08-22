@@ -32,11 +32,13 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nymphjs/nymph": "^1.0.0-alpha.0",
+    "lodash": "^4.17.21",
     "websocket": "^1.0.34"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
     "@types/jest": "^27.0.1",
+    "@types/lodash": "^4.14.172",
     "@types/websocket": "^1.0.4",
     "jest": "^27.0.6",
     "ts-jest": "^27.0.5",
