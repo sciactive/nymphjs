@@ -98,6 +98,17 @@ This one's zip code is 92064.`;
     await createTestEntities();
   });
 
+  it('update mdate on save', async () => {
+    await createTestEntities();
+
+    const oldMdate = testEntity.mdate ?? Infinity;
+
+    await new Promise((resolve) => setTimeout(() => resolve(true), 100));
+    await testEntity.$save();
+
+    expect(testEntity.mdate).toBeGreaterThan(oldMdate);
+  });
+
   it('create multiple entities', async () => {
     return createMultipleTestEntities();
   });

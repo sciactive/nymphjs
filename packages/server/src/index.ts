@@ -366,7 +366,7 @@ async function doPutOrPatch(
         continue;
       }
       try {
-        if (entity.$save()) {
+        if (await entity.$save()) {
           saved.push(entity);
           hadSuccess = true;
         } else {

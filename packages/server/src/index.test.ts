@@ -46,6 +46,19 @@ describe('Nymph REST Server and Client', () => {
     expect(typeof jane.guid).toEqual('string');
   });
 
+  it('mdate is updated on save', async () => {
+    const jane = await createJane();
+
+    expect(jane.guid).not.toBeNull();
+
+    const oldMdate = jane.mdate ?? Infinity;
+
+    await new Promise((resolve) => setTimeout(() => resolve(true), 100));
+    await jane.$save();
+
+    expect(jane.mdate).toBeGreaterThan(oldMdate);
+  });
+
   it('create two unrelated entities', async () => {
     const entity = await Employee.factory();
     entity.name = 'Jane Doe';
