@@ -613,7 +613,7 @@ export default class PubSub {
         oldArr.splice(remove[n], 1);
       }
       // And add the new ones.
-      for (let [key, value] of Object.entries(idMap)) {
+      for (let value of Object.values(idMap)) {
         oldArr.splice(oldArr.length, 0, newArr[value]);
       }
     } else if (update != null && update.hasOwnProperty('query')) {
@@ -629,8 +629,16 @@ export default class PubSub {
       // Get the entity.
       let entity: EntityInterface | null = null;
       if ('added' in update) {
-        // A new entity.
-        entity = Nymph.initEntity(update.data);
+        // Check for it in the array already.
+        for (let i = 0; i < oldArr.length; i++) {
+          if (oldArr[i] != null && oldArr[i].guid === update.added) {
+            entity = oldArr.splice(i, 1)[0].$init(update.data);
+          }
+        }
+        if (entity == null) {
+          // A new entity.
+          entity = Nymph.initEntity(update.data);
+        }
       }
       if ('updated' in update) {
         // Extract it from the array.

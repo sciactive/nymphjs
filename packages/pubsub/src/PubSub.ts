@@ -743,6 +743,116 @@ export default class PubSub {
       const curClients = this.querySubs[etype][curQuery];
       const updatedClients = new Set<connection>();
 
+      const updateClient = async (
+        curClient: connection,
+        curData: {
+          current: string[];
+          query: string;
+          count: boolean;
+        }
+      ) => {
+        // Update currents list.
+        let current: EntityInterface[];
+        let token: string | undefined;
+        try {
+          const [clientOptions, ...selectors] = JSON.parse(curQuery);
+          const options: Options = {
+            ...clientOptions,
+            class: Nymph.getEntityClass(clientOptions.class),
+            return: 'entity',
+            source: 'client',
+          };
+          if (this.sessions.has(curClient)) {
+            token = this.sessions.get(curClient);
+          }
+          if (this.tilmeld != null && token != null) {
+            const user = this.tilmeld.extractToken(token);
+            if (user) {
+              // Log in the user for access controls.
+              this.tilmeld.fillSession(user);
+            }
+          }
+          current = await Nymph.getEntities(options, ...selectors);
+        } catch (e) {
+          this.config.logger(
+            'error',
+            new Date().toISOString(),
+            `Error updating client! (${e.message}, ${curClient.remoteAddress})`
+          );
+          return;
+        }
+
+        const entityMap = Object.fromEntries(
+          current.map((entity) => [entity.guid, entity])
+        );
+        const currentGuids = current.map((entity) => entity.guid ?? '');
+        const removed = difference(curData.current, currentGuids);
+        const added = difference(currentGuids, curData.current);
+
+        for (let guid of removed) {
+          // Notify subscriber.
+          this.config.logger(
+            'log',
+            new Date().toISOString(),
+            `Notifying client of removal! (${curClient.remoteAddress})`
+          );
+          curClient.sendUTF(
+            JSON.stringify({
+              query: curData.query,
+              removed: guid,
+            })
+          );
+        }
+
+        for (let guid of added) {
+          const entity = entityMap[guid];
+          // Notify client.
+          this.config.logger(
+            'log',
+            new Date().toISOString(),
+            `Notifying client of new match! (${curClient.remoteAddress})`
+          );
+          if (typeof entity.updateDataProtection === 'function') {
+            entity.updateDataProtection();
+          }
+          curClient.sendUTF(
+            JSON.stringify({
+              query: curData.query,
+              added: guid,
+              data: entity,
+            })
+          );
+        }
+
+        if (data.event === 'update' && data.guid in entityMap) {
+          const entity = entityMap[data.guid];
+          // Notify subscriber.
+          this.config.logger(
+            'log',
+            new Date().toISOString(),
+            `Notifying client of update! (${curClient.remoteAddress})`
+          );
+          if (typeof entity.updateDataProtection === 'function') {
+            entity.updateDataProtection();
+          }
+          curClient.sendUTF(
+            JSON.stringify({
+              query: curData.query,
+              updated: data.guid,
+              data: entity,
+            })
+          );
+        }
+
+        // Update curData.
+        curData.current = currentGuids;
+
+        if (this.tilmeld != null && token != null) {
+          // Clear the user that was temporarily logged in.
+          this.tilmeld.clearSession();
+        }
+      };
+
       if (data.event === 'delete' || data.event === 'update') {
         // Check if it is in any client's currents.
         for (const curClient of curClients.keys()) {
@@ -751,78 +861,7 @@ export default class PubSub {
             continue;
           }
           if (curData.current.indexOf(data.guid) !== -1) {
-            // Update currents list.
-            let current: EntityInterface | null;
-            let token: string | undefined;
-            try {
-              const [clientOptions, ...selectors] = JSON.parse(curQuery);
-              const options: Options = {
-                ...clientOptions,
-                class: Nymph.getEntityClass(clientOptions.class),
-                return: 'entity',
-                source: 'client',
-              };
-              selectors.push({ type: '&', guid: [data.guid] });
-              if (this.sessions.has(curClient)) {
-                token = this.sessions.get(curClient);
-              }
-              if (this.tilmeld != null && token != null) {
-                const user = this.tilmeld.extractToken(token);
-                if (user) {
-                  // Log in the user for access controls.
-                  this.tilmeld.fillSession(user);
-                }
-              }
-              current = await Nymph.getEntity(options, ...selectors);
-            } catch (e) {
-              this.config.logger(
-                'error',
-                new Date().toISOString(),
-                `Error updating client! (${e.message}, ${curClient.remoteAddress})`
-              );
-              continue;
-            }
-
-            if (current != null) {
-              // Notify subscriber.
-              this.config.logger(
-                'log',
-                new Date().toISOString(),
-                `Notifying client of update! (${curClient.remoteAddress})`
-              );
-              if (typeof current.updateDataProtection === 'function') {
-                current.updateDataProtection();
-              }
-              curClient.sendUTF(
-                JSON.stringify({
-                  query: curData.query,
-                  updated: data.guid,
-                  data: current,
-                })
-              );
-            } else {
-              curData.current = difference(curData.current, [data.guid]);
-              curClients.set(curClient, curData);
-
-              // Notify subscriber.
-              this.config.logger(
-                'log',
-                new Date().toISOString(),
-                `Notifying client of removal! (${curClient.remoteAddress})`
-              );
-              curClient.sendUTF(
-                JSON.stringify({
-                  query: curData.query,
-                  removed: data.guid,
-                })
-              );
-            }
-
-            if (this.tilmeld != null && token != null) {
-              // Clear the user that was temporarily logged in.
-              this.tilmeld.clearSession();
-            }
-
+            await updateClient(curClient, curData);
             updatedClients.add(curClient);
           }
         }
@@ -867,61 +906,11 @@ export default class PubSub {
                 continue;
               }
 
-              // Check that the user can access the entity.
-              const [clientOptions, ...selectors] = JSON.parse(curQuery);
-              const options: Options = {
-                ...clientOptions,
-                class: Nymph.getEntityClass(clientOptions.class),
-                return: 'entity',
-                source: 'client',
-              };
-              selectors.push({ type: '&', guid: [data.guid] });
-              let token = null;
-              if (this.sessions.has(curClient)) {
-                token = this.sessions.get(curClient);
+              const curData = curClients.get(curClient);
+              if (!curData) {
+                continue;
               }
-              if (this.tilmeld != null && token != null) {
-                const user = this.tilmeld.extractToken(token);
-                if (user) {
-                  // Log in the user for access controls.
-                  this.tilmeld.fillSession(user);
-                }
-              }
-              const current: EntityInterface | null = await Nymph.getEntity(
-                options,
-                ...selectors
-              );
-
-              if (current != null) {
-                // Update the currents list.
-                const curData = curClients.get(curClient);
-                if (curData) {
-                  curData.current.push(data.guid);
-                  curClients.set(curClient, curData);
-
-                  // Notify client.
-                  this.config.logger(
-                    'log',
-                    new Date().toISOString(),
-                    `Notifying client of new match! (${curClient.remoteAddress})`
-                  );
-                  if (typeof current.updateDataProtection === 'function') {
-                    current.updateDataProtection();
-                  }
-                  curClient.sendUTF(
-                    JSON.stringify({
-                      query: curData.query,
-                      added: data.guid,
-                      data: current,
-                    })
-                  );
-                }
-              }
-
-              if (this.tilmeld != null && token != null) {
-                // Clear the user that was temporarily logged in.
-                this.tilmeld.clearSession();
-              }
+              await updateClient(curClient, curData);
             }
           }
         } catch (e) {

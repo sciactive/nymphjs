@@ -4,7 +4,7 @@ import NymphServer from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
 import { PubSub } from '@nymphjs/client';
 import rest from '@nymphjs/server';
-import { Employee } from '@nymphjs/server/dist/testArtifacts.js';
+import { Employee, EmployeeData } from '@nymphjs/server/dist/testArtifacts.js';
 
 import createServer from './index';
 import PubSubServer from './PubSub';
@@ -77,6 +77,159 @@ describe('Nymph REST Server and Client', () => {
         }
       });
     });
+  });
+
+  it('notified of entity update', async () => {
+    let jane = await createJane();
+    let entities: (Employee & EmployeeData)[] = [];
+
+    await new Promise((resolve) => {
+      let mdate = 0;
+      if (jane.guid == null) {
+        throw new Error('Entity is null.');
+      }
+      const subscription = PubSub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          guid: jane.guid,
+        }
+      )(async (update) => {
+        PubSub.updateArray(entities, update);
+
+        if (mdate > 0 && (entities[0]?.mdate ?? -1) === mdate) {
+          subscription.unsubscribe();
+          resolve(true);
+        } else if (Array.isArray(update)) {
+          expect(update.length).toEqual(1);
+          expect(entities[0].salary).toEqual(8000000);
+          // Time for a raise!
+          jane.salary = (jane.salary ?? 0) + 1000000;
+          await jane.$save();
+          mdate = jane.mdate ?? 0;
+        }
+      });
+    });
+
+    expect(entities[0].salary).toEqual(9000000);
+  });
+
+  it('receives correct number of updates', async () => {
+    let jane = await createJane();
+    let entities: (Employee & EmployeeData)[] = [];
+
+    // Wait for change to propagate. (Only needed since we're not going across network.)
+    await new Promise((resolve) => setTimeout(() => resolve(true), 10));
+
+    await new Promise((resolve) => {
+      // Should only receive 1 update, since we waited.
+      let updated = false;
+      if (jane.guid == null) {
+        throw new Error('Entity is null.');
+      }
+      const subscription = PubSub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          guid: jane.guid,
+        }
+      )(async (update) => {
+        PubSub.updateArray(entities, update);
+
+        if (updated) {
+          subscription.unsubscribe();
+          resolve(true);
+        } else if (Array.isArray(update)) {
+          expect(update.length).toEqual(1);
+          expect(entities[0].salary).toEqual(8000000);
+          updated = true;
+          // Time for a raise!
+          jane.salary = (jane.salary ?? 0) + 1000000;
+          await jane.$save();
+        }
+      });
+    });
+
+    expect(entities[0].salary).toEqual(9000000);
+  });
+
+  it('notified of entity delete', async () => {
+    let jane = await createJane();
+    let entities: (Employee & EmployeeData)[] = [];
+
+    // Wait for change to propagate. (Only needed since we're not going across network.)
+    await new Promise((resolve) => setTimeout(() => resolve(true), 10));
+
+    let length: number = -1;
+    await new Promise((resolve) => {
+      let updated = false;
+      if (jane.guid == null) {
+        throw new Error('Entity is null.');
+      }
+      const subscription = PubSub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          equal: ['name', 'Jane Doe'],
+        }
+      )(async (update) => {
+        PubSub.updateArray(entities, update);
+
+        if (updated) {
+          subscription.unsubscribe();
+          resolve(true);
+        } else if (Array.isArray(update)) {
+          expect(update.length).toBeGreaterThan(0);
+          updated = true;
+          length = update.length;
+          await jane.$delete();
+        }
+      });
+    });
+
+    expect(entities.length).toEqual(length - 1);
+  });
+
+  it('entire match is updated', async () => {
+    let jane: (Employee & EmployeeData) | undefined;
+    let entities: (Employee & EmployeeData)[] = [];
+    await createJane();
+
+    // Wait for change to propagate. (Only needed since we're not going across network.)
+    await new Promise((resolve) => setTimeout(() => resolve(true), 10));
+
+    await new Promise((resolve) => {
+      let receivedRemove = false;
+      let receivedAdd = false;
+      const subscription = PubSub.subscribeEntities(
+        { class: Employee, limit: 1, reverse: true },
+        {
+          type: '&',
+          equal: ['name', 'Jane Doe'],
+        }
+      )(async (update) => {
+        PubSub.updateArray(entities, update);
+
+        if (jane) {
+          if ('removed' in update) {
+            receivedRemove = true;
+          }
+          if ('added' in update) {
+            receivedAdd = true;
+          }
+          if (receivedAdd && receivedRemove) {
+            subscription.unsubscribe();
+            resolve(true);
+          }
+        } else if (Array.isArray(update)) {
+          expect(update.length).toEqual(1);
+          jane = await createJane();
+        }
+      });
+    });
+
+    expect(entities.length).toEqual(1);
+    expect(entities[0].$is(jane)).toEqual(true);
   });
 
   afterAll(async () => {
