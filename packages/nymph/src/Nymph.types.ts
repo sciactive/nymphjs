@@ -1,5 +1,47 @@
 import { EntityConstructor, EntityInterface } from './Entity.types';
 
+export type NymphEventType =
+  | 'connect'
+  | 'disconnect'
+  | 'beforeSaveEntity'
+  | 'afterSaveEntity'
+  | 'beforeDeleteEntity'
+  | 'afterDeleteEntity'
+  | 'beforeDeleteEntityByID'
+  | 'afterDeleteEntityByID'
+  | 'beforeNewUID'
+  | 'afterNewUID'
+  | 'beforeSetUID'
+  | 'afterSetUID'
+  | 'beforeRenameUID'
+  | 'afterRenameUID'
+  | 'beforeDeleteUID'
+  | 'afterDeleteUID';
+export type NymphConnectCallback = (result: Promise<boolean>) => void;
+export type NymphDisconnectCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeSaveEntityCallback = (entity: EntityInterface) => void;
+export type NymphAfterSaveEntityCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeDeleteEntityCallback = (entity: EntityInterface) => void;
+export type NymphAfterDeleteEntityCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeDeleteEntityByIDCallback = (
+  guid: string,
+  className?: string
+) => void;
+export type NymphAfterDeleteEntityByIDCallback = (
+  result: Promise<boolean>
+) => void;
+export type NymphBeforeNewUIDCallback = (name: string) => void;
+export type NymphAfterNewUIDCallback = (result: Promise<number | null>) => void;
+export type NymphBeforeSetUIDCallback = (name: string, value: number) => void;
+export type NymphAfterSetUIDCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeRenameUIDCallback = (
+  oldName: string,
+  newName: string
+) => void;
+export type NymphAfterRenameUIDCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeDeleteUIDCallback = (name: string) => void;
+export type NymphAfterDeleteUIDCallback = (result: Promise<boolean>) => void;
+
 export type Options<T extends EntityConstructor = EntityConstructor> = {
   class?: T;
   limit?: number;

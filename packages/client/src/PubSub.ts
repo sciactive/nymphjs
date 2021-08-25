@@ -1,44 +1,23 @@
 import Nymph from './Nymph';
 import { NymphOptions, Options, Selector } from './Nymph.types';
-import { EntityConstructor, EntityInterface, EntityJson } from './Entity.types';
-
-export type PubSubResolveCallback<T> = (arg: T) => void;
-export type PubSubRejectCallback = (err: any) => void;
-export type PubSubCountCallback = (count: number) => void;
-export type PubSubCallbacks<T> = [
-  PubSubResolveCallback<T> | undefined,
-  PubSubRejectCallback | undefined,
-  PubSubCountCallback | undefined
-];
-export type PubSubEventType = 'connect' | 'disconnect';
-export type PubSubConnectCallback = () => void;
-export type PubSubDisconnectCallback = () => void;
-export type PubSubUpdate =
-  | EntityInterface[]
-  | {
-      query: string;
-      removed: string;
-    }
-  | {
-      query: string;
-      added: string;
-      data: EntityJson;
-    }
-  | {
-      query: string;
-      updated: string;
-      data: EntityJson;
-    };
-export type PubSubSubscribable<T> = (
-  resolve?: PubSubResolveCallback<T> | undefined,
-  reject?: PubSubRejectCallback | undefined,
-  count?: PubSubCountCallback | undefined
-) => PubSubSubscription<T>;
+import { EntityConstructor, EntityInterface } from './Entity.types';
+import {
+  PubSubCallbacks,
+  PubSubConnectCallback,
+  PubSubCountCallback,
+  PubSubDisconnectCallback,
+  PubSubEventType,
+  PubSubRejectCallback,
+  PubSubResolveCallback,
+  PubSubSubscribable,
+  PubSubUpdate,
+} from './PubSub.types';
 
 let authToken: string | null = null;
 
 export default class PubSub {
   private static connection: WebSocket | undefined;
+  private static waitForConnectionTimeout: NodeJS.Timeout | undefined;
   private static pubsubURL: string | undefined;
   private static WebSocket: typeof WebSocket;
   private static subscriptions: {
@@ -78,37 +57,43 @@ export default class PubSub {
   >(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
-  ): PubSubSubscribable<string[]>;
+  ): PubSubSubscribable<PubSubUpdate<string[]>>;
   public static subscribeEntities<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<ReturnType<T['factorySync']>[]>;
+  ): PubSubSubscribable<PubSubUpdate<ReturnType<T['factorySync']>[]>>;
   public static subscribeEntities<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<ReturnType<T['factorySync']>[] | string[]> {
+  ): PubSubSubscribable<
+    PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
+  > {
     const promise = Nymph.getEntities(options, ...selectors);
-    const query = JSON.stringify([options, ...selectors]);
+    const query = [{ ...options, class: options.class.class }, ...selectors];
+    const jsonQuery = JSON.stringify(query);
     const subscribe = (
       resolve?:
-        | PubSubResolveCallback<ReturnType<T['factorySync']>[] | string[]>
+        | PubSubResolveCallback<
+            | PubSubUpdate<ReturnType<T['factorySync']>[]>
+            | PubSubUpdate<string[]>
+          >
         | undefined,
       reject?: PubSubRejectCallback | undefined,
       count?: PubSubCountCallback | undefined
     ) => {
       const callbacks: PubSubCallbacks<
-        ReturnType<T['factorySync']>[] | string[]
+        PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
       > = [resolve, reject, count];
 
       promise.then(resolve, reject);
 
-      PubSub._subscribeQuery(query, callbacks);
-      return new PubSubSubscription(query, callbacks, () => {
-        PubSub._unsubscribeQuery(query, callbacks);
+      PubSub._subscribeQuery(jsonQuery, callbacks);
+      return new PubSubSubscription(jsonQuery, callbacks, () => {
+        PubSub._unsubscribeQuery(jsonQuery, callbacks);
       });
     };
     return subscribe;
@@ -119,25 +104,34 @@ export default class PubSub {
   >(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
-  ): PubSubSubscribable<string | null>;
+  ): PubSubSubscribable<PubSubUpdate<string | null>>;
   public static subscribeEntity<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<ReturnType<T['factorySync']> | null>;
+  ): PubSubSubscribable<PubSubUpdate<ReturnType<T['factorySync']> | null>>;
   public static subscribeEntity<
     T extends EntityConstructor = EntityConstructor
   >(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<ReturnType<T['factorySync']> | string | null> {
+  ): PubSubSubscribable<
+    | PubSubUpdate<ReturnType<T['factorySync']> | null>
+    | PubSubUpdate<string | null>
+  > {
     const promise = Nymph.getEntity(options, ...selectors);
-    options.limit = 1;
-    const query = JSON.stringify([options, ...selectors]);
+    const query = [
+      { ...options, class: options.class.class, limit: 1 },
+      ...selectors,
+    ];
+    const jsonQuery = JSON.stringify(query);
     const subscribe = (
       resolve?:
-        | PubSubResolveCallback<ReturnType<T['factorySync']> | string | null>
+        | PubSubResolveCallback<
+            | PubSubUpdate<ReturnType<T['factorySync']> | null>
+            | PubSubUpdate<string | null>
+          >
         | undefined,
       reject?: PubSubRejectCallback | undefined,
       count?: PubSubCountCallback | undefined
@@ -154,14 +148,15 @@ export default class PubSub {
         }
       };
       const callbacks: PubSubCallbacks<
-        ReturnType<T['factorySync']> | string | null
+        | PubSubUpdate<ReturnType<T['factorySync']> | null>
+        | PubSubUpdate<string | null>
       > = [newResolve, reject, count];
 
       promise.then(resolve, reject);
 
-      PubSub._subscribeQuery(query, callbacks);
-      return new PubSubSubscription(query, callbacks, () => {
-        PubSub._unsubscribeQuery(query, callbacks);
+      PubSub._subscribeQuery(jsonQuery, callbacks);
+      return new PubSubSubscription(jsonQuery, callbacks, () => {
+        PubSub._unsubscribeQuery(jsonQuery, callbacks);
       });
     };
     return subscribe;
@@ -246,6 +241,9 @@ export default class PubSub {
   }
 
   public static close() {
+    if (this.waitForConnectionTimeout) {
+      clearTimeout(this.waitForConnectionTimeout);
+    }
     if (!this.connection) {
       return;
     }
@@ -256,7 +254,7 @@ export default class PubSub {
   private static _waitForConnection(attempts = 0) {
     // Wait 5 seconds, then check and attempt connection again if
     // unsuccessful. Keep repeating until successful.
-    setTimeout(() => {
+    this.waitForConnectionTimeout = setTimeout(() => {
       if (
         this.connection &&
         this.connection.readyState !== this.WebSocket.OPEN
@@ -557,7 +555,10 @@ export default class PubSub {
     });
   }
 
-  public static updateArray(oldArr: EntityInterface[], update: PubSubUpdate) {
+  public static updateArray(
+    oldArr: EntityInterface[],
+    update: PubSubUpdate<EntityInterface[]>
+  ) {
     if (Array.isArray(update)) {
       const newArr = [...update];
 
@@ -675,15 +676,18 @@ export default class PubSub {
     event: T,
     callback: T extends 'connect'
       ? PubSubConnectCallback
-      : PubSubDisconnectCallback
+      : T extends 'disconnect'
+      ? PubSubDisconnectCallback
+      : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
-      : 'disconnectCallbacks';
+      : T extends 'disconnect'
+      ? 'disconnectCallbacks'
+      : never;
     if (!this.hasOwnProperty(prop)) {
       throw new Error('Invalid event type.');
     }
-    // @ts-ignore: The callback should always be the right type here.
     this[prop].push(callback);
     return () => this.off(event, callback);
   }
@@ -692,18 +696,20 @@ export default class PubSub {
     event: T,
     callback: T extends 'connect'
       ? PubSubConnectCallback
-      : PubSubDisconnectCallback
+      : T extends 'disconnect'
+      ? PubSubDisconnectCallback
+      : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
-      : 'disconnectCallbacks';
+      : T extends 'disconnect'
+      ? 'disconnectCallbacks'
+      : never;
     if (!this.hasOwnProperty(prop)) {
       return false;
     }
-    // @ts-ignore: The callback should always be the right type here.
     const i = this[prop].indexOf(callback);
     if (i > -1) {
-      // @ts-ignore: The callback should always be the right type here.
       this[prop].splice(i, 1);
     }
     return true;

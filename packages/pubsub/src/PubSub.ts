@@ -58,6 +58,203 @@ export default class PubSub {
     [uidName: string]: Map<connection, { count: boolean }>;
   } = {};
 
+  public static initPublisher(config: Partial<Config>) {
+    const configWithDefaults: Config = { ...defaults, ...config };
+
+    Nymph.on('beforeSaveEntity', (entity: EntityInterface) => {
+      const guid = entity.guid;
+      const etype = (entity.constructor as EntityConstructor).ETYPE;
+
+      const off = Nymph.on(
+        'afterSaveEntity',
+        async (result: Promise<boolean>) => {
+          off();
+          if (!(await result)) {
+            return;
+          }
+          this.publish(
+            JSON.stringify({
+              action: 'publish',
+              event: guid == null ? 'create' : 'update',
+              guid: entity.guid,
+              entity: entity.toJSON(),
+              etype: etype,
+            }),
+            configWithDefaults
+          );
+        }
+      );
+    });
+
+    Nymph.on('beforeDeleteEntity', (entity: EntityInterface) => {
+      const guid = entity.guid;
+      const etype = (entity.constructor as EntityConstructor).ETYPE;
+
+      const off = Nymph.on(
+        'afterDeleteEntity',
+        async (result: Promise<boolean>) => {
+          off();
+          if (!(await result)) {
+            return;
+          }
+          this.publish(
+            JSON.stringify({
+              action: 'publish',
+              event: 'delete',
+              guid: guid,
+              etype: etype,
+            }),
+            configWithDefaults
+          );
+        }
+      );
+    });
+
+    Nymph.on('beforeDeleteEntityByID', (guid: string, className?: string) => {
+      try {
+        const etype = Nymph.getEntityClass(className ?? 'Entity').ETYPE;
+
+        const off = Nymph.on(
+          'afterDeleteEntityByID',
+          async (result: Promise<boolean>) => {
+            off();
+            if (!(await result)) {
+              return;
+            }
+            this.publish(
+              JSON.stringify({
+                action: 'publish',
+                event: 'delete',
+                guid: guid,
+                etype: etype,
+              }),
+              configWithDefaults
+            );
+          }
+        );
+      } catch (e) {
+        return;
+      }
+    });
+
+    Nymph.on('beforeNewUID', (name: string) => {
+      const off = Nymph.on(
+        'afterNewUID',
+        async (result: Promise<number | null>) => {
+          off();
+          const value = await result;
+          if (value == null) {
+            return;
+          }
+          this.publish(
+            JSON.stringify({
+              action: 'publish',
+              event: 'newUID',
+              name: name,
+              value: value,
+            }),
+            configWithDefaults
+          );
+        }
+      );
+    });
+
+    Nymph.on('beforeSetUID', (name: string, value: number) => {
+      const off = Nymph.on('afterSetUID', async (result: Promise<boolean>) => {
+        off();
+        if (!(await result)) {
+          return;
+        }
+        this.publish(
+          JSON.stringify({
+            action: 'publish',
+            event: 'setUID',
+            name: name,
+            value: value,
+          }),
+          configWithDefaults
+        );
+      });
+    });
+
+    Nymph.on('beforeRenameUID', (oldName: string, newName: string) => {
+      const off = Nymph.on(
+        'afterRenameUID',
+        async (result: Promise<boolean>) => {
+          off();
+          if (!(await result)) {
+            return;
+          }
+          this.publish(
+            JSON.stringify({
+              action: 'publish',
+              event: 'renameUID',
+              oldName: oldName,
+              newName: newName,
+            }),
+            configWithDefaults
+          );
+        }
+      );
+    });
+
+    Nymph.on('beforeDeleteUID', (name: string) => {
+      const off = Nymph.on(
+        'afterDeleteUID',
+        async (result: Promise<boolean>) => {
+          off();
+          if (!(await result)) {
+            return;
+          }
+          this.publish(
+            JSON.stringify({
+              action: 'publish',
+              event: 'deleteUID',
+              name: name,
+            }),
+            configWithDefaults
+          );
+        }
+      );
+    });
+  }
+
+  private static publish(message: string, config: Config) {
+    for (let host of config.entries ?? []) {
+      const client = new WebSocketClient();
+
+      client.on('connectFailed', (error) => {
+        if (config.logger) {
+          config.logger(
+            'error',
+            new Date().toISOString(),
+            `Publish connection failed. (${error.toString()}, ${host})`
+          );
+        }
+      });
+
+      client.on('connect', (connection) => {
+        connection.on('error', (error) => {
+          if (config.logger) {
+            config.logger(
+              'error',
+              new Date().toISOString(),
+              `Publish connect error. (${error.toString()}, ${host})`
+            );
+          }
+        });
+
+        if (connection.connected) {
+          connection.sendUTF(message);
+        }
+
+        connection.close();
+      });
+
+      client.connect(host, 'nymph');
+    }
+  }
+
   /**
    * Initialize Nymph PubSub.
    *
@@ -75,6 +272,10 @@ export default class PubSub {
     this.server.on('request', this.handleRequest.bind(this));
   }
 
+  public close() {
+    this.server.shutDown();
+  }
+
   public originIsAllowed(_origin: string) {
     // TODO: add this to options.
     return true;
@@ -84,7 +285,8 @@ export default class PubSub {
     if (!this.originIsAllowed(request.origin)) {
       // Make sure we only accept requests from an allowed origin
       request.reject();
-      console.log(
+      this.config.logger(
+        'log',
         new Date().toISOString(),
         'Client from origin ' + request.origin + ' was kicked by the bouncer.'
       );
@@ -92,7 +294,8 @@ export default class PubSub {
     }
 
     const connection = request.accept('nymph', request.origin);
-    console.log(
+    this.config.logger(
+      'log',
       new Date().toISOString(),
       `Client joined the party! (${connection.remoteAddress}).`
     );
@@ -144,7 +347,8 @@ export default class PubSub {
    * Clean up after users who leave.
    */
   public onClose(conn: connection, description: string) {
-    console.log(
+    this.config.logger(
+      'log',
       new Date().toISOString(),
       `Client skedaddled. (${description}, ${conn.remoteAddress})`
     );
@@ -170,7 +374,7 @@ export default class PubSub {
               for (let key of curClients.keys()) {
                 const curData = curClients.get(key);
                 if (curData && curData.count) {
-                  key.send(
+                  key.sendUTF(
                     JSON.stringify({
                       query: curData.query,
                       count,
@@ -200,7 +404,7 @@ export default class PubSub {
             for (const key of curClients.keys()) {
               const curData = curClients.get(key);
               if (curData && curData.count) {
-                key.send(
+                key.sendUTF(
                   JSON.stringify({
                     uid: curUID,
                     count,
@@ -220,7 +424,8 @@ export default class PubSub {
     }
 
     if (mess) {
-      console.log(
+      this.config.logger(
+        'log',
         new Date().toISOString(),
         `Cleaned up client's mess. (${mess}, ${conn.remoteAddress})`
       );
@@ -228,7 +433,8 @@ export default class PubSub {
   }
 
   public onError(conn: connection, e: Error) {
-    console.error(
+    this.config.logger(
+      'error',
       new Date().toISOString(),
       `An error occured. (${e.message}, ${conn.remoteAddress})`
     );
@@ -325,7 +531,8 @@ export default class PubSub {
         // Clear the user that was temporarily logged in.
         this.tilmeld.clearSession();
       }
-      console.log(
+      this.config.logger(
+        'log',
         new Date().toISOString(),
         `Client subscribed to a query! ($serialArgs, ${from.remoteAddress})`
       );
@@ -336,7 +543,7 @@ export default class PubSub {
         for (let key of this.querySubs[etype][serialArgs].keys()) {
           const curData = this.querySubs[etype][serialArgs].get(key);
           if (curData && curData.count) {
-            key.send(
+            key.sendUTF(
               JSON.stringify({
                 query: curData.query,
                 count,
@@ -359,7 +566,8 @@ export default class PubSub {
         return;
       }
       this.querySubs[etype][serialArgs].delete(from);
-      console.log(
+      this.config.logger(
+        'log',
         new Date().toISOString(),
         `Client unsubscribed from a query! ($serialArgs, ${from.remoteAddress})`
       );
@@ -380,7 +588,7 @@ export default class PubSub {
         for (let key of this.querySubs[etype][serialArgs].keys()) {
           const curData = this.querySubs[etype][serialArgs].get(key);
           if (curData && curData.count) {
-            key.send(
+            key.sendUTF(
               JSON.stringify({
                 query: curData.query,
                 count,
@@ -407,7 +615,8 @@ export default class PubSub {
       this.uidSubs[data['uid']].set(from, {
         count: !!data.count,
       });
-      console.log(
+      this.config.logger(
+        'log',
         new Date().toISOString(),
         `Client subscribed to a UID! (${data.uid}, ${from.remoteAddress})`
       );
@@ -418,7 +627,7 @@ export default class PubSub {
         for (let key of this.uidSubs[data.uid].keys()) {
           const curData = this.uidSubs[data.uid].get(key);
           if (curData && curData.count) {
-            key.send(
+            key.sendUTF(
               JSON.stringify({
                 uid: data.uid,
                 count,
@@ -438,7 +647,8 @@ export default class PubSub {
         return;
       }
       this.uidSubs[data.uid].delete(from);
-      console.log(
+      this.config.logger(
+        'log',
         new Date().toISOString(),
         `Client unsubscribed from a UID! (${data.uid}, ${from.remoteAddress})`
       );
@@ -456,7 +666,7 @@ export default class PubSub {
         for (let key of this.uidSubs[data.uid].keys()) {
           const curData = this.uidSubs[data.uid].get(key);
           if (curData && curData.count) {
-            key.send(
+            key.sendUTF(
               JSON.stringify({
                 uid: data.uid,
                 count,
@@ -479,7 +689,7 @@ export default class PubSub {
     if (
       'guid' in data &&
       typeof data.guid === 'string' &&
-      data.guid.match(/^[0-9a-f]24$/) &&
+      data.guid.match(/^[0-9a-f]{24}$/) &&
       (data.event === 'delete' ||
         ((data.event === 'create' || data.event === 'update') &&
           'entity' in data &&
@@ -517,7 +727,8 @@ export default class PubSub {
     from: connection,
     data: PublishEntityMessageData
   ) {
-    console.log(
+    this.config.logger(
+      'log',
       new Date().toISOString(),
       `Received an entity publish! (${data.guid}, ${data.event}, ${from.remoteAddress})`
     );
@@ -564,7 +775,8 @@ export default class PubSub {
               }
               current = await Nymph.getEntity(options, ...selectors);
             } catch (e) {
-              console.error(
+              this.config.logger(
+                'error',
                 new Date().toISOString(),
                 `Error updating client! (${e.message}, ${curClient.remoteAddress})`
               );
@@ -573,14 +785,15 @@ export default class PubSub {
 
             if (current != null) {
               // Notify subscriber.
-              console.log(
+              this.config.logger(
+                'log',
                 new Date().toISOString(),
                 `Notifying client of update! (${curClient.remoteAddress})`
               );
               if (typeof current.updateDataProtection === 'function') {
                 current.updateDataProtection();
               }
-              curClient.send(
+              curClient.sendUTF(
                 JSON.stringify({
                   query: curData.query,
                   updated: data.guid,
@@ -592,11 +805,12 @@ export default class PubSub {
               curClients.set(curClient, curData);
 
               // Notify subscriber.
-              console.log(
+              this.config.logger(
+                'log',
                 new Date().toISOString(),
                 `Notifying client of removal! (${curClient.remoteAddress})`
               );
-              curClient.send(
+              curClient.sendUTF(
                 JSON.stringify({
                   query: curData.query,
                   removed: data.guid,
@@ -686,14 +900,15 @@ export default class PubSub {
                   curClients.set(curClient, curData);
 
                   // Notify client.
-                  console.log(
+                  this.config.logger(
+                    'log',
                     new Date().toISOString(),
                     `Notifying client of new match! (${curClient.remoteAddress})`
                   );
                   if (typeof current.updateDataProtection === 'function') {
                     current.updateDataProtection();
                   }
-                  curClient.send(
+                  curClient.sendUTF(
                     JSON.stringify({
                       query: curData.query,
                       added: data.guid,
@@ -710,7 +925,8 @@ export default class PubSub {
             }
           }
         } catch (e) {
-          console.error(
+          this.config.logger(
+            'error',
             new Date().toISOString(),
             `Error checking for client updates! (${e.message})`
           );
@@ -726,7 +942,8 @@ export default class PubSub {
     from: connection,
     data: PublishUidMessageData
   ) {
-    console.log(
+    this.config.logger(
+      'log',
       new Date().toISOString(),
       `Received a UID publish! (${
         'name' in data ? data.name : `${data.oldName} => ${data.newName}`
@@ -742,7 +959,8 @@ export default class PubSub {
         continue;
       }
       for (let curClient of this.uidSubs[name].keys()) {
-        console.log(
+        this.config.logger(
+          'log',
           new Date().toISOString(),
           `Notifying client of ${data.event}! (${name}, ${curClient.remoteAddress})`
         );
@@ -757,7 +975,7 @@ export default class PubSub {
         if (data.value != null) {
           payload.value = data.value;
         }
-        curClient.send(JSON.stringify(payload));
+        curClient.sendUTF(JSON.stringify(payload));
       }
     }
   }
@@ -767,23 +985,29 @@ export default class PubSub {
    */
   private relay(message: Message) {
     if (message.type !== 'utf8') {
-      console.error(new Date().toISOString(), `Can't relay non UTF8 message.`);
+      this.config.logger(
+        'error',
+        new Date().toISOString(),
+        `Can't relay non UTF8 message.`
+      );
       return;
     }
 
     for (let host of this.config.relays) {
       const client = new WebSocketClient();
 
-      client.on('connectFailed', function (error) {
-        console.error(
+      client.on('connectFailed', (error) => {
+        this.config.logger(
+          'error',
           new Date().toISOString(),
           `Relay connection failed. (${error.toString()}, ${host})`
         );
       });
 
-      client.on('connect', function (connection) {
-        connection.on('error', function (error) {
-          console.error(
+      client.on('connect', (connection) => {
+        connection.on('error', (error) => {
+          this.config.logger(
+            'error',
             new Date().toISOString(),
             `Relay connect error. (${error.toString()}, ${host})`
           );

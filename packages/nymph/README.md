@@ -31,7 +31,7 @@ const mysqlConfig = {
   password: 'your_password',
 };
 
-Nymph.init({ pubsub: false }, new MySQLDriver(mysqlConfig));
+Nymph.init({}, new MySQLDriver(mysqlConfig));
 
 // You are set up. Now you can use entity classes like `Todo` to store data,
 // and Nymph's query methods like `getEntities` to retrieve them.

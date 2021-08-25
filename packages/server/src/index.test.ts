@@ -11,7 +11,7 @@ const sqliteConfig = {
   filename: ':memory:',
 };
 
-NymphServer.init({ pubsub: false }, new SQLite3Driver(sqliteConfig));
+NymphServer.init({}, new SQLite3Driver(sqliteConfig));
 
 const app = express();
 app.use('/test', rest);

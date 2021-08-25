@@ -1,25 +1,31 @@
 import { server as WebSocketServer } from 'websocket';
 import http from 'http';
 
+import { Config, ConfigDefaults as defaults } from './conf';
 import PubSub from './PubSub';
 
+export * from './conf';
 export { PubSub };
 
-export default function defaultServer(port = 8080) {
-  const server = http.createServer(function (_request, response) {
+export default function createServer(
+  port = 8080,
+  config: Partial<Config> = {}
+) {
+  const server = http.createServer((_request, response) => {
     response.writeHead(404);
     response.end();
   });
 
-  server.listen(port, () => {
-    console.log(
+  const listener = server.listen(port, () => {
+    (config.logger ?? defaults.logger)(
+      'log',
       new Date().toISOString(),
       `Nymph-PubSub server started listening on port ${port}.`
     );
   });
 
   const wsServer = new WebSocketServer({
-    httpServer: server,
+    httpServer: listener,
     // You should not use autoAcceptConnections for production
     // applications, as it defeats all standard cross-origin protection
     // facilities built into the protocol and the browser.  You should
@@ -28,5 +34,13 @@ export default function defaultServer(port = 8080) {
     autoAcceptConnections: false,
   });
 
-  return new PubSub({}, wsServer);
+  const pubsub = new PubSub(config, wsServer);
+
+  const _close = pubsub.close;
+  pubsub.close = function () {
+    _close.call(pubsub);
+    listener.close();
+  };
+
+  return pubsub;
 }

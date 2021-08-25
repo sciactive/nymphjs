@@ -9,7 +9,7 @@ const mysqlConfig = {
   password: 'nymph',
 };
 
-Nymph.init({ pubsub: false }, new MySQLDriver(mysqlConfig));
+Nymph.init({}, new MySQLDriver(mysqlConfig));
 
 describe('MySQLDriver', () => {
   QueriesTest(it);

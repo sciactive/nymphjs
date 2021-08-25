@@ -7,7 +7,7 @@ const sqliteConfig = {
   filename: ':memory:',
 };
 
-Nymph.init({ pubsub: false }, new SQLite3Driver(sqliteConfig));
+Nymph.init({}, new SQLite3Driver(sqliteConfig));
 
 describe('SQLite3Driver', () => {
   if (Nymph.driver.isConnected()) {

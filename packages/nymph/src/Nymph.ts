@@ -2,7 +2,27 @@ import { Config, ConfigDefaults as defaults } from './conf';
 import { NymphDriver } from './driver';
 import { EntityConstructor, EntityInterface } from './Entity.types';
 import { ClassNotAvailableError } from './errors';
-import { Selector, Options } from './Nymph.types';
+import {
+  Selector,
+  Options,
+  NymphConnectCallback,
+  NymphDisconnectCallback,
+  NymphBeforeSaveEntityCallback,
+  NymphAfterSaveEntityCallback,
+  NymphBeforeDeleteEntityCallback,
+  NymphAfterDeleteEntityCallback,
+  NymphBeforeDeleteEntityByIDCallback,
+  NymphAfterDeleteEntityByIDCallback,
+  NymphBeforeNewUIDCallback,
+  NymphAfterNewUIDCallback,
+  NymphBeforeSetUIDCallback,
+  NymphAfterSetUIDCallback,
+  NymphBeforeRenameUIDCallback,
+  NymphAfterRenameUIDCallback,
+  NymphBeforeDeleteUIDCallback,
+  NymphAfterDeleteUIDCallback,
+  NymphEventType,
+} from './Nymph.types';
 
 /**
  * An object relational mapper for Node.js.
@@ -18,6 +38,27 @@ export default class Nymph {
   public static driver: NymphDriver;
   public static entityClasses: { [k: string]: EntityConstructor } = {};
   public static Tilmeld: any = undefined;
+  private static connectCallbacks: NymphConnectCallback[] = [];
+  private static disconnectCallbacks: NymphDisconnectCallback[] = [];
+  private static beforeSaveEntityCallbacks: NymphBeforeSaveEntityCallback[] =
+    [];
+  private static afterSaveEntityCallbacks: NymphAfterSaveEntityCallback[] = [];
+  private static beforeDeleteEntityCallbacks: NymphBeforeDeleteEntityCallback[] =
+    [];
+  private static afterDeleteEntityCallbacks: NymphAfterDeleteEntityCallback[] =
+    [];
+  private static beforeDeleteEntityByIDCallbacks: NymphBeforeDeleteEntityByIDCallback[] =
+    [];
+  private static afterDeleteEntityByIDCallbacks: NymphAfterDeleteEntityByIDCallback[] =
+    [];
+  private static beforeNewUIDCallbacks: NymphBeforeNewUIDCallback[] = [];
+  private static afterNewUIDCallbacks: NymphAfterNewUIDCallback[] = [];
+  private static beforeSetUIDCallbacks: NymphBeforeSetUIDCallback[] = [];
+  private static afterSetUIDCallbacks: NymphAfterSetUIDCallback[] = [];
+  private static beforeRenameUIDCallbacks: NymphBeforeRenameUIDCallback[] = [];
+  private static afterRenameUIDCallbacks: NymphAfterRenameUIDCallback[] = [];
+  private static beforeDeleteUIDCallbacks: NymphBeforeDeleteUIDCallback[] = [];
+  private static afterDeleteUIDCallbacks: NymphAfterDeleteUIDCallback[] = [];
 
   public static setEntityClass(
     className: string,
@@ -56,7 +97,13 @@ export default class Nymph {
    * @returns Whether the instance is connected to the database.
    */
   public static async connect(): Promise<boolean> {
-    return await this.driver.connect();
+    const result = this.driver.connect();
+    for (let callback of this.connectCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -65,7 +112,13 @@ export default class Nymph {
    * @returns Whether the instance is connected to the database.
    */
   public static async disconnect(): Promise<boolean> {
-    return await this.driver.disconnect();
+    const result = this.driver.disconnect();
+    for (let callback of this.disconnectCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -124,7 +177,18 @@ export default class Nymph {
    * @returns The UID's new value, or null on failure.
    */
   public static async newUID(name: string): Promise<number | null> {
-    return await this.driver.newUID(name);
+    for (let callback of this.beforeNewUIDCallbacks) {
+      if (callback) {
+        callback(name);
+      }
+    }
+    const result = this.driver.newUID(name);
+    for (let callback of this.afterNewUIDCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -144,7 +208,18 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public static async setUID(name: string, value: number): Promise<boolean> {
-    return await this.driver.setUID(name, value);
+    for (let callback of this.beforeSetUIDCallbacks) {
+      if (callback) {
+        callback(name, value);
+      }
+    }
+    const result = this.driver.setUID(name, value);
+    for (let callback of this.afterSetUIDCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -154,7 +229,18 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public static async deleteUID(name: string): Promise<boolean> {
-    return await this.driver.deleteUID(name);
+    for (let callback of this.beforeDeleteUIDCallbacks) {
+      if (callback) {
+        callback(name);
+      }
+    }
+    const result = this.driver.deleteUID(name);
+    for (let callback of this.afterDeleteUIDCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -168,7 +254,18 @@ export default class Nymph {
     oldName: string,
     newName: string
   ): Promise<boolean> {
-    return await this.driver.renameUID(oldName, newName);
+    for (let callback of this.beforeRenameUIDCallbacks) {
+      if (callback) {
+        callback(oldName, newName);
+      }
+    }
+    const result = this.driver.renameUID(oldName, newName);
+    for (let callback of this.afterRenameUIDCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -183,7 +280,18 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public static async saveEntity(entity: EntityInterface): Promise<boolean> {
-    return await this.driver.saveEntity(entity);
+    for (let callback of this.beforeSaveEntityCallbacks) {
+      if (callback) {
+        callback(entity);
+      }
+    }
+    const result = this.driver.saveEntity(entity);
+    for (let callback of this.afterSaveEntityCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -431,7 +539,18 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public static async deleteEntity(entity: EntityInterface): Promise<boolean> {
-    return await this.driver.deleteEntity(entity);
+    for (let callback of this.beforeDeleteEntityCallbacks) {
+      if (callback) {
+        callback(entity);
+      }
+    }
+    const result = this.driver.deleteEntity(entity);
+    for (let callback of this.afterDeleteEntityCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -445,7 +564,18 @@ export default class Nymph {
     guid: string,
     className?: string
   ): Promise<boolean> {
-    return await this.driver.deleteEntityByID(guid, className);
+    for (let callback of this.beforeDeleteEntityByIDCallbacks) {
+      if (callback) {
+        callback(guid, className);
+      }
+    }
+    const result = this.driver.deleteEntityByID(guid, className);
+    for (let callback of this.afterDeleteEntityByIDCallbacks) {
+      if (callback) {
+        callback(result);
+      }
+    }
+    return await result;
   }
 
   /**
@@ -505,5 +635,163 @@ export default class Nymph {
    */
   public static async import(filename: string): Promise<boolean> {
     return await this.driver.import(filename);
+  }
+
+  public static on<T extends NymphEventType>(
+    event: T,
+    callback: T extends 'connect'
+      ? NymphConnectCallback
+      : T extends 'disconnect'
+      ? NymphDisconnectCallback
+      : T extends 'beforeSaveEntity'
+      ? NymphBeforeSaveEntityCallback
+      : T extends 'afterSaveEntity'
+      ? NymphAfterSaveEntityCallback
+      : T extends 'beforeDeleteEntity'
+      ? NymphBeforeDeleteEntityCallback
+      : T extends 'afterDeleteEntity'
+      ? NymphAfterDeleteEntityCallback
+      : T extends 'beforeDeleteEntityByID'
+      ? NymphBeforeDeleteEntityByIDCallback
+      : T extends 'afterDeleteEntityByID'
+      ? NymphAfterDeleteEntityByIDCallback
+      : T extends 'beforeNewUID'
+      ? NymphBeforeNewUIDCallback
+      : T extends 'afterNewUID'
+      ? NymphAfterNewUIDCallback
+      : T extends 'beforeSetUID'
+      ? NymphBeforeSetUIDCallback
+      : T extends 'afterSetUID'
+      ? NymphAfterSetUIDCallback
+      : T extends 'beforeRenameUID'
+      ? NymphBeforeRenameUIDCallback
+      : T extends 'afterRenameUID'
+      ? NymphAfterRenameUIDCallback
+      : T extends 'beforeDeleteUID'
+      ? NymphBeforeDeleteUIDCallback
+      : T extends 'afterDeleteUID'
+      ? NymphAfterDeleteUIDCallback
+      : never
+  ) {
+    const prop = (event + 'Callbacks') as T extends 'connect'
+      ? 'connectCallbacks'
+      : T extends 'disconnect'
+      ? 'disconnectCallbacks'
+      : T extends 'beforeSaveEntity'
+      ? 'beforeSaveEntityCallbacks'
+      : T extends 'afterSaveEntity'
+      ? 'afterSaveEntityCallbacks'
+      : T extends 'beforeDeleteEntity'
+      ? 'beforeDeleteEntityCallbacks'
+      : T extends 'afterDeleteEntity'
+      ? 'afterDeleteEntityCallbacks'
+      : T extends 'beforeDeleteEntityByID'
+      ? 'beforeDeleteEntityByIDCallbacks'
+      : T extends 'afterDeleteEntityByID'
+      ? 'afterDeleteEntityByIDCallbacks'
+      : T extends 'beforeNewUID'
+      ? 'beforeNewUIDCallbacks'
+      : T extends 'afterNewUID'
+      ? 'afterNewUIDCallbacks'
+      : T extends 'beforeSetUID'
+      ? 'beforeSetUIDCallbacks'
+      : T extends 'afterSetUID'
+      ? 'afterSetUIDCallbacks'
+      : T extends 'beforeRenameUID'
+      ? 'beforeRenameUIDCallbacks'
+      : T extends 'afterRenameUID'
+      ? 'afterRenameUIDCallbacks'
+      : T extends 'beforeDeleteUID'
+      ? 'beforeDeleteUIDCallbacks'
+      : T extends 'afterDeleteUID'
+      ? 'afterDeleteUIDCallbacks'
+      : never;
+    if (!this.hasOwnProperty(prop)) {
+      throw new Error('Invalid event type.');
+    }
+    // @ts-ignore: The callback should be the right type here.
+    this[prop].push(callback);
+    return () => this.off(event, callback);
+  }
+
+  public static off<T extends NymphEventType>(
+    event: T,
+    callback: T extends 'connect'
+      ? NymphConnectCallback
+      : T extends 'disconnect'
+      ? NymphDisconnectCallback
+      : T extends 'beforeSaveEntity'
+      ? NymphBeforeSaveEntityCallback
+      : T extends 'afterSaveEntity'
+      ? NymphAfterSaveEntityCallback
+      : T extends 'beforeDeleteEntity'
+      ? NymphBeforeDeleteEntityCallback
+      : T extends 'afterDeleteEntity'
+      ? NymphAfterDeleteEntityCallback
+      : T extends 'beforeDeleteEntityByID'
+      ? NymphBeforeDeleteEntityByIDCallback
+      : T extends 'afterDeleteEntityByID'
+      ? NymphAfterDeleteEntityByIDCallback
+      : T extends 'beforeNewUID'
+      ? NymphBeforeNewUIDCallback
+      : T extends 'afterNewUID'
+      ? NymphAfterNewUIDCallback
+      : T extends 'beforeSetUID'
+      ? NymphBeforeSetUIDCallback
+      : T extends 'afterSetUID'
+      ? NymphAfterSetUIDCallback
+      : T extends 'beforeRenameUID'
+      ? NymphBeforeRenameUIDCallback
+      : T extends 'afterRenameUID'
+      ? NymphAfterRenameUIDCallback
+      : T extends 'beforeDeleteUID'
+      ? NymphBeforeDeleteUIDCallback
+      : T extends 'afterDeleteUID'
+      ? NymphAfterDeleteUIDCallback
+      : never
+  ) {
+    const prop = (event + 'Callbacks') as T extends 'connect'
+      ? 'connectCallbacks'
+      : T extends 'disconnect'
+      ? 'disconnectCallbacks'
+      : T extends 'beforeSaveEntity'
+      ? 'beforeSaveEntityCallbacks'
+      : T extends 'afterSaveEntity'
+      ? 'afterSaveEntityCallbacks'
+      : T extends 'beforeDeleteEntity'
+      ? 'beforeDeleteEntityCallbacks'
+      : T extends 'afterDeleteEntity'
+      ? 'afterDeleteEntityCallbacks'
+      : T extends 'beforeDeleteEntityByID'
+      ? 'beforeDeleteEntityByIDCallbacks'
+      : T extends 'afterDeleteEntityByID'
+      ? 'afterDeleteEntityByIDCallbacks'
+      : T extends 'beforeNewUID'
+      ? 'beforeNewUIDCallbacks'
+      : T extends 'afterNewUID'
+      ? 'afterNewUIDCallbacks'
+      : T extends 'beforeSetUID'
+      ? 'beforeSetUIDCallbacks'
+      : T extends 'afterSetUID'
+      ? 'afterSetUIDCallbacks'
+      : T extends 'beforeRenameUID'
+      ? 'beforeRenameUIDCallbacks'
+      : T extends 'afterRenameUID'
+      ? 'afterRenameUIDCallbacks'
+      : T extends 'beforeDeleteUID'
+      ? 'beforeDeleteUIDCallbacks'
+      : T extends 'afterDeleteUID'
+      ? 'afterDeleteUIDCallbacks'
+      : never;
+    if (!this.hasOwnProperty(prop)) {
+      return false;
+    }
+    // @ts-ignore: The callback should always be the right type here.
+    const i = this[prop].indexOf(callback);
+    if (i > -1) {
+      // @ts-ignore: The callback should always be the right type here.
+      this[prop].splice(i, 1);
+    }
+    return true;
   }
 }

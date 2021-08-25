@@ -19,4 +19,8 @@ export interface Config {
    * same queries.
    */
   broadcastCounts: boolean;
+  /**
+   * Function to log PubSub info/error messages.
+   */
+  logger: (...args: any[]) => void;
 }

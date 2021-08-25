@@ -18,3 +18,5 @@ export * from './Nymph.types';
 export * from './PubSub';
 import PubSub from './PubSub';
 export { PubSub };
+
+export * from './PubSub.types';
