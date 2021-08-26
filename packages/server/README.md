@@ -28,7 +28,7 @@ const sqliteConfig = {
   filename: ':memory:',
 };
 
-NymphServer.init({}, new SQLite3Driver(sqliteConfig));
+Nymph.init({}, new SQLite3Driver(sqliteConfig));
 
 // Create your Express app.
 const app = express();
