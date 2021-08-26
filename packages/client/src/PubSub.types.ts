@@ -1,7 +1,7 @@
 import { EntityJson } from './Entity.types';
 import { PubSubSubscription } from './PubSub';
 
-export type PubSubResolveCallback<T> = (arg: T) => void;
+export type PubSubResolveCallback<T> = (arg: T, event?: string) => void;
 export type PubSubRejectCallback = (err: any) => void;
 export type PubSubCountCallback = (count: number) => void;
 export type PubSubCallbacks<T> = [

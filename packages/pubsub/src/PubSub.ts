@@ -939,9 +939,13 @@ export default class PubSub {
       }, ${data.event}, ${from.remoteAddress})`
     );
 
-    const names = [data.name, data.newName, data.oldName].filter(
+    const names = [data.name, data.oldName].filter(
       (name) => name != null
     ) as string[];
+    let value = data.value;
+    if (data.event === 'renameUID' && data.newName) {
+      value = (await Nymph.getUID(data.newName)) ?? undefined;
+    }
 
     for (let name of names) {
       if (!(name in this.uidSubs)) {
@@ -965,6 +969,27 @@ export default class PubSub {
           payload.value = data.value;
         }
         curClient.sendUTF(JSON.stringify(payload));
+      }
+    }
+
+    if (
+      data.event === 'renameUID' &&
+      data.newName &&
+      data.newName in this.uidSubs
+    ) {
+      for (let curClient of this.uidSubs[data.newName].keys()) {
+        this.config.logger(
+          'log',
+          new Date().toISOString(),
+          `Notifying client of new value after rename! (${data.newName}, ${curClient.remoteAddress})`
+        );
+        curClient.sendUTF(
+          JSON.stringify({
+            uid: data.newName,
+            event: 'setUID',
+            value,
+          })
+        );
       }
     }
   }

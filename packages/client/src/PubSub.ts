@@ -1,4 +1,4 @@
-import Nymph from './Nymph';
+import Nymph, { InvalidRequestError } from './Nymph';
 import { NymphOptions, Options, Selector } from './Nymph.types';
 import { EntityConstructor, EntityInterface } from './Entity.types';
 import {
@@ -190,7 +190,9 @@ export default class PubSub {
     count?: PubSubCountCallback | undefined
   ) {
     if (!entity.guid) {
-      return false;
+      throw new InvalidRequestError(
+        "You can't subscribe to an entity with no GUID."
+      );
     }
     const query = [
       { class: (entity.constructor as EntityConstructor).class, limit: 1 },
@@ -199,19 +201,16 @@ export default class PubSub {
     const jsonQuery = JSON.stringify(query);
 
     const newResolve = (args: any) => {
-      let myArray;
       if (Array.isArray(args)) {
-        myArray = args;
-        if (myArray.length) {
-          entity.$init(myArray[0]);
+        if (args[0].length) {
+          entity.$init(args[0]);
+        } else {
+          entity.guid = null;
         }
-      } else {
-        myArray = [entity];
-        PubSub.updateArray(myArray, args);
-      }
-
-      if (!myArray.length) {
+      } else if ('removed' in args) {
         entity.guid = null;
+      } else {
+        entity.$init(args.data);
       }
 
       if (resolve) {
@@ -345,30 +344,41 @@ export default class PubSub {
 
   private static _onmessage(e: WebSocketEventMap['message']) {
     let data = JSON.parse(e.data);
-    let val = null;
     let subs: PubSubCallbacks<any>[] = [];
-    let count = data.hasOwnProperty('count');
+    let count = 'count' in data;
     if (
       data.hasOwnProperty('query') &&
       this.subscriptions.queries.hasOwnProperty(data.query)
     ) {
       subs = [...this.subscriptions.queries[data.query]];
       if (!count) {
-        val = data;
+        for (let i = 0; i < subs.length; i++) {
+          const callback = subs[i][0];
+          if (typeof callback === 'function') {
+            callback(data);
+          }
+        }
       }
     } else if (
       data.hasOwnProperty('uid') &&
       this.subscriptions.uids.hasOwnProperty(data.uid)
     ) {
       subs = [...this.subscriptions.uids[data.uid]];
-      if (!count && (data.event === 'newUID' || data.event === 'setUID')) {
-        val = data.value;
+      if (!count) {
+        for (let i = 0; i < subs.length; i++) {
+          const callback = subs[i][0];
+          if (typeof callback === 'function') {
+            callback(data.value ?? null, data.event);
+          }
+        }
       }
     }
-    for (let i = 0; i < subs.length; i++) {
-      const callback = subs[i][count ? 2 : 0];
-      if (typeof callback === 'function') {
-        callback(count ? data.count : val);
+    if (count) {
+      for (let i = 0; i < subs.length; i++) {
+        const callback = subs[i][2];
+        if (typeof callback === 'function') {
+          callback(data.count);
+        }
       }
     }
   }

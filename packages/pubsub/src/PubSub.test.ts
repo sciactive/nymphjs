@@ -232,6 +232,165 @@ describe('Nymph REST Server and Client', () => {
     expect(entities[0].$is(jane)).toEqual(true);
   });
 
+  it('entity subscription is updated', async () => {
+    let jane = await createJane();
+
+    await new Promise(async (resolve) => {
+      let mdate = 0;
+      const subscription = PubSub.subscribeWith(jane, async () => {
+        if (mdate > 0 && (jane.mdate ?? -1) === mdate) {
+          subscription.unsubscribe();
+          resolve(true);
+        }
+      });
+
+      if (jane.guid == null) {
+        throw new Error('Entity is null.');
+      }
+
+      expect(jane.salary).toEqual(8000000);
+      const janeDupe = await Employee.factory(jane.guid);
+      expect(janeDupe.salary).toEqual(8000000);
+      // Time for a raise!
+      janeDupe.salary = (janeDupe.salary ?? 0) + 1000000;
+      await janeDupe.$save();
+      mdate = janeDupe.mdate ?? 0;
+    });
+
+    expect(jane.salary).toEqual(9000000);
+  });
+
+  it('new uid', async () => {
+    await new Promise(async (resolve) => {
+      const subscription = PubSub.subscribeUID('testNewUID')(
+        async (value) => {
+          expect(value).toEqual(directValue);
+          subscription.unsubscribe();
+          resolve(true);
+        },
+        (err) => {
+          expect(err.status).toEqual(404);
+        }
+      );
+
+      const directValue = await Nymph.newUID('testNewUID');
+    });
+  });
+
+  it('increasing uids', async () => {
+    await new Promise(async (resolve) => {
+      let lastUpdate: number;
+      const subscription = PubSub.subscribeUID('testIncUID')(
+        async (value) => {
+          if (lastUpdate) {
+            expect(value).toEqual(lastUpdate + 1);
+          } else {
+            expect(value).toEqual(1);
+          }
+          lastUpdate = value;
+          if (value == 100) {
+            subscription.unsubscribe();
+            resolve(true);
+          }
+        },
+        (err) => {
+          expect(err.status).toEqual(404);
+        }
+      );
+
+      let directValue: number = -1;
+      while (directValue < 100) {
+        directValue = await Nymph.newUID('testIncUID');
+      }
+    });
+  });
+
+  it('set uid', async () => {
+    await new Promise(async (resolve) => {
+      const subscription = PubSub.subscribeUID('testSetUID')(
+        async (value) => {
+          expect(value).toEqual(123);
+          subscription.unsubscribe();
+          resolve(true);
+        },
+        (err) => {
+          expect(err.status).toEqual(404);
+        }
+      );
+
+      await Nymph.setUID('testSetUID', 123);
+    });
+  });
+
+  it('rename uid from old name', async () => {
+    await new Promise(async (resolve) => {
+      let updated = false;
+      const subscription = PubSub.subscribeUID('testRenameUID')(
+        async (value, event) => {
+          if (updated) {
+            expect(event).toEqual('renameUID');
+            expect(value).toEqual(null);
+            subscription.unsubscribe();
+            resolve(true);
+          } else {
+            expect(value).toEqual(456);
+            updated = true;
+          }
+        },
+        (err) => {
+          expect(err.status).toEqual(404);
+        }
+      );
+
+      await Nymph.setUID('testRenameUID', 456);
+      await NymphServer.renameUID('testRenameUID', 'newRenameUID');
+    });
+  });
+
+  it('rename uid from new name', async () => {
+    await new Promise(async (resolve) => {
+      const subscription = PubSub.subscribeUID('newRename2UID')(
+        async (value, event) => {
+          expect(event).toEqual('setUID');
+          expect(value).toEqual(456);
+          subscription.unsubscribe();
+          resolve(true);
+        },
+        (err) => {
+          expect(err.status).toEqual(404);
+        }
+      );
+
+      await Nymph.setUID('testRename2UID', 456);
+      await NymphServer.renameUID('testRename2UID', 'newRename2UID');
+    });
+  });
+
+  it('delete uid', async () => {
+    await Nymph.setUID('testDeleteUID', 789);
+
+    await new Promise(async (resolve) => {
+      let updated = false;
+      const subscription = PubSub.subscribeUID('testDeleteUID')(
+        async (value, event) => {
+          if (updated && event === 'deleteUID') {
+            expect(value).toEqual(null);
+            subscription.unsubscribe();
+            resolve(true);
+          } else {
+            expect(value).toEqual(789);
+            updated = true;
+          }
+        },
+        (err) => {
+          expect(err.status).toEqual(404);
+        }
+      );
+
+      await Nymph.deleteUID('testDeleteUID');
+    });
+  });
+
   afterAll(async () => {
     // avoid jest open handle error
     const closed = new Promise((resolve) => {
