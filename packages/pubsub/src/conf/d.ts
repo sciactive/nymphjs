@@ -3,6 +3,10 @@
  */
 export interface Config {
   /**
+   * Determine whether a client's origin is allowed to connect.
+   */
+  originIsAllowed: (origin: string) => boolean;
+  /**
    * The URLs of the Nymph-PubSub servers to directly publish to. These servers
    * are how this host will enter the PubSub network. If you only have one
    * PubSub server, it needs to be listed here.

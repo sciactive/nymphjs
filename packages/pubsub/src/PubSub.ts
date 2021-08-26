@@ -276,13 +276,8 @@ export default class PubSub {
     this.server.shutDown();
   }
 
-  public originIsAllowed(_origin: string) {
-    // TODO: add this to options.
-    return true;
-  }
-
   public handleRequest(request: request) {
-    if (!this.originIsAllowed(request.origin)) {
+    if (!this.config.originIsAllowed(request.origin)) {
       // Make sure we only accept requests from an allowed origin
       request.reject();
       this.config.logger(

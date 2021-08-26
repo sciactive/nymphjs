@@ -14,6 +14,7 @@ const sqliteConfig = {
 };
 
 const pubSubConfig = {
+  originIsAllowed: () => true,
   entries: ['ws://localhost:5081/'],
   logger: () => {},
 };

@@ -1,5 +1,5 @@
-import { server as WebSocketServer } from 'websocket';
 import http from 'http';
+import { server as WebSocketServer } from 'websocket';
 
 import { Config, ConfigDefaults as defaults } from './conf';
 import PubSub from './PubSub';
@@ -37,7 +37,7 @@ export default function createServer(
   const pubsub = new PubSub(config, wsServer);
 
   const _close = pubsub.close;
-  pubsub.close = function () {
+  pubsub.close = () => {
     _close.call(pubsub);
     listener.close();
   };
