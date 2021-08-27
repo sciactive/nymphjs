@@ -145,6 +145,7 @@ export default class User extends AbleObject<UserData> {
     'emailChangeDate',
   ];
   private static DEFAULT_ALLOWLIST_DATA: string[] = [];
+
   protected $clientEnabledMethods = User.DEFAULT_CLIENT_ENABLED_METHODS;
   public static clientEnabledStaticMethods = [
     'current',
@@ -448,7 +449,7 @@ export default class User extends AbleObject<UserData> {
     }
     return (
       'https://secure.gravatar.com/avatar/' +
-      md5(this.$data.email.trim().toLowerCase()).toString(CryptoJS.enc.Utf16) +
+      md5(this.$data.email.trim().toLowerCase()).toString() +
       '?d=identicon&s=40'
     );
   }
@@ -456,15 +457,33 @@ export default class User extends AbleObject<UserData> {
   /**
    * Get the user's group descendants.
    */
-  public $getDescendantGroups(): (Group & GroupData)[] {
+  public async $getDescendantGroups(): Promise<(Group & GroupData)[]> {
     if (this.$descendantGroups == null) {
       this.$descendantGroups = [];
       if (this.$data.group != null) {
-        this.$descendantGroups = this.$data.group.$getDescendants();
+        this.$descendantGroups = await this.$data.group.$getDescendants();
       }
       for (let curGroup of this.$data.groups ?? []) {
         this.$descendantGroups = this.$descendantGroups?.concat(
-          curGroup.$getDescendants()
+          await curGroup.$getDescendants()
+        );
+      }
+    }
+    return this.$descendantGroups;
+  }
+
+  /**
+   * Get the user's group descendants.
+   */
+  public $getDescendantGroupsSync(): (Group & GroupData)[] {
+    if (this.$descendantGroups == null) {
+      this.$descendantGroups = [];
+      if (this.$data.group != null) {
+        this.$descendantGroups = this.$data.group.$getDescendantsSync();
+      }
+      for (let curGroup of this.$data.groups ?? []) {
+        this.$descendantGroups = this.$descendantGroups?.concat(
+          curGroup.$getDescendantsSync()
         );
       }
     }
@@ -1090,7 +1109,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Start transaction.
-    if (!(await Nymph.startTransaction())) {
+    if ((await Nymph.inTransaction()) || !(await Nymph.startTransaction())) {
       return {
         result: false,
         loggedin: false,
@@ -1266,7 +1285,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public async $save() {
-    if (this.$data.username == null) {
+    if (this.$data.username == null || !this.$data.username.length) {
       return false;
     }
 
@@ -1285,7 +1304,7 @@ export default class User extends AbleObject<UserData> {
     // Formatting.
     this.$data.username = this.$data.username.trim();
     if (!Tilmeld.config.emailUsernames) {
-      this.$data.email = this.$data.username.trim();
+      this.$data.email = this.$data.username;
     }
     this.$data.nameFirst = (this.$data.nameFirst ?? '').trim();
     this.$data.nameMiddle = (this.$data.nameMiddle ?? '').trim();

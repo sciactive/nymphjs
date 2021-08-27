@@ -46,6 +46,7 @@ export default abstract class NymphDriver {
   abstract startTransaction(): Promise<boolean>;
   abstract commit(): Promise<boolean>;
   abstract rollback(): Promise<boolean>;
+  abstract inTransaction(): Promise<boolean>;
   abstract deleteEntityByID(
     guid: string,
     classConstructor: EntityConstructor

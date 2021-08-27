@@ -1,9 +1,11 @@
 import Nymph, { EntityInterface, Options, Selector } from '@nymphjs/nymph';
 import { Request, Response } from 'express';
-import { AccessControlData } from './AccessControlData';
+
 import { Config, ConfigDefaults as defaults } from './conf';
+import { AccessControlError } from './errors';
 import Group from './Group';
 import User, { UserData } from './User';
+import { AccessControlData } from './Tilmeld.types';
 
 /**
  * A user and group system for Nymph.js.
@@ -74,10 +76,250 @@ export default class Tilmeld {
       throw new Error("Tilmeld can't be configured before Nymph.");
     }
 
-    // TODO: HookMethods::setup();
+    this.initAccessControl();
     if (this.request != null) {
       this.authenticate();
     }
+  }
+
+  private static initAccessControl() {
+    // Check for the skip access control option and add AC selectors.
+    const getEntities = function (options?: Options, ...selectors: Selector[]) {
+      if (
+        !options ||
+        !('skipAc' in options) ||
+        !options.skipAc ||
+        options.source === 'client'
+      ) {
+        if (options?.source === 'client') {
+          if (
+            !Tilmeld.gatekeeper('tilmeld/admin') &&
+            ((!Tilmeld.config.enableUserSearch &&
+              options.class?.factorySync() instanceof User) ||
+              (!Tilmeld.config.enableGroupSearch &&
+                options.class?.factorySync() instanceof Group)) &&
+            (selectors[0] == null ||
+              selectors[0].type !== '&' ||
+              (!('guid' in selectors[0]) && !('equal' in selectors[0])) ||
+              ('guid' in selectors[0] &&
+                typeof selectors[0].guid !== 'string') ||
+              ('equal' in selectors[0] &&
+                selectors[0]['equal']?.[0] !== 'username'))
+          ) {
+            // If the user is not specifically searching for a GUID or username, and they're not
+            // allowed to search, it should fail.
+            throw new AccessControlError('No permission to search.');
+          }
+        }
+        // Add access control selectors
+        Tilmeld.addAccessControlSelectors([options ?? {}, ...selectors]);
+      }
+    };
+
+    // Filter entities being deleted for user permissions.
+    const checkPermissionsDelete = function (entity: EntityInterface) {
+      if (
+        typeof entity.$tilmeldDeleteSkipAC === 'function' &&
+        entity.$tilmeldDeleteSkipAC()
+      ) {
+        return;
+      }
+      // Test for permissions.
+      if (Tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
+        throw new AccessControlError('No permission to delete.');
+      }
+    };
+
+    // Filter entities being deleted for user permissions.
+    const checkPermissionsDeleteByID = function (
+      guid: string,
+      className?: string
+    ) {
+      const entity = Nymph.driver.getEntitySync(
+        { class: Nymph.getEntityClass(className ?? 'Entity') },
+        { type: '&', guid: guid }
+      );
+      if (entity != null) {
+        checkPermissionsDelete(entity);
+      }
+    };
+
+    // Filter entities being saved for user permissions, and filter any disallowed changes to AC
+    // properties.
+    const checkPermissionsSaveAndFilterAcChanges = function (
+      entity: EntityInterface & AccessControlData
+    ) {
+      if (!entity) {
+        return;
+      }
+      if (
+        typeof entity.$tilmeldSaveSkipAC === 'function' &&
+        entity.$tilmeldSaveSkipAC()
+      ) {
+        return;
+      }
+
+      if (entity.guid != null) {
+        // If the entity is not new, check that the user has full access before allowing a change to
+        // ac properties.
+
+        const originalAc = entity.$getOriginalAcValues();
+        const newAc = {
+          user: entity.user ?? null,
+          group: entity.group ?? null,
+          acUser: entity.acUser ?? null,
+          acGroup: entity.acGroup ?? null,
+          acOther: entity.acOther ?? null,
+          acRead: entity.acRead ?? null,
+          acWrite: entity.acWrite ?? null,
+          acFull: entity.acFull ?? null,
+        };
+
+        const setAcProperties = (acValues: { [k: string]: any }) => {
+          for (let name in acValues) {
+            const value = acValues[name];
+            if (value == null) {
+              delete entity[name];
+            } else {
+              entity[name] = value;
+            }
+          }
+        };
+
+        // Restore original AC properties and check permissions.
+        setAcProperties(originalAc);
+        if (Tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
+          // Only allow changes to AC properties if the user has full access.
+          // TODO: only allow changes to `user` and `group` if tilmeld admin or group is user's group.
+          setAcProperties(newAc);
+        }
+      }
+
+      // Test for permissions.
+      if (!Tilmeld.checkPermissions(entity, Tilmeld.WRITE_ACCESS)) {
+        throw new AccessControlError('No permission to write.');
+      }
+    };
+
+    /*
+     * Add the current user's "user", "group", and access control to new entity.
+     *
+     * This occurs right before an entity is saved. It only alters the entity if:
+     *
+     * - There is a user logged in.
+     * - The entity is new (doesn't have a GUID.)
+     * - The entity is not a user or group.
+     *
+     * Default access control is
+     *
+     * - acUser = Tilmeld::FULL_ACCESS
+     * - acGroup = Tilmeld::READ_ACCESS
+     * - acOther = Tilmeld::NO_ACCESS
+     */
+    const addAccess = function (entity: EntityInterface & AccessControlData) {
+      const user = Tilmeld.currentUser;
+      if (
+        user != null &&
+        entity.guid == null &&
+        !(entity instanceof User) &&
+        !(entity instanceof Group)
+      ) {
+        if (entity.user == null) {
+          entity.user = user;
+        }
+        if (
+          entity.group == null &&
+          user.group != null &&
+          user.group.guid != null
+        ) {
+          entity.group = user.group;
+        }
+        if (entity.acUser == null) {
+          entity.acUser = Tilmeld.FULL_ACCESS;
+        }
+        if (entity.acGroup == null) {
+          entity.acGroup = Tilmeld.READ_ACCESS;
+        }
+        if (entity.acOther == null) {
+          entity.acOther = Tilmeld.NO_ACCESS;
+        }
+        if (entity.acRead == null) {
+          entity.acRead = [];
+        }
+        if (entity.acWrite == null) {
+          entity.acWrite = [];
+        }
+        if (entity.acFull == null) {
+          entity.acFull = [];
+        }
+      }
+    };
+
+    const validate = function (entity: EntityInterface & AccessControlData) {
+      if (!(entity instanceof User) && !(entity instanceof Group)) {
+        const ownershipAcPropertyValidator = (prop: any) => {
+          if (
+            typeof prop != 'number' ||
+            prop < Tilmeld.NO_ACCESS ||
+            prop > Tilmeld.FULL_ACCESS
+          ) {
+            throw new AccessControlError('Invalid access control property.');
+          }
+        };
+
+        const accessAcPropertyValidator = (prop: any) => {
+          if (!Array.isArray(prop)) {
+            throw new AccessControlError('Invalid access control property.');
+          }
+          prop.forEach((value) => {
+            if (!(value instanceof User || value instanceof Group)) {
+              throw new AccessControlError('Invalid access control property.');
+            }
+          });
+        };
+
+        if ('user' in entity) {
+          if (!(entity.user instanceof User)) {
+            throw new AccessControlError('Invalid access control property.');
+          }
+        }
+
+        if ('group' in entity) {
+          if (!(entity.Group instanceof Group)) {
+            throw new AccessControlError('Invalid access control property.');
+          }
+        }
+
+        if ('acUser' in entity) {
+          ownershipAcPropertyValidator(entity.acUser);
+        }
+        if ('acGroup' in entity) {
+          ownershipAcPropertyValidator(entity.acGroup);
+        }
+        if ('acOther' in entity) {
+          ownershipAcPropertyValidator(entity.acOther);
+        }
+        if ('acRead' in entity) {
+          accessAcPropertyValidator(entity.acRead);
+        }
+        if ('acWrite' in entity) {
+          accessAcPropertyValidator(entity.acWrite);
+        }
+        if ('acFull' in entity) {
+          accessAcPropertyValidator(entity.acFull);
+        }
+      }
+    };
+
+    Nymph.on('beforeGetEntity', getEntities);
+    Nymph.on('beforeGetEntities', getEntities);
+
+    Nymph.on('beforeSaveEntity', addAccess);
+    Nymph.on('beforeSaveEntity', validate);
+    Nymph.on('beforeSaveEntity', checkPermissionsSaveAndFilterAcChanges);
+
+    Nymph.on('beforeDeleteEntity', checkPermissionsDelete);
+    Nymph.on('beforeDeleteEntityByID', checkPermissionsDeleteByID);
   }
 
   /**
@@ -164,7 +406,7 @@ export default class Tilmeld {
           acRefs.push(['acFull', curSecondaryGroup]);
         }
       }
-      for (let curDescendantGroup of user.$getDescendantGroups()) {
+      for (let curDescendantGroup of user.$getDescendantGroupsSync()) {
         if (curDescendantGroup != null && curDescendantGroup.guid != null) {
           // It belongs to the user's secondary group.
           groupRefs.push(['group', curDescendantGroup]);
@@ -323,7 +565,7 @@ export default class Tilmeld {
     // Calculate all the groups the user belongs to.
     let allGroups = userOrEmpty.group == null ? [] : [userOrEmpty.group];
     allGroups = allGroups.concat(userOrEmpty.groups ?? []);
-    allGroups = allGroups.concat(userOrEmpty.$getDescendantGroups());
+    allGroups = allGroups.concat(userOrEmpty.$getDescendantGroupsSync());
 
     // Check access ac properties.
     const checks = [

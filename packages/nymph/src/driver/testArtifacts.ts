@@ -132,6 +132,9 @@ This one's zip code is 92064.`;
   it('transactions', async () => {
     await createTestEntities();
 
+    // Verify not in a transaction.
+    expect(await Nymph.inTransaction()).toEqual(false);
+
     const transaction = await Nymph.startTransaction();
 
     if (!transaction) {
@@ -141,12 +144,18 @@ This one's zip code is 92064.`;
       return;
     }
 
+    // Verify in a transaction.
+    expect(await Nymph.inTransaction()).toEqual(true);
+
     // Change a value in the test entity.
     testEntity.string = 'bad value';
     expect(await testEntity.$save()).toEqual(true);
 
     // Rollback the transaction.
     await Nymph.rollback();
+
+    // Verify not in a transaction.
+    expect(await Nymph.inTransaction()).toEqual(false);
 
     // Verify the value is correct.
     await testEntity.$refresh();
@@ -155,6 +164,9 @@ This one's zip code is 92064.`;
     // Start a new transaction.
     await Nymph.startTransaction();
 
+    // Verify in a transaction.
+    expect(await Nymph.inTransaction()).toEqual(true);
+
     // Delete the entity.
     expect(await testEntity.$delete()).toEqual(true);
     const resultEntity = await Nymph.getEntity({ class: TestModel }, testGuid);
@@ -162,6 +174,9 @@ This one's zip code is 92064.`;
 
     // Rollback the transaction.
     await Nymph.rollback();
+
+    // Verify not in a transaction.
+    expect(await Nymph.inTransaction()).toEqual(false);
 
     // Verify it's back.
     testEntity = (await Nymph.getEntity(
@@ -174,12 +189,18 @@ This one's zip code is 92064.`;
     // Start a new transaction.
     await Nymph.startTransaction();
 
+    // Verify in a transaction.
+    expect(await Nymph.inTransaction()).toEqual(true);
+
     // Make a change.
     testEntity.string = 'fish';
     expect(await testEntity.$save()).toEqual(true);
 
     // Commit the transaction.
     await Nymph.commit();
+
+    // Verify not in a transaction.
+    expect(await Nymph.inTransaction()).toEqual(false);
 
     // Verify the value is correct.
     await testEntity.$refresh();

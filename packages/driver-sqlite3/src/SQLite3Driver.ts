@@ -29,6 +29,7 @@ export default class SQLite3Driver extends NymphDriver {
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: SQLite3.Database;
+  protected transactionStarted = false;
 
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
@@ -101,6 +102,10 @@ export default class SQLite3Driver extends NymphDriver {
       this.connected = false;
     }
     return this.connected;
+  }
+
+  public async inTransaction() {
+    return this.transactionStarted;
   }
 
   /**
@@ -347,6 +352,12 @@ export default class SQLite3Driver extends NymphDriver {
     return this.query(() => this.link.prepare(query).run(params), query, etype);
   }
 
+  public async commit() {
+    this.queryRun('COMMIT;');
+    this.transactionStarted = false;
+    return true;
+  }
+
   public async deleteEntityByID(
     guid: string,
     className?: EntityConstructor | string | null
@@ -410,11 +421,6 @@ export default class SQLite3Driver extends NymphDriver {
     if (Nymph.config.cache) {
       this.cleanCache(guid);
     }
-    return true;
-  }
-
-  public async commit() {
-    this.queryRun('COMMIT;');
     return true;
   }
 
@@ -1597,6 +1603,7 @@ export default class SQLite3Driver extends NymphDriver {
 
   public async rollback() {
     this.queryRun('ROLLBACK;');
+    this.transactionStarted = false;
     return true;
   }
 
@@ -1786,6 +1793,7 @@ export default class SQLite3Driver extends NymphDriver {
 
   public async startTransaction() {
     this.queryRun('BEGIN TRANSACTION;');
+    this.transactionStarted = true;
     return true;
   }
 }

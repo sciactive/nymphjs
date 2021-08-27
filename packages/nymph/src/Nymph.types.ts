@@ -3,6 +3,8 @@ import { EntityConstructor, EntityInterface } from './Entity.types';
 export type NymphEventType =
   | 'connect'
   | 'disconnect'
+  | 'beforeGetEntity'
+  | 'beforeGetEntities'
   | 'beforeSaveEntity'
   | 'afterSaveEntity'
   | 'beforeDeleteEntity'
@@ -19,6 +21,14 @@ export type NymphEventType =
   | 'afterDeleteUID';
 export type NymphConnectCallback = (result: Promise<boolean>) => void;
 export type NymphDisconnectCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeGetEntityCallback = (
+  options?: Options,
+  ...selectors: Selector[]
+) => void;
+export type NymphBeforeGetEntitiesCallback = (
+  options?: Options,
+  ...selectors: Selector[]
+) => void;
 export type NymphBeforeSaveEntityCallback = (entity: EntityInterface) => void;
 export type NymphAfterSaveEntityCallback = (result: Promise<boolean>) => void;
 export type NymphBeforeDeleteEntityCallback = (entity: EntityInterface) => void;

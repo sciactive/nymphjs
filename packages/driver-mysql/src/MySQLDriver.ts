@@ -37,6 +37,7 @@ export default class MySQLDriver extends NymphDriver {
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: MySQLType.Pool;
   protected connection: MySQLType.PoolConnection | null = null;
+  protected transactionStarted = false;
 
   static escape(input: string) {
     return mysql.escapeId(input);
@@ -126,6 +127,10 @@ export default class MySQLDriver extends NymphDriver {
       this.connected = false;
     }
     return this.connected;
+  }
+
+  public async inTransaction() {
+    return this.transactionStarted;
   }
 
   /**
@@ -532,6 +537,16 @@ export default class MySQLDriver extends NymphDriver {
     );
   }
 
+  public async commit() {
+    if (this.config.transactions) {
+      this.queryRun('COMMIT;');
+      this.connection = null;
+      this.transactionStarted = false;
+      return true;
+    }
+    return false;
+  }
+
   public async deleteEntityByID(
     guid: string,
     className?: EntityConstructor | string | null
@@ -621,15 +636,6 @@ export default class MySQLDriver extends NymphDriver {
     }
     connection.release();
     return true;
-  }
-
-  public async commit() {
-    if (this.config.transactions) {
-      this.queryRun('COMMIT;');
-      this.connection = null;
-      return true;
-    }
-    return false;
   }
 
   public async deleteUID(name: string) {
@@ -1959,6 +1965,7 @@ export default class MySQLDriver extends NymphDriver {
     if (this.config.transactions) {
       this.queryRun('ROLLBACK;');
       this.connection = null;
+      this.transactionStarted = false;
       return true;
     }
     return false;
@@ -2263,6 +2270,7 @@ export default class MySQLDriver extends NymphDriver {
       // Lock to one connection.
       this.connection = await this.getConnection();
       this.queryRun('START TRANSACTION;');
+      this.transactionStarted = true;
       return true;
     }
     return false;

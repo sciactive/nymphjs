@@ -7,6 +7,8 @@ import {
   Options,
   NymphConnectCallback,
   NymphDisconnectCallback,
+  NymphBeforeGetEntityCallback,
+  NymphBeforeGetEntitiesCallback,
   NymphBeforeSaveEntityCallback,
   NymphAfterSaveEntityCallback,
   NymphBeforeDeleteEntityCallback,
@@ -40,6 +42,9 @@ export default class Nymph {
   public static Tilmeld: any = undefined;
   private static connectCallbacks: NymphConnectCallback[] = [];
   private static disconnectCallbacks: NymphDisconnectCallback[] = [];
+  private static beforeGetEntityCallbacks: NymphBeforeGetEntityCallback[] = [];
+  private static beforeGetEntitiesCallbacks: NymphBeforeGetEntitiesCallback[] =
+    [];
   private static beforeSaveEntityCallbacks: NymphBeforeSaveEntityCallback[] =
     [];
   private static afterSaveEntityCallbacks: NymphAfterSaveEntityCallback[] = [];
@@ -153,6 +158,15 @@ export default class Nymph {
    */
   public static async rollback(): Promise<boolean> {
     return await this.driver.rollback();
+  }
+
+  /**
+   * Check if there is an ongoing transaction.
+   *
+   * @returns True if there is a transaction.
+   */
+  public static async inTransaction(): Promise<boolean> {
+    return await this.driver.inTransaction();
   }
 
   /**
@@ -471,6 +485,11 @@ export default class Nymph {
     options: Options<T> = {},
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[]> {
+    for (let callback of this.beforeGetEntitiesCallbacks) {
+      if (callback) {
+        callback(options, ...selectors);
+      }
+    }
     return await this.driver.getEntities(options, ...selectors);
   }
 
@@ -522,6 +541,11 @@ export default class Nymph {
       selectors = [{ type: '&', guid: selectors[0] }];
     }
     options.limit = 1;
+    for (let callback of this.beforeGetEntityCallbacks) {
+      if (callback) {
+        callback(options, ...(selectors as Selector[]));
+      }
+    }
     const entities = await this.driver.getEntities(
       options,
       ...(selectors as Selector[])
@@ -643,6 +667,10 @@ export default class Nymph {
       ? NymphConnectCallback
       : T extends 'disconnect'
       ? NymphDisconnectCallback
+      : T extends 'beforeGetEntity'
+      ? NymphBeforeGetEntityCallback
+      : T extends 'beforeGetEntities'
+      ? NymphBeforeGetEntitiesCallback
       : T extends 'beforeSaveEntity'
       ? NymphBeforeSaveEntityCallback
       : T extends 'afterSaveEntity'
@@ -677,6 +705,10 @@ export default class Nymph {
       ? 'connectCallbacks'
       : T extends 'disconnect'
       ? 'disconnectCallbacks'
+      : T extends 'beforeGetEntity'
+      ? 'beforeGetEntityCallbacks'
+      : T extends 'beforeGetEntities'
+      ? 'beforeGetEntitiesCallbacks'
       : T extends 'beforeSaveEntity'
       ? 'beforeSaveEntityCallbacks'
       : T extends 'afterSaveEntity'
@@ -720,6 +752,10 @@ export default class Nymph {
       ? NymphConnectCallback
       : T extends 'disconnect'
       ? NymphDisconnectCallback
+      : T extends 'beforeGetEntity'
+      ? NymphBeforeGetEntityCallback
+      : T extends 'beforeGetEntities'
+      ? NymphBeforeGetEntitiesCallback
       : T extends 'beforeSaveEntity'
       ? NymphBeforeSaveEntityCallback
       : T extends 'afterSaveEntity'
@@ -756,6 +792,10 @@ export default class Nymph {
       ? 'disconnectCallbacks'
       : T extends 'beforeSaveEntity'
       ? 'beforeSaveEntityCallbacks'
+      : T extends 'beforeGetEntity'
+      ? 'beforeGetEntityCallbacks'
+      : T extends 'beforeGetEntities'
+      ? 'beforeGetEntitiesCallbacks'
       : T extends 'afterSaveEntity'
       ? 'afterSaveEntityCallbacks'
       : T extends 'beforeDeleteEntity'
