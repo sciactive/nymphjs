@@ -6,7 +6,8 @@
     "./packages/driver-sqlite3/",
     "./packages/nymph/",
     "./packages/pubsub/",
-    "./packages/server/"
+    "./packages/server/",
+    "./packages/tilmeld/"
   ],
   "out": "docs",
   "name": "Nymph.js",
