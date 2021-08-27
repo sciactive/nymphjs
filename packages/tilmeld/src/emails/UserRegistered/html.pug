@@ -1,0 +1,24 @@
+p #{toName},
+p
+  | A new user has registered on 
+  a(href="#{siteLink}" target="_blank") #{siteLink}
+  | . Here are the details of their account:
+div
+  table(cellpadding="0" cellspacing="2" border="0")
+    tr
+      td(valign="top" style="padding-right: 1em;") Username:
+      td #{userUsername}
+    tr
+      td(valign="top" style="padding-right: 1em;") Name:
+      td #{userName}
+    tr
+      td(valign="top" style="padding-right: 1em;") Email:
+      td
+        a(href="mailto:#{userEmail}") #{userEmail}
+    tr
+      td(valign="top" style="padding-right: 1em;") Phone:
+      td #{userPhone}
+p 
+  | Regards,
+  br
+  | #{siteName}

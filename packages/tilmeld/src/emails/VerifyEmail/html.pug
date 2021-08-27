@@ -1,0 +1,11 @@
+p Welcome #{toName},
+p
+  | Thank you for signing up at 
+  a(href="#{siteLink}" target="_blank") #{siteName}
+  | . Please verify your email address by clicking on the following link:
+p
+  a(href="#{verifyLink}" target="_blank") #{verifyLink}
+p 
+  | Regards,
+  br
+  | #{siteName}

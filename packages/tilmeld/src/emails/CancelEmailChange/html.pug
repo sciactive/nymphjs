@@ -1,0 +1,16 @@
+p Hi #{toName},
+p 
+  | We've received a request to change your email address at 
+  a(href="#{siteLink}" target="_blank") #{siteName}
+  |  to #{newEmail}. If you didn't request this change, you can cancel it by clicking 
+  | this link:
+p 
+  a(href="#{cancelLink}" target="_blank") #{cancelLink}
+p You should also change your password if you didn't make the request.
+p
+  | If you did make this request, you can complete the change by clicking the link 
+  | emailed to #{newEmail}.
+p 
+  | Regards,
+  br
+  | #{siteName}
