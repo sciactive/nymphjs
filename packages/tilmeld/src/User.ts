@@ -16,7 +16,12 @@ import { difference } from 'lodash';
 import AbleObject from './AbleObject';
 import Group, { GroupData } from './Group';
 import Tilmeld from './Tilmeld';
-import { BadDataError } from './errors';
+import {
+  BadDataError,
+  BadEmailError,
+  BadUsernameError,
+  EmailChangeRateLimitExceededError,
+} from './errors';
 
 export type UserData = {
   /**
@@ -619,6 +624,7 @@ export default class User extends AbleObject<UserData> {
 
   public $clearCache() {
     const ret = super.$clearCache();
+    this.$descendantGroups = undefined;
     this.$gatekeeperCache = undefined;
     return ret;
   }
@@ -1036,6 +1042,400 @@ export default class User extends AbleObject<UserData> {
     };
   }
 
+  public async $register(data: {
+    password: string;
+  }): Promise<{ result: boolean; loggedin: boolean; message: string }> {
+    if (!Tilmeld.config.allowRegistration) {
+      return {
+        result: false,
+        loggedin: false,
+        message: 'Registration is not allowed.',
+      };
+    }
+    if (this.guid != null) {
+      return {
+        result: false,
+        loggedin: false,
+        message: 'This is already a registered user.',
+      };
+    }
+    if (!('password' in data) || !data.password.length) {
+      return {
+        result: false,
+        loggedin: false,
+        message: 'Password is a required field.',
+      };
+    }
+    const unCheck = await this.$checkUsername();
+    if (!unCheck.result) {
+      return { ...unCheck, loggedin: false };
+    }
+
+    this.$password(data.password);
+    if (Tilmeld.config.regFields.indexOf('name') !== -1) {
+      this.$data.name =
+        this.$data.nameFirst +
+        (!this.$data.nameMiddle == null ? '' : ' ' + this.$data.nameMiddle) +
+        (!this.$data.nameLast == null ? '' : ' ' + this.$data.nameLast);
+      if (this.$data.name === '') {
+        this.$data.name = this.$data.username;
+      }
+    }
+    if (Tilmeld.config.emailUsernames) {
+      this.$data.email = this.$data.username;
+    }
+
+    // Start transaction.
+    if (!(await Nymph.startTransaction())) {
+      return {
+        result: false,
+        loggedin: false,
+        message: 'Error starting database transaction.',
+      };
+    }
+
+    // Add primary group.
+    let generatedPrimaryGroup: (Group & GroupData) | null = null;
+    if (Tilmeld.config.generatePrimary) {
+      // Generate a new primary group for the user.
+      generatedPrimaryGroup = await Group.factory();
+      generatedPrimaryGroup.groupname = this.$data.username;
+      generatedPrimaryGroup.avatar = this.$data.avatar;
+      generatedPrimaryGroup.name = this.$data.name;
+      generatedPrimaryGroup.email = this.$data.email;
+      const parent = await Nymph.getEntity(
+        { class: Group },
+        {
+          type: '&',
+          equal: ['defaultPrimary', true],
+        }
+      );
+      if (parent != null) {
+        generatedPrimaryGroup.parent = parent;
+      }
+      if (!(await generatedPrimaryGroup.$saveSkipAC())) {
+        await Nymph.rollback();
+        return {
+          result: false,
+          loggedin: false,
+          message: 'Error creating primary group for user.',
+        };
+      }
+      this.$data.group = generatedPrimaryGroup;
+    } else {
+      // Add the default primary.
+      const group = await Nymph.getEntity(
+        { class: Group },
+        {
+          type: '&',
+          equal: ['defaultPrimary', true],
+        }
+      );
+      if (group != null) {
+        this.$data.group = group;
+      }
+    }
+
+    try {
+      // Add secondary groups.
+      if (Tilmeld.config.verifyEmail && Tilmeld.config.unverifiedAccess) {
+        // Add the default secondaries for unverified users.
+        this.$data.groups = await Nymph.getEntities(
+          { class: Group },
+          {
+            type: '&',
+            equal: ['unverifiedSecondary', true],
+          }
+        );
+      } else {
+        // Add the default secondaries.
+        this.$data.groups = await Nymph.getEntities(
+          { class: Group },
+          {
+            type: '&',
+            equal: ['defaultSecondary', true],
+          }
+        );
+      }
+
+      if (Tilmeld.config.verifyEmail) {
+        // The user will be enabled after verifying their e-mail address.
+        if (!Tilmeld.config.unverifiedAccess) {
+          this.$data.enabled = false;
+        }
+      } else {
+        this.$data.enabled = true;
+      }
+
+      // If create_admin is true and there are no other users, grant
+      // "system/admin".
+      if (Tilmeld.config.createAdmin) {
+        const otherUsers = await Nymph.getEntities({
+          class: User,
+          skipAc: true,
+          limit: 1,
+        });
+        // Make sure it's not just null, cause that means an error.
+        if (!otherUsers.length) {
+          this.$grant('system/admin');
+          this.$data.enabled = true;
+        }
+      }
+
+      if (this.$saveSkipAC()) {
+        // Send the new user registered email.
+        if (Tilmeld.config.userRegisteredRecipient != null) {
+          await Tilmeld.config.sendEmail(
+            {
+              template: 'UserRegistered',
+              message: {
+                to: Tilmeld.config.userRegisteredRecipient,
+              },
+              locals: {
+                userUsername: this.$data.username,
+                userName: this.$data.name,
+                userFirstName: this.$data.nameFirst,
+                userLastName: this.$data.nameLast,
+                userEmail: this.$data.email,
+                userPhone: this.$data.phone,
+              },
+            },
+            this
+          );
+        }
+
+        let message = '';
+        let loggedin = false;
+
+        // Save the primary group.
+        if (generatedPrimaryGroup != null) {
+          generatedPrimaryGroup.user = this;
+          if (!generatedPrimaryGroup.$saveSkipAC()) {
+            await Nymph.rollback();
+            return {
+              result: false,
+              loggedin: false,
+              message:
+                'Your primary group could not be assigned. Please try again later.',
+            };
+          }
+        }
+
+        // Finish up.
+        if (Tilmeld.config.verifyEmail && !Tilmeld.config.unverifiedAccess) {
+          message +=
+            `Almost there. An email has been sent to ${this.$data.email} ` +
+            'with a verification link for you to finish registration.';
+        } else if (
+          Tilmeld.config.verifyEmail &&
+          Tilmeld.config.unverifiedAccess
+        ) {
+          Tilmeld.login(this, true);
+          message +=
+            "You're now logged in! An email has been sent to " +
+            `${this.$data.email} with a verification link for you to finish ` +
+            'registration.';
+          loggedin = true;
+        } else {
+          Tilmeld.login(this, true);
+          message += "You're now registered and logged in!";
+          loggedin = true;
+        }
+        await Nymph.commit();
+        return {
+          result: true,
+          loggedin,
+          message,
+        };
+      } else {
+        await Nymph.rollback();
+        return {
+          result: false,
+          loggedin: false,
+          message: 'Error registering user.',
+        };
+      }
+    } catch (e) {
+      await Nymph.rollback();
+      throw e;
+    }
+  }
+
+  public async $save() {
+    if (this.$data.username == null) {
+      return false;
+    }
+
+    if (
+      Tilmeld.gatekeeper('tilmeld/admin') &&
+      !Tilmeld.gatekeeper('system/admin') &&
+      this.$gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to modify system admins."
+      );
+    }
+
+    let sendVerification = false;
+
+    // Formatting.
+    this.$data.username = this.$data.username.trim();
+    if (!Tilmeld.config.emailUsernames) {
+      this.$data.email = this.$data.username.trim();
+    }
+    this.$data.nameFirst = (this.$data.nameFirst ?? '').trim();
+    this.$data.nameMiddle = (this.$data.nameMiddle ?? '').trim();
+    this.$data.nameLast = (this.$data.nameLast ?? '').trim();
+    this.$data.phone = (this.$data.phone ?? '').trim();
+    this.$data.name =
+      this.$data.nameFirst +
+      (this.$data.nameMiddle ? ' ' + this.$data.nameMiddle : '') +
+      (this.$data.nameLast ? ' ' + this.$data.nameLast : '');
+
+    // Verification.
+    const unCheck = await this.$checkUsername();
+    if (!unCheck.result) {
+      throw new BadUsernameError(unCheck.message);
+    }
+    if (!Tilmeld.config.emailUsernames) {
+      const emCheck = await this.$checkEmail();
+      if (!emCheck.result) {
+        throw new BadEmailError(emCheck.message);
+      }
+    }
+
+    // Email changes.
+    if (!Tilmeld.gatekeeper('tilmeld/admin')) {
+      // The user isn't an admin, so email address changes should contain some security measures.
+      if (Tilmeld.config.verifyEmail) {
+        // The user needs to verify this new email address.
+        if (this.guid == null) {
+          this.$data.secret = nanoid();
+          sendVerification = true;
+        } else if (
+          this.$data.originalEmail != null &&
+          this.$data.originalEmail !== this.$data.email
+        ) {
+          // The user already has an old email address.
+          if (
+            Tilmeld.config.emailRateLimit !== '' &&
+            this.$data.emailChangeDate != null &&
+            this.$data.emailChangeDate >
+              strtotime('-' + Tilmeld.config.emailRateLimit) * 1000
+          ) {
+            throw new EmailChangeRateLimitExceededError(
+              'You already changed your email address recently. Please wait until ' +
+                new Date(
+                  strtotime(
+                    '+' + Tilmeld.config.emailRateLimit,
+                    Math.floor(this.$data.emailChangeDate / 1000)
+                  )
+                ).toLocaleString() +
+                ' to change your email address again.'
+            );
+          } else {
+            if (
+              this.$data.secret == null &&
+              // Make sure the user has at least the rate limit time to cancel an email change.
+              (this.$data.emailChangeDate == null ||
+                this.$data.emailChangeDate <
+                  strtotime('-' + Tilmeld.config.emailRateLimit) * 1000)
+            ) {
+              // Save the old email in case the cancel change link is clicked.
+              this.$data.cancelEmailAddress = this.$data.originalEmail;
+              this.$data.cancelEmailSecret = nanoid();
+              this.$data.emailChangeDate = Date.now();
+            }
+            this.$data.secret = nanoid();
+            sendVerification = true;
+          }
+        }
+      } else if (
+        this.guid != null &&
+        this.$data.originalEmail != null &&
+        this.$data.originalEmail !== this.$data.email &&
+        // Make sure the user has at least the rate limit time to cancel an email change.
+        (this.$data.emailChangeDate == null ||
+          this.$data.emailChangeDate <
+            strtotime('-' + Tilmeld.config.emailRateLimit) * 1000)
+      ) {
+        // The user doesn't need to verify their new email address, but should be able to cancel the
+        // email change from their old address.
+        this.$data.cancelEmailAddress = this.$data.originalEmail;
+        this.$data.cancelEmailSecret = nanoid();
+        sendVerification = true;
+      }
+    }
+
+    if (
+      (this.$data.password == null || this.$data.password === '') &&
+      (this.$passwordTemp == null || this.$passwordTemp === '')
+    ) {
+      throw new BadDataError('A password is required.');
+    }
+
+    if (this.$passwordTemp != null && this.$passwordTemp !== '') {
+      this.$password(this.$passwordTemp);
+    }
+    delete this.$passwordTemp;
+
+    try {
+      Tilmeld.config.validatorUser(this);
+    } catch (e) {
+      throw new BadDataError(e.message);
+    }
+
+    if (!(await Nymph.startTransaction())) {
+      return false;
+    }
+
+    if (
+      this.$data.group &&
+      this.$data.group.user &&
+      this.$is(this.$data.group.user)
+    ) {
+      try {
+        // Update the user's generated primary group.
+        this.$data.group.groupname = this.$data.username;
+        this.$data.group.avatar = this.$data.avatar;
+        this.$data.group.email = this.$data.email;
+        this.$data.group.name = this.$data.name;
+        this.$data.group.phone = this.$data.phone;
+        await this.$data.group.$saveSkipAC();
+      } catch (e) {
+        await Nymph.rollback();
+        throw e;
+      }
+    }
+
+    let ret: boolean;
+
+    try {
+      ret = await super.$save();
+    } catch (e) {
+      await Nymph.rollback();
+      throw e;
+    }
+    if (ret) {
+      if (sendVerification) {
+        // The email has changed, so send a new verification email.
+        await this.$sendEmailVerification();
+      }
+
+      if (User.current(true).$is(this)) {
+        // Update the user in the session cache.
+        Tilmeld.fillSession(this);
+      }
+
+      this.$descendantGroups = undefined;
+      this.$gatekeeperCache = undefined;
+      await Nymph.commit();
+    } else {
+      await Nymph.rollback();
+    }
+    return ret;
+  }
+
   /**
    * This should *never* be accessible on the client.
    */
@@ -1043,4 +1443,32 @@ export default class User extends AbleObject<UserData> {
     this.$skipAcWhenSaving = true;
     return this.$save();
   }
+
+  public $tilmeldSaveSkipAC() {
+    if (this.$skipAcWhenSaving) {
+      this.$skipAcWhenSaving = false;
+      return true;
+    }
+    return false;
+  }
+
+  public async $delete() {
+    if (!Tilmeld.gatekeeper('tilmeld/admin')) {
+      throw new BadDataError("You don't have the authority to delete users.");
+    }
+    if (
+      !Tilmeld.gatekeeper('system/admin') &&
+      this.$gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to delete system admins."
+      );
+    }
+    if (User.current(true).$is(this)) {
+      this.$logout();
+    }
+    return await super.$delete();
+  }
 }
+
+Nymph.setEntityClass(User.class, User);

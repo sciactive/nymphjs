@@ -1,3 +1,5 @@
+import Nymph from '@nymphjs/nymph';
+
 import AbleObject from './AbleObject';
 import User, { UserData } from './User';
 
@@ -74,4 +76,10 @@ export default class Group extends AbleObject<GroupData> {
   public $isDescendant(group: (Group & GroupData) | string): boolean {
     return true;
   }
+
+  public async $saveSkipAC(): Promise<boolean> {
+    return true;
+  }
 }
+
+Nymph.setEntityClass(Group.class, Group);

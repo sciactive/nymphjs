@@ -13,7 +13,7 @@ export default abstract class AbleObject<
    *
    * @param ability The ability.
    */
-  public grant(ability: string) {
+  public $grant(ability: string) {
     if (!Array.isArray(this.$data.abilities)) {
       this.$data.abilities = [];
     }
@@ -27,7 +27,7 @@ export default abstract class AbleObject<
    *
    * @param ability The ability.
    */
-  public revoke(ability: string) {
+  public $revoke(ability: string) {
     if (!Array.isArray(this.$data.abilities)) {
       this.$data.abilities = [];
     }

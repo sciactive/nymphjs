@@ -130,6 +130,7 @@ export default {
     });
     return !!result;
   },
+  userRegisteredRecipient: null,
   validatorGroup: (group) => {
     // v::notEmpty()
     // ->attribute('groupname', v::stringType()->notBlank()->length(1, null))

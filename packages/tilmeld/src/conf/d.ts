@@ -174,6 +174,10 @@ export interface Config {
   ) => { guid: string; expire: Date } | null;
   sendEmail: (config: EmailOptions, user: User & UserData) => Promise<boolean>;
   /**
+   * The address you'd like to receive a notification of registered users, if any.
+   */
+  userRegisteredRecipient: string | null;
+  /**
    * The validator used to check groups before saving.
    */
   validatorGroup: (group: Group & GroupData) => void;
