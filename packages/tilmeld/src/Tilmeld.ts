@@ -1,4 +1,5 @@
-import Nymph, { Entity, Options, Selector } from '@nymphjs/nymph';
+import Nymph, { EntityInterface, Options, Selector } from '@nymphjs/nymph';
+import { Request, Response } from 'express';
 import { AccessControlData } from './AccessControlData';
 import { Config, ConfigDefaults as defaults } from './conf';
 import Group from './Group';
@@ -30,6 +31,22 @@ export default class Tilmeld {
   public static currentUser: (User & UserData) | null = null;
 
   /**
+   * If you will be performing authentication functions (logging in/out), you should set these so
+   * Tilmeld can read and write cookies and headers.
+   *
+   * If you want the user to be authenticated with the cookie and/or header they provide, you should
+   * set at least the request. It's better to set both, so the JWT can be updated if needed.
+   *
+   * After you set these, call `authenticate()` to read user authentication data from them and fill
+   * the user's session.
+   *
+   * If you want to support cookie based authentication (which still requires an XSRF token for
+   * security), you should enable the cookie parser middleware.
+   */
+  public static request: Request;
+  public static response: Response;
+
+  /**
    * Check to see if the current user has an ability.
    *
    * If `ability` is undefined, it will check to see if a user is currently logged in.
@@ -58,12 +75,14 @@ export default class Tilmeld {
     }
 
     // TODO: HookMethods::setup();
-    // TODO: this.authenticate();
+    if (this.request != null) {
+      this.authenticate();
+    }
   }
 
   /**
-   * Add selectors to a list of options and selectors which will limit results
-   * to only entities the current user has access to.
+   * Add selectors to a list of options and selectors which will limit results to only entities the
+   * current user has access to.
    *
    * @param optionsAndSelectors The options and selectors of the query.
    */
@@ -240,7 +259,7 @@ export default class Tilmeld {
    * @returns Whether the current user has at least `type` permission for the entity.
    */
   public static checkPermissions(
-    entity: Entity & AccessControlData,
+    entity: EntityInterface & AccessControlData,
     type = Tilmeld.READ_ACCESS,
     user?: (User & UserData) | false
   ) {
@@ -414,44 +433,47 @@ export default class Tilmeld {
   /**
    * Check for a TILMELDAUTH token, and, if set, authenticate from it.
    *
-   * @param requestUri The requested URI.
-   * @param headers The HTTP headers.
-   * @param cookies The HTTP cookies.
    * @param skipXsrfToken Skip the XSRF token check.
    * @returns True if a user was authenticated, false on any failure.
    */
-  public static authenticate(
-    requestUri: string,
-    headers: any,
-    cookies: any,
-    skipXsrfToken = false
-  ) {
-    // If a client does't support cookies, they can use the X-TILMELDAUTH header
-    // to provide the auth token.
+  public static authenticate(skipXsrfToken = false) {
+    if (this.request == null) {
+      return false;
+    }
+
+    const cookies = this.request.cookies ?? {};
+
+    // If a client does't support cookies, they can use the X-TILMELDAUTH header to provide the auth
+    // token.
     let fromAuthHeader = false;
     let authToken: string;
-    if ('HTTP_X_TILMELDAUTH' in headers && !('TILMELDAUTH' in cookies)) {
+    if (this.request.header('HTTP_X_TILMELDAUTH') != null) {
       fromAuthHeader = true;
-      authToken = headers.HTTP_X_TILMELDAUTH;
+      authToken = this.request.header('HTTP_X_TILMELDAUTH') as string;
     } else if ('TILMELDAUTH' in cookies) {
       fromAuthHeader = false;
       authToken = cookies.TILMELDAUTH;
     } else {
       return false;
     }
+
     let extract: { guid: string; expire: Date } | null;
-    if (skipXsrfToken || requestUri.startsWith(this.config.setupUrl)) {
-      // The request is for the setup app, or we were told to skip the XSRF
-      // check, so don't check for the XSRF token.
+    if (
+      skipXsrfToken ||
+      this.request.originalUrl.startsWith(this.config.setupPath)
+    ) {
+      // The request is for the setup app, or we were told to skip the XSRF check, so don't check
+      // for the XSRF token.
       extract = this.config.jwtExtract(authToken);
     } else {
-      // The request is for something else, so check for a valid XSRF token,
-      // unless the auth token is provided by a header (instead of a cookie).
-      if (!('HTTP_X_XSRF_TOKEN' in headers) && !fromAuthHeader) {
+      // The request is for something else, so check for a valid XSRF token, unless the auth token
+      // is provided by a header (instead of a cookie).
+      const xsrfToken = this.request.header('HTTP_X_XSRF_TOKEN');
+      if (xsrfToken == null && !fromAuthHeader) {
         return false;
       }
 
-      extract = this.config.jwtExtract(authToken, headers.HTTP_X_XSRF_TOKEN);
+      extract = this.config.jwtExtract(authToken, xsrfToken);
     }
 
     if (extract == null) {
@@ -467,8 +489,7 @@ export default class Tilmeld {
     }
 
     if (expire.valueOf() < Date.now() + this.config.jwtRenew * 1000) {
-      // If the user is less than renew time from needing a new token, give them
-      // a new one.
+      // If the user is less than renew time from needing a new token, give them a new one.
       this.login(user, fromAuthHeader);
     } else {
       this.fillSession(user);
@@ -485,19 +506,20 @@ export default class Tilmeld {
    */
   public static login(user: User & UserData, sendAuthHeader: boolean) {
     if (user.guid != null && user.enabled) {
-      const token = this.config.jwtBuilder(user);
-      const appUrl = new URL(this.config.appUrl);
-      setcookie(
-        'TILMELDAUTH',
-        token,
-        Date.now() + this.config.jwtExpire * 1000,
-        appUrl.pathname,
-        appUrl.hostname,
-        appUrl.protocol === 'https',
-        false // Allow JS access (for CSRF protection).
-      );
-      if (sendAuthHeader) {
-        header('X-TILMELDAUTH: $token');
+      if (this.response && !this.response.headersSent) {
+        const token = this.config.jwtBuilder(user);
+        const appUrl = new URL(this.config.appUrl);
+        this.response.cookie('TILMELDAUTH', token, {
+          domain: this.config.cookieDomain,
+          path: this.config.cookiePath,
+          maxAge: this.config.jwtExpire * 1000,
+          secure: appUrl.protocol === 'https',
+          httpOnly: false, // Allow JS access (for CSRF protection).
+          sameSite: 'lax',
+        });
+        if (sendAuthHeader) {
+          this.response.set('X-TILMELDAUTH', token);
+        }
       }
       this.fillSession(user);
       return true;
@@ -510,16 +532,19 @@ export default class Tilmeld {
    */
   public static logout() {
     this.clearSession();
-    const appUrl = new URL(this.config.appUrl);
-    setcookie('TILMELDAUTH', '', null, appUrl.pathname, appUrl.hostname);
-    header('X-TILMELDAUTH: ');
+    if (this.response && !this.response.headersSent) {
+      this.response.clearCookie('TILMELDAUTH', {
+        domain: this.config.cookieDomain,
+        path: this.config.cookiePath,
+      });
+      this.response.set('X-TILMELDAUTH', '');
+    }
   }
 
   // /**
   //  * Sort an array of groups hierarchically.
   //  *
-  //  * An additional property of the groups can be used to sort them under their
-  //  * parents.
+  //  * An additional property of the groups can be used to sort them under their parents.
   //  *
   //  * @param array The array of groups.
   //  * @param property The name of the property to sort groups by. Undefined for no additional sorting.

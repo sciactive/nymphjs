@@ -11,30 +11,38 @@ export interface Config {
    */
   appName: string;
   /**
-   * The URL of the app. Used to define cookie domain, path, and security. Must
-   * be accessible to the Tilmeld client JS. (Note, cookies are not specific to
-   * individual ports, so tokens will be sent to any port running on this host.)
+   * The URL of the app. Used to define cookie domain, path, and security. Must be accessible to the
+   * Tilmeld client JS. (Note, cookies are not specific to individual ports, so tokens will be sent
+   * to any port running on this host.)
    */
   appUrl: string;
   /**
-   * The URL where the setup utility is accessible. This is also used for
+   * The domain of the auth cookie.
+   */
+  cookieDomain: string;
+  /**
+   * The path of the auth cookie.
+   */
+  cookiePath: string;
+  /**
+   * The path (with leading slash) where the setup utility is accessible. This is also used for
    * email address verification.
    *
-   * ***************************************************************************
-   * This portion of the app will *not* check for the XSRF token, so make sure
-   * your REST endpoint is *not* under this URL.
-   * ***************************************************************************
+   * ***********************************************************************************************
+   * This portion of the app will **not** check for the XSRF token, so make sure your REST endpoint
+   * is **not** under this URL.
+   * ***********************************************************************************************
    */
-  setupUrl: string;
+  setupPath: string;
   /**
-   * Allow the creation of an admin user. When a user is created, if there are
-   * no other users in the system, they will be granted all abilities.
+   * Allow the creation of an admin user. When a user is created, if there are no other users in the
+   * system, they will be granted all abilities.
    */
   createAdmin: boolean;
   /**
-   * Instead of a "username", a user logs in and is referred to by their email
-   * address. Enabling this after many users have been created can be messy.
-   * Make sure they all have email addresses first.
+   * Instead of a "username", a user logs in and is referred to by their email address. Enabling
+   * this after many users have been created can be messy. Make sure they all have email addresses
+   * first.
    */
   emailUsernames: boolean;
   /**
@@ -42,18 +50,16 @@ export interface Config {
    */
   allowRegistration: boolean;
   /**
-   * Whether frontend can search users. (Probably not a good idea if privacy is
-   * a concern.)
+   * Whether frontend can search users. (Probably not a good idea if privacy is a concern.)
    */
   enableUserSearch: boolean;
   /**
-   * Whether frontend can search groups. (Probably not a good idea if privacy is
-   * a concern. Same risks as user search if generate_primary is true.)
+   * Whether frontend can search groups. (Probably not a good idea if privacy is a concern. Same
+   * risks as user search if generatePrimary is true.)
    */
   enableGroupSearch: boolean;
   /**
-   * These will be the available fields for users. (Some fields, like username,
-   * can't be excluded.)
+   * These will be the available fields for users. (Some fields, like username, can't be excluded.)
    */
   userFields: string[];
   /**
@@ -61,8 +67,8 @@ export interface Config {
    */
   regFields: string[];
   /**
-   * Verify users' email addresses upon registration/email change before
-   * allowing them to log in/change it.
+   * Verify users' email addresses upon registration/email change before allowing them to log
+   * in/change it.
    */
   verifyEmail: boolean;
   /**
@@ -70,20 +76,18 @@ export interface Config {
    */
   verifyRedirect: string;
   /**
-   * Unverified users will be able to log in, but will only have the "unverified
-   * users" secondary group(s) until they verify their email. If set to false,
-   * their account will instead be disabled until they verify.
+   * Unverified users will be able to log in, but will only have the "unverified users" secondary
+   * group(s) until they verify their email. If set to false, their account will instead be disabled
+   * until they verify.
    */
   unverifiedAccess: boolean;
   /**
-   * Don't let users change their email address more often than this. You can
-   * enter one value and one unit of time, such as "2 weeks". Leave blank to
-   * disable rate limiting.
+   * Don't let users change their email address more often than this. You can enter one value and
+   * one unit of time, such as "2 weeks". Leave blank to disable rate limiting.
    */
   emailRateLimit: string;
   /**
-   * Allow users to recover their username and/or password through their
-   * registered email.
+   * Allow users to recover their username and/or password through their registered email.
    */
   pwRecovery: boolean;
   /**
@@ -91,10 +95,9 @@ export interface Config {
    */
   pwRecoveryTimeLimit: string;
   /**
-   * Method used to store passwords. Salt is more secure if the database is
-   * compromised. Plain: store the password in plaintext. Digest: store the
-   * password's digest. Salt: store the password's digest using a complex,
-   * unique salt.
+   * Method used to store passwords. Salt is more secure if the database is compromised. Plain:
+   * store the password in plaintext. Digest: store the password's digest (hash). Salt: store the
+   * password's digest using a complex, unique salt.
    *
    * Digests are SHA-256, so a salt probably isn't necessary, but who knows.
    *
@@ -102,26 +105,26 @@ export interface Config {
    */
   pwMethod: 'plain' | 'digest' | 'salt';
   /**
-   * Whether to create a new primary group for every user who registers. This
-   * can be useful for providing access to entities the user creates.
+   * Whether to create a new primary group for every user who registers. This can be useful for
+   * providing access to entities the user creates.
    *
-   * In the case this is set, the default primary group, rather than being
-   * assigned to the user, is assigned as the parent of the generated group.
+   * In the case this is set, the default primary group, rather than being assigned to the user, is
+   * assigned as the parent of the generated group.
    */
   generatePrimary: boolean;
   /**
-   * The GUID of the group above the highest groups allowed to be assigned as
-   * primary groups. True means all groups, and false means no groups.
+   * The GUID of the group above the highest groups allowed to be assigned as primary groups. True
+   * means all groups, and false means no groups.
    */
   highestPrimary: string | boolean;
   /**
-   * The GUID of the group above the highest groups allowed to be assigned as
-   * secondary groups. True means all groups, and false means no groups.
+   * The GUID of the group above the highest groups allowed to be assigned as secondary groups.
+   * True means all groups, and false means no groups.
    */
   highestSecondary: string | boolean;
   /**
-   * Only these characters can be used when creating usernames and groupnames.
-   * (Doesn't apply to emails as usernames.)
+   * Only these characters can be used when creating usernames and groupnames. (Doesn't apply to
+   * emails as usernames.)
    */
   validChars: string;
   /**
@@ -129,14 +132,13 @@ export interface Config {
    */
   validCharsNotice: string;
   /**
-   * Usernames and groupnames must match this regular expression. (Doesn't apply
-   * to emails as usernames.) By default, this ensures that the name begins and
-   * ends with an alphanumeric. (To allow anything, use .* inside the slashes.)
+   * Usernames and groupnames must match this regular expression. (Doesn't apply to emails as
+   * usernames.) By default, this ensures that the name begins and ends with an alphanumeric. (To
+   * allow anything, use .* inside the slashes.)
    */
   validRegex: RegExp;
   /**
-   * When a user enters a name that doesn't match the regex, this message will
-   * be displayed.
+   * When a user enters a name that doesn't match the regex, this message will be displayed.
    */
   validRegexNotice: string;
   /**
@@ -160,13 +162,12 @@ export interface Config {
    */
   jwtBuilder: (user: User) => string;
   /**
-   * Function to verify that a JWT was signed with the secret key, vaildate its
-   * data, validate the XSRF token, and extract the GUID.
+   * Function to verify that a JWT was signed with the secret key, vaildate its data, validate the
+   * XSRF token, and extract the GUID.
    *
    * If no XSRF token is supplied, ignore it.
    *
-   * Return false if the JWT is not valid, or an array of GUID and expire
-   * timestamp otherwise.
+   * Return false if the JWT is not valid, or an array of GUID and expire timestamp otherwise.
    */
   jwtExtract: (
     token: string,

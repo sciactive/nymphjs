@@ -9,7 +9,9 @@ import User, { UserData } from '../User';
 export default {
   appName: 'My Nymph App',
   appUrl: 'http://localhost:8080/',
-  setupUrl: 'http://localhost:8080/tilmeld/',
+  cookieDomain: 'localhost',
+  cookiePath: '/',
+  setupPath: '/tilmeld/',
   createAdmin: true,
   emailUsernames: true,
   allowRegistration: true,

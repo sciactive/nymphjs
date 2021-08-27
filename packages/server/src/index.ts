@@ -1,6 +1,5 @@
 import express, { Request, Response } from 'express';
-// import cookieParser from 'cookie-parser';
-// import safeJsonStringify from 'safe-json-stringify';
+import cookieParser from 'cookie-parser';
 import Nymph, {
   Entity,
   EntityConflictError,
@@ -14,8 +13,16 @@ import Nymph, {
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
 const rest = express();
-// rest.use(cookieParser());
+rest.use(cookieParser());
 rest.use(express.json());
+
+function authenticateTilmeld(request: Request, response: Response) {
+  if (Nymph.Tilmeld) {
+    Nymph.Tilmeld.request = request;
+    Nymph.Tilmeld.response = response;
+    Nymph.Tilmeld.authenticate();
+  }
+}
 
 function getActionData(request: Request): { action: string; data: any } {
   if (request.method === 'GET') {
@@ -41,6 +48,7 @@ function getActionData(request: Request): { action: string; data: any } {
 }
 
 rest.get('/', async (request, response) => {
+  authenticateTilmeld(request, response);
   const { action, data } = getActionData(request);
   if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
     httpError(response, 400, 'Bad Request');
@@ -110,6 +118,7 @@ rest.get('/', async (request, response) => {
 });
 
 rest.post('/', async (request, response) => {
+  authenticateTilmeld(request, response);
   const { action, data: dataConst } = getActionData(request);
   let data = dataConst;
   if (['entity', 'entities', 'uid', 'method'].indexOf(action) === -1) {
@@ -288,6 +297,7 @@ rest.post('/', async (request, response) => {
 });
 
 rest.put('/', async (request, response) => {
+  authenticateTilmeld(request, response);
   const { action, data } = getActionData(request);
   if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
     httpError(response, 400, 'Bad Request');
@@ -297,6 +307,7 @@ rest.put('/', async (request, response) => {
 });
 
 rest.patch('/', async (request, response) => {
+  authenticateTilmeld(request, response);
   const { action, data } = getActionData(request);
   if (['entity', 'entities'].indexOf(action) === -1) {
     httpError(response, 400, 'Bad Request');
@@ -407,6 +418,7 @@ async function doPutOrPatch(
 }
 
 rest.delete('/', async (request, response) => {
+  authenticateTilmeld(request, response);
   const { action, data: dataConst } = getActionData(request);
   let data = dataConst;
   if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
@@ -572,49 +584,3 @@ function httpError(
 }
 
 export default rest;
-
-// rest.get('/', function (req, res) {
-//   res.cookie('my-cookie', 'value', {
-//     domain: 'localhost',
-//     maxAge: 1000 * 60,
-//     httpOnly: true,
-//     path: '/',
-//   });
-//   res.send(`<pre>${safeJsonStringify(req.headers, null, 2)}
-// ${safeJsonStringify(req.query, null, 2)}
-// ${safeJsonStringify(req.body, null, 2)}
-// ${safeJsonStringify(req.cookies, null, 2)}
-
-// ${safeJsonStringify(req, null, 2)}</pre>`);
-// });
-
-// /**
-//  * Simple Nymph REST server implementation.
-//  *
-//  * Provides Nymph functionality compatible with a REST API. Allows the developer
-//  * to design their own API, or just use the reference implementation.
-//  *
-//  * @author Hunter Perrin <hperrin@gmail.com>
-//  * @copyright SciActive.com
-//  * @see http://nymph.io/
-//  */
-// class REST {
-//   /**
-//    * Run the Nymph REST server process.
-//    *
-//    * Note that on failure, an HTTP error status code will be sent, usually
-//    * along with a message body.
-//    *
-//    * @param string $method The HTTP method.
-//    * @param string $action The Nymph action.
-//    * @param string $data The decoded data.
-//    * @return bool True on success, false on failure.
-//    */
-//   run($method, $action, $data) {
-//     $method = strtoupper($method);
-//     if (is_callable([$this, $method])) {
-//       return $this->$method($action, $data);
-//     }
-//     return $this->httpError(405, 'Method Not Allowed');
-//   }
-// }

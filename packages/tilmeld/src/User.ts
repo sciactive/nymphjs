@@ -640,9 +640,13 @@ export default class User extends AbleObject<UserData> {
     }
     let success = true;
 
+    const setupUrl = `${Tilmeld.config.appUrl.replace(/\/$/, () => '')}${
+      Tilmeld.config.setupPath
+    }`;
+
     if (this.$data.secret != null && this.$data.cancelEmailSecret == null) {
-      const link = `${Tilmeld.config.setupUrl}${
-        Tilmeld.config.setupUrl.match(/\?/) ? '&' : '?'
+      const link = `${setupUrl}${
+        setupUrl.match(/\?/) ? '&' : '?'
       }action=verifyemail&id=${encodeURIComponent(
         this.guid
       )}&secret=${encodeURIComponent(this.$data.secret)}`;
@@ -667,8 +671,8 @@ export default class User extends AbleObject<UserData> {
 
     if (this.$data.secret != null && this.$data.cancelEmailSecret != null) {
       // phpcs:ignore Generic.Files.LineLength.TooLong
-      const link = `${Tilmeld.config.setupUrl}${
-        Tilmeld.config.setupUrl.match(/\?/) ? '&' : '?'
+      const link = `${setupUrl}${
+        setupUrl.match(/\?/) ? '&' : '?'
       }action=verifyemailchange&id=${encodeURIComponent(
         this.guid
       )}&secret=${encodeURIComponent(this.$data.secret)}`;
@@ -694,8 +698,8 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (this.$data.cancelEmailSecret != null) {
-      const link = `${Tilmeld.config.setupUrl}${
-        Tilmeld.config.setupUrl.match(/\?/) ? '&' : '?'
+      const link = `${setupUrl}${
+        setupUrl.match(/\?/) ? '&' : '?'
       }action=cancelemailchange&id=${encodeURIComponent(
         this.guid
       )}&secret=${encodeURIComponent(this.$data.cancelEmailSecret)}`;
