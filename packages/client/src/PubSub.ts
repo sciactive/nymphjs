@@ -52,6 +52,10 @@ export default class PubSub {
     }
   }
 
+  public static isConfigured() {
+    return this.pubsubURL != null;
+  }
+
   public static subscribeEntities<
     T extends EntityConstructor = EntityConstructor
   >(

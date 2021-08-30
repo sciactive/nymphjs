@@ -7,7 +7,8 @@
     "./packages/nymph/",
     "./packages/pubsub/",
     "./packages/server/",
-    "./packages/tilmeld/"
+    "./packages/tilmeld/",
+    "./packages/tilmeld-client/"
   ],
   "out": "docs",
   "name": "Nymph.js",

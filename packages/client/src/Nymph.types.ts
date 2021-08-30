@@ -23,7 +23,7 @@ export type NymphOptions = {
   noConsole?: boolean;
 };
 
-export type RequestEventType = 'request' | 'response';
+export type EventType = 'request' | 'response';
 
 export type RequestCallback = (url: string, options: RequestInit) => void;
 

@@ -43,11 +43,15 @@ export default class HttpRequester {
     event: T,
     callback: T extends 'request'
       ? HttpRequesterRequestCallback
-      : HttpRequesterResponseCallback
+      : T extends 'response'
+      ? HttpRequesterResponseCallback
+      : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
-      : 'responseCallbacks';
+      : T extends 'response'
+      ? 'responseCallbacks'
+      : never;
     if (!this.hasOwnProperty(prop)) {
       throw new Error('Invalid event type.');
     }
@@ -60,11 +64,15 @@ export default class HttpRequester {
     event: T,
     callback: T extends 'request'
       ? HttpRequesterRequestCallback
-      : HttpRequesterResponseCallback
+      : T extends 'response'
+      ? HttpRequesterResponseCallback
+      : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
-      : 'responseCallbacks';
+      : T extends 'response'
+      ? 'responseCallbacks'
+      : never;
     if (!this.hasOwnProperty(prop)) {
       return false;
     }

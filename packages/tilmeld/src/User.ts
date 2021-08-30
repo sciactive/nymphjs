@@ -137,7 +137,6 @@ export default class User extends AbleObject<UserData> {
     'recoverSecret',
     'recoverSecretTime',
     'password',
-    'passwordTemp',
     'salt',
     'secret',
     'cancelEmailAddress',

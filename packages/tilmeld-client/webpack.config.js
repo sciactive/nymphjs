@@ -4,17 +4,20 @@ module.exports = {
   mode: 'production',
   devtool: 'source-map',
   entry: {
-    NymphClient: './lib/index.js',
+    TilmeldClient: './lib/index.js',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'index.js',
-    library: ['@nymphjs/client'],
+    library: ['@nymphjs/tilmeld-client'],
     libraryTarget: 'umd',
     globalObject: 'this',
   },
   resolve: {
     extensions: ['.tsx', '.ts', '.js'],
+  },
+  externals: {
+    '@nymphjs/client': '@nymphjs/client',
   },
   module: {
     rules: [

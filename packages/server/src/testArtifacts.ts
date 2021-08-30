@@ -143,6 +143,9 @@ export class BadFunctionCallError extends Error {
 export type EmployeeData = EmployeeBaseData<Employee>;
 
 export class Employee extends Entity<EmployeeData> {
+  // The name of the server class
+  public static class = 'Employee';
+
   constructor(guid?: string) {
     super(guid);
 
@@ -185,9 +188,6 @@ export class Employee extends Entity<EmployeeData> {
     return Employee.serverCallStatic('inaccessibleMethod', []);
   }
 }
-
-// The name of the server class
-Employee.class = 'Employee';
 
 Nymph.setEntityClass(Employee.class, Employee);
 export default Employee;

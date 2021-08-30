@@ -7,10 +7,10 @@ import {
 } from './Entity.types';
 import HttpRequester from './HttpRequester';
 import {
+  EventType,
   NymphOptions,
   Options,
   RequestCallback,
-  RequestEventType,
   ResponseCallback,
   Selector,
 } from './Nymph.types';
@@ -434,13 +434,19 @@ export default class Nymph {
     return this.initEntitiesFromData(data);
   }
 
-  public static on<T extends RequestEventType>(
+  public static on<T extends EventType>(
     event: T,
-    callback: T extends 'request' ? RequestCallback : ResponseCallback
+    callback: T extends 'request'
+      ? RequestCallback
+      : T extends 'response'
+      ? ResponseCallback
+      : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
-      : 'responseCallbacks';
+      : T extends 'request'
+      ? 'responseCallbacks'
+      : never;
     if (!this.hasOwnProperty(prop)) {
       throw new Error('Invalid event type.');
     }
@@ -449,13 +455,19 @@ export default class Nymph {
     return () => this.off(event, callback);
   }
 
-  public static off<T extends RequestEventType>(
+  public static off<T extends EventType>(
     event: T,
-    callback: T extends 'request' ? RequestCallback : ResponseCallback
+    callback: T extends 'request'
+      ? RequestCallback
+      : T extends 'response'
+      ? ResponseCallback
+      : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
-      : 'responseCallbacks';
+      : T extends 'request'
+      ? 'responseCallbacks'
+      : never;
     if (!this.hasOwnProperty(prop)) {
       return false;
     }
