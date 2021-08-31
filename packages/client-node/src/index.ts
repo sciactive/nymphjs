@@ -13,7 +13,7 @@ Nymph.init = (nymphOptions: NymphOptions) => {
     fetch: fetch as any as WindowOrWorkerGlobalScope['fetch'],
     ...nymphOptions,
   });
-  if (nymphOptions.pubsubURL) {
+  if (nymphOptions.pubsubUrl) {
     PubSub.init({
       WebSocket: w3cwebsocket as any as typeof WebSocket,
       ...nymphOptions,

@@ -29,8 +29,8 @@ const server = app.listen(5080);
 const pubsub = createServer(5081, pubSubConfig);
 
 Nymph.init({
-  restURL: 'http://localhost:5080/',
-  pubsubURL: 'ws://localhost:5081/',
+  restUrl: 'http://localhost:5080/',
+  pubsubUrl: 'ws://localhost:5081/',
   noConsole: true,
 });
 

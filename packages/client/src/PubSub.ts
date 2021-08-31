@@ -18,7 +18,7 @@ let authToken: string | null = null;
 export default class PubSub {
   private static connection: WebSocket | undefined;
   private static waitForConnectionTimeout: NodeJS.Timeout | undefined;
-  private static pubsubURL: string | undefined;
+  private static pubsubUrl: string | undefined;
   private static WebSocket: typeof WebSocket;
   private static subscriptions: {
     queries: {
@@ -36,7 +36,7 @@ export default class PubSub {
   private static noConsole = false;
 
   public static init(NymphOptions: NymphOptions) {
-    this.pubsubURL = NymphOptions.pubsubURL;
+    this.pubsubUrl = NymphOptions.pubsubUrl;
     this.WebSocket = NymphOptions.WebSocket ?? WebSocket;
     this.noConsole = !!NymphOptions.noConsole;
 
@@ -53,7 +53,7 @@ export default class PubSub {
   }
 
   public static isConfigured() {
-    return this.pubsubURL != null;
+    return this.pubsubUrl != null;
   }
 
   public static subscribeEntities<
@@ -280,8 +280,8 @@ export default class PubSub {
 
   private static _attemptConnect() {
     // Attempt to connect.
-    if (this.pubsubURL != null) {
-      this.connection = new this.WebSocket(this.pubsubURL, 'nymph');
+    if (this.pubsubUrl != null) {
+      this.connection = new this.WebSocket(this.pubsubUrl, 'nymph');
       this.connection.onopen = this._onopen.bind(this);
       this.connection.onmessage = this._onmessage.bind(this);
     }
@@ -769,7 +769,7 @@ if (
   typeof (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })
     .NymphOptions !== 'undefined' &&
   (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })
-    .NymphOptions.pubsubURL
+    .NymphOptions.pubsubUrl
 ) {
   PubSub.init(
     (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })

@@ -22,7 +22,7 @@ export default class Nymph {
   private static entityClasses: { [k: string]: EntityConstructor } = {};
   private static requestCallbacks: RequestCallback[] = [];
   private static responseCallbacks: ResponseCallback[] = [];
-  private static restURL: string;
+  private static restUrl: string;
 
   public static setEntityClass(
     className: string,
@@ -41,7 +41,7 @@ export default class Nymph {
   }
 
   public static init(NymphOptions: NymphOptions) {
-    this.restURL = NymphOptions.restURL;
+    this.restUrl = NymphOptions.restUrl;
 
     requester = new HttpRequester(
       'fetch' in NymphOptions ? NymphOptions.fetch : undefined
@@ -62,7 +62,7 @@ export default class Nymph {
 
   public static async newUID(name: string) {
     const data = await requester.POST({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'text',
       data: { action: 'uid', data: name },
     });
@@ -71,7 +71,7 @@ export default class Nymph {
 
   public static async setUID(name: string, value: number) {
     return await requester.PUT({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'json',
       data: { action: 'uid', data: { name, value } },
     });
@@ -79,7 +79,7 @@ export default class Nymph {
 
   public static async getUID(name: string) {
     const data = await requester.GET({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'text',
       data: { action: 'uid', data: name },
     });
@@ -88,7 +88,7 @@ export default class Nymph {
 
   public static async deleteUID(name: string) {
     return await requester.DELETE({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'text',
       data: { action: 'uid', data: name },
     });
@@ -166,7 +166,7 @@ export default class Nymph {
     plural: boolean
   ): Promise<T | T[]> {
     const response = await requester[method]({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'json',
       data: {
         action: plural ? 'entities' : 'entity',
@@ -270,7 +270,7 @@ export default class Nymph {
       selectors = [{ type: '&', guid: selectors[0] }];
     }
     const data = await requester.GET({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'json',
       data: {
         action: 'entity',
@@ -303,7 +303,7 @@ export default class Nymph {
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[]> {
     const data = await requester.GET({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'json',
       data: {
         action: 'entities',
@@ -364,7 +364,7 @@ export default class Nymph {
     _plural = false
   ) {
     return await requester.DELETE({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'json',
       data: {
         action: _plural ? 'entities' : 'entity',
@@ -393,7 +393,7 @@ export default class Nymph {
     stateless = false
   ): Promise<ServerCallResponse> {
     const data = await requester.POST({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'json',
       data: {
         action: 'method',
@@ -418,7 +418,7 @@ export default class Nymph {
     params: any[]
   ): Promise<ServerCallStaticResponse> {
     const data = await requester.POST({
-      url: this.restURL,
+      url: this.restUrl,
       dataType: 'json',
       data: {
         action: 'method',
@@ -499,13 +499,18 @@ export class InvalidRequestError extends Error {
   }
 }
 
-if (
-  this &&
-  typeof (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })
-    .NymphOptions !== 'undefined'
-) {
-  Nymph.init(
-    (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })
-      .NymphOptions
-  );
-}
+((global) => {
+  if (
+    typeof global !== 'undefined' &&
+    typeof (global as any as { NymphOptions: NymphOptions }).NymphOptions !==
+      'undefined'
+  ) {
+    Nymph.init((global as any as { NymphOptions: NymphOptions }).NymphOptions);
+  }
+})(
+  typeof window === 'undefined'
+    ? typeof self === 'undefined'
+      ? undefined
+      : self
+    : window
+);

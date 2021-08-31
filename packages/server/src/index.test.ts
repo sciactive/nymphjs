@@ -18,7 +18,7 @@ app.use('/test', rest);
 const server = app.listen(5080);
 
 Nymph.init({
-  restURL: 'http://localhost:5080/test/',
+  restUrl: 'http://localhost:5080/test/',
 });
 
 describe('Nymph REST Server and Client', () => {

@@ -4,11 +4,11 @@ export type NymphOptions = {
   /**
    * The URL of your Nymph REST server.
    */
-  restURL: string;
+  restUrl: string;
   /**
    * The URL of your Nymph PubSub server.
    */
-  pubsubURL?: string;
+  pubsubUrl?: string;
   /**
    * A fetch implementation.
    */

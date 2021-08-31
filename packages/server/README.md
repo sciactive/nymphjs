@@ -52,7 +52,7 @@ import { Nymph } from '@nymphjs/client';
 Nymph.init({
   // You should configure your Express server to
   // use HTTPS, but you don't have to.
-  restURL: 'https://mydomain.tld/nymphrest/',
+  restUrl: 'https://mydomain.tld/nymphrest/',
 });
 ```
 
