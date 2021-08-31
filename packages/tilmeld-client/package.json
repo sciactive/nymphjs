@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "clean": "npm run clean:ts && npm run clean:js",
-    "clean:ts": "test -d list && rm -r list || true",
+    "clean:ts": "test -d lib && rm -r lib || true",
     "clean:js": "test -d dist && rm -r dist || true",
     "build": "npm run build:ts && npm run build:js",
     "build:ts": "tsc",
