@@ -327,7 +327,7 @@ export default class SQLite3Driver extends NymphDriver {
   ) {
     return this.query(
       () => this.link.prepare(query).iterate(params),
-      query,
+      `${query} -- ${JSON.stringify(params)}`,
       etype
     );
   }
@@ -339,7 +339,11 @@ export default class SQLite3Driver extends NymphDriver {
       params = {},
     }: { etype?: string; params?: { [k: string]: any } } = {}
   ) {
-    return this.query(() => this.link.prepare(query).get(params), query, etype);
+    return this.query(
+      () => this.link.prepare(query).get(params),
+      `${query} -- ${JSON.stringify(params)}`,
+      etype
+    );
   }
 
   private queryRun(
@@ -349,7 +353,11 @@ export default class SQLite3Driver extends NymphDriver {
       params = {},
     }: { etype?: string; params?: { [k: string]: any } } = {}
   ) {
-    return this.query(() => this.link.prepare(query).run(params), query, etype);
+    return this.query(
+      () => this.link.prepare(query).run(params),
+      `${query} -- ${JSON.stringify(params)}`,
+      etype
+    );
   }
 
   public async commit() {
@@ -1450,6 +1458,9 @@ export default class SQLite3Driver extends NymphDriver {
         for (const name in sdata) {
           const value = sdata[name];
           const uvalue = JSON.parse(value);
+          if (value === undefined) {
+            continue;
+          }
           const storageValue =
             typeof uvalue === 'number'
               ? 'N'
@@ -1616,6 +1627,9 @@ export default class SQLite3Driver extends NymphDriver {
       etype: string
     ) => {
       const runInsertQuery = (name: string, value: any, svalue: string) => {
+        if (value === undefined) {
+          return;
+        }
         const storageValue =
           typeof value === 'number'
             ? 'N'

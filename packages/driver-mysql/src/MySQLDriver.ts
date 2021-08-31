@@ -378,7 +378,7 @@ export default class MySQLDriver extends NymphDriver {
         );
         return results;
       },
-      query,
+      `${query} -- ${JSON.stringify(params)}`,
       etype
     );
   }
@@ -418,7 +418,7 @@ export default class MySQLDriver extends NymphDriver {
         }
         return results;
       },
-      query,
+      `${query} -- ${JSON.stringify(params)}`,
       etype
     );
   }
@@ -455,7 +455,7 @@ export default class MySQLDriver extends NymphDriver {
         );
         return results[0];
       },
-      query,
+      `${query} -- ${JSON.stringify(params)}`,
       etype
     );
   }
@@ -492,7 +492,7 @@ export default class MySQLDriver extends NymphDriver {
         });
         return { changes: results.changedRows ?? 0 };
       },
-      query,
+      `${query} -- ${JSON.stringify(params)}`,
       etype
     );
   }
@@ -532,7 +532,7 @@ export default class MySQLDriver extends NymphDriver {
         }
         return { changes: results.changedRows ?? 0 };
       },
-      query,
+      `${query} -- ${JSON.stringify(params)}`,
       etype
     );
   }
@@ -1776,6 +1776,9 @@ export default class MySQLDriver extends NymphDriver {
         for (const name in sdata) {
           const value = sdata[name];
           const uvalue = JSON.parse(value);
+          if (value === undefined) {
+            continue;
+          }
           const storageValue =
             typeof uvalue === 'number'
               ? 'N'
@@ -1984,6 +1987,9 @@ export default class MySQLDriver extends NymphDriver {
         value: any,
         svalue: string
       ) => {
+        if (value === undefined) {
+          return;
+        }
         const storageValue =
           typeof value === 'number'
             ? 'N'
