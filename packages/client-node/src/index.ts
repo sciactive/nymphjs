@@ -38,3 +38,4 @@ Nymph.on('response', (response: Response) => {
 });
 
 export { Nymph };
+export default Nymph;
