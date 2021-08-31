@@ -134,34 +134,38 @@ export default class Nymph {
    * can also undo all the changes since this function ran with rollback().
    *
    * If it returns false instead of throwing an error, that probably means the
-   * driver or the database doesn't support transaction.
+   * driver or the database doesn't support transaction. You should call
+   * `rollback(name)` immediately in this case.
+   *
+   * Transactions will nest as long as every name is unique. Internally, Nymph
+   * uses names prefixed with "nymph-".
    *
    * @returns True on success, false on failure.
    */
-  public static async startTransaction(): Promise<boolean> {
-    return await this.driver.startTransaction();
+  public static async startTransaction(name: string): Promise<boolean> {
+    return await this.driver.startTransaction(name);
   }
 
   /**
-   * Commit the current transaction.
+   * Commit the named transaction.
    *
    * @returns True on success, false on failure.
    */
-  public static async commit(): Promise<boolean> {
-    return await this.driver.commit();
+  public static async commit(name: string): Promise<boolean> {
+    return await this.driver.commit(name);
   }
 
   /**
-   * Rollback the current transaction.
+   * Rollback the named transaction.
    *
    * @returns True on success, false on failure.
    */
-  public static async rollback(): Promise<boolean> {
-    return await this.driver.rollback();
+  public static async rollback(name: string): Promise<boolean> {
+    return await this.driver.rollback(name);
   }
 
   /**
-   * Check if there is an ongoing transaction.
+   * Check if there is any open transaction.
    *
    * @returns True if there is a transaction.
    */

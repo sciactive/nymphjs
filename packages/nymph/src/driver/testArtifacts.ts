@@ -135,12 +135,13 @@ This one's zip code is 92064.`;
     // Verify not in a transaction.
     expect(await Nymph.inTransaction()).toEqual(false);
 
-    const transaction = await Nymph.startTransaction();
+    const transaction = await Nymph.startTransaction('test');
 
     if (!transaction) {
       console.log(
         'This Nymph driver or database seems to not support transactions. Skipping transaction tests.'
       );
+      await Nymph.rollback('test');
       return;
     }
 
@@ -152,7 +153,7 @@ This one's zip code is 92064.`;
     expect(await testEntity.$save()).toEqual(true);
 
     // Rollback the transaction.
-    await Nymph.rollback();
+    await Nymph.rollback('test');
 
     // Verify not in a transaction.
     expect(await Nymph.inTransaction()).toEqual(false);
@@ -162,7 +163,7 @@ This one's zip code is 92064.`;
     expect(testEntity.string).toEqual('test');
 
     // Start a new transaction.
-    await Nymph.startTransaction();
+    await Nymph.startTransaction('test');
 
     // Verify in a transaction.
     expect(await Nymph.inTransaction()).toEqual(true);
@@ -173,7 +174,7 @@ This one's zip code is 92064.`;
     expect(resultEntity).toBeNull();
 
     // Rollback the transaction.
-    await Nymph.rollback();
+    await Nymph.rollback('test');
 
     // Verify not in a transaction.
     expect(await Nymph.inTransaction()).toEqual(false);
@@ -187,7 +188,7 @@ This one's zip code is 92064.`;
     expect(testEntity.guid).toEqual(testGuid);
 
     // Start a new transaction.
-    await Nymph.startTransaction();
+    await Nymph.startTransaction('test');
 
     // Verify in a transaction.
     expect(await Nymph.inTransaction()).toEqual(true);
@@ -197,7 +198,7 @@ This one's zip code is 92064.`;
     expect(await testEntity.$save()).toEqual(true);
 
     // Commit the transaction.
-    await Nymph.commit();
+    await Nymph.commit('test');
 
     // Verify not in a transaction.
     expect(await Nymph.inTransaction()).toEqual(false);
@@ -209,6 +210,8 @@ This one's zip code is 92064.`;
     // Finally, change it back.
     testEntity.string = 'test';
     expect(await testEntity.$save()).toEqual(true);
+
+    // TODO: nested transactions
   });
 
   it('options', async () => {

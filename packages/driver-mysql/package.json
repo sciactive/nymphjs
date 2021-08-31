@@ -15,7 +15,7 @@
     "build": "tsc;  cp src/runMysqlSync.js dist/runMysqlSync.js",
     "watch": "tsc --watch",
     "prepare": "npm run clean && npm run build",
-    "test": "jest --detectOpenHandles",
+    "test": "jest",
     "test:watch": "jest --watch",
     "test:mysql:run": "npm run test:mysql:start && npm run test:mysql:clean",
     "test:mysql:clean": "docker container rm nymph",

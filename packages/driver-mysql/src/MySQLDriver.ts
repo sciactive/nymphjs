@@ -37,7 +37,7 @@ export default class MySQLDriver extends NymphDriver {
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: MySQLType.Pool;
   protected connection: MySQLType.PoolConnection | null = null;
-  protected transactionStarted = false;
+  protected transactionsStarted = 0;
 
   static escape(input: string) {
     return mysql.escapeId(input);
@@ -130,7 +130,7 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async inTransaction() {
-    return this.transactionStarted;
+    return this.transactionsStarted > 0;
   }
 
   /**
@@ -350,11 +350,9 @@ export default class MySQLDriver extends NymphDriver {
     query: string,
     {
       etype,
-      connection,
       params = {},
     }: {
       etype?: string;
-      connection?: MySQLType.PoolConnection;
       params?: { [k: string]: any };
     } = {}
   ) {
@@ -365,7 +363,7 @@ export default class MySQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: any = await new Promise((resolve, reject) =>
-          (this.connection ?? connection ?? this.link).query(
+          (this.connection ?? this.link).query(
             newQuery,
             newParams,
             (error, results) => {
@@ -427,11 +425,9 @@ export default class MySQLDriver extends NymphDriver {
     query: string,
     {
       etype,
-      connection,
       params = {},
     }: {
       etype?: string;
-      connection?: MySQLType.PoolConnection;
       params?: { [k: string]: any };
     } = {}
   ) {
@@ -442,7 +438,7 @@ export default class MySQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: any = await new Promise((resolve, reject) =>
-          (this.connection ?? connection ?? this.link).query(
+          (this.connection ?? this.link).query(
             newQuery,
             newParams,
             (error, results) => {
@@ -464,11 +460,9 @@ export default class MySQLDriver extends NymphDriver {
     query: string,
     {
       etype,
-      connection,
       params = {},
     }: {
       etype?: string;
-      connection?: MySQLType.PoolConnection;
       params?: { [k: string]: any };
     } = {}
   ) {
@@ -479,7 +473,7 @@ export default class MySQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: any = await new Promise((resolve, reject) => {
-          (this.connection ?? connection ?? this.link).query(
+          (this.connection ?? this.link).query(
             newQuery,
             newParams,
             (error, results) => {
@@ -537,12 +531,25 @@ export default class MySQLDriver extends NymphDriver {
     );
   }
 
-  public async commit() {
+  public async commit(name: string) {
     if (this.config.transactions) {
-      this.queryRun('COMMIT;');
-      this.connection = null;
-      this.transactionStarted = false;
+      if (this.transactionsStarted === 0) {
+        return true;
+      }
+      await this.queryRun(`RELEASE SAVEPOINT ${MySQLDriver.escape(name)};`);
+      this.transactionsStarted--;
+      if (this.transactionsStarted === 0) {
+        await this.queryRun('COMMIT;');
+        this.connection?.release();
+        this.connection = null;
+      }
       return true;
+    }
+    // Use a single connection when a transaction is requested.
+    this.transactionsStarted--;
+    if (this.transactionsStarted === 0) {
+      this.connection?.release();
+      this.connection = null;
     }
     return false;
   }
@@ -559,13 +566,7 @@ export default class MySQLDriver extends NymphDriver {
       EntityClass = className;
     }
     const etype = EntityClass.ETYPE;
-    const connection = await this.getConnection();
-    if (this.config.transactions) {
-      await this.queryRun(
-        this.connection ? 'SAVEPOINT `delete`;' : 'START TRANSACTION;',
-        { connection }
-      );
-    }
+    await this.startTransaction('nymph-delete');
     try {
       await this.queryRun(
         `DELETE FROM ${MySQLDriver.escape(
@@ -573,7 +574,6 @@ export default class MySQLDriver extends NymphDriver {
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etype,
-          connection,
           params: {
             guid,
           },
@@ -585,7 +585,6 @@ export default class MySQLDriver extends NymphDriver {
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etype,
-          connection,
           params: {
             guid,
           },
@@ -597,7 +596,6 @@ export default class MySQLDriver extends NymphDriver {
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etype,
-          connection,
           params: {
             guid,
           },
@@ -609,33 +607,21 @@ export default class MySQLDriver extends NymphDriver {
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etype,
-          connection,
           params: {
             guid,
           },
         }
       );
-      if (this.config.transactions) {
-        await this.queryRun(
-          this.connection ? 'RELEASE SAVEPOINT `delete`;' : 'COMMIT;',
-          {
-            connection,
-          }
-        );
+      await this.commit('nymph-delete');
+      // Remove any cached versions of this entity.
+      if (Nymph.config.cache) {
+        this.cleanCache(guid);
       }
+      return true;
     } catch (e) {
-      await this.queryRun(
-        this.connection ? 'ROLLBACK TO `delete`;' : 'ROLLBACK;',
-        { connection }
-      );
+      await this.rollback('nymph-delete');
       throw e;
     }
-    // Remove any cached versions of this entity.
-    if (Nymph.config.cache) {
-      this.cleanCache(guid);
-    }
-    connection.release();
-    return true;
   }
 
   public async deleteUID(name: string) {
@@ -1704,208 +1690,185 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async import(filename: string) {
-    const connection = await this.getConnection();
-    const result = await this.importFromFile(
-      filename,
-      async (guid, tags, sdata, etype) => {
-        await this.queryRun(
-          `REPLACE INTO ${MySQLDriver.escape(
-            `${this.prefix}entities_${etype}`
-          )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
-          {
-            etype,
-            connection,
-            params: {
-              guid,
-              tags: ' ' + tags.join(' ') + ' ',
-              cdate: isNaN(Number(JSON.parse(sdata.cdate)))
-                ? null
-                : Number(JSON.parse(sdata.cdate)),
-              mdate: isNaN(Number(JSON.parse(sdata.mdate)))
-                ? null
-                : Number(JSON.parse(sdata.mdate)),
-            },
-          }
-        );
-        const promises = [];
-        promises.push(
-          this.queryRun(
-            `DELETE FROM ${MySQLDriver.escape(
-              `${this.prefix}data_${etype}`
-            )} WHERE \`guid\`=UNHEX(@guid);`,
+    try {
+      const result = await this.importFromFile(
+        filename,
+        async (guid, tags, sdata, etype) => {
+          await this.queryRun(
+            `REPLACE INTO ${MySQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
             {
               etype,
-              connection,
               params: {
                 guid,
+                tags: ' ' + tags.join(' ') + ' ',
+                cdate: isNaN(Number(JSON.parse(sdata.cdate)))
+                  ? null
+                  : Number(JSON.parse(sdata.cdate)),
+                mdate: isNaN(Number(JSON.parse(sdata.mdate)))
+                  ? null
+                  : Number(JSON.parse(sdata.mdate)),
               },
             }
-          )
-        );
-        promises.push(
-          this.queryRun(
-            `DELETE FROM ${MySQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`
-            )} WHERE \`guid\`=UNHEX(@guid);`,
-            {
-              etype,
-              connection,
-              params: {
-                guid,
-              },
-            }
-          )
-        );
-        promises.push(
-          this.queryRun(
-            `DELETE FROM ${MySQLDriver.escape(
-              `${this.prefix}references_${etype}`
-            )} WHERE \`guid\`=UNHEX(@guid);`,
-            {
-              etype,
-              connection,
-              params: {
-                guid,
-              },
-            }
-          )
-        );
-        await Promise.all(promises);
-        delete sdata.cdate;
-        delete sdata.mdate;
-        for (const name in sdata) {
-          const value = sdata[name];
-          const uvalue = JSON.parse(value);
-          if (value === undefined) {
-            continue;
-          }
-          const storageValue =
-            typeof uvalue === 'number'
-              ? 'N'
-              : typeof uvalue === 'string'
-              ? 'S'
-              : value;
+          );
           const promises = [];
           promises.push(
             this.queryRun(
-              `INSERT INTO ${MySQLDriver.escape(
+              `DELETE FROM ${MySQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
+              )} WHERE \`guid\`=UNHEX(@guid);`,
               {
                 etype,
-                connection,
                 params: {
                   guid,
-                  name,
-                  storageValue,
                 },
               }
             )
           );
           promises.push(
             this.queryRun(
-              `INSERT INTO ${MySQLDriver.escape(
+              `DELETE FROM ${MySQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
-              )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
+              )} WHERE \`guid\`=UNHEX(@guid);`,
               {
                 etype,
-                connection,
                 params: {
                   guid,
-                  name,
-                  truthy: !!uvalue,
-                  string: `${uvalue}`,
-                  number: isNaN(Number(uvalue)) ? null : Number(uvalue),
                 },
               }
             )
           );
-          const references = this.findReferences(value);
-          for (const reference of references) {
+          promises.push(
+            this.queryRun(
+              `DELETE FROM ${MySQLDriver.escape(
+                `${this.prefix}references_${etype}`
+              )} WHERE \`guid\`=UNHEX(@guid);`,
+              {
+                etype,
+                params: {
+                  guid,
+                },
+              }
+            )
+          );
+          await Promise.all(promises);
+          delete sdata.cdate;
+          delete sdata.mdate;
+          for (const name in sdata) {
+            const value = sdata[name];
+            const uvalue = JSON.parse(value);
+            if (value === undefined) {
+              continue;
+            }
+            const storageValue =
+              typeof uvalue === 'number'
+                ? 'N'
+                : typeof uvalue === 'string'
+                ? 'S'
+                : value;
+            const promises = [];
             promises.push(
               this.queryRun(
                 `INSERT INTO ${MySQLDriver.escape(
-                  `${this.prefix}references_${etype}`
-                )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
+                  `${this.prefix}data_${etype}`
+                )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
                 {
                   etype,
-                  connection,
                   params: {
                     guid,
                     name,
-                    reference,
+                    storageValue,
                   },
                 }
               )
             );
+            promises.push(
+              this.queryRun(
+                `INSERT INTO ${MySQLDriver.escape(
+                  `${this.prefix}comparisons_${etype}`
+                )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                    name,
+                    truthy: !!uvalue,
+                    string: `${uvalue}`,
+                    number: isNaN(Number(uvalue)) ? null : Number(uvalue),
+                  },
+                }
+              )
+            );
+            const references = this.findReferences(value);
+            for (const reference of references) {
+              promises.push(
+                this.queryRun(
+                  `INSERT INTO ${MySQLDriver.escape(
+                    `${this.prefix}references_${etype}`
+                  )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
+                  {
+                    etype,
+                    params: {
+                      guid,
+                      name,
+                      reference,
+                    },
+                  }
+                )
+              );
+            }
           }
+          await Promise.all(promises);
+        },
+        async (name, curUid) => {
+          await this.queryRun(
+            `INSERT INTO ${MySQLDriver.escape(
+              `${this.prefix}uids`
+            )} (\`name\`, \`cur_uid\`) VALUES (@name, @curUid) ON DUPLICATE KEY UPDATE \`cur_uid\`=@curUid;`,
+            {
+              params: {
+                name,
+                curUid,
+              },
+            }
+          );
+        },
+        async () => {
+          await this.startTransaction('nymph-import');
+        },
+        async () => {
+          await this.commit('nymph-import');
         }
-        await Promise.all(promises);
-      },
-      async (name, curUid) => {
-        await this.queryRun(
-          `INSERT INTO ${MySQLDriver.escape(
-            `${this.prefix}uids`
-          )} (\`name\`, \`cur_uid\`) VALUES (@name, @curUid) ON DUPLICATE KEY UPDATE \`cur_uid\`=@curUid;`,
-          {
-            connection,
-            params: {
-              name,
-              curUid,
-            },
-          }
-        );
-      },
-      this.config.transactions
-        ? async () => {
-            await this.queryRun(
-              this.connection ? 'SAVEPOINT `import`;' : 'START TRANSACTION;',
-              { connection }
-            );
-          }
-        : null,
-      this.config.transactions
-        ? async () => {
-            await this.queryRun(
-              this.connection ? 'RELEASE SAVEPOINT `import`;' : 'COMMIT;',
-              { connection }
-            );
-          }
-        : null
-    );
+      );
 
-    connection.release();
-    return result;
+      return result;
+    } catch (e) {
+      await this.rollback('nymph-import');
+      return false;
+    }
   }
 
   public async newUID(name: string) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
-    const connection = await this.getConnection();
-    const lock = await this.queryGet(
-      `SELECT GET_LOCK(${MySQLDriver.escapeValue(
-        `${this.prefix}uids_${name}`
-      )}, 10) AS \`lock\`;`,
-      { connection }
-    );
-    if (lock.lock !== 1) {
-      throw new QueryFailedError("Couldn't get lock for UID: " + name);
-    }
-    if (this.config.transactions) {
-      await this.queryRun(
-        this.connection ? 'SAVEPOINT `newuid`;' : 'START TRANSACTION;',
-        { connection }
-      );
-    }
-    let curUid: number | null = null;
+    await this.startTransaction('nymph-newuid');
     try {
+      const lock = await this.queryGet(
+        `SELECT GET_LOCK(${MySQLDriver.escapeValue(
+          `${this.prefix}uids_${name}`
+        )}, 10) AS \`lock\`;`
+      );
+      if (lock.lock !== 1) {
+        throw new QueryFailedError("Couldn't get lock for UID: " + name);
+      }
+      let curUid: number | null = null;
       await this.queryRun(
         `INSERT INTO ${MySQLDriver.escape(
           `${this.prefix}uids`
         )} (\`name\`, \`cur_uid\`) VALUES (@name, 1) ON DUPLICATE KEY UPDATE \`cur_uid\`=\`cur_uid\`+1;`,
         {
-          connection,
           params: {
             name,
           },
@@ -1916,34 +1879,30 @@ export default class MySQLDriver extends NymphDriver {
           `${this.prefix}uids`
         )} WHERE \`name\`=@name;`,
         {
-          connection,
           params: {
             name,
           },
         }
       );
-      if (this.config.transactions) {
+      await this.queryRun(
+        `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
+          `${this.prefix}uids_${name}`
+        )});`
+      );
+      await this.commit('nymph-newuid');
+      curUid = result.cur_uid ?? null;
+      return curUid;
+    } catch (e) {
+      if (e.message !== "Couldn't get lock for UID: " + name) {
         await this.queryRun(
-          this.connection ? 'RELEASE SAVEPOINT `newuid`;' : 'COMMIT;',
-          { connection }
+          `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
+            `${this.prefix}uids_${name}`
+          )});`
         );
       }
-      curUid = result.cur_uid ?? null;
-    } catch (e) {
-      await this.queryRun(
-        this.connection ? 'ROLLBACK TO `newuid`;' : 'ROLLBACK;',
-        { connection }
-      );
+      await this.rollback('nymph-newuid');
       throw e;
     }
-    await this.queryRun(
-      `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
-        `${this.prefix}uids_${name}`
-      )});`,
-      { connection }
-    );
-    connection.release();
-    return curUid;
   }
 
   public async renameUID(oldName: string, newName: string) {
@@ -1964,18 +1923,30 @@ export default class MySQLDriver extends NymphDriver {
     return true;
   }
 
-  public async rollback() {
+  public async rollback(name: string) {
     if (this.config.transactions) {
-      this.queryRun('ROLLBACK;');
-      this.connection = null;
-      this.transactionStarted = false;
+      if (this.transactionsStarted === 0) {
+        return true;
+      }
+      await this.queryRun(`ROLLBACK TO SAVEPOINT ${MySQLDriver.escape(name)};`);
+      this.transactionsStarted--;
+      if (this.transactionsStarted === 0) {
+        await this.queryRun('ROLLBACK;');
+        this.connection?.release();
+        this.connection = null;
+      }
       return true;
+    }
+    // Use a single connection when a transaction is requested.
+    this.transactionsStarted--;
+    if (this.transactionsStarted === 0) {
+      this.connection?.release();
+      this.connection = null;
     }
     return false;
   }
 
   public async saveEntity(entity: EntityInterface) {
-    const connection = await this.getConnection();
     const insertData = async (
       guid: string,
       data: EntityData,
@@ -2004,7 +1975,6 @@ export default class MySQLDriver extends NymphDriver {
             )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
             {
               etype,
-              connection,
               params: {
                 guid,
                 name,
@@ -2020,7 +1990,6 @@ export default class MySQLDriver extends NymphDriver {
             )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
             {
               etype,
-              connection,
               params: {
                 guid,
                 name,
@@ -2040,7 +2009,6 @@ export default class MySQLDriver extends NymphDriver {
               )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
               {
                 etype,
-                connection,
                 params: {
                   guid,
                   name,
@@ -2059,198 +2027,179 @@ export default class MySQLDriver extends NymphDriver {
         await runInsertQuery(name, JSON.parse(sdata[name]), sdata[name]);
       }
     };
-    const result = await this.saveEntityRowLike(
-      entity,
-      async (_entity, guid, tags, data, sdata, cdate, etype) => {
-        await this.queryRun(
-          `INSERT INTO ${MySQLDriver.escape(
-            `${this.prefix}entities_${etype}`
-          )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @cdate);`,
-          {
-            etype,
-            connection,
-            params: {
-              guid,
-              tags: ' ' + tags.join(' ') + ' ',
-              cdate,
-            },
-          }
-        );
-        await insertData(guid, data, sdata, etype);
-        return true;
-      },
-      async (entity, guid, tags, data, sdata, mdate, etype) => {
-        if (this.config.rowLocking) {
-          const promises = [];
-          promises.push(
-            this.queryRun(
-              `SELECT 1 FROM ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-              {
-                etype,
-                connection,
-                params: {
-                  guid,
-                },
-              }
-            )
-          );
-          promises.push(
-            this.queryRun(
-              `SELECT 1 FROM ${MySQLDriver.escape(
-                `${this.prefix}data_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-              {
-                etype,
-                connection,
-                params: {
-                  guid,
-                },
-              }
-            )
-          );
-          promises.push(
-            this.queryRun(
-              `SELECT 1 FROM ${MySQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-              {
-                etype,
-                connection,
-                params: {
-                  guid,
-                },
-              }
-            )
-          );
-          promises.push(
-            this.queryRun(
-              `SELECT 1 FROM ${MySQLDriver.escape(
-                `${this.prefix}references_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-              {
-                etype,
-                connection,
-                params: {
-                  guid,
-                },
-              }
-            )
-          );
-          await Promise.all(promises);
-        }
-        if (this.config.tableLocking) {
+    try {
+      const result = await this.saveEntityRowLike(
+        entity,
+        async (_entity, guid, tags, data, sdata, cdate, etype) => {
           await this.queryRun(
-            `LOCK TABLES ${MySQLDriver.escape(
+            `INSERT INTO ${MySQLDriver.escape(
               `${this.prefix}entities_${etype}`
-            )} WRITE, ${MySQLDriver.escape(
-              `${this.prefix}data_${etype}`
-            )} WRITE, ${MySQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`
-            )} WRITE, ${MySQLDriver.escape(
-              `${this.prefix}references_${etype}`
-            )} WRITE;`,
-            { connection }
+            )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @cdate);`,
+            {
+              etype,
+              params: {
+                guid,
+                tags: ' ' + tags.join(' ') + ' ',
+                cdate,
+              },
+            }
           );
-        }
-        const info = await this.queryRun(
-          `UPDATE ${MySQLDriver.escape(
-            `${this.prefix}entities_${etype}`
-          )} SET \`tags\`=@tags, \`mdate\`=@mdate WHERE \`guid\`=UNHEX(@guid) AND \`mdate\` <= @emdate;`,
-          {
-            etype,
-            connection,
-            params: {
-              tags: ' ' + tags.join(' ') + ' ',
-              mdate,
-              guid,
-              emdate: isNaN(Number(entity.mdate)) ? 0 : Number(entity.mdate),
-            },
-          }
-        );
-        let success = false;
-        if (info.changes === 1) {
-          const promises = [];
-          promises.push(
-            this.queryRun(
-              `DELETE FROM ${MySQLDriver.escape(
-                `${this.prefix}data_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid);`,
-              {
-                etype,
-                connection,
-                params: {
-                  guid,
-                },
-              }
-            )
-          );
-          promises.push(
-            this.queryRun(
-              `DELETE FROM ${MySQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid);`,
-              {
-                etype,
-                connection,
-                params: {
-                  guid,
-                },
-              }
-            )
-          );
-          promises.push(
-            this.queryRun(
-              `DELETE FROM ${MySQLDriver.escape(
-                `${this.prefix}references_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid);`,
-              {
-                etype,
-                connection,
-                params: {
-                  guid,
-                },
-              }
-            )
-          );
-          await Promise.all(promises);
           await insertData(guid, data, sdata, etype);
-          success = true;
-        }
-        if (this.config.tableLocking) {
-          await this.queryRun('UNLOCK TABLES;', { connection });
-        }
-        return success;
-      },
-      this.config.transactions
-        ? async () => {
+          return true;
+        },
+        async (entity, guid, tags, data, sdata, mdate, etype) => {
+          if (this.config.rowLocking) {
+            const promises = [];
+            promises.push(
+              this.queryRun(
+                `SELECT 1 FROM ${MySQLDriver.escape(
+                  `${this.prefix}entities_${etype}`
+                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                  },
+                }
+              )
+            );
+            promises.push(
+              this.queryRun(
+                `SELECT 1 FROM ${MySQLDriver.escape(
+                  `${this.prefix}data_${etype}`
+                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                  },
+                }
+              )
+            );
+            promises.push(
+              this.queryRun(
+                `SELECT 1 FROM ${MySQLDriver.escape(
+                  `${this.prefix}comparisons_${etype}`
+                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                  },
+                }
+              )
+            );
+            promises.push(
+              this.queryRun(
+                `SELECT 1 FROM ${MySQLDriver.escape(
+                  `${this.prefix}references_${etype}`
+                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                  },
+                }
+              )
+            );
+            await Promise.all(promises);
+          }
+          if (this.config.tableLocking) {
             await this.queryRun(
-              this.connection ? 'SAVEPOINT `save`;' : 'START TRANSACTION;',
-              { connection }
+              `LOCK TABLES ${MySQLDriver.escape(
+                `${this.prefix}entities_${etype}`
+              )} WRITE, ${MySQLDriver.escape(
+                `${this.prefix}data_${etype}`
+              )} WRITE, ${MySQLDriver.escape(
+                `${this.prefix}comparisons_${etype}`
+              )} WRITE, ${MySQLDriver.escape(
+                `${this.prefix}references_${etype}`
+              )} WRITE;`
             );
           }
-        : null,
-      this.config.transactions
-        ? async (success) => {
-            if (success) {
-              await this.queryRun(
-                this.connection ? 'RELEASE SAVEPOINT `save`;' : 'COMMIT;',
-                { connection }
-              );
-            } else {
-              await this.queryRun(
-                this.connection ? 'ROLLBACK TO `save`;' : 'ROLLBACK;',
-                { connection }
-              );
+          const info = await this.queryRun(
+            `UPDATE ${MySQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} SET \`tags\`=@tags, \`mdate\`=@mdate WHERE \`guid\`=UNHEX(@guid) AND \`mdate\` <= @emdate;`,
+            {
+              etype,
+              params: {
+                tags: ' ' + tags.join(' ') + ' ',
+                mdate,
+                guid,
+                emdate: isNaN(Number(entity.mdate)) ? 0 : Number(entity.mdate),
+              },
             }
-            return success;
+          );
+          let success = false;
+          if (info.changes === 1) {
+            const promises = [];
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${MySQLDriver.escape(
+                  `${this.prefix}data_${etype}`
+                )} WHERE \`guid\`=UNHEX(@guid);`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                  },
+                }
+              )
+            );
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${MySQLDriver.escape(
+                  `${this.prefix}comparisons_${etype}`
+                )} WHERE \`guid\`=UNHEX(@guid);`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                  },
+                }
+              )
+            );
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${MySQLDriver.escape(
+                  `${this.prefix}references_${etype}`
+                )} WHERE \`guid\`=UNHEX(@guid);`,
+                {
+                  etype,
+                  params: {
+                    guid,
+                  },
+                }
+              )
+            );
+            await Promise.all(promises);
+            await insertData(guid, data, sdata, etype);
+            success = true;
           }
-        : null
-    );
+          if (this.config.tableLocking) {
+            await this.queryRun('UNLOCK TABLES;');
+          }
+          return success;
+        },
+        async () => {
+          await this.startTransaction('nymph-save');
+        },
+        async (success) => {
+          if (success) {
+            await this.commit('nymph-save');
+          } else {
+            await this.rollback('nymph-save');
+          }
+          return success;
+        }
+      );
 
-    connection.release();
-    return result;
+      return result;
+    } catch (e) {
+      await this.rollback('nymph-save');
+      throw e;
+    }
   }
 
   public async setUID(name: string, curUid: number) {
@@ -2271,14 +2220,22 @@ export default class MySQLDriver extends NymphDriver {
     return true;
   }
 
-  public async startTransaction() {
+  public async startTransaction(name: string) {
     if (this.config.transactions) {
       // Lock to one connection.
-      this.connection = await this.getConnection();
-      this.queryRun('START TRANSACTION;');
-      this.transactionStarted = true;
+      if (this.transactionsStarted === 0) {
+        this.connection = await this.getConnection();
+        await this.queryRun('START TRANSACTION;');
+      }
+      await this.queryRun(`SAVEPOINT ${MySQLDriver.escape(name)};`);
+      this.transactionsStarted++;
       return true;
     }
+    // Use a single connection when a transaction is requested.
+    if (this.transactionsStarted === 0) {
+      this.connection = await this.getConnection();
+    }
+    this.transactionsStarted++;
     return false;
   }
 }
