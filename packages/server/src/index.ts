@@ -548,7 +548,7 @@ function referencesToEntities(item: any): any {
   } else if (typeof item === 'object' && !(item instanceof Entity)) {
     // Only do this for non-entity objects.
     for (let curProperty in item) {
-      item[curProperty] = referencesToEntities(curProperty);
+      item[curProperty] = referencesToEntities(item[curProperty]);
     }
   }
   return item;
