@@ -7,9 +7,11 @@ export interface SQLite3DriverConfig {
    */
   filename: string;
   /**
-   * If the file does not exist, an Error will be thrown instead of creating a new file.
+   * If the file does not exist, an Error will be thrown instead of creating a
+   * new file.
    *
-   * This option is ignored for in-memory, temporary, or readonly database connections.
+   * This option is ignored for in-memory, temporary, or readonly database
+   * connections.
    */
   fileMustExist: boolean;
   /**

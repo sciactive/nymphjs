@@ -122,8 +122,8 @@ export default class User extends Entity<UserData> {
   private static removeNymphResponseListener?: () => void;
 
   /**
-   * No need to call this function yourself. It is called when the class is loaded. It adds
-   * listeners to Nymph to handle authentication changes.
+   * No need to call this function yourself. It is called when the class is
+   * loaded. It adds listeners to Nymph to handle authentication changes.
    */
   public static init() {
     if (this.removeNymphResponseListener) {

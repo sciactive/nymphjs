@@ -161,8 +161,8 @@ export default class User extends AbleObject<UserData> {
   /**
    * Gatekeeper ability cache.
    *
-   * Gatekeeper will cache the user's abilities that it calculates, so it can check faster if that
-   * user has been checked before.
+   * Gatekeeper will cache the user's abilities that it calculates, so it can
+   * check faster if that user has been checked before.
    */
   private $gatekeeperCache?: { [k: string]: true };
   /**
@@ -174,7 +174,8 @@ export default class User extends AbleObject<UserData> {
    */
   private $descendantGroups?: (Group & GroupData)[];
   /**
-   * Temporary storage for passwords. This will be hashed before going into the database.
+   * Temporary storage for passwords. This will be hashed before going into the
+   * database.
    */
   private $passwordTemp?: string;
 
@@ -602,10 +603,11 @@ export default class User extends AbleObject<UserData> {
   /**
    * Check to see if a user has an ability.
    *
-   * This function will check both user and group abilities, if the user is marked to inherit the
-   * abilities of its group.
+   * This function will check both user and group abilities, if the user is
+   * marked to inherit the abilities of its group.
    *
-   * If `ability` is undefined, it will check to see if the user is currently logged in.
+   * If `ability` is undefined, it will check to see if the user is currently
+   * logged in.
    *
    * If the user has the "system/admin" ability, this function will return true.
    *
@@ -808,7 +810,7 @@ export default class User extends AbleObject<UserData> {
   /**
    * Check whether the user is in a (primary or secondary) group.
    *
-   * @param mixed $group The group, or the group's GUID.
+   * @param group The group, or the group's GUID.
    * @returns True or false.
    */
   public $inGroup(group: (Group & GroupData) | string) {
@@ -1328,7 +1330,8 @@ export default class User extends AbleObject<UserData> {
 
     // Email changes.
     if (!Tilmeld.gatekeeper('tilmeld/admin')) {
-      // The user isn't an admin, so email address changes should contain some security measures.
+      // The user isn't an admin, so email address changes should contain some
+      // security measures.
       if (Tilmeld.config.verifyEmail) {
         // The user needs to verify this new email address.
         if (this.guid == null) {
@@ -1358,7 +1361,8 @@ export default class User extends AbleObject<UserData> {
           } else {
             if (
               this.$data.secret == null &&
-              // Make sure the user has at least the rate limit time to cancel an email change.
+              // Make sure the user has at least the rate limit time to cancel
+              // an email change.
               (this.$data.emailChangeDate == null ||
                 this.$data.emailChangeDate <
                   strtotime('-' + Tilmeld.config.emailRateLimit) * 1000)
@@ -1376,13 +1380,14 @@ export default class User extends AbleObject<UserData> {
         this.guid != null &&
         this.$data.originalEmail != null &&
         this.$data.originalEmail !== this.$data.email &&
-        // Make sure the user has at least the rate limit time to cancel an email change.
+        // Make sure the user has at least the rate limit time to cancel an
+        // email change.
         (this.$data.emailChangeDate == null ||
           this.$data.emailChangeDate <
             strtotime('-' + Tilmeld.config.emailRateLimit) * 1000)
       ) {
-        // The user doesn't need to verify their new email address, but should be able to cancel the
-        // email change from their old address.
+        // The user doesn't need to verify their new email address, but should
+        // be able to cancel the email change from their old address.
         this.$data.cancelEmailAddress = this.$data.originalEmail;
         this.$data.cancelEmailSecret = nanoid();
         sendVerification = true;

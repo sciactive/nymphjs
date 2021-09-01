@@ -33,17 +33,18 @@ export default class Tilmeld {
   public static currentUser: (User & UserData) | null = null;
 
   /**
-   * If you will be performing authentication functions (logging in/out), you should set these so
-   * Tilmeld can read and write cookies and headers.
+   * If you will be performing authentication functions (logging in/out), you
+   * should set these so Tilmeld can read and write cookies and headers.
    *
-   * If you want the user to be authenticated with the cookie and/or header they provide, you should
-   * set at least the request. It's better to set both, so the JWT can be updated if needed.
+   * If you want the user to be authenticated with the cookie and/or header they
+   * provide, you should set at least the request. It's better to set both, so
+   * the JWT can be updated if needed.
    *
-   * After you set these, call `authenticate()` to read user authentication data from them and fill
-   * the user's session.
+   * After you set these, call `authenticate()` to read user authentication data
+   * from them and fill the user's session.
    *
-   * If you want to support cookie based authentication (which still requires an XSRF token for
-   * security), you should enable the cookie parser middleware.
+   * If you want to support cookie based authentication (which still requires an
+   * XSRF token for security), you should enable the cookie parser middleware.
    */
   public static request: Request;
   public static response: Response;
@@ -51,7 +52,8 @@ export default class Tilmeld {
   /**
    * Check to see if the current user has an ability.
    *
-   * If `ability` is undefined, it will check to see if a user is currently logged in.
+   * If `ability` is undefined, it will check to see if a user is currently
+   * logged in.
    *
    * @param ability The ability.
    * @returns Whether the user has the given ability.
@@ -106,8 +108,8 @@ export default class Tilmeld {
               ('equal' in selectors[0] &&
                 selectors[0]['equal']?.[0] !== 'username'))
           ) {
-            // If the user is not specifically searching for a GUID or username, and they're not
-            // allowed to search, it should fail.
+            // If the user is not specifically searching for a GUID or username,
+            // and they're not allowed to search, it should fail.
             throw new AccessControlError('No permission to search.');
           }
         }
@@ -144,8 +146,8 @@ export default class Tilmeld {
       }
     };
 
-    // Filter entities being saved for user permissions, and filter any disallowed changes to AC
-    // properties.
+    // Filter entities being saved for user permissions, and filter any
+    // disallowed changes to AC properties.
     const checkPermissionsSaveAndFilterAcChanges = function (
       entity: EntityInterface & AccessControlData
     ) {
@@ -160,8 +162,8 @@ export default class Tilmeld {
       }
 
       if (entity.guid != null) {
-        // If the entity is not new, check that the user has full access before allowing a change to
-        // ac properties.
+        // If the entity is not new, check that the user has full access before
+        // allowing a change to ac properties.
 
         const originalAc = entity.$getOriginalAcValues();
         const newAc = {
@@ -190,7 +192,8 @@ export default class Tilmeld {
         setAcProperties(originalAc);
         if (Tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
           // Only allow changes to AC properties if the user has full access.
-          // TODO: only allow changes to `user` and `group` if tilmeld admin or group is user's group.
+          // TODO: only allow changes to `user` and `group` if tilmeld admin or
+          //       group is user's group.
           setAcProperties(newAc);
         }
       }
@@ -204,7 +207,8 @@ export default class Tilmeld {
     /*
      * Add the current user's "user", "group", and access control to new entity.
      *
-     * This occurs right before an entity is saved. It only alters the entity if:
+     * This occurs right before an entity is saved. It only alters the entity
+     * if:
      *
      * - There is a user logged in.
      * - The entity is new (doesn't have a GUID.)
@@ -323,8 +327,8 @@ export default class Tilmeld {
   }
 
   /**
-   * Add selectors to a list of options and selectors which will limit results to only entities the
-   * current user has access to.
+   * Add selectors to a list of options and selectors which will limit results
+   * to only entities the current user has access to.
    *
    * @param optionsAndSelectors The options and selectors of the query.
    */
@@ -441,8 +445,8 @@ export default class Tilmeld {
   /**
    * Check an entity's permissions for a user.
    *
-   * This will check the AC (Access Control) properties of the entity. These include the following
-   * properties:
+   * This will check the AC (Access Control) properties of the entity. These
+   * include the following properties:
    *
    * - acUser
    * - acGroup
@@ -451,17 +455,19 @@ export default class Tilmeld {
    * - acWrite
    * - acFull
    *
-   * "acUser" refers to the entity's owner, "acGroup" refers to all users in the entity's group and
-   * all ancestor groups, and "acOther" refers to any user who doesn't fit these descriptions.
+   * "acUser" refers to the entity's owner, "acGroup" refers to all users in the
+   * entity's group and all ancestor groups, and "acOther" refers to any user
+   * who doesn't fit these descriptions.
    *
-   * Each of these properties should be either NO_ACCESS, READ_ACCESS, WRITE_ACCESS, or FULL_ACCESS.
+   * Each of these properties should be either NO_ACCESS, READ_ACCESS,
+   * WRITE_ACCESS, or FULL_ACCESS.
    *
    * - NO_ACCESS - the user has no access to the entity.
    * - READ_ACCESS, the user has read access to the entity.
-   * - WRITE_ACCESS, the user has read and write access to the entity, but can't delete it, change
-   *   its access controls, or change its ownership.
-   * - FULL_ACCESS, the user has read, write, and delete access to the entity, as well as being able
-   *   to manage its access controls and ownership.
+   * - WRITE_ACCESS, the user has read and write access to the entity, but can't
+   *   delete it, change its access controls, or change its ownership.
+   * - FULL_ACCESS, the user has read, write, and delete access to the entity,
+   *   as well as being able to manage its access controls and ownership.
    *
    * These properties defaults to:
    *
@@ -469,14 +475,14 @@ export default class Tilmeld {
    * - acGroup = Tilmeld.READ_ACCESS
    * - acOther = Tilmeld.NO_ACCESS
    *
-   * "acRead", "acWrite", and "acFull" are arrays of users and/or groups that also have those
-   * permissions.
+   * "acRead", "acWrite", and "acFull" are arrays of users and/or groups that
+   * also have those permissions.
    *
-   * Only users with FULL_ACCESS have the ability to change any of the ac*, user, and group
-   * properties.
+   * Only users with FULL_ACCESS have the ability to change any of the ac*,
+   * user, and group properties.
    *
-   * The following conditions will result in different checks, which determine whether the check
-   * passes:
+   * The following conditions will result in different checks, which determine
+   * whether the check passes:
    *
    * - The user has the "system/admin" ability. (Always true.)
    * - It is a user or group. (True for READ_ACCESS or Tilmeld admins.)
@@ -613,8 +619,8 @@ export default class Tilmeld {
    * @param user The user.
    */
   public static fillSession(user: User & UserData) {
-    // Read groups right now, since gatekeeper needs them, so $udpateDataProtection will fail to
-    // read them (since it runs gatekeeper).
+    // Read groups right now, since gatekeeper needs them, so
+    // $udpateDataProtection will fail to read them (since it runs gatekeeper).
     const _group = user.group;
     const _groups = user.groups;
     this.currentUser = user;
@@ -685,8 +691,8 @@ export default class Tilmeld {
 
     const cookies = this.request.cookies ?? {};
 
-    // If a client does't support cookies, they can use the X-TILMELDAUTH header to provide the auth
-    // token.
+    // If a client does't support cookies, they can use the X-TILMELDAUTH header
+    // to provide the auth token.
     let fromAuthHeader = false;
     let authToken: string;
     if (this.request.header('HTTP_X_TILMELDAUTH') != null) {
@@ -704,12 +710,12 @@ export default class Tilmeld {
       skipXsrfToken ||
       this.request.originalUrl.startsWith(this.config.setupPath)
     ) {
-      // The request is for the setup app, or we were told to skip the XSRF check, so don't check
-      // for the XSRF token.
+      // The request is for the setup app, or we were told to skip the XSRF
+      // check, so don't check for the XSRF token.
       extract = this.config.jwtExtract(authToken);
     } else {
-      // The request is for something else, so check for a valid XSRF token, unless the auth token
-      // is provided by a header (instead of a cookie).
+      // The request is for something else, so check for a valid XSRF token,
+      // unless the auth token is provided by a header (instead of a cookie).
       const xsrfToken = this.request.header('HTTP_X_XSRF_TOKEN');
       if (xsrfToken == null && !fromAuthHeader) {
         return false;
@@ -731,7 +737,8 @@ export default class Tilmeld {
     }
 
     if (expire.valueOf() < Date.now() + this.config.jwtRenew * 1000) {
-      // If the user is less than renew time from needing a new token, give them a new one.
+      // If the user is less than renew time from needing a new token, give them
+      // a new one.
       this.login(user, fromAuthHeader);
     } else {
       this.fillSession(user);
@@ -786,7 +793,8 @@ export default class Tilmeld {
   // /**
   //  * Sort an array of groups hierarchically.
   //  *
-  //  * An additional property of the groups can be used to sort them under their parents.
+  //  * An additional property of the groups can be used to sort them under their
+  //  * parents.
   //  *
   //  * @param array The array of groups.
   //  * @param property The name of the property to sort groups by. Undefined for no additional sorting.

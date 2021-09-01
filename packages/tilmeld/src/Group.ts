@@ -407,8 +407,9 @@ export default class Group extends AbleObject<GroupData> {
   /**
    * Get the number of parents the group has.
    *
-   * If the group is a top level group, this will return 0. If it is a child of a top level group,
-   * this will return 1. If it is a grandchild of a top level group, this will return 2, and so on.
+   * If the group is a top level group, this will return 0. If it is a child of
+   * a top level group, this will return 1. If it is a grandchild of a top level
+   * group, this will return 2, and so on.
    *
    * Levels will max out at 1024 to avoid recursive loops.
    *

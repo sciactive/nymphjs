@@ -77,10 +77,10 @@ import {
  * - 1 => The referenced entity's GUID.
  * - 2 => The referenced entity's class name.
  *
- * Since the referenced entity's class name (meaning the `class` static property,
- * not the name of the class itself) is stored in the reference on the parent
- * entity, if you change the class name in an update, you need to reassign all
- * referenced entities of that class and resave.
+ * Since the referenced entity's class name (meaning the `class` static
+ * property, not the name of the class itself) is stored in the reference on the
+ * parent entity, if you change the class name in an update, you need to
+ * reassign all referenced entities of that class and resave.
  *
  * When an entity is loaded, it does not request its referenced entities from
  * Nymph. Instead, it creates instances without data called sleeping references.
