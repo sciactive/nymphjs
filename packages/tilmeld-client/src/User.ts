@@ -287,11 +287,11 @@ export default class User extends Entity<UserData> {
     return response;
   }
 
-  public static async sendRecoveryLink(data: {
+  public static async sendRecovery(data: {
     recoveryType: 'username' | 'password';
     account: string;
   }): Promise<{ result: boolean; message: string }> {
-    return await User.serverCallStatic('sendRecoveryLink', [data]);
+    return await User.serverCallStatic('sendRecovery', [data]);
   }
 
   public static async recover(data: {

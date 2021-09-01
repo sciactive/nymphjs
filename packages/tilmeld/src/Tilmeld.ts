@@ -46,8 +46,8 @@ export default class Tilmeld {
    * If you want to support cookie based authentication (which still requires an
    * XSRF token for security), you should enable the cookie parser middleware.
    */
-  public static request: Request;
-  public static response: Response;
+  public static request: Request | null = null;
+  public static response: Response | null = null;
 
   /**
    * Check to see if the current user has an ability.
@@ -86,7 +86,7 @@ export default class Tilmeld {
 
   private static initAccessControl() {
     // Check for the skip access control option and add AC selectors.
-    const getEntities = function (options?: Options, ...selectors: Selector[]) {
+    const getEntities = function (options: Options, selectors: Selector[]) {
       if (
         !options ||
         !('skipAc' in options) ||
@@ -114,7 +114,7 @@ export default class Tilmeld {
           }
         }
         // Add access control selectors
-        Tilmeld.addAccessControlSelectors([options ?? {}, ...selectors]);
+        Tilmeld.addAccessControlSelectors(options, selectors);
       }
     };
 
@@ -333,28 +333,31 @@ export default class Tilmeld {
    * @param optionsAndSelectors The options and selectors of the query.
    */
   public static addAccessControlSelectors(
-    optionsAndSelectors: [Options, ...Selector[]]
+    options: Options,
+    selectors: Selector[]
   ) {
     const user = this.currentUser;
 
-    if (user != null && user.$gatekeeper('system/admin')) {
+    if (
+      user != null &&
+      (user.abilities?.indexOf('system/admin') ?? -1) !== -1
+    ) {
       // The user is a system admin, so they can see everything.
       return;
     }
 
-    if (optionsAndSelectors.length === 0) {
+    if (options == null) {
       throw new Error('No options in argument.');
     } else if (
-      'class' in optionsAndSelectors[0] &&
-      (optionsAndSelectors[0].class === User ||
-        optionsAndSelectors[0].class === Group)
+      'class' in options &&
+      (options.class === User || options.class === Group)
     ) {
       // They are requesting a user/group. Always accessible for reading.
       return;
     }
 
     if (user === null) {
-      optionsAndSelectors.push({
+      selectors.push({
         type: '|',
         // Other access control is sufficient.
         gte: ['acOther', Tilmeld.READ_ACCESS],
@@ -438,7 +441,7 @@ export default class Tilmeld {
           ref: acRefs,
         });
       }
-      optionsAndSelectors.push(selector);
+      selectors.push(selector);
     }
   }
 
@@ -764,7 +767,7 @@ export default class Tilmeld {
           maxAge: this.config.jwtExpire * 1000,
           secure: appUrl.protocol === 'https',
           httpOnly: false, // Allow JS access (for CSRF protection).
-          sameSite: 'lax',
+          sameSite: appUrl.protocol === 'https' ? 'lax' : 'strict',
         });
         if (sendAuthHeader) {
           this.response.set('X-TILMELDAUTH', token);

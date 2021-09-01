@@ -149,7 +149,7 @@ export default class User extends AbleObject<UserData> {
   public static clientEnabledStaticMethods = [
     'current',
     'loginUser',
-    'sendRecoveryLink',
+    'sendRecovery',
     'recover',
     'getClientConfig',
   ];
@@ -238,7 +238,7 @@ export default class User extends AbleObject<UserData> {
    * @param data The input data from the client.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
-  public static async sendRecoveryLink(data: {
+  public static async sendRecovery(data: {
     recoveryType: 'username' | 'password';
     account: string;
   }): Promise<{ result: boolean; message: string }> {
@@ -371,7 +371,7 @@ export default class User extends AbleObject<UserData> {
     user.$password(data.password);
     delete user.recoverSecret;
     delete user.recoverSecretTime;
-    if (user.$saveSkipAC()) {
+    if (await user.$saveSkipAC()) {
       return {
         result: true,
         message:
@@ -494,10 +494,10 @@ export default class User extends AbleObject<UserData> {
     this.$referenceWake();
 
     if (
-      Tilmeld.gatekeeper('tilmeld/admin') &&
-      !Tilmeld.gatekeeper('system/admin') &&
       input.data.abilities.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1
+      this.$data.abilities?.indexOf('system/admin') === -1 &&
+      Tilmeld.gatekeeper('tilmeld/admin') &&
+      !Tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to make this user a system admin."
@@ -511,10 +511,10 @@ export default class User extends AbleObject<UserData> {
     this.$referenceWake();
 
     if (
-      Tilmeld.gatekeeper('tilmeld/admin') &&
-      !Tilmeld.gatekeeper('system/admin') &&
       patch.set.abilities.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1
+      this.$data.abilities?.indexOf('system/admin') === -1 &&
+      Tilmeld.gatekeeper('tilmeld/admin') &&
+      !Tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to make this user a system admin."
@@ -525,17 +525,27 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $putData(data: EntityData, sdata?: SerializedEntityData) {
-    super.$putData(data, sdata);
+    const unserialize = (name: string) => {
+      if (sdata != null && name in sdata) {
+        data[name] = JSON.parse(sdata[name]);
+        delete sdata[name];
+      }
+    };
+
+    unserialize('secret');
+    unserialize('emailChangeDate');
+    unserialize('email');
 
     if (
-      this.$data.secret == null &&
-      (this.$data.emailChangeDate == null ||
-        this.$data.emailChangeDate <
+      data.secret == null &&
+      (data.emailChangeDate == null ||
+        data.emailChangeDate <
           strtotime('-' + Tilmeld.config.emailRateLimit) * 1000)
     ) {
-      this.$data.originalEmail = this.$data.email;
+      data.originalEmail = data.email;
     }
 
+    super.$putData(data, sdata);
     this.$updateDataProtection();
   }
 
@@ -555,7 +565,13 @@ export default class User extends AbleObject<UserData> {
       this.$privateData.push('username');
     }
 
-    const isCurrentUser = user != null && this.$is(user);
+    const isCurrentUser = user != null && user.$is(this);
+    // While loading, accessing abilities on the current user will infinitely
+    // loop, but if this is the current user, we can use its abilities.
+    const abilities =
+      (isCurrentUser || user == null
+        ? this.$data.abilities
+        : user?.abilities) ?? [];
     const isNewUser = this.guid == null;
 
     if (isCurrentUser) {
@@ -566,7 +582,7 @@ export default class User extends AbleObject<UserData> {
       this.$clientEnabledMethods.push('$sendEmailVerification');
     }
 
-    if (user != null && user.$gatekeeper('tilmeld/admin')) {
+    if (user != null && abilities.indexOf('tilmeld/admin') !== -1) {
       // Users who can edit other users can see most of their data.
       this.$privateData = ['password', 'salt'];
       this.$allowlistData = undefined;
@@ -616,19 +632,16 @@ export default class User extends AbleObject<UserData> {
    */
   public $gatekeeper(ability?: string) {
     if (ability == null) {
-      return User.current(true).$is(this);
+      return User.current()?.$is(this) ?? false;
     }
     // Check the cache to see if we've already checked this user.
     if (this.$gatekeeperCache == null) {
       let abilities = this.$data.abilities ?? [];
       if (this.$data.inheritAbilities) {
         for (let curGroup of this.$data.groups ?? []) {
-          if (curGroup.guid == null) {
-            continue;
-          }
           abilities = abilities.concat(curGroup.abilities ?? []);
         }
-        if (this.$data.group != null && this.$data.group.guid != null) {
+        if (this.$data.group != null && this.$data.group.cdate != null) {
           abilities = abilities.concat(this.$data.group.abilities ?? []);
         }
       }
@@ -690,7 +703,6 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (this.$data.secret != null && this.$data.cancelEmailSecret != null) {
-      // phpcs:ignore Generic.Files.LineLength.TooLong
       const link = `${setupUrl}${
         setupUrl.match(/\?/) ? '&' : '?'
       }action=verifyemailchange&id=${encodeURIComponent(
@@ -839,7 +851,7 @@ export default class User extends AbleObject<UserData> {
   public $isDescendant(group: (Group & GroupData) | string) {
     // Check to see if the user is in a descendant group of the given group.
     if (
-      this.$data.group?.guid != null &&
+      this.$data.group?.cdate != null &&
       this.$data.group.$isDescendant(group)
     ) {
       return true;
@@ -925,11 +937,12 @@ export default class User extends AbleObject<UserData> {
             ' characters.',
         };
       }
+
       if (
         difference(
           this.$data.username.split(''),
           Tilmeld.config.validChars.split('')
-        )
+        ).length
       ) {
         return {
           result: false,
@@ -1001,10 +1014,10 @@ export default class User extends AbleObject<UserData> {
         return { result: true, message: '' };
       }
     }
-    if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(this.$data.email)) {
+    if (!Tilmeld.config.validEmailRegex.test(this.$data.email)) {
       return {
         result: false,
-        message: 'Email must be a correctly formatted address.',
+        message: Tilmeld.config.validEmailRegexNotice,
       };
     }
     const selector: Selector = {
@@ -1110,57 +1123,52 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Start transaction.
-    if ((await Nymph.inTransaction()) || !(await Nymph.startTransaction())) {
-      return {
-        result: false,
-        loggedin: false,
-        message: 'Error starting database transaction.',
-      };
-    }
-
-    // Add primary group.
-    let generatedPrimaryGroup: (Group & GroupData) | null = null;
-    if (Tilmeld.config.generatePrimary) {
-      // Generate a new primary group for the user.
-      generatedPrimaryGroup = await Group.factory();
-      generatedPrimaryGroup.groupname = this.$data.username;
-      generatedPrimaryGroup.avatar = this.$data.avatar;
-      generatedPrimaryGroup.name = this.$data.name;
-      generatedPrimaryGroup.email = this.$data.email;
-      const parent = await Nymph.getEntity(
-        { class: Group },
-        {
-          type: '&',
-          equal: ['defaultPrimary', true],
-        }
-      );
-      if (parent != null) {
-        generatedPrimaryGroup.parent = parent;
-      }
-      if (!(await generatedPrimaryGroup.$saveSkipAC())) {
-        await Nymph.rollback();
-        return {
-          result: false,
-          loggedin: false,
-          message: 'Error creating primary group for user.',
-        };
-      }
-      this.$data.group = generatedPrimaryGroup;
-    } else {
-      // Add the default primary.
-      const group = await Nymph.getEntity(
-        { class: Group },
-        {
-          type: '&',
-          equal: ['defaultPrimary', true],
-        }
-      );
-      if (group != null) {
-        this.$data.group = group;
-      }
-    }
+    const transaction = 'tilmeld-register-' + nanoid();
+    await Nymph.startTransaction(transaction);
 
     try {
+      // Add primary group.
+      let generatedPrimaryGroup: (Group & GroupData) | null = null;
+      if (Tilmeld.config.generatePrimary) {
+        // Generate a new primary group for the user.
+        generatedPrimaryGroup = await Group.factory();
+        generatedPrimaryGroup.groupname = this.$data.username;
+        generatedPrimaryGroup.avatar = this.$data.avatar;
+        generatedPrimaryGroup.name = this.$data.name;
+        generatedPrimaryGroup.email = this.$data.email;
+        const parent = await Nymph.getEntity(
+          { class: Group },
+          {
+            type: '&',
+            equal: ['defaultPrimary', true],
+          }
+        );
+        if (parent != null) {
+          generatedPrimaryGroup.parent = parent;
+        }
+        if (!(await generatedPrimaryGroup.$saveSkipAC())) {
+          await Nymph.rollback(transaction);
+          return {
+            result: false,
+            loggedin: false,
+            message: 'Error creating primary group for user.',
+          };
+        }
+        this.$data.group = generatedPrimaryGroup;
+      } else {
+        // Add the default primary.
+        const group = await Nymph.getEntity(
+          { class: Group },
+          {
+            type: '&',
+            equal: ['defaultPrimary', true],
+          }
+        );
+        if (group != null) {
+          this.$data.group = group;
+        }
+      }
+
       // Add secondary groups.
       if (Tilmeld.config.verifyEmail && Tilmeld.config.unverifiedAccess) {
         // Add the default secondaries for unverified users.
@@ -1193,20 +1201,23 @@ export default class User extends AbleObject<UserData> {
 
       // If create_admin is true and there are no other users, grant
       // "system/admin".
+      let madeAdmin = false;
       if (Tilmeld.config.createAdmin) {
         const otherUsers = await Nymph.getEntities({
           class: User,
           skipAc: true,
           limit: 1,
+          return: 'guid',
         });
         // Make sure it's not just null, cause that means an error.
         if (!otherUsers.length) {
           this.$grant('system/admin');
           this.$data.enabled = true;
+          madeAdmin = true;
         }
       }
 
-      if (this.$saveSkipAC()) {
+      if (await this.$saveSkipAC()) {
         // Send the new user registered email.
         if (Tilmeld.config.userRegisteredRecipient != null) {
           await Tilmeld.config.sendEmail(
@@ -1234,8 +1245,8 @@ export default class User extends AbleObject<UserData> {
         // Save the primary group.
         if (generatedPrimaryGroup != null) {
           generatedPrimaryGroup.user = this;
-          if (!generatedPrimaryGroup.$saveSkipAC()) {
-            await Nymph.rollback();
+          if (!(await generatedPrimaryGroup.$saveSkipAC())) {
+            await Nymph.rollback(transaction);
             return {
               result: false,
               loggedin: false,
@@ -1246,13 +1257,18 @@ export default class User extends AbleObject<UserData> {
         }
 
         // Finish up.
-        if (Tilmeld.config.verifyEmail && !Tilmeld.config.unverifiedAccess) {
+        if (
+          Tilmeld.config.verifyEmail &&
+          !Tilmeld.config.unverifiedAccess &&
+          !madeAdmin
+        ) {
           message +=
             `Almost there. An email has been sent to ${this.$data.email} ` +
             'with a verification link for you to finish registration.';
         } else if (
           Tilmeld.config.verifyEmail &&
-          Tilmeld.config.unverifiedAccess
+          Tilmeld.config.unverifiedAccess &&
+          !madeAdmin
         ) {
           Tilmeld.login(this, true);
           message +=
@@ -1265,14 +1281,14 @@ export default class User extends AbleObject<UserData> {
           message += "You're now registered and logged in!";
           loggedin = true;
         }
-        await Nymph.commit();
+        await Nymph.commit(transaction);
         return {
           result: true,
           loggedin,
           message,
         };
       } else {
-        await Nymph.rollback();
+        await Nymph.rollback(transaction);
         return {
           result: false,
           loggedin: false,
@@ -1280,7 +1296,7 @@ export default class User extends AbleObject<UserData> {
         };
       }
     } catch (e) {
-      await Nymph.rollback();
+      await Nymph.rollback(transaction);
       throw e;
     }
   }
@@ -1304,7 +1320,7 @@ export default class User extends AbleObject<UserData> {
 
     // Formatting.
     this.$data.username = this.$data.username.trim();
-    if (!Tilmeld.config.emailUsernames) {
+    if (Tilmeld.config.emailUsernames) {
       this.$data.email = this.$data.username;
     }
     this.$data.nameFirst = (this.$data.nameFirst ?? '').trim();
@@ -1335,8 +1351,12 @@ export default class User extends AbleObject<UserData> {
       if (Tilmeld.config.verifyEmail) {
         // The user needs to verify this new email address.
         if (this.guid == null) {
-          this.$data.secret = nanoid();
-          sendVerification = true;
+          // If this is the first user, they'll be made an admin, so they don't
+          // need to verify.
+          if ((this.$data.abilities?.indexOf('system/admin') ?? -1) === -1) {
+            this.$data.secret = nanoid();
+            sendVerification = true;
+          }
         } else if (
           this.$data.originalEmail != null &&
           this.$data.originalEmail !== this.$data.email
@@ -1355,7 +1375,7 @@ export default class User extends AbleObject<UserData> {
                     '+' + Tilmeld.config.emailRateLimit,
                     Math.floor(this.$data.emailChangeDate / 1000)
                   )
-                ).toLocaleString() +
+                ).toString() +
                 ' to change your email address again.'
             );
           } else {
@@ -1412,9 +1432,9 @@ export default class User extends AbleObject<UserData> {
       throw new BadDataError(e.message);
     }
 
-    if (!(await Nymph.startTransaction())) {
-      return false;
-    }
+    // Start transaction.
+    const transaction = 'tilmeld-save-' + nanoid();
+    await Nymph.startTransaction(transaction);
 
     if (
       this.$data.group &&
@@ -1430,23 +1450,32 @@ export default class User extends AbleObject<UserData> {
         this.$data.group.phone = this.$data.phone;
         await this.$data.group.$saveSkipAC();
       } catch (e) {
-        await Nymph.rollback();
+        await Nymph.rollback(transaction);
         throw e;
       }
     }
 
     let ret: boolean;
+    let preGuid = this.guid;
+    let preCdate = this.cdate;
+    let preMdate = this.mdate;
 
     try {
       ret = await super.$save();
     } catch (e) {
-      await Nymph.rollback();
+      await Nymph.rollback(transaction);
       throw e;
     }
     if (ret) {
       if (sendVerification) {
         // The email has changed, so send a new verification email.
-        await this.$sendEmailVerification();
+        if (!(await this.$sendEmailVerification())) {
+          await Nymph.rollback(transaction);
+          this.guid = preGuid;
+          this.cdate = preCdate;
+          this.mdate = preMdate;
+          throw new Error("Couldn't send verification email.");
+        }
       }
 
       if (User.current(true).$is(this)) {
@@ -1456,9 +1485,9 @@ export default class User extends AbleObject<UserData> {
 
       this.$descendantGroups = undefined;
       this.$gatekeeperCache = undefined;
-      await Nymph.commit();
+      await Nymph.commit(transaction);
     } else {
-      await Nymph.rollback();
+      await Nymph.rollback(transaction);
     }
     return ret;
   }
@@ -1466,9 +1495,9 @@ export default class User extends AbleObject<UserData> {
   /**
    * This should *never* be accessible on the client.
    */
-  public $saveSkipAC() {
+  public async $saveSkipAC() {
     this.$skipAcWhenSaving = true;
-    return this.$save();
+    return await this.$save();
   }
 
   public $tilmeldSaveSkipAC() {

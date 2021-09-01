@@ -16,12 +16,40 @@ const rest = express();
 rest.use(cookieParser());
 rest.use(express.json());
 
-function authenticateTilmeld(request: Request, response: Response) {
+function authenticateTilmeld(
+  request: Request,
+  response: Response,
+  next: () => void
+) {
   if (Nymph.Tilmeld) {
     Nymph.Tilmeld.request = request;
     Nymph.Tilmeld.response = response;
-    Nymph.Tilmeld.authenticate();
+    try {
+      Nymph.Tilmeld.authenticate();
+    } catch (e) {
+      httpError(response, 500, 'Internal Server Error', e);
+      return;
+    }
   }
+  next();
+}
+
+function unauthenticateTilmeld(
+  _request: Request,
+  response: Response,
+  next: () => void
+) {
+  if (Nymph.Tilmeld) {
+    Nymph.Tilmeld.request = null;
+    Nymph.Tilmeld.response = null;
+    try {
+      Nymph.Tilmeld.clearSession();
+    } catch (e) {
+      httpError(response, 500, 'Internal Server Error', e);
+      return;
+    }
+  }
+  next();
 }
 
 function getActionData(request: Request): { action: string; data: any } {
@@ -47,273 +75,303 @@ function getActionData(request: Request): { action: string; data: any } {
   }
 }
 
+// Authenticate before the request.
+rest.use(authenticateTilmeld);
+
 rest.get('/', async (request, response) => {
-  authenticateTilmeld(request, response);
-  const { action, data } = getActionData(request);
-  if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
-    httpError(response, 400, 'Bad Request');
-    return;
-  }
-  if (['entity', 'entities'].indexOf(action) !== -1) {
-    if (!Array.isArray(data)) {
+  try {
+    const { action, data } = getActionData(request);
+    if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
       httpError(response, 400, 'Bad Request');
       return;
     }
-    const count = data.length;
-    if (count < 1 || typeof data[0] !== 'object') {
-      httpError(response, 400, 'Bad Request');
-      return;
-    }
-    if (!('class' in data[0])) {
-      httpError(response, 400, 'Bad Request');
-      return;
-    }
-    let EntityClass;
-    try {
-      EntityClass = Nymph.getEntityClass(data[0].class);
-    } catch (e) {
-      httpError(response, 400, 'Bad Request', e);
-      return;
-    }
-    data[0].class = EntityClass;
-    data[0].source = 'client';
-    data[0].skipAc = false;
-    let result: EntityInterface | EntityInterface[] | string | string[] | null;
-    try {
-      if (action === 'entity') {
-        result = await Nymph.getEntity(data[0], ...data.slice(1));
-      } else {
-        result = await Nymph.getEntities(...data);
-      }
-    } catch (e) {
-      httpError(response, 500, 'Internal Server Error', e);
-      return;
-    }
-    if (result === [] || result == null) {
-      if (action === 'entity' || Nymph.config.emptyListError) {
-        httpError(response, 404, 'Not Found');
+    if (['entity', 'entities'].indexOf(action) !== -1) {
+      if (!Array.isArray(data)) {
+        httpError(response, 400, 'Bad Request');
         return;
       }
+      const count = data.length;
+      if (count < 1 || typeof data[0] !== 'object') {
+        httpError(response, 400, 'Bad Request');
+        return;
+      }
+      if (!('class' in data[0])) {
+        httpError(response, 400, 'Bad Request');
+        return;
+      }
+      let EntityClass;
+      try {
+        EntityClass = Nymph.getEntityClass(data[0].class);
+      } catch (e) {
+        httpError(response, 400, 'Bad Request', e);
+        return;
+      }
+      data[0].class = EntityClass;
+      data[0].source = 'client';
+      data[0].skipAc = false;
+      let result:
+        | EntityInterface
+        | EntityInterface[]
+        | string
+        | string[]
+        | null;
+      try {
+        if (action === 'entity') {
+          result = await Nymph.getEntity(data[0], ...data.slice(1));
+        } else {
+          result = await Nymph.getEntities(...data);
+        }
+      } catch (e) {
+        httpError(response, 500, 'Internal Server Error', e);
+        return;
+      }
+      if (result === [] || result == null) {
+        if (action === 'entity' || Nymph.config.emptyListError) {
+          httpError(response, 404, 'Not Found');
+          return;
+        }
+      }
+      response.setHeader('Content-Type', 'application/json');
+      response.send(JSON.stringify(result));
+    } else {
+      let result: number | null;
+      try {
+        result = await Nymph.getUID(`${data}`);
+      } catch ($e) {
+        httpError(response, 500, 'Internal Server Error', $e);
+        return;
+      }
+      if (result === null) {
+        httpError(response, 404, 'Not Found');
+        return;
+      } else if (typeof result !== 'number') {
+        httpError(response, 500, 'Internal Server Error');
+        return;
+      }
+      response.setHeader('Content-Type', 'text/plain');
+      response.send(`${result}`);
     }
-    response.setHeader('Content-Type', 'application/json');
-    response.send(JSON.stringify(result));
-  } else {
-    let result: number | null;
-    try {
-      result = await Nymph.getUID(`${data}`);
-    } catch ($e) {
-      httpError(response, 500, 'Internal Server Error', $e);
-      return;
-    }
-    if (result === null) {
-      httpError(response, 404, 'Not Found');
-      return;
-    } else if (typeof result !== 'number') {
-      httpError(response, 500, 'Internal Server Error');
-      return;
-    }
-    response.setHeader('Content-Type', 'text/plain');
-    response.send(`${result}`);
+  } catch (e) {
+    httpError(response, 500, 'Internal Server Error', e);
+    return;
   }
 });
 
 rest.post('/', async (request, response) => {
-  authenticateTilmeld(request, response);
-  const { action, data: dataConst } = getActionData(request);
-  let data = dataConst;
-  if (['entity', 'entities', 'uid', 'method'].indexOf(action) === -1) {
-    httpError(response, 400, 'Bad Request');
-    return;
-  }
-  if (['entity', 'entities'].indexOf(action) !== -1) {
-    if (action === 'entity') {
-      data = [data];
+  try {
+    const { action, data: dataConst } = getActionData(request);
+    let data = dataConst;
+    if (['entity', 'entities', 'uid', 'method'].indexOf(action) === -1) {
+      httpError(response, 400, 'Bad Request');
+      return;
     }
-    const created = [];
-    let hadSuccess = false;
-    let invalidRequest = false;
-    let conflict = false;
-    let lastException = null;
-    for (let entData of data) {
-      if (entData.guid) {
-        invalidRequest = true;
-        created.push(null);
-        continue;
+    if (['entity', 'entities'].indexOf(action) !== -1) {
+      if (action === 'entity') {
+        data = [data];
       }
-      let entity: EntityInterface;
-      try {
-        entity = await loadEntity(entData);
-      } catch (e) {
-        if (e instanceof EntityConflictError) {
-          conflict = true;
-        }
-        if (e instanceof InvalidParametersError) {
+      const created = [];
+      let hadSuccess = false;
+      let invalidRequest = false;
+      let conflict = false;
+      let lastException = null;
+      for (let entData of data) {
+        if (entData.guid) {
           invalidRequest = true;
-          lastException = e;
+          created.push(null);
+          continue;
         }
-        created.push(null);
-        continue;
-      }
-      if (!entity) {
-        invalidRequest = true;
-        created.push(null);
-        continue;
-      }
-      try {
-        if (await entity.$save()) {
-          created.push(entity);
-          hadSuccess = true;
-        } else {
-          created.push(false);
+        let entity: EntityInterface;
+        try {
+          entity = await loadEntity(entData);
+        } catch (e) {
+          if (e instanceof EntityConflictError) {
+            conflict = true;
+          }
+          if (e instanceof InvalidParametersError) {
+            invalidRequest = true;
+            lastException = e;
+          }
+          created.push(null);
+          continue;
         }
-      } catch (e) {
-        if (e instanceof EntityInvalidDataError) {
+        if (!entity) {
           invalidRequest = true;
-        } else {
-          lastException = e;
+          created.push(null);
+          continue;
         }
-        created.push(null);
-      }
-    }
-    if (!hadSuccess) {
-      if (invalidRequest) {
-        httpError(response, 400, 'Bad Request', lastException);
-        return;
-      } else if (conflict) {
-        httpError(response, 409, 'Conflict');
-        return;
-      } else {
-        httpError(response, 500, 'Internal Server Error', lastException);
-        return;
-      }
-    }
-    response.status(201);
-    response.setHeader('Content-Type', 'application/json');
-    if (action === 'entity') {
-      response.send(JSON.stringify(created[0]));
-    } else {
-      response.send(created);
-    }
-  } else if (action === 'method') {
-    data.params = referencesToEntities(data.params);
-    if (data.static) {
-      let EntityClass: EntityConstructor;
-      try {
-        EntityClass = Nymph.getEntityClass(data.class);
-      } catch (e) {
-        httpError(response, 400, 'Bad Request');
-        return;
-      }
-      if (EntityClass.clientEnabledStaticMethods.indexOf(data.method) === -1) {
-        httpError(response, 403, 'Forbidden');
-        return;
-      }
-      if (!(data.method in EntityClass)) {
-        httpError(response, 400, 'Bad Request');
-        return;
-      }
-      // @ts-ignore Dynamic methods make TypeScript sad.
-      const method: Function = EntityClass[data.method];
-      if (typeof method !== 'function') {
-        httpError(response, 400, 'Bad Request');
-        return;
-      }
-      try {
-        const result = method.call(EntityClass, ...data.params);
-        let ret = result;
-        if (result instanceof Promise) {
-          ret = await result;
+        try {
+          if (await entity.$save()) {
+            created.push(entity);
+            hadSuccess = true;
+          } else {
+            created.push(false);
+          }
+        } catch (e) {
+          if (e instanceof EntityInvalidDataError) {
+            invalidRequest = true;
+          } else {
+            lastException = e;
+          }
+          created.push(null);
         }
-        response.status(200);
-        response.setHeader('Content-Type', 'application/json');
-        response.send({ return: ret });
-      } catch (e) {
-        httpError(response, 500, 'Internal Server Error', e);
-        return;
       }
-    } else {
-      let entity: EntityInterface;
-      try {
-        entity = await loadEntity(data.entity);
-      } catch (e) {
-        if (e instanceof EntityConflictError) {
+      if (!hadSuccess) {
+        if (invalidRequest) {
+          httpError(response, 400, 'Bad Request', lastException);
+          return;
+        } else if (conflict) {
           httpError(response, 409, 'Conflict');
-        } else if (e instanceof InvalidParametersError) {
-          httpError(response, 400, 'Bad Request', e);
+          return;
         } else {
-          httpError(response, 500, 'Internal Server Error');
+          httpError(response, 500, 'Internal Server Error', lastException);
+          return;
         }
-        return;
       }
-      if (data.entity.guid && !entity.guid) {
+      response.status(201);
+      response.setHeader('Content-Type', 'application/json');
+      if (action === 'entity') {
+        response.send(JSON.stringify(created[0]));
+      } else {
+        response.send(created);
+      }
+    } else if (action === 'method') {
+      if (!Array.isArray(data.params)) {
         httpError(response, 400, 'Bad Request');
         return;
       }
-      if (entity.$getClientEnabledMethods().indexOf(data.method) === -1) {
-        httpError(response, 403, 'Forbidden');
-        return;
-      }
-      if (
-        !(data.method in entity) ||
-        typeof entity[data.method] !== 'function'
-      ) {
-        httpError(response, 400, 'Bad Request');
-        return;
-      }
-      try {
-        const result = entity[data.method](...data.params);
-        let ret = result;
-        if (result instanceof Promise) {
-          ret = await result;
+      const params = referencesToEntities([...data.params]);
+      if (data.static) {
+        let EntityClass: EntityConstructor;
+        try {
+          EntityClass = Nymph.getEntityClass(data.class);
+        } catch (e) {
+          httpError(response, 400, 'Bad Request');
+          return;
         }
-        response.status(200);
-        response.setHeader('Content-Type', 'application/json');
-        if (data.stateless) {
+        if (
+          EntityClass.clientEnabledStaticMethods.indexOf(data.method) === -1
+        ) {
+          httpError(response, 403, 'Forbidden');
+          return;
+        }
+        if (!(data.method in EntityClass)) {
+          httpError(response, 400, 'Bad Request');
+          return;
+        }
+        // @ts-ignore Dynamic methods make TypeScript sad.
+        const method: Function = EntityClass[data.method];
+        if (typeof method !== 'function') {
+          httpError(response, 400, 'Bad Request');
+          return;
+        }
+        try {
+          const result = method.call(EntityClass, ...params);
+          let ret = result;
+          if (result instanceof Promise) {
+            ret = await result;
+          }
+          response.status(200);
+          response.setHeader('Content-Type', 'application/json');
           response.send({ return: ret });
-        } else {
-          response.send({ entity: entity, return: ret });
+        } catch (e) {
+          httpError(response, 500, 'Internal Server Error', e);
+          return;
         }
+      } else {
+        let entity: EntityInterface;
+        try {
+          entity = await loadEntity(data.entity);
+        } catch (e) {
+          if (e instanceof EntityConflictError) {
+            httpError(response, 409, 'Conflict');
+          } else if (e instanceof InvalidParametersError) {
+            httpError(response, 400, 'Bad Request', e);
+          } else {
+            httpError(response, 500, 'Internal Server Error');
+          }
+          return;
+        }
+        if (data.entity.guid && !entity.guid) {
+          httpError(response, 400, 'Bad Request');
+          return;
+        }
+        if (entity.$getClientEnabledMethods().indexOf(data.method) === -1) {
+          httpError(response, 403, 'Forbidden');
+          return;
+        }
+        if (
+          !(data.method in entity) ||
+          typeof entity[data.method] !== 'function'
+        ) {
+          httpError(response, 400, 'Bad Request');
+          return;
+        }
+        try {
+          const result = entity[data.method](...params);
+          let ret = result;
+          if (result instanceof Promise) {
+            ret = await result;
+          }
+          response.status(200);
+          response.setHeader('Content-Type', 'application/json');
+          if (data.stateless) {
+            response.send({ return: ret });
+          } else {
+            response.send({ entity: entity, return: ret });
+          }
+        } catch (e) {
+          httpError(response, 500, 'Internal Server Error', e);
+          return;
+        }
+      }
+    } else {
+      let result: number | null;
+      try {
+        result = await Nymph.newUID(`${data}`);
       } catch (e) {
         httpError(response, 500, 'Internal Server Error', e);
         return;
       }
+      if (typeof result !== 'number') {
+        httpError(response, 500, 'Internal Server Error');
+        return;
+      }
+      response.status(201);
+      response.setHeader('Content-Type', 'text/plain');
+      response.send(`${result}`);
     }
-  } else {
-    let result: number | null;
-    try {
-      result = await Nymph.newUID(`${data}`);
-    } catch (e) {
-      httpError(response, 500, 'Internal Server Error', e);
-      return;
-    }
-    if (typeof result !== 'number') {
-      httpError(response, 500, 'Internal Server Error');
-      return;
-    }
-    response.status(201);
-    response.setHeader('Content-Type', 'text/plain');
-    response.send(`${result}`);
+  } catch (e) {
+    httpError(response, 500, 'Internal Server Error', e);
+    return;
   }
 });
 
 rest.put('/', async (request, response) => {
-  authenticateTilmeld(request, response);
-  const { action, data } = getActionData(request);
-  if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
-    httpError(response, 400, 'Bad Request');
+  try {
+    const { action, data } = getActionData(request);
+    if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
+      httpError(response, 400, 'Bad Request');
+      return;
+    }
+    await doPutOrPatch(response, action, data, false);
+  } catch (e) {
+    httpError(response, 500, 'Internal Server Error', e);
     return;
   }
-  await doPutOrPatch(response, action, data, false);
 });
 
 rest.patch('/', async (request, response) => {
-  authenticateTilmeld(request, response);
-  const { action, data } = getActionData(request);
-  if (['entity', 'entities'].indexOf(action) === -1) {
-    httpError(response, 400, 'Bad Request');
+  try {
+    const { action, data } = getActionData(request);
+    if (['entity', 'entities'].indexOf(action) === -1) {
+      httpError(response, 400, 'Bad Request');
+      return;
+    }
+    await doPutOrPatch(response, action, data, true);
+  } catch (e) {
+    httpError(response, 500, 'Internal Server Error', e);
     return;
   }
-  await doPutOrPatch(response, action, data, true);
 });
 
 async function doPutOrPatch(
@@ -395,17 +453,14 @@ async function doPutOrPatch(
     if (!hadSuccess) {
       if (invalidRequest) {
         httpError(response, 400, 'Bad Request', lastException);
-        return;
       } else if (conflict) {
         httpError(response, 409, 'Conflict');
-        return;
       } else if (notfound) {
         httpError(response, 404, 'Not Found');
-        return;
       } else {
         httpError(response, 500, 'Internal Server Error', lastException);
-        return;
       }
+      return;
     }
     response.status(200);
     response.setHeader('Content-Type', 'application/json');
@@ -418,72 +473,79 @@ async function doPutOrPatch(
 }
 
 rest.delete('/', async (request, response) => {
-  authenticateTilmeld(request, response);
-  const { action, data: dataConst } = getActionData(request);
-  let data = dataConst;
-  if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
-    httpError(response, 400, 'Bad Request');
-    return;
-  }
-  if (['entity', 'entities'].indexOf(action) !== -1) {
-    if (action === 'entity') {
-      data = [data];
-    }
-    const deleted = [];
-    let failures = false;
-    let invalidRequest = false;
-    for (let delEnt of data) {
-      try {
-        const guid = delEnt.guid;
-        if (!delEnt.guid) {
-          invalidRequest = true;
-          continue;
-        }
-        if (await Nymph.deleteEntityByID(guid, delEnt.class)) {
-          deleted.push(guid);
-        } else {
-          failures = true;
-        }
-      } catch (e) {
-        failures = true;
-      }
-    }
-    if (deleted.length === 0) {
-      if (invalidRequest || !failures) {
-        httpError(response, 400, 'Bad Request');
-      } else {
-        httpError(response, 500, 'Internal Server Error');
-      }
-      return;
-    }
-    response.status(200);
-    response.setHeader('Content-Type', 'application/json');
-    if (action === 'entity') {
-      response.send(JSON.stringify(deleted[0]));
-    } else {
-      response.send(deleted);
-    }
-  } else {
-    if (typeof data !== 'string') {
+  try {
+    const { action, data: dataConst } = getActionData(request);
+    let data = dataConst;
+    if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
       httpError(response, 400, 'Bad Request');
       return;
     }
-    let result: boolean;
-    try {
-      result = await Nymph.deleteUID(data);
-    } catch ($e) {
-      httpError(response, 500, 'Internal Server Error', $e);
-      return;
+    if (['entity', 'entities'].indexOf(action) !== -1) {
+      if (action === 'entity') {
+        data = [data];
+      }
+      const deleted = [];
+      let failures = false;
+      let invalidRequest = false;
+      for (let delEnt of data) {
+        try {
+          const guid = delEnt.guid;
+          if (!delEnt.guid) {
+            invalidRequest = true;
+            continue;
+          }
+          if (await Nymph.deleteEntityByID(guid, delEnt.class)) {
+            deleted.push(guid);
+          } else {
+            failures = true;
+          }
+        } catch (e) {
+          failures = true;
+        }
+      }
+      if (deleted.length === 0) {
+        if (invalidRequest || !failures) {
+          httpError(response, 400, 'Bad Request');
+        } else {
+          httpError(response, 500, 'Internal Server Error');
+        }
+        return;
+      }
+      response.status(200);
+      response.setHeader('Content-Type', 'application/json');
+      if (action === 'entity') {
+        response.send(JSON.stringify(deleted[0]));
+      } else {
+        response.send(deleted);
+      }
+    } else {
+      if (typeof data !== 'string') {
+        httpError(response, 400, 'Bad Request');
+        return;
+      }
+      let result: boolean;
+      try {
+        result = await Nymph.deleteUID(data);
+      } catch ($e) {
+        httpError(response, 500, 'Internal Server Error', $e);
+        return;
+      }
+      if (!result) {
+        httpError(response, 500, 'Internal Server Error');
+        return;
+      }
+      response.status(200);
+      response.setHeader('Content-Type', 'application/json');
+      response.send(JSON.stringify(result));
     }
-    if (!result) {
-      httpError(response, 500, 'Internal Server Error');
-      return;
-    }
-    response.status(200);
-    response.setHeader('Content-Type', 'application/json');
-    response.send(JSON.stringify(result));
+  } catch (e) {
+    httpError(response, 500, 'Internal Server Error', e);
+    return;
   }
 });
+
+// Unauthenticate after the request.
+rest.use(unauthenticateTilmeld);
 
 async function loadEntity(
   entityData: EntityJson | EntityPatch,
@@ -496,12 +558,7 @@ async function loadEntity(
       "Can't use Entity class directly from the front end."
     );
   }
-  let EntityClass: EntityConstructor;
-  try {
-    EntityClass = Nymph.getEntityClass(entityData.class);
-  } catch (e) {
-    throw e;
-  }
+  let EntityClass = Nymph.getEntityClass(entityData.class);
   let entity: EntityInterface | null;
   if (entityData.guid) {
     entity = await Nymph.getEntity(
@@ -542,14 +599,15 @@ function referencesToEntities(item: any): any {
       } catch (e) {
         return item;
       }
-    } else {
-      return item.map((entry) => referencesToEntities(entry));
     }
+    return item.map((entry) => referencesToEntities(entry));
   } else if (typeof item === 'object' && !(item instanceof Entity)) {
     // Only do this for non-entity objects.
+    const newItem: { [k: string]: any } = {};
     for (let curProperty in item) {
-      item[curProperty] = referencesToEntities(item[curProperty]);
+      newItem[curProperty] = referencesToEntities(item[curProperty]);
     }
+    return newItem;
   }
   return item;
 }
@@ -567,11 +625,10 @@ function httpError(
   message: string,
   error?: Error
 ) {
-  if (res.headersSent) {
-    return;
+  if (!res.headersSent) {
+    res.status(errorCode);
+    res.setHeader('Content-Type', 'application/json');
   }
-  res.status(errorCode);
-  res.setHeader('Content-Type', 'application/json');
   if (error) {
     res.send({
       textStatus: `${errorCode} ${message}`,

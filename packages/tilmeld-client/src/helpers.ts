@@ -72,7 +72,12 @@ export async function login(username: string, password: string) {
   }
 }
 
-export async function register(userDetails: RegistrationDetails) {
+export async function register(userDetails: RegistrationDetails): Promise<{
+  result: boolean;
+  loggedin: boolean;
+  message: string;
+  user?: User & CurrentUserData;
+}> {
   if (userDetails.username === '') {
     throw new Error('You need to enter a username.');
   }
@@ -110,7 +115,7 @@ export async function register(userDetails: RegistrationDetails) {
     if (!response.result) {
       throw new Error(response.message);
     }
-    return response;
+    return { ...response, user };
   } catch (e) {
     throw new Error(e.message || 'An error occurred.');
   }
@@ -130,7 +135,7 @@ export async function checkUsername(username: string) {
 
     return {
       result: response.result,
-      message: response.result ? '' : response.message,
+      message: response.message,
     };
   } catch (e) {
     return {

@@ -192,7 +192,7 @@ export default class Group extends AbleObject<GroupData> {
       if (highestParent !== true) {
         assignableGroups = assignableGroups.filter((group) => {
           let curGroup = group;
-          while (curGroup.parent != null && curGroup.parent.guid != null) {
+          while (curGroup.parent != null && curGroup.parent.cdate != null) {
             if (curGroup.parent.guid === highestParent) {
               return true;
             }
@@ -288,7 +288,10 @@ export default class Group extends AbleObject<GroupData> {
       this.$privateData.push('groupname');
     }
 
-    if (user != null && user.$gatekeeper('tilmeld/admin')) {
+    if (
+      user != null &&
+      (user.abilities?.indexOf('tilmeld/admin') ?? -1) !== -1
+    ) {
       // Users who can edit groups can see their data.
       this.$privateData = [];
       this.$allowlistData = undefined;
@@ -499,7 +502,7 @@ export default class Group extends AbleObject<GroupData> {
         difference(
           this.$data.groupname.split(''),
           Tilmeld.config.validChars.split('')
-        )
+        ).length
       ) {
         return {
           result: false,
@@ -524,7 +527,7 @@ export default class Group extends AbleObject<GroupData> {
         selector['!guid'] = this.guid;
       }
       const test = await Nymph.getEntity(
-        { class: User, skipAc: true },
+        { class: Group, skipAc: true },
         selector
       );
       if (test != null) {
@@ -570,10 +573,10 @@ export default class Group extends AbleObject<GroupData> {
     if (this.$data.email == null) {
       return { result: false, message: 'Please specify a valid email.' };
     }
-    if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(this.$data.email)) {
+    if (!Tilmeld.config.validEmailRegex.test(this.$data.email)) {
       return {
         result: false,
-        message: 'Email must be a correctly formatted address.',
+        message: Tilmeld.config.validEmailRegexNotice,
       };
     }
     const selector: Selector = {
@@ -583,7 +586,10 @@ export default class Group extends AbleObject<GroupData> {
     if (this.guid != null) {
       selector['!guid'] = this.guid;
     }
-    const test = await Nymph.getEntity({ class: User, skipAc: true }, selector);
+    const test = await Nymph.getEntity(
+      { class: Group, skipAc: true },
+      selector
+    );
     if (test != null) {
       return {
         result: false,
@@ -605,12 +611,20 @@ export default class Group extends AbleObject<GroupData> {
 
     // Formatting.
     this.$data.groupname = this.$data.groupname.trim();
-    if (!Tilmeld.config.emailUsernames) {
+    if (Tilmeld.config.emailUsernames) {
       this.$data.email = this.$data.groupname;
     }
     this.$data.email = (this.$data.email ?? '').trim();
     this.$data.name = (this.$data.name ?? '').trim();
     this.$data.phone = (this.$data.phone ?? '').trim();
+
+    // Groups should never have 'system/admin' or 'tilmeld/admin' abilities.
+    this.$data.abilities = difference(this.$data.abilities ?? [], [
+      'system/admin',
+      'tilmeld/admin',
+      null,
+      undefined,
+    ]) as string[];
 
     // Verification.
     const unCheck = await this.$checkGroupname();
@@ -627,7 +641,7 @@ export default class Group extends AbleObject<GroupData> {
     // Validate group parent. Make sure it's not a descendant of this group.
     if (
       this.$data.parent &&
-      (this.$data.parent.guid == null ||
+      (this.$data.parent.cdate == null ||
         this.$is(this.$data.parent) ||
         this.$data.parent.$isDescendant(this))
     ) {
@@ -683,19 +697,15 @@ export default class Group extends AbleObject<GroupData> {
       throw new BadDataError("You don't have the authority to delete groups.");
     }
 
-    const transaction = await Nymph.inTransaction();
-    if (transaction) {
-      await Nymph.startTransaction();
-    }
+    const transaction = 'tilmeld-delete-' + this.guid;
+    await Nymph.startTransaction(transaction);
 
     // Delete descendants.
     const descendants = await this.$getDescendants();
     if (descendants.length) {
       for (let curGroup of descendants) {
         if (!(await curGroup.$delete())) {
-          if (transaction) {
-            await Nymph.rollback();
-          }
+          await Nymph.rollback(transaction);
           return false;
         }
       }
@@ -715,9 +725,7 @@ export default class Group extends AbleObject<GroupData> {
     for (let user of primaryUsers) {
       delete user.group;
       if (!(await user.$save())) {
-        if (transaction) {
-          await Nymph.rollback();
-        }
+        await Nymph.rollback(transaction);
         return false;
       }
     }
@@ -736,17 +744,17 @@ export default class Group extends AbleObject<GroupData> {
     for (let user of secondaryUsers) {
       user.$delGroup(this);
       if (!(await user.$save())) {
-        if (transaction) {
-          await Nymph.rollback();
-        }
+        await Nymph.rollback(transaction);
         return false;
       }
     }
 
     // Delete the group.
     const success = await super.$delete();
-    if (transaction && success) {
-      Nymph.commit();
+    if (success) {
+      await Nymph.commit(transaction);
+    } else {
+      await Nymph.rollback(transaction);
     }
     return success;
   }

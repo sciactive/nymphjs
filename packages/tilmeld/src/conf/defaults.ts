@@ -1,3 +1,4 @@
+import path from 'path';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import Email, { EmailOptions } from 'email-templates';
@@ -17,7 +18,7 @@ export default {
   allowRegistration: true,
   enableUserSearch: false,
   enableGroupSearch: false,
-  userFields: ['name', 'email', 'phone', 'timezone'],
+  userFields: ['name', 'email', 'phone'],
   regFields: ['name', 'email'],
   verifyEmail: true,
   verifyRedirect: 'http://localhost:8080/',
@@ -36,6 +37,9 @@ export default {
   validRegex: /^[a-zA-Z0-9].*[a-zA-Z0-9]$/,
   validRegexNotice:
     'Usernames and groupnames must begin and end with a letter or number.',
+  validEmailRegex:
+    /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
+  validEmailRegexNotice: 'Email must be a correctly formatted address.',
   maxUsernameLength: 128,
   jwtSecret: '',
   jwtExpire: 60 * 60 * 24 * 7 * 8, // 8 weeks(ish)
@@ -94,6 +98,7 @@ export default {
       return null;
     }
   },
+  emailTemplateDir: path.join(__dirname, '..', '..', 'emails'),
   sendEmail: async (options: EmailOptions, user: User & UserData) => {
     const appUrl = new URL(Tilmeld.config.appUrl);
     const email = new Email({
@@ -104,33 +109,41 @@ export default {
         },
       },
     });
-    const result = await email.send({
-      ...options,
-      locals: {
-        // System
-        siteName: Tilmeld.config.appName,
-        siteLink: Tilmeld.config.appUrl,
-        // Recipient
-        toUsername: user.username ?? '',
-        toName: user.name ?? '',
-        toFirstName: user.nameFirst ?? '',
-        toLastName: user.nameLast ?? '',
-        toEmail: user.email ?? '',
-        toPhone: user.phone ?? '',
-        // Current User with Tilmeld.
-        ...(User.current()
-          ? {
-              username: User.current(true).username,
-              name: User.current(true).name,
-              firstName: User.current(true).nameFirst,
-              lastName: User.current(true).nameLast,
-              email: User.current(true).email,
-            }
-          : {}),
-        ...options.locals,
-      },
-    });
-    return !!result;
+    try {
+      const result = await email.send({
+        ...options,
+        template: path.join(
+          Tilmeld.config.emailTemplateDir,
+          options.template ?? '.'
+        ),
+        locals: {
+          // System
+          siteName: Tilmeld.config.appName,
+          siteLink: Tilmeld.config.appUrl,
+          // Recipient
+          toUsername: user.username ?? '',
+          toName: user.name ?? '',
+          toFirstName: user.nameFirst ?? '',
+          toLastName: user.nameLast ?? '',
+          toEmail: user.email ?? '',
+          toPhone: user.phone ?? '',
+          // Current User with Tilmeld.
+          ...(User.current()
+            ? {
+                username: User.current(true).username,
+                name: User.current(true).name,
+                firstName: User.current(true).nameFirst,
+                lastName: User.current(true).nameLast,
+                email: User.current(true).email,
+              }
+            : {}),
+          ...options.locals,
+        },
+      });
+      return !!result;
+    } catch (e) {
+      return false;
+    }
   },
   userRegisteredRecipient: null,
   validatorGroup: (group) => {

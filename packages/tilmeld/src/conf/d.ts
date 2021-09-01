@@ -148,6 +148,18 @@ export interface Config {
    */
   validRegexNotice: string;
   /**
+   * Email addresses must match this regular expression. By default, this uses
+   * the regex from the W3C HTML email element validation:
+   *
+   * https://html.spec.whatwg.org/multipage/input.html#email-state-(type=email)
+   */
+  validEmailRegex: RegExp;
+  /**
+   * When a user enters an email that doesn't match the regex, this message will
+   * be displayed.
+   */
+  validEmailRegexNotice: string;
+  /**
    * The maximum length for usernames. Infinity for unlimited.
    */
   maxUsernameLength: number;
@@ -181,6 +193,36 @@ export interface Config {
     token: string,
     xsrfToken?: string
   ) => { guid: string; expire: Date } | null;
+  /**
+   * The absolute path to the email template directory. Used by the default
+   * email sender.
+   */
+  emailTemplateDir: string;
+  /**
+   * Send an email to a user. Uses `email-templates` by default.
+   *
+   * Check out the `emails` directory to see the templates used.
+   *
+   * In addition to the specific `locals` for each template, there are
+   * additional locals added by the default email sender:
+   *
+   * - System Information
+   *  - siteName
+   *  - siteLink
+   * - Recipient Information
+   *  - toUsername
+   *  - toName
+   *  - toFirstName
+   *  - toLastName
+   *  - toEmail
+   *  - toPhone
+   * - Current User Information (Only available if a user is logged in.)
+   *  - username
+   *  - name
+   *  - firstName
+   *  - lastName
+   *  - email
+   */
   sendEmail: (config: EmailOptions, user: User & UserData) => Promise<boolean>;
   /**
    * The address you'd like to receive a notification of registered users, if

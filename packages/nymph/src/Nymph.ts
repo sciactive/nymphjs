@@ -491,7 +491,7 @@ export default class Nymph {
   ): Promise<ReturnType<T['factorySync']>[] | string[]> {
     for (let callback of this.beforeGetEntitiesCallbacks) {
       if (callback) {
-        callback(options, ...selectors);
+        callback(options, selectors);
       }
     }
     return await this.driver.getEntities(options, ...selectors);
@@ -547,7 +547,7 @@ export default class Nymph {
     options.limit = 1;
     for (let callback of this.beforeGetEntityCallbacks) {
       if (callback) {
-        callback(options, ...(selectors as Selector[]));
+        callback(options, selectors as Selector[]);
       }
     }
     const entities = await this.driver.getEntities(
