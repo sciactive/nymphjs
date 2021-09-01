@@ -360,6 +360,11 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   public async commit(name: string) {
+    if (name == null || typeof name !== 'string' || name.length === 0) {
+      throw new InvalidParametersError(
+        'Transaction commit attempted without a name.'
+      );
+    }
     if (this.transactionsStarted === 0) {
       return true;
     }
@@ -1630,6 +1635,11 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   public async rollback(name: string) {
+    if (name == null || typeof name !== 'string' || name.length === 0) {
+      throw new InvalidParametersError(
+        'Transaction rollback attempted without a name.'
+      );
+    }
     if (this.transactionsStarted === 0) {
       return true;
     }
@@ -1831,6 +1841,11 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   public async startTransaction(name: string) {
+    if (name == null || typeof name !== 'string' || name.length === 0) {
+      throw new InvalidParametersError(
+        'Transaction start attempted without a name.'
+      );
+    }
     this.queryRun(`SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.transactionsStarted++;
     return true;

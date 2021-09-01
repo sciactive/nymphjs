@@ -532,6 +532,11 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async commit(name: string) {
+    if (name == null || typeof name !== 'string' || name.length === 0) {
+      throw new InvalidParametersError(
+        'Transaction commit attempted without a name.'
+      );
+    }
     if (this.config.transactions) {
       if (this.transactionsStarted === 0) {
         return true;
@@ -1924,6 +1929,11 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async rollback(name: string) {
+    if (name == null || typeof name !== 'string' || name.length === 0) {
+      throw new InvalidParametersError(
+        'Transaction rollback attempted without a name.'
+      );
+    }
     if (this.config.transactions) {
       if (this.transactionsStarted === 0) {
         return true;
@@ -2221,6 +2231,11 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async startTransaction(name: string) {
+    if (name == null || typeof name !== 'string' || name.length === 0) {
+      throw new InvalidParametersError(
+        'Transaction start attempted without a name.'
+      );
+    }
     if (this.config.transactions) {
       // Lock to one connection.
       if (this.transactionsStarted === 0) {
