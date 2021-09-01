@@ -36,8 +36,8 @@ export function referencesToEntities(item: any, useSkipAc = false): any {
     // Check if it's a reference.
     if (item[0] === 'nymph_entity_reference') {
       try {
-        const Entity = Nymph.getEntityClass(item[2]);
-        return Entity.factoryReference(item as EntityReference);
+        const EntityClass = Nymph.getEntityClass(item[2]);
+        return EntityClass.factoryReference(item as EntityReference);
       } catch (e) {
         return item;
       }

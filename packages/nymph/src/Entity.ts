@@ -264,8 +264,6 @@ export default class Entity<T extends EntityData = EntityData>
 
     return new Proxy(this, {
       has: (entity: Entity, name: string) => {
-        this.$referenceWake();
-
         if (
           typeof name !== 'string' ||
           name in entity ||
@@ -273,19 +271,24 @@ export default class Entity<T extends EntityData = EntityData>
         ) {
           return name in entity;
         }
+
+        this.$referenceWake();
         return name in entity.$data;
       },
 
       get: (entity: Entity, name: string) => {
-        this.$referenceWake();
-
         if (
           typeof name !== 'string' ||
           name in entity ||
           name.substring(0, 1) === '$'
         ) {
+          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+            this.$referenceWake();
+          }
           return (entity as any)[name];
         }
+
+        this.$referenceWake();
         if (name in entity.$data) {
           return entity.$data[name];
         }
@@ -293,26 +296,27 @@ export default class Entity<T extends EntityData = EntityData>
       },
 
       set: (entity: Entity, name: string, value: any) => {
-        this.$referenceWake();
-
         if (
           typeof name !== 'string' ||
           name in entity ||
           name.substring(0, 1) === '$'
         ) {
+          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+            this.$referenceWake();
+          }
           (entity as any)[name] = value;
         } else {
+          this.$referenceWake();
           (entity.$data as any)[name] = value;
         }
         return true;
       },
 
       deleteProperty: (entity: Entity, name: string) => {
-        this.$referenceWake();
-
         if (name in entity) {
           return delete (entity as any)[name];
         } else if (name in entity.$data) {
+          this.$referenceWake();
           return delete entity.$data[name];
         }
         return true;
@@ -512,14 +516,16 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $is(object: any) {
-    this.$referenceWake();
-
     if (!(object instanceof Entity)) {
       return false;
     }
+
     if (this.guid || object.guid) {
       return this.guid === object.guid;
-    } else if (typeof object.$getData !== 'function') {
+    }
+
+    this.$referenceWake();
+    if (typeof object.$getData !== 'function') {
       return false;
     } else {
       const obData = object.$getData(true);

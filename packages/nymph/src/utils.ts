@@ -34,7 +34,7 @@ export function entitiesToReferences(item: any): any {
 }
 
 export function referencesToEntities(item: any, useSkipAc = false): any {
-  const EntityClass = Nymph.getEntityClass('Entity');
+  const Entity = Nymph.getEntityClass('Entity');
 
   if (Array.isArray(item)) {
     // Check if it's a reference.
@@ -51,11 +51,7 @@ export function referencesToEntities(item: any, useSkipAc = false): any {
       // Recurse into lower arrays.
       return item.map((item) => referencesToEntities(item, useSkipAc));
     }
-  } else if (
-    EntityClass &&
-    item instanceof Object &&
-    !(item instanceof EntityClass)
-  ) {
+  } else if (Entity && item instanceof Object && !(item instanceof Entity)) {
     for (let [key, value] of Object.entries(item)) {
       item[key] = referencesToEntities(value);
     }

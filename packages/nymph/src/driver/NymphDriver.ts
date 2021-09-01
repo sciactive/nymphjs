@@ -40,6 +40,10 @@ export default abstract class NymphDriver {
    * A counter for the entity cache to determine the most accessed entities.
    */
   protected entityCount: { [k: string]: number } = {};
+  /**
+   * Protect against infinite loops.
+   */
+  private putDataCounter = 0;
 
   abstract connect(): Promise<boolean>;
   abstract isConnected(): boolean;
@@ -54,7 +58,9 @@ export default abstract class NymphDriver {
   abstract deleteEntityByID(guid: string, className?: string): Promise<boolean>;
   abstract deleteUID(name: string): Promise<boolean>;
   abstract disconnect(): Promise<boolean>;
-  protected abstract exportEntities(writeLine: (line: string) => void): void;
+  protected abstract exportEntities(
+    writeLine: (line: string) => void
+  ): Promise<void>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -744,18 +750,10 @@ export default abstract class NymphDriver {
     if (!this.isConnected()) {
       throw new UnableToConnectError('not connected to DB');
     }
-    for (const key in selectors) {
-      const selector = selectors[key];
+    for (const selector of selectors) {
       if (
         !selector ||
-        (Object.keys(selector).length === 1 &&
-          'type' in selector &&
-          ['&', '!&', '|', '!|'].indexOf(selector.type) !== -1)
-      ) {
-        delete selectors[key];
-        continue;
-      }
-      if (
+        Object.keys(selector).length === 1 ||
         !('type' in selector) ||
         ['&', '!&', '|', '!|'].indexOf(selector.type) === -1
       ) {
@@ -852,7 +850,12 @@ export default abstract class NymphDriver {
             entity.cdate = cdate;
             entity.mdate = mdate;
             entity.tags = tags;
+            this.putDataCounter++;
+            if (this.putDataCounter == 100) {
+              throw new Error('Infinite loop detected in Entity loading.');
+            }
             entity.$putData(data, sdata);
+            this.putDataCounter--;
             if (Nymph.config.cache) {
               this.pushCache(guid, cdate, mdate, tags, data, sdata);
             }
