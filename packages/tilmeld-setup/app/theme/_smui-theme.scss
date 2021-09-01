@@ -1,0 +1,176 @@
+@use 'sass:color';
+
+@use '@material/theme/color-palette';
+
+@use '@material/theme/index' as theme with (
+  $primary: #4260a6,
+  $secondary: #f8d153,
+  $surface: #fff,
+  $background: #fff,
+  $error: color-palette.$red-900,
+);
+
+// Typography mixins.
+@use './helpers';
+@use '@material/typography/index' as typography with (
+  $styles-headline1: (
+    font-size: helpers.px-to-rem(60px),
+    line-height: helpers.px-to-rem(60px),
+  ),
+  $styles-headline2: (
+    font-size: helpers.px-to-rem(48px),
+    line-height: helpers.px-to-rem(50px),
+  ),
+  $styles-headline3: (
+    font-size: helpers.px-to-rem(34px),
+    line-height: helpers.px-to-rem(40px),
+  ),
+  $styles-headline4: (
+    font-size: helpers.px-to-rem(24px),
+    line-height: helpers.px-to-rem(32px),
+  ),
+  $styles-headline5: (
+    font-size: helpers.px-to-rem(20px),
+    line-height: helpers.px-to-rem(32px),
+  ),
+  $styles-headline6: (
+    font-size: helpers.px-to-rem(16px),
+    line-height: helpers.px-to-rem(28px),
+  )
+);
+
+// Import all the styles for the classes.
+@use '@material/typography/mdc-typography';
+
+// Main Top App Bar styling.
+@use '@material/top-app-bar/index' as top-app-bar;
+.mdc-top-app-bar.tilmeld-top-app-bar {
+  // Position it above the drawer.
+  z-index: 7;
+}
+
+html,
+body {
+  background-color: theme.$surface;
+  color: theme.$on-surface;
+}
+
+a {
+  color: #4260a6;
+}
+a:visited {
+  color: color.scale(#4260a6, $lightness: -35%);
+}
+
+html {
+  height: 100vh;
+  width: 100vw;
+  position: fixed;
+}
+
+body,
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.drawer-container {
+  flex-grow: 1;
+  height: 0;
+  display: flex;
+}
+
+.tilmeld-drawer,
+.tilmeld-main-content {
+  overflow: auto;
+  height: 100%;
+}
+
+.tilmeld-drawer.tilmeld-drawer-adjust {
+  padding-bottom: top-app-bar.$row-height;
+}
+
+.tilmeld-app-content {
+  flex: auto;
+  position: relative;
+  width: 0;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tilmeld-main-content {
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.tilmeld-main-content > section {
+  padding: 48px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tilmeld-main-content > section:after {
+  height: 32px;
+  display: block;
+  content: ' ';
+}
+
+html {
+  @include typography.typography('body1');
+}
+
+h1 {
+  @include typography.typography('headline1');
+  margin-bottom: 0;
+}
+
+h2 {
+  @include typography.typography('headline2');
+  margin-bottom: 0;
+}
+
+h3 {
+  @include typography.typography('headline3');
+  margin-bottom: 0;
+}
+
+h4 {
+  @include typography.typography('headline4');
+  margin-bottom: 0;
+}
+
+h5 {
+  @include typography.typography('headline5');
+  margin-bottom: 0;
+}
+
+h6 {
+  @include typography.typography('headline6');
+  margin-bottom: 0;
+}
+
+caption {
+  @include typography.typography('caption');
+}
+
+code,
+pre {
+  font-family: 'Roboto Mono', monospace;
+}
+
+small {
+  font-size: 0.9em;
+}
+
+big {
+  font-size: 1.1em;
+}
+
+b,
+strong {
+  font-weight: bold;
+}

@@ -1,0 +1,77 @@
+{
+  "name": "@nymphjs/tilmeld-setup",
+  "version": "1.0.0-alpha.0",
+  "description": "NymphJS - Tilmeld Setup App",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "keywords": [
+    "nymph",
+    "ORM",
+    "object relational mapper"
+  ],
+  "scripts": {
+    "clean": "test -d dist && rm -r dist || true",
+    "build": "npm run build:server && npm run build:app && npm run build:app:theme",
+    "build:server": "tsc",
+    "build:app": "webpack",
+    "build:app:theme": "smui-theme compile dist/app/smui.css -i app/theme",
+    "watch:server": "tsc --watch",
+    "watch:app": "webpack --watch",
+    "prepare": "npm run clean && npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sciactive/nymphjs.git"
+  },
+  "author": "Hunter Perrin <hperrin@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/sciactive/nymphjs/issues"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@nymphjs/nymph": "^1.0.0-alpha.0",
+    "@nymphjs/tilmeld": "^1.0.0-alpha.0",
+    "express": "^4.17.1"
+  },
+  "devDependencies": {
+    "@material/elevation": "^11.0.0",
+    "@material/typography": "^11.0.0",
+    "@mdi/js": "^5.9.55",
+    "@nymphjs/client": "^1.0.0-alpha.0",
+    "@nymphjs/driver-sqlite3": "^1.0.0-alpha.0",
+    "@nymphjs/server": "^1.0.0-alpha.0",
+    "@nymphjs/tilmeld-client": "^1.0.0-alpha.0",
+    "@smui/button": "^4.2.0",
+    "@smui/circular-progress": "^4.2.0",
+    "@smui/common": "^4.2.0",
+    "@smui/dialog": "^4.2.0",
+    "@smui/drawer": "^4.2.0",
+    "@smui/form-field": "^4.2.0",
+    "@smui/icon-button": "^4.2.0",
+    "@smui/list": "^4.2.0",
+    "@smui/menu": "^4.2.0",
+    "@smui/radio": "^4.2.0",
+    "@smui/textfield": "^4.2.0",
+    "@smui/top-app-bar": "^4.2.0",
+    "@tsconfig/recommended": "^1.0.1",
+    "@tsconfig/svelte": "^2.0.1",
+    "@types/express": "^4.17.13",
+    "@types/jest": "^27.0.1",
+    "jest": "^27.0.6",
+    "smui-theme": "^4.2.0",
+    "svelte": "^3.42.4",
+    "svelte-check": "^2.2.5",
+    "svelte-loader": "^3.1.2",
+    "svelte-preprocess": "^4.8.0",
+    "ts-jest": "^27.0.5",
+    "typescript": "^4.3.5",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0"
+  }
+}
