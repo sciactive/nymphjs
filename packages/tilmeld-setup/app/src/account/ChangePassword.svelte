@@ -152,8 +152,8 @@
       } else {
         open = false;
       }
-    } catch (e) {
-      failureMessage = e.message;
+    } catch (e: any) {
+      failureMessage = e?.message;
     }
     changing = false;
   }

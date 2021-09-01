@@ -1,7 +1,7 @@
 {
   "name": "@nymphjs/tilmeld",
   "version": "1.0.0-alpha.0",
-  "description": "NymphJS - Tilmeld User/Group System",
+  "description": "NymphJS - Tilmeld User and Group System",
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

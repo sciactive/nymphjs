@@ -162,7 +162,7 @@ export default abstract class NymphDriver {
         fs.writeSync(fhandle, `${line}\n`);
       });
       fs.closeSync(fhandle);
-    } catch (e) {
+    } catch (e: any) {
       return false;
     }
     return true;
@@ -190,7 +190,7 @@ export default abstract class NymphDriver {
     let rl: ReadLines;
     try {
       rl = new ReadLines(filename);
-    } catch (e) {
+    } catch (e: any) {
       throw new InvalidParametersError('Provided filename is unreadable.');
     }
     let guid: string | null = null;

@@ -38,7 +38,7 @@ export function referencesToEntities(item: any, useSkipAc = false): any {
       try {
         const EntityClass = Nymph.getEntityClass(item[2]);
         return EntityClass.factoryReference(item as EntityReference);
-      } catch (e) {
+      } catch (e: any) {
         return item;
       }
     } else {

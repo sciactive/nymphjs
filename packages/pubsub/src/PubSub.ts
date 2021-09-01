@@ -132,7 +132,7 @@ export default class PubSub {
             );
           }
         );
-      } catch (e) {
+      } catch (e: any) {
         return;
       }
     });
@@ -485,7 +485,7 @@ export default class PubSub {
     try {
       args = JSON.parse(data.query);
       EntityClass = Nymph.getEntityClass(args[0].class);
-    } catch (e) {
+    } catch (e: any) {
       return;
     }
     const etype = EntityClass.ETYPE;
@@ -768,11 +768,11 @@ export default class PubSub {
             }
           }
           current = await Nymph.getEntities(options, ...selectors);
-        } catch (e) {
+        } catch (e: any) {
           this.config.logger(
             'error',
             new Date().toISOString(),
-            `Error updating client! (${e.message}, ${curClient.remoteAddress})`
+            `Error updating client! (${e?.message}, ${curClient.remoteAddress})`
           );
           return;
         }
@@ -908,11 +908,11 @@ export default class PubSub {
               await updateClient(curClient, curData);
             }
           }
-        } catch (e) {
+        } catch (e: any) {
           this.config.logger(
             'error',
             new Date().toISOString(),
-            `Error checking for client updates! (${e.message})`
+            `Error checking for client updates! (${e?.message})`
           );
         }
       }

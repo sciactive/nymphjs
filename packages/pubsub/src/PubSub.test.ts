@@ -45,7 +45,7 @@ describe('Nymph REST Server and Client', () => {
     jane.title = 'Seniorer Person';
     try {
       await jane.$save();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error creating entity: ', e);
       throw e;
     }

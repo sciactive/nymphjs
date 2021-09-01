@@ -76,14 +76,14 @@ export default class SQLite3Driver extends NymphDriver {
           (pattern: string, subject: string) =>
             this.posixRegexMatch(pattern, subject) ? 1 : 0
         );
-      } catch (e) {
+      } catch (e: any) {
         this.connected = false;
         if (filename === ':memory:') {
           throw new NotConfiguredError(
             "It seems the config hasn't been set up correctly."
           );
         } else {
-          throw new UnableToConnectError('Could not connect: ' + e.message);
+          throw new UnableToConnectError('Could not connect: ' + e?.message);
         }
       }
     }
@@ -276,7 +276,7 @@ export default class SQLite3Driver extends NymphDriver {
       }
       this.commit('nymph-tablecreation');
       return true;
-    } catch (e) {
+    } catch (e: any) {
       this.rollback('nymph-tablecreation');
       throw e;
     }
@@ -289,9 +289,9 @@ export default class SQLite3Driver extends NymphDriver {
   ): ReturnType<T> {
     try {
       return runQuery();
-    } catch (e) {
-      const errorCode = e.code;
-      const errorMsg = e.message;
+    } catch (e: any) {
+      const errorCode = e?.code;
+      const errorMsg = e?.message;
       if (
         errorCode === 'SQLITE_ERROR' &&
         errorMsg.match(/^no such table: /) &&
@@ -302,15 +302,15 @@ export default class SQLite3Driver extends NymphDriver {
         }
         try {
           return runQuery();
-        } catch (e2) {
+        } catch (e2: any) {
           throw new QueryFailedError(
-            'Query failed: ' + e2.code + ' - ' + e2.message,
+            'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query
           );
         }
       } else {
         throw new QueryFailedError(
-          'Query failed: ' + e.code + ' - ' + e.message,
+          'Query failed: ' + e?.code + ' - ' + e?.message,
           query
         );
       }
@@ -438,7 +438,7 @@ export default class SQLite3Driver extends NymphDriver {
         this.cleanCache(guid);
       }
       return true;
-    } catch (e) {
+    } catch (e: any) {
       await this.rollback('nymph-delete');
       throw e;
     }
@@ -1556,7 +1556,7 @@ export default class SQLite3Driver extends NymphDriver {
           await this.commit('nymph-import');
         }
       );
-    } catch (e) {
+    } catch (e: any) {
       await this.rollback('nymph-import');
       throw e;
     }
@@ -1609,7 +1609,7 @@ export default class SQLite3Driver extends NymphDriver {
       }
       await this.commit('nymph-newuid');
       return curUid as number;
-    } catch (e) {
+    } catch (e: any) {
       await this.rollback('nymph-newuid');
       throw e;
     }
@@ -1805,7 +1805,7 @@ export default class SQLite3Driver extends NymphDriver {
           return success;
         }
       );
-    } catch (e) {
+    } catch (e: any) {
       await this.rollback('nymph-save');
       throw e;
     }

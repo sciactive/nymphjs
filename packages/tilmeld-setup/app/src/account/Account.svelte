@@ -222,8 +222,8 @@
       } else {
         failureMessage = 'Error saving account changes.';
       }
-    } catch (e) {
-      failureMessage = e.message;
+    } catch (e: any) {
+      failureMessage = e?.message;
     }
     saving = false;
   }
@@ -240,9 +240,9 @@
         const data = await user.$checkUsername();
         usernameVerified = data.result;
         usernameVerifiedMessage = data.message;
-      } catch (e) {
+      } catch (e: any) {
         usernameVerified = false;
-        usernameVerifiedMessage = e.message;
+        usernameVerifiedMessage = e?.message;
       }
     }, 400);
   }
@@ -259,9 +259,9 @@
         const data = await user.$checkEmail();
         emailVerified = data.result;
         emailVerifiedMessage = data.message;
-      } catch (e) {
+      } catch (e: any) {
         emailVerified = false;
-        emailVerifiedMessage = e.message;
+        emailVerifiedMessage = e?.message;
       }
     }, 400);
   }

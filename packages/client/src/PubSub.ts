@@ -764,15 +764,20 @@ export class PubSubSubscription<T> {
   }
 }
 
-if (
-  this &&
-  typeof (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })
-    .NymphOptions !== 'undefined' &&
-  (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })
-    .NymphOptions.pubsubUrl
-) {
-  PubSub.init(
-    (this as WindowOrWorkerGlobalScope & { NymphOptions: NymphOptions })
-      .NymphOptions
-  );
-}
+((global) => {
+  if (
+    typeof global !== 'undefined' &&
+    typeof (global as any as { NymphOptions: NymphOptions }).NymphOptions !==
+      'undefined' &&
+    typeof (global as any as { NymphOptions: NymphOptions }).NymphOptions
+      .pubsubUrl
+  ) {
+    PubSub.init((global as any as { NymphOptions: NymphOptions }).NymphOptions);
+  }
+})(
+  typeof window === 'undefined'
+    ? typeof self === 'undefined'
+      ? undefined
+      : self
+    : window
+);

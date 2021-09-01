@@ -44,7 +44,7 @@ export function referencesToEntities(item: any, useSkipAc = false): any {
         const entity = EntityClass.factoryReference(item as EntityReference);
         entity.$useSkipAc(useSkipAc);
         return entity;
-      } catch (e) {
+      } catch (e: any) {
         return item;
       }
     } else {

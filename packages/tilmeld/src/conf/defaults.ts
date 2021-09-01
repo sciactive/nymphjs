@@ -97,7 +97,7 @@ export default {
       const expire = new Date(exp * 1000);
 
       return { guid, expire };
-    } catch (e) {
+    } catch (e: any) {
       return null;
     }
   },
@@ -144,7 +144,7 @@ export default {
         },
       });
       return !!result;
-    } catch (e) {
+    } catch (e: any) {
       return false;
     }
   },

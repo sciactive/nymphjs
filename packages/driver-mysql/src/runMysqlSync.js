@@ -36,8 +36,8 @@ async function run() {
         });
       }
     );
-  } catch (err) {
-    process.stderr.end(JSON.stringify(err), 'utf8', () => {
+  } catch (e) {
+    process.stderr.end(JSON.stringify(e), 'utf8', () => {
       process.exit(1);
     });
   }

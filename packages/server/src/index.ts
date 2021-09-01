@@ -26,7 +26,7 @@ function authenticateTilmeld(
     Nymph.Tilmeld.response = response;
     try {
       Nymph.Tilmeld.authenticate();
-    } catch (e) {
+    } catch (e: any) {
       httpError(response, 500, 'Internal Server Error', e);
       return;
     }
@@ -44,7 +44,7 @@ function unauthenticateTilmeld(
     Nymph.Tilmeld.response = null;
     try {
       Nymph.Tilmeld.clearSession();
-    } catch (e) {
+    } catch (e: any) {
       httpError(response, 500, 'Internal Server Error', e);
       return;
     }
@@ -102,7 +102,7 @@ rest.get('/', async (request, response) => {
       let EntityClass;
       try {
         EntityClass = Nymph.getEntityClass(data[0].class);
-      } catch (e) {
+      } catch (e: any) {
         httpError(response, 400, 'Bad Request', e);
         return;
       }
@@ -121,7 +121,7 @@ rest.get('/', async (request, response) => {
         } else {
           result = await Nymph.getEntities(...data);
         }
-      } catch (e) {
+      } catch (e: any) {
         httpError(response, 500, 'Internal Server Error', e);
         return;
       }
@@ -137,8 +137,8 @@ rest.get('/', async (request, response) => {
       let result: number | null;
       try {
         result = await Nymph.getUID(`${data}`);
-      } catch ($e) {
-        httpError(response, 500, 'Internal Server Error', $e);
+      } catch (e: any) {
+        httpError(response, 500, 'Internal Server Error', e);
         return;
       }
       if (result === null) {
@@ -151,7 +151,7 @@ rest.get('/', async (request, response) => {
       response.setHeader('Content-Type', 'text/plain');
       response.send(`${result}`);
     }
-  } catch (e) {
+  } catch (e: any) {
     httpError(response, 500, 'Internal Server Error', e);
     return;
   }
@@ -183,7 +183,7 @@ rest.post('/', async (request, response) => {
         let entity: EntityInterface;
         try {
           entity = await loadEntity(entData);
-        } catch (e) {
+        } catch (e: any) {
           if (e instanceof EntityConflictError) {
             conflict = true;
           }
@@ -206,7 +206,7 @@ rest.post('/', async (request, response) => {
           } else {
             created.push(false);
           }
-        } catch (e) {
+        } catch (e: any) {
           if (e instanceof EntityInvalidDataError) {
             invalidRequest = true;
           } else {
@@ -244,7 +244,7 @@ rest.post('/', async (request, response) => {
         let EntityClass: EntityConstructor;
         try {
           EntityClass = Nymph.getEntityClass(data.class);
-        } catch (e) {
+        } catch (e: any) {
           httpError(response, 400, 'Bad Request');
           return;
         }
@@ -273,7 +273,7 @@ rest.post('/', async (request, response) => {
           response.status(200);
           response.setHeader('Content-Type', 'application/json');
           response.send({ return: ret });
-        } catch (e) {
+        } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
         }
@@ -281,7 +281,7 @@ rest.post('/', async (request, response) => {
         let entity: EntityInterface;
         try {
           entity = await loadEntity(data.entity);
-        } catch (e) {
+        } catch (e: any) {
           if (e instanceof EntityConflictError) {
             httpError(response, 409, 'Conflict');
           } else if (e instanceof InvalidParametersError) {
@@ -319,7 +319,7 @@ rest.post('/', async (request, response) => {
           } else {
             response.send({ entity: entity, return: ret });
           }
-        } catch (e) {
+        } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
         }
@@ -328,7 +328,7 @@ rest.post('/', async (request, response) => {
       let result: number | null;
       try {
         result = await Nymph.newUID(`${data}`);
-      } catch (e) {
+      } catch (e: any) {
         httpError(response, 500, 'Internal Server Error', e);
         return;
       }
@@ -340,7 +340,7 @@ rest.post('/', async (request, response) => {
       response.setHeader('Content-Type', 'text/plain');
       response.send(`${result}`);
     }
-  } catch (e) {
+  } catch (e: any) {
     httpError(response, 500, 'Internal Server Error', e);
     return;
   }
@@ -354,7 +354,7 @@ rest.put('/', async (request, response) => {
       return;
     }
     await doPutOrPatch(response, action, data, false);
-  } catch (e) {
+  } catch (e: any) {
     httpError(response, 500, 'Internal Server Error', e);
     return;
   }
@@ -368,7 +368,7 @@ rest.patch('/', async (request, response) => {
       return;
     }
     await doPutOrPatch(response, action, data, true);
-  } catch (e) {
+  } catch (e: any) {
     httpError(response, 500, 'Internal Server Error', e);
     return;
   }
@@ -388,8 +388,8 @@ async function doPutOrPatch(
     let result: boolean;
     try {
       result = await Nymph.setUID(data.name, data.value);
-    } catch ($e) {
-      httpError(response, 500, 'Internal Server Error', $e);
+    } catch (e: any) {
+      httpError(response, 500, 'Internal Server Error', e);
       return;
     }
     if (!result) {
@@ -418,7 +418,7 @@ async function doPutOrPatch(
       let entity: EntityInterface;
       try {
         entity = await loadEntity(entData, patch);
-      } catch (e) {
+      } catch (e: any) {
         if (e instanceof EntityConflictError) {
           conflict = true;
         }
@@ -441,7 +441,7 @@ async function doPutOrPatch(
         } else {
           saved.push(false);
         }
-      } catch (e) {
+      } catch (e: any) {
         if (e instanceof EntityInvalidDataError) {
           invalidRequest = true;
         } else {
@@ -499,7 +499,7 @@ rest.delete('/', async (request, response) => {
           } else {
             failures = true;
           }
-        } catch (e) {
+        } catch (e: any) {
           failures = true;
         }
       }
@@ -526,8 +526,8 @@ rest.delete('/', async (request, response) => {
       let result: boolean;
       try {
         result = await Nymph.deleteUID(data);
-      } catch ($e) {
-        httpError(response, 500, 'Internal Server Error', $e);
+      } catch (e: any) {
+        httpError(response, 500, 'Internal Server Error', e);
         return;
       }
       if (!result) {
@@ -538,7 +538,7 @@ rest.delete('/', async (request, response) => {
       response.setHeader('Content-Type', 'application/json');
       response.send(JSON.stringify(result));
     }
-  } catch (e) {
+  } catch (e: any) {
     httpError(response, 500, 'Internal Server Error', e);
     return;
   }
@@ -596,7 +596,7 @@ function referencesToEntities(item: any): any {
       try {
         const EntityClass = Nymph.getEntityClass(item[1]);
         return EntityClass.factoryReference(item as EntityReference);
-      } catch (e) {
+      } catch (e: any) {
         return item;
       }
     }

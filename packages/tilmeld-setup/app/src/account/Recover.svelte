@@ -241,8 +241,8 @@
           hasSentSecret = true;
         }
       }
-    } catch (e) {
-      failureMessage = e.message;
+    } catch (e: any) {
+      failureMessage = e?.message;
     }
     recovering = false;
   }
@@ -279,8 +279,8 @@
       } else {
         successRecoveredMessage = data.message;
       }
-    } catch (e) {
-      failureMessage = e.message;
+    } catch (e: any) {
+      failureMessage = e?.message;
     }
     recovering = false;
   }

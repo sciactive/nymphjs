@@ -89,7 +89,7 @@ export default class MySQLDriver extends NymphDriver {
         );
         connection.release();
       }
-    } catch (e) {
+    } catch (e: any) {
       this.connected = false;
     }
 
@@ -98,7 +98,7 @@ export default class MySQLDriver extends NymphDriver {
       try {
         this.link = await mysql.createPool(this.mysqlConfig);
         this.connected = true;
-      } catch (e) {
+      } catch (e: any) {
         if (
           this.mysqlConfig.host === 'localhost' &&
           this.mysqlConfig.user === 'nymph' &&
@@ -109,7 +109,7 @@ export default class MySQLDriver extends NymphDriver {
             "It seems the config hasn't been set up correctly."
           );
         } else {
-          throw new UnableToConnectError('Could not connect: ' + e.message);
+          throw new UnableToConnectError('Could not connect: ' + e?.message);
         }
       }
     }
@@ -265,8 +265,8 @@ export default class MySQLDriver extends NymphDriver {
   ): ReturnType<T> {
     try {
       return await runQuery();
-    } catch (e) {
-      const errorCode = e.errno;
+    } catch (e: any) {
+      const errorCode = e?.errno;
       if (errorCode === 1146 && this.createTables()) {
         // If the tables don't exist yet, create them.
         if (etype != null) {
@@ -274,9 +274,9 @@ export default class MySQLDriver extends NymphDriver {
         }
         try {
           return await runQuery();
-        } catch (e2) {
+        } catch (e2: any) {
           throw new QueryFailedError(
-            'Query failed: ' + e2.code + ' - ' + e2.message,
+            'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query
           );
         }
@@ -284,15 +284,15 @@ export default class MySQLDriver extends NymphDriver {
         // If the MySQL server disconnected, reconnect to it.
         if (!this.connect()) {
           throw new QueryFailedError(
-            'Query failed: ' + e.code + ' - ' + e.message,
+            'Query failed: ' + e?.code + ' - ' + e?.message,
             query
           );
         }
         try {
           return await runQuery();
-        } catch (e2) {
+        } catch (e2: any) {
           throw new QueryFailedError(
-            'Query failed: ' + e2.code + ' - ' + e2.message,
+            'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query
           );
         }
@@ -309,8 +309,8 @@ export default class MySQLDriver extends NymphDriver {
   ): ReturnType<T> {
     try {
       return runQuery();
-    } catch (e) {
-      const errorCode = e.errno;
+    } catch (e: any) {
+      const errorCode = e?.errno;
       if (errorCode === 1146 && this.createTables()) {
         // If the tables don't exist yet, create them.
         if (etype != null) {
@@ -318,9 +318,9 @@ export default class MySQLDriver extends NymphDriver {
         }
         try {
           return runQuery();
-        } catch (e2) {
+        } catch (e2: any) {
           throw new QueryFailedError(
-            'Query failed: ' + e2.code + ' - ' + e2.message,
+            'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query
           );
         }
@@ -328,15 +328,15 @@ export default class MySQLDriver extends NymphDriver {
         // If the MySQL server disconnected, reconnect to it.
         if (!this.connect()) {
           throw new QueryFailedError(
-            'Query failed: ' + e.code + ' - ' + e.message,
+            'Query failed: ' + e?.code + ' - ' + e?.message,
             query
           );
         }
         try {
           return runQuery();
-        } catch (e2) {
+        } catch (e2: any) {
           throw new QueryFailedError(
-            'Query failed: ' + e2.code + ' - ' + e2.message,
+            'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query
           );
         }
@@ -623,7 +623,7 @@ export default class MySQLDriver extends NymphDriver {
         this.cleanCache(guid);
       }
       return true;
-    } catch (e) {
+    } catch (e: any) {
       await this.rollback('nymph-delete');
       throw e;
     }
@@ -1848,7 +1848,7 @@ export default class MySQLDriver extends NymphDriver {
       );
 
       return result;
-    } catch (e) {
+    } catch (e: any) {
       await this.rollback('nymph-import');
       return false;
     }
@@ -1897,8 +1897,8 @@ export default class MySQLDriver extends NymphDriver {
       await this.commit('nymph-newuid');
       curUid = result.cur_uid ?? null;
       return curUid;
-    } catch (e) {
-      if (e.message !== "Couldn't get lock for UID: " + name) {
+    } catch (e: any) {
+      if (e?.message !== "Couldn't get lock for UID: " + name) {
         await this.queryRun(
           `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
             `${this.prefix}uids_${name}`
@@ -2206,7 +2206,7 @@ export default class MySQLDriver extends NymphDriver {
       );
 
       return result;
-    } catch (e) {
+    } catch (e: any) {
       await this.rollback('nymph-save');
       throw e;
     }

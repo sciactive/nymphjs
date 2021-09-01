@@ -32,7 +32,7 @@ describe('Nymph REST Server and Client', () => {
     jane.title = 'Seniorer Person';
     try {
       await jane.$save();
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error creating entity: ', e);
       throw e;
     }
@@ -404,8 +404,8 @@ describe('Nymph REST Server and Client', () => {
     let error = { message: '' };
     try {
       await entity.$save();
-    } catch (errObj) {
-      error = errObj;
+    } catch (e: any) {
+      error = e;
     }
     expect(error.message).toEqual(
       "Can't use Entity class directly from the front end."
@@ -416,8 +416,8 @@ describe('Nymph REST Server and Client', () => {
     let error = { status: 200 };
     try {
       await Employee.inaccessibleMethod();
-    } catch (errObj) {
-      error = errObj;
+    } catch (e: any) {
+      error = e;
     }
     expect(error.status).toEqual(403);
   });
@@ -426,8 +426,8 @@ describe('Nymph REST Server and Client', () => {
     let error = { error: { name: '' } };
     try {
       await Employee.throwErrorStatic();
-    } catch (errObj) {
-      error = errObj;
+    } catch (e: any) {
+      error = e;
     }
     expect(error.error.name).toEqual('BadFunctionCallError');
   });
@@ -438,8 +438,8 @@ describe('Nymph REST Server and Client', () => {
     let error = { error: { name: '' } };
     try {
       await jane.$throwError();
-    } catch (errObj) {
-      error = errObj;
+    } catch (e: any) {
+      error = e;
     }
     expect(error.error.name).toEqual('BadFunctionCallError');
   });
@@ -611,8 +611,8 @@ describe('Nymph REST Server and Client', () => {
     let error = { status: 200 };
     try {
       await Nymph.getUID('temp');
-    } catch (errObj) {
-      error = errObj;
+    } catch (e: any) {
+      error = e;
     }
     expect(error.status).toEqual(404);
   });

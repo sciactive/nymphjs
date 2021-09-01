@@ -361,9 +361,9 @@ describe('Entity', () => {
 
     try {
       testEntity.$jsonAcceptData(data);
-    } catch (e) {
+    } catch (e: any) {
       thrown = true;
-      thrownName = e.name;
+      thrownName = e?.name;
     }
 
     expect(thrown).toEqual(true);
@@ -384,9 +384,9 @@ describe('Entity', () => {
         addTags: [],
         removeTags: [],
       });
-    } catch (e) {
+    } catch (e: any) {
       thrown = true;
-      thrownName = e.name;
+      thrownName = e?.name;
     }
 
     expect(thrown).toEqual(true);

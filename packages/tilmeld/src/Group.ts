@@ -652,8 +652,8 @@ export default class Group extends AbleObject<GroupData> {
 
     try {
       Tilmeld.config.validatorGroup(this);
-    } catch (e) {
-      throw new BadDataError(e.message);
+    } catch (e: any) {
+      throw new BadDataError(e?.message);
     }
 
     // Only one default primary group is allowed.

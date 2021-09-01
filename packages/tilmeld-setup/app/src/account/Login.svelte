@@ -239,8 +239,8 @@
       const data = await loginAction(username, password);
       successLoginMessage = data.message;
       dispatch('login', { user: data.user });
-    } catch (e) {
-      failureMessage = e.message;
+    } catch (e: any) {
+      failureMessage = e?.message;
     }
     loggingIn = false;
   }
@@ -267,8 +267,8 @@
         successLoginMessage = data.message;
         dispatch('login', { user: data.user });
       }
-    } catch (e) {
-      failureMessage = e.message;
+    } catch (e: any) {
+      failureMessage = e?.message;
     }
     registering = false;
   }
@@ -288,9 +288,9 @@
         const data = await checkUsernameAction(newValue);
         usernameVerified = true;
         usernameVerifiedMessage = data.message;
-      } catch (e) {
+      } catch (e: any) {
         usernameVerified = false;
-        usernameVerifiedMessage = e.message;
+        usernameVerifiedMessage = e?.message;
       }
     }, 400);
   }

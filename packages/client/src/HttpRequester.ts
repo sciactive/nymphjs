@@ -147,7 +147,7 @@ export default class HttpRequester {
       let errObj;
       try {
         errObj = JSON.parse(text);
-      } catch (e) {
+      } catch (e: any) {
         if (!(e instanceof SyntaxError)) {
           throw e;
         }
@@ -173,7 +173,7 @@ export default class HttpRequester {
       }
       try {
         return JSON.parse(text);
-      } catch (e) {
+      } catch (e: any) {
         if (!(e instanceof SyntaxError)) {
           throw e;
         }

@@ -67,8 +67,8 @@ export async function login(username: string, password: string) {
       throw new Error(response.message);
     }
     return response;
-  } catch (e) {
-    throw new Error(e.message || 'An error occurred.');
+  } catch (e: any) {
+    throw new Error(e?.message ?? 'An error occurred.');
   }
 }
 
@@ -116,8 +116,8 @@ export async function register(userDetails: RegistrationDetails): Promise<{
       throw new Error(response.message);
     }
     return { ...response, user };
-  } catch (e) {
-    throw new Error(e.message || 'An error occurred.');
+  } catch (e: any) {
+    throw new Error(e?.message ?? 'An error occurred.');
   }
 }
 
@@ -136,7 +136,7 @@ export async function checkUsername(username: string) {
       throw new Error(response.message);
     }
     return response;
-  } catch (e) {
-    throw new Error(e.message || 'An error occurred.');
+  } catch (e: any) {
+    throw new Error(e?.message ?? 'An error occurred.');
   }
 }

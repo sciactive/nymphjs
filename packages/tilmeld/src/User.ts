@@ -1288,7 +1288,7 @@ export default class User extends AbleObject<UserData> {
           message: 'Error registering user.',
         };
       }
-    } catch (e) {
+    } catch (e: any) {
       await Nymph.rollback(transaction);
       throw e;
     }
@@ -1429,8 +1429,8 @@ export default class User extends AbleObject<UserData> {
 
     try {
       Tilmeld.config.validatorUser(this);
-    } catch (e) {
-      throw new BadDataError(e.message);
+    } catch (e: any) {
+      throw new BadDataError(e?.message);
     }
 
     // Start transaction.
@@ -1450,7 +1450,7 @@ export default class User extends AbleObject<UserData> {
         this.$data.group.name = this.$data.name;
         this.$data.group.phone = this.$data.phone;
         await this.$data.group.$saveSkipAC();
-      } catch (e) {
+      } catch (e: any) {
         await Nymph.rollback(transaction);
         throw e;
       }
@@ -1463,7 +1463,7 @@ export default class User extends AbleObject<UserData> {
 
     try {
       ret = await super.$save();
-    } catch (e) {
+    } catch (e: any) {
       await Nymph.rollback(transaction);
       throw e;
     }
