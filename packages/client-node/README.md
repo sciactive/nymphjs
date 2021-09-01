@@ -26,7 +26,7 @@ Then provide the options to Nymph.init:
 
 ```js
 Nymph.init({
-  restUrl: 'https://yournymphrestserver/path/to/your/endpoint/',
+  restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
   pubsubUrl: 'wss://yournymphpubsubserver',
 });
 ```

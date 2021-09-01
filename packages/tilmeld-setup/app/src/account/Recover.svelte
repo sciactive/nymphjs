@@ -1,21 +1,14 @@
-{#if clientConfig == null || recovering}
-  <CircularProgress style="height: 32px; width: 32px;" indefinite />
-{:else}
-  <a href="javascript:void(0);" on:click={() => (showDialog = true)}>
-    {linkText}
-  </a>
-
+{#if clientConfig != null && clientConfig.pwRecovery}
   <Dialog
-    bind:open={showDialog}
+    bind:open
     aria-labelledby="tilmeld-recovery-title"
     aria-describedby="tilmeld-recovery-content"
+    surface$class="tilmeld-recover-dialog-surface"
   >
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
     <Title id="tilmeld-recovery-title">Recover Your Account</Title>
     <Content id="tilmeld-recovery-content">
-      {#if recovering}
-        <CircularProgress style="height: 64px; width: 64px;" indefinite />
-      {:else if successRecoveredMessage}
+      {#if successRecoveredMessage}
         {successRecoveredMessage}
       {:else}
         {#if !hasSentSecret}
@@ -31,6 +24,7 @@
               </FormField>
             </div>
           {/if}
+
           <div>
             {#if recoveryType === 'password'}
               <p>
@@ -47,6 +41,7 @@
               </p>
             {/if}
           </div>
+
           <div>
             <Textfield
               bind:this={accountElem}
@@ -57,15 +52,20 @@
               type={clientConfig.emailUsernames || recoveryType === 'username'
                 ? 'email'
                 : 'text'}
+              input$autocomplete={clientConfig.emailUsernames ||
+              recoveryType === 'username'
+                ? 'email'
+                : 'username'}
               input$autocapitalize="off"
               input$spellcheck="false"
             />
           </div>
-          {#if account !== '' && recoveryType === 'password'}
-            <div class="recover-form-action">
+
+          {#if recoveryType === 'password'}
+            <div class="tilmeld-recover-action">
               <a
                 href="javascript:void(0);"
-                on:click={() => (hasSentSecret = true)}
+                on:click={() => (hasSentSecret = 1)}
               >
                 Already Got a Code?
               </a>
@@ -78,13 +78,34 @@
               new password for your account.
             </p>
           </div>
+
+          {#if hasSentSecret === 1}
+            <div>
+              <Textfield
+                bind:this={accountElem}
+                bind:value={account}
+                label={clientConfig.emailUsernames
+                  ? 'Email Address'
+                  : 'Username'}
+                type={clientConfig.emailUsernames ? 'email' : 'text'}
+                input$autocomplete={clientConfig.emailUsernames
+                  ? 'email'
+                  : 'username'}
+                input$autocapitalize="off"
+                input$spellcheck="false"
+              />
+            </div>
+          {/if}
+
           <div>
             <Textfield
-              bind:value={password}
+              bind:value={secret}
               label="Recovery Code"
               type="text"
+              input$autocomplete="one-time-code"
             />
           </div>
+
           <div>
             <Textfield
               bind:value={password}
@@ -93,6 +114,7 @@
               input$autocomplete="new-password"
             />
           </div>
+
           <div>
             <Textfield
               bind:value={password2}
@@ -101,7 +123,8 @@
               input$autocomplete="new-password"
             />
           </div>
-          <div class="recover-form-action">
+
+          <div class="tilmeld-recover-action">
             <a
               href="javascript:void(0);"
               on:click={() => (hasSentSecret = false)}
@@ -112,14 +135,20 @@
         {/if}
 
         {#if failureMessage}
-          <div class="recover-form-failure">
+          <div class="tilmeld-recover-failure">
             {failureMessage}
+          </div>
+        {/if}
+
+        {#if recovering}
+          <div class="tilmeld-recover-loading">
+            <CircularProgress style="height: 24px; width: 24px;" indefinite />
           </div>
         {/if}
       {/if}
     </Content>
     <Actions>
-      <Button on:click={() => (showDialog = false)} disabled={recovering}>
+      <Button on:click={() => (open = false)} disabled={recovering}>
         <Label>{successRecoveredMessage ? 'Close' : 'Cancel'}</Label>
       </Button>
       {#if !successRecoveredMessage}
@@ -153,28 +182,29 @@
   import Radio from '@smui/radio';
   import { ClientConfig, User } from '@nymphjs/tilmeld-client';
 
-  // The text used to toggle the dialog.
-  export let linkText = "I can't access my account.";
+  export let open = false;
   // Give focus to the account box when the form is ready.
   export let autofocus = true;
   export let recoveryType: 'username' | 'password' = 'password';
 
-  // These are all user provided details.
+  /** User provided. You can bind to it if you need to. */
   export let account = '';
+  /** User provided. You can bind to it if you need to. */
   export let secret = '';
+  /** User provided. You can bind to it if you need to. */
   export let password = '';
+  /** User provided. You can bind to it if you need to. */
   export let password2 = '';
 
   let clientConfig: ClientConfig | null = null;
-  let showDialog = false;
   let recovering = false;
-  let hasSentSecret = false;
+  let hasSentSecret: number | boolean = false;
   let accountElem: SvelteComponent;
   let failureMessage: string | null = null;
   let successRecoveredMessage: string | null = null;
 
   $: {
-    if (showDialog && autofocus && accountElem) {
+    if (open && autofocus && accountElem) {
       accountElem.focus();
     }
   }
@@ -183,7 +213,7 @@
     clientConfig = await User.getClientConfig();
   });
 
-  function sendRecovery() {
+  async function sendRecovery() {
     if (account === '') {
       failureMessage =
         'You need to enter ' +
@@ -196,30 +226,28 @@
 
     failureMessage = null;
     recovering = true;
-    User.sendRecovery({
-      recoveryType,
-      account,
-    }).then(
-      (data) => {
-        if (!data.result) {
-          failureMessage = data.message;
-        } else {
-          if (recoveryType === 'username') {
-            successRecoveredMessage = data.message;
-          } else if (recoveryType === 'password') {
-            hasSentSecret = true;
-          }
+
+    try {
+      const data = await User.sendRecovery({
+        recoveryType,
+        account,
+      });
+      if (!data.result) {
+        failureMessage = data.message;
+      } else {
+        if (recoveryType === 'username') {
+          successRecoveredMessage = data.message;
+        } else if (recoveryType === 'password') {
+          hasSentSecret = true;
         }
-        recovering = false;
-      },
-      () => {
-        failureMessage = 'An error occurred.';
-        recovering = false;
       }
-    );
+    } catch (e) {
+      failureMessage = e.message;
+    }
+    recovering = false;
   }
 
-  function recover() {
+  async function recover() {
     if (account === '') {
       failureMessage =
         'You need to enter ' +
@@ -240,33 +268,39 @@
 
     failureMessage = null;
     recovering = true;
-    User.recover({
-      username: account,
-      secret,
-      password,
-    }).then(
-      (data) => {
-        if (!data.result) {
-          failureMessage = data.message;
-        } else {
-          successRecoveredMessage = data.message;
-        }
-        recovering = false;
-      },
-      () => {
-        failureMessage = 'An error occurred.';
-        recovering = false;
+    try {
+      const data = await User.recover({
+        username: account,
+        secret,
+        password,
+      });
+      if (!data.result) {
+        failureMessage = data.message;
+      } else {
+        successRecoveredMessage = data.message;
       }
-    );
+    } catch (e) {
+      failureMessage = e.message;
+    }
+    recovering = false;
   }
 </script>
 
 <style>
-  .recover-form-action {
+  :global(.mdc-dialog .mdc-dialog__surface.tilmeld-recover-dialog-surface) {
+    width: 540px;
+    max-width: calc(100vw - 32px);
+  }
+  .tilmeld-recover-action {
     margin-top: 1em;
   }
-  .recover-form-failure {
+  .tilmeld-recover-failure {
     margin-top: 1em;
     color: var(--mdc-theme-error, #f00);
+  }
+  .tilmeld-recover-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 </style>

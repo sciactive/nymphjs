@@ -15,18 +15,35 @@
     <Section align="end" toolbar style="color: var(--mdc-on-surface, #000);">
       <IconButton
         href="https://github.com/sciactive/nymphjs"
-        title="Nymph (and Tilmeld) on GitHub"
+        target="_blank"
+        title="Nymph/Tilmeld on GitHub"
       >
         <Icon component={Svg} viewBox="0 0 24 24">
           <path fill="currentColor" d={mdiGithub} />
         </Icon>
       </IconButton>
+      <IconButton
+        href="https://twitter.com/SciActive"
+        target="_blank"
+        title="SciActive on Twitter"
+      >
+        <Icon component={Svg} viewBox="0 0 24 24">
+          <path fill="currentColor" d={mdiTwitter} />
+        </Icon>
+      </IconButton>
       <div>
-        <IconButton title="Account" on:click={() => accountMenu.setOpen(true)}>
+        <IconButton
+          title="Account"
+          on:click={() => user != null && accountMenu.setOpen(true)}
+        >
           <Icon component={Img} src={userAvatar} />
         </IconButton>
         <Menu bind:this={accountMenu} anchorCorner="BOTTOM_LEFT">
           <List>
+            <Item on:SMUI:action={() => (accountOpen = true)}>
+              <Text>Account Details</Text>
+            </Item>
+            <Separator />
             <Item on:SMUI:action={() => user.$logout()}>
               <Text>Logout</Text>
             </Item>
@@ -45,8 +62,8 @@
       : 'hide-initial-small'}"
   >
     <Content>
-      {#if tilmeldAdmin}
-        <List>
+      <List>
+        {#if tilmeldAdmin}
           {#each sections as section (section.name)}
             {#if 'separator' in section}
               <Separator />
@@ -68,8 +85,16 @@
               </Item>
             {/if}
           {/each}
-        </List>
-      {/if}
+        {:else if user == null}
+          <Item on:click={() => (drawerOpen = false)} activated>
+            <Text class="mdc-theme--on-secondary">Login</Text>
+          </Item>
+        {:else}
+          <Item on:click={() => (drawerOpen = false)} activated>
+            <Text class="mdc-theme--on-secondary">Forbidden</Text>
+          </Item>
+        {/if}
+      </List>
     </Content>
   </Drawer>
 
@@ -84,13 +109,14 @@
         {:else}
           Loading...
         {/if}
-      {:else if !user}
+      {:else if user == null}
         <section style="display: flex; justify-content: center;">
           <Login />
         </section>
       {:else}
         <section>You don't have permission to access this app.</section>
       {/if}
+      <Account bind:open={accountOpen} />
     </main>
   </AppContent>
 </div>
@@ -98,7 +124,7 @@
 <script lang="ts">
   import { onMount, SvelteComponent } from 'svelte';
   import { ClientConfig, CurrentUserData, User } from '@nymphjs/tilmeld-client';
-  import { mdiGithub } from '@mdi/js';
+  import { mdiGithub, mdiTwitter } from '@mdi/js';
   import TopAppBar, { Row, Section, Title } from '@smui/top-app-bar';
   import Drawer, { Content, Scrim, AppContent } from '@smui/drawer';
   import IconButton from '@smui/icon-button';
@@ -109,6 +135,7 @@
   import Svg from '@smui/common/Svg.svelte';
 
   import Login from './account/Login.svelte';
+  import Account from './account/Account.svelte';
 
   import Intro from './Intro.svelte';
   import Users from './Users.svelte';
@@ -125,10 +152,13 @@
   let user: (User & CurrentUserData) | null = null;
   let userAvatar: string = DEFAULT_AVATAR;
   let tilmeldAdmin: boolean | null = null;
+  let accountOpen = false;
 
   $: if (active && mainContent) {
+    drawerOpen = false;
     mainContent.scrollTop = 0;
   }
+
   $: if (user) {
     user.$gatekeeper('tilmeld/admin').then((value) => (tilmeldAdmin = value));
     user.$getAvatar().then((value) => (userAvatar = value));
@@ -175,19 +205,13 @@
   };
 
   onMount(setMiniWindow);
-  onMount(() => {
-    User.current().then((currentUser) => {
-      user = currentUser;
-    });
-
+  onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
+    user = await User.current();
   });
   onMount(async () => {
     clientConfig = await User.getClientConfig();
-    User.current().then((currentUser) => {
-      user = currentUser;
-    });
   });
 
   function setMiniWindow() {

@@ -25,8 +25,8 @@ export interface Config {
    */
   cookiePath: string;
   /**
-   * The path (with leading slash) where the setup utility is accessible. This
-   * is also used for email address verification.
+   * The path (with leading slash and no trailing slash) where the setup utility
+   * is accessible. This is also used for email address verification.
    *
    * ***************************************************************************
    * This portion of the app will **not** check for the XSRF token, so make sure
@@ -49,6 +49,10 @@ export interface Config {
    * Allow users to register.
    */
   allowRegistration: boolean;
+  /**
+   * Allow users to change their username.
+   */
+  allowUsernameChange: boolean;
   /**
    * Whether frontend can search users. (Probably not a good idea if privacy is
    * a concern.)
@@ -78,6 +82,14 @@ export interface Config {
    */
   verifyRedirect: string;
   /**
+   * After the user verifies an address change, redirect them to this URL.
+   */
+  verifyChangeRedirect: string;
+  /**
+   * After the user cancels an address change, redirect them to this URL.
+   */
+  cancelChangeRedirect: string;
+  /**
    * Unverified users will be able to log in, but will only have the "unverified
    * users" secondary group(s) until they verify their email. If set to false,
    * their account will instead be disabled until they verify.
@@ -87,6 +99,9 @@ export interface Config {
    * Don't let users change their email address more often than this. You can
    * enter one value and one unit of time, such as "2 weeks". Leave blank to
    * disable rate limiting.
+   *
+   * This also controls how long a user has to cancel an email address change
+   * from a link emailed to the old address.
    */
   emailRateLimit: string;
   /**

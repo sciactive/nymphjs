@@ -9,8 +9,10 @@ export type LogoutCallback = (user: User & UserData) => void;
 
 export type ClientConfig = {
   regFields: string[];
+  userFields: string[];
   emailUsernames: boolean;
   allowRegistration: boolean;
+  allowUsernameChange: boolean;
   pwRecovery: boolean;
   verifyEmail: boolean;
   unverifiedAccess: boolean;
@@ -234,8 +236,8 @@ export default class User extends Entity<UserData> {
   }
 
   public async $changePassword(data: {
-    password: string;
-    oldPassword: string;
+    newPassword: string;
+    currentPassword: string;
   }): Promise<{ result: boolean; message: string }> {
     return await this.$serverCall('$changePassword', [data]);
   }

@@ -37,7 +37,8 @@
   "dependencies": {
     "@nymphjs/nymph": "^1.0.0-alpha.0",
     "@nymphjs/tilmeld": "^1.0.0-alpha.0",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "locutus": "^2.0.15"
   },
   "devDependencies": {
     "@material/elevation": "^11.0.0",
@@ -63,6 +64,7 @@
     "@tsconfig/svelte": "^2.0.1",
     "@types/express": "^4.17.13",
     "@types/jest": "^27.0.1",
+    "@types/locutus": "^0.0.6",
     "jest": "^27.0.6",
     "smui-theme": "^4.2.0",
     "svelte": "^3.42.4",

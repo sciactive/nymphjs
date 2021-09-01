@@ -34,7 +34,7 @@ Nymph.init({}, new SQLite3Driver(sqliteConfig));
 const app = express();
 
 // Use the REST server (with an optional path).
-app.use('/nymphrest', rest);
+app.use('/rest', rest);
 
 // Do anything else you need to do...
 
@@ -52,7 +52,7 @@ import { Nymph } from '@nymphjs/client';
 Nymph.init({
   // You should configure your Express server to
   // use HTTPS, but you don't have to.
-  restUrl: 'https://mydomain.tld/nymphrest/',
+  restUrl: 'https://mydomain.tld/rest',
 });
 ```
 

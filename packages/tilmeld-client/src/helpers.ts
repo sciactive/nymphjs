@@ -59,12 +59,12 @@ export async function login(username: string, password: string) {
   }
 
   try {
-    const response = await User.loginUser({
+    const { result, ...response } = await User.loginUser({
       username,
       password,
     });
-    if (!response.result) {
-      return Promise.reject(response.message);
+    if (!result) {
+      throw new Error(response.message);
     }
     return response;
   } catch (e) {
@@ -73,7 +73,6 @@ export async function login(username: string, password: string) {
 }
 
 export async function register(userDetails: RegistrationDetails): Promise<{
-  result: boolean;
   loggedin: boolean;
   message: string;
   user?: User & CurrentUserData;
@@ -110,9 +109,10 @@ export async function register(userDetails: RegistrationDetails): Promise<{
   }
 
   try {
-    const response = await user.$register({ password: userDetails.password });
-
-    if (!response.result) {
+    const { result, ...response } = await user.$register({
+      password: userDetails.password,
+    });
+    if (!result) {
       throw new Error(response.message);
     }
     return { ...response, user };
@@ -131,16 +131,12 @@ export async function checkUsername(username: string) {
   }
 
   try {
-    const response = await user.$checkUsername();
-
-    return {
-      result: response.result,
-      message: response.message,
-    };
+    const { result, ...response } = await user.$checkUsername();
+    if (!result) {
+      throw new Error(response.message);
+    }
+    return response;
   } catch (e) {
-    return {
-      result: false,
-      message: 'Error checking username: ' + e.message,
-    };
+    throw new Error(e.message || 'An error occurred.');
   }
 }

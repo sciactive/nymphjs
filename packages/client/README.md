@@ -19,7 +19,7 @@ This package is the Nymph client for browsers. You can find UMD in `dist`, or TS
   <!-- Nymph setup -->
   <script>
     NymphOptions = {
-      restUrl: 'https://yournymphrestserver/path/to/your/endpoint/',
+      restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
       pubsubUrl: 'wss://yournymphpubsubserver',
     };
   </script>

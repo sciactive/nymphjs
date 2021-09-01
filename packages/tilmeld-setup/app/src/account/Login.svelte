@@ -35,6 +35,7 @@
             </HelperText>
           </Textfield>
         </div>
+
         <div>
           <Textfield
             bind:value={password}
@@ -47,6 +48,7 @@
             input$name="password"
           />
         </div>
+
         {#if clientConfig.allowRegistration && !existingUser}
           <div>
             <Textfield
@@ -58,6 +60,7 @@
               input$name="password2"
             />
           </div>
+
           {#if clientConfig.regFields.indexOf('name') !== -1}
             <div>
               <Textfield
@@ -70,6 +73,7 @@
               />
             </div>
           {/if}
+
           {#if !clientConfig.emailUsernames && clientConfig.regFields.indexOf('email') !== -1}
             <div>
               <Textfield
@@ -84,6 +88,7 @@
               />
             </div>
           {/if}
+
           {#if clientConfig.regFields.indexOf('phone') !== -1}
             <div>
               <Textfield
@@ -97,13 +102,14 @@
             </div>
           {/if}
         {/if}
+
         {#if failureMessage}
-          <div class="login-form-failure">
+          <div class="tilmeld-login-failure">
             {failureMessage}
           </div>
         {/if}
 
-        <div class="login-form-buttons">
+        <div class="tilmeld-login-buttons">
           {#if existingUser}
             <Button variant="raised" type="submit" on:click={login}>
               <Label>Log In</Label>
@@ -116,7 +122,7 @@
         </div>
 
         {#if clientConfig.allowRegistration && showExistingUserToggle}
-          <div class="login-form-action">
+          <div class="tilmeld-login-action">
             {#if existingUser}
               <a
                 href="javascript:void(0);"
@@ -136,9 +142,12 @@
         {/if}
 
         {#if !hideRecovery && clientConfig.pwRecovery && existingUser}
-          <div class="login-form-action">
-            <Recover account={username} />
+          <div class="tilmeld-login-action">
+            <a href="javascript:void(0);" on:click={() => (recoverOpen = true)}>
+              I can't access my account.
+            </a>
           </div>
+          <Recover bind:open={recoverOpen} />
         {/if}
       </form>
     {/if}
@@ -196,6 +205,7 @@
   let usernameVerifiedMessage: string | null = null;
   let registering = false;
   let loggingIn = false;
+  let recoverOpen = false;
 
   $: nameFirst = name.match(/^(.*?)(?: ([^ ]+))?$/)[1] || '';
   $: nameLast = name.match(/^(.*?)(?: ([^ ]+))?$/)[2] || '';
@@ -273,27 +283,31 @@
     if (newValue === '' || existingUser) {
       return;
     }
-    usernameTimer = setTimeout(() => {
-      checkUsernameAction(newValue).then((data) => {
-        usernameVerified = data.result;
+    usernameTimer = setTimeout(async () => {
+      try {
+        const data = await checkUsernameAction(newValue);
+        usernameVerified = true;
         usernameVerifiedMessage = data.message;
-      });
+      } catch (e) {
+        usernameVerified = false;
+        usernameVerifiedMessage = e.message;
+      }
     }, 400);
   }
 </script>
 
 <style>
-  .login-form-buttons {
+  .tilmeld-login-buttons {
     display: flex;
     flex-direction: row;
     justify-content: start;
     align-items: center;
     margin-top: 1em;
   }
-  .login-form-action {
+  .tilmeld-login-action {
     margin-top: 1em;
   }
-  .login-form-failure {
+  .tilmeld-login-failure {
     margin-top: 1em;
     color: var(--mdc-theme-error, #f00);
   }

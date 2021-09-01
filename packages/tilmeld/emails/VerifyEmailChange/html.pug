@@ -1,10 +1,10 @@
 p Hi #{toName},
 p 
   | We've received a request to change your email address at 
-  a(href="#{siteLink}" target="_blank") #{siteName}
-  | . Please verify your new email address by clicking on the following link:<br />
+  | #[a(href=siteLink target="_blank") #{siteName}]. Please verify your new 
+  | email address by clicking on the following link:
 p
-  a(href="#{verifyLink}" target="_blank") #{verifyLink}
+  a(href=verifyLink target="_blank") #{verifyLink}
 p
   | Once you verify this email address, we will no longer send emails to 
   | #{oldEmail}. If you didn't make this request, you can ignore this message.

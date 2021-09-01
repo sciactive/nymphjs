@@ -7,8 +7,9 @@ import Nymph, {
 } from '@nymphjs/nymph';
 import { EmailOptions } from 'email-templates';
 import strtotime from 'locutus/php/datetime/strtotime';
-import { nanoid } from 'nanoid';
-import CryptoJS from 'crypto-js';
+import { nanoid, customAlphabet } from 'nanoid';
+import { nolookalikesSafe } from 'nanoid-dictionary';
+import Base64 from 'crypto-js/enc-base64';
 import sha256 from 'crypto-js/sha256';
 import md5 from 'crypto-js/md5';
 import { difference } from 'lodash';
@@ -53,10 +54,6 @@ export type UserData = {
    */
   email?: string;
   /**
-   * Used to save the current email to send verification if it changes.
-   */
-  originalEmail?: string;
-  /**
    * The user's avatar URL. (Use $getAvatar() to support Gravatar.)
    */
   avatar?: string;
@@ -89,6 +86,14 @@ export type UserData = {
    * The timestamp of when the email address was last changed.
    */
   emailChangeDate?: number;
+  /**
+   * An email change proceed secret.
+   */
+  newEmailSecret?: string;
+  /**
+   * The new email address.
+   */
+  newEmailAddress?: string;
   /**
    * An email change cancellation secret.
    */
@@ -139,6 +144,7 @@ export default class User extends AbleObject<UserData> {
     'password',
     'salt',
     'secret',
+    'newEmailSecret',
     'cancelEmailAddress',
     'cancelEmailSecret',
     'emailChangeDate',
@@ -178,6 +184,14 @@ export default class User extends AbleObject<UserData> {
    * database.
    */
   private $passwordTemp?: string;
+  /**
+   * Used to save the current email address to send verification if it changes
+   * from the frontend.
+   *
+   * If you are changing a user's email address and want to bypass email
+   * verification, don't set this.
+   */
+  public $originalEmail?: string;
 
   static async factory(guid?: string): Promise<User & UserData> {
     return (await super.factory(guid)) as User & UserData;
@@ -293,7 +307,7 @@ export default class User extends AbleObject<UserData> {
       }
 
       // Create a unique secret.
-      getUser.recoverSecret = nanoid();
+      getUser.recoverSecret = customAlphabet(nolookalikesSafe, 10)();
       getUser.recoverSecretTime = Date.now();
       if (!(await getUser.$saveSkipAC())) {
         return { result: false, message: "Couldn't save recovery secret." };
@@ -356,7 +370,9 @@ export default class User extends AbleObject<UserData> {
       strtotime(
         '+' + Tilmeld.config.pwRecoveryTimeLimit,
         Math.floor((user.recoverSecretTime ?? 0) / 1000)
-      ) < Date.now()
+      ) *
+        1000 <
+        Date.now()
     ) {
       return {
         result: false,
@@ -375,8 +391,7 @@ export default class User extends AbleObject<UserData> {
       return {
         result: true,
         message:
-          'Your password has been reset. You can now log in using ' +
-          'your new password.',
+          'Your password has been reset. You can now log in using your new password.',
       };
     } else {
       return { result: false, message: 'Error saving new password.' };
@@ -386,8 +401,10 @@ export default class User extends AbleObject<UserData> {
   public static getClientConfig() {
     return {
       regFields: Tilmeld.config.regFields,
+      userFields: Tilmeld.config.userFields,
       emailUsernames: Tilmeld.config.emailUsernames,
       allowRegistration: Tilmeld.config.allowRegistration,
+      allowUsernameChange: Tilmeld.config.allowUsernameChange,
       pwRecovery: Tilmeld.config.pwRecovery,
       verifyEmail: Tilmeld.config.verifyEmail,
       unverifiedAccess: Tilmeld.config.unverifiedAccess,
@@ -504,6 +521,7 @@ export default class User extends AbleObject<UserData> {
       );
     }
 
+    this.$originalEmail = this.$data.email;
     super.$jsonAcceptData(input, allowConflict);
   }
 
@@ -521,30 +539,11 @@ export default class User extends AbleObject<UserData> {
       );
     }
 
+    this.$originalEmail = this.$data.email;
     super.$jsonAcceptPatch(patch, allowConflict);
   }
 
   public $putData(data: EntityData, sdata?: SerializedEntityData) {
-    const unserialize = (name: string) => {
-      if (sdata != null && name in sdata) {
-        data[name] = JSON.parse(sdata[name]);
-        delete sdata[name];
-      }
-    };
-
-    unserialize('secret');
-    unserialize('emailChangeDate');
-    unserialize('email');
-
-    if (
-      data.secret == null &&
-      (data.emailChangeDate == null ||
-        data.emailChangeDate <
-          strtotime('-' + Tilmeld.config.emailRateLimit) * 1000)
-    ) {
-      data.originalEmail = data.email;
-    }
-
     super.$putData(data, sdata);
     this.$updateDataProtection();
   }
@@ -588,7 +587,9 @@ export default class User extends AbleObject<UserData> {
       this.$allowlistData = undefined;
     } else if (isCurrentUser || isNewUser) {
       // Users can see their own data, and edit some of it.
-      this.$allowlistData.push('username');
+      if (Tilmeld.config.allowUsernameChange || isNewUser) {
+        this.$allowlistData.push('username');
+      }
       this.$allowlistData.push('avatar');
       if (Tilmeld.config.userFields.indexOf('name') !== -1) {
         this.$allowlistData.push('nameFirst');
@@ -603,8 +604,8 @@ export default class User extends AbleObject<UserData> {
         this.$allowlistData.push('phone');
       }
       this.$privateData = [
-        'originalEmail',
         'secret',
+        'newEmailSecret',
         'cancelEmailAddress',
         'cancelEmailSecret',
         'emailChangeDate',
@@ -673,14 +674,12 @@ export default class User extends AbleObject<UserData> {
     }
     let success = true;
 
-    const setupUrl = `${Tilmeld.config.appUrl.replace(/\/$/, () => '')}${
+    const verifyUrl = `${Tilmeld.config.appUrl.replace(/\/$/, () => '')}${
       Tilmeld.config.setupPath
-    }`;
+    }/verify`;
 
-    if (this.$data.secret != null && this.$data.cancelEmailSecret == null) {
-      const link = `${setupUrl}${
-        setupUrl.match(/\?/) ? '&' : '?'
-      }action=verifyemail&id=${encodeURIComponent(
+    if (this.$data.secret != null) {
+      const link = `${verifyUrl}?action=verify&id=${encodeURIComponent(
         this.guid
       )}&secret=${encodeURIComponent(this.$data.secret)}`;
       success =
@@ -702,12 +701,10 @@ export default class User extends AbleObject<UserData> {
         ));
     }
 
-    if (this.$data.secret != null && this.$data.cancelEmailSecret != null) {
-      const link = `${setupUrl}${
-        setupUrl.match(/\?/) ? '&' : '?'
-      }action=verifyemailchange&id=${encodeURIComponent(
+    if (this.$data.newEmailSecret != null) {
+      const link = `${verifyUrl}?action=verifychange&id=${encodeURIComponent(
         this.guid
-      )}&secret=${encodeURIComponent(this.$data.secret)}`;
+      )}&secret=${encodeURIComponent(this.$data.newEmailSecret)}`;
       success =
         success &&
         (await Tilmeld.config.sendEmail(
@@ -716,13 +713,13 @@ export default class User extends AbleObject<UserData> {
             message: {
               to: {
                 name: this.$data.name ?? '',
-                address: this.$data.email ?? '',
+                address: this.$data.newEmailAddress ?? '',
               },
             },
             locals: {
               verifyLink: link,
               oldEmail: this.$data.cancelEmailAddress,
-              newEmail: this.$data.email,
+              newEmail: this.$data.newEmailAddress,
             },
           },
           this
@@ -730,9 +727,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (this.$data.cancelEmailSecret != null) {
-      const link = `${setupUrl}${
-        setupUrl.match(/\?/) ? '&' : '?'
-      }action=cancelemailchange&id=${encodeURIComponent(
+      const link = `${verifyUrl}?action=cancelchange&id=${encodeURIComponent(
         this.guid
       )}&secret=${encodeURIComponent(this.$data.cancelEmailSecret)}`;
       success =
@@ -787,14 +782,12 @@ export default class User extends AbleObject<UserData> {
       case 'plain':
         return this.$data.password === password;
       case 'digest':
-        return (
-          this.$data.password == sha256(password).toString(CryptoJS.enc.Utf16)
-        );
+        return this.$data.password === sha256(password).toString(Base64);
       case 'salt':
       default:
         return (
-          this.$data.password ==
-          sha256(password + this.$data.salt).toString(CryptoJS.enc.Utf16)
+          this.$data.password ===
+          sha256(password + this.$data.salt).toString(Base64)
         );
     }
   }
@@ -871,16 +864,16 @@ export default class User extends AbleObject<UserData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   public async $changePassword(data: {
-    password: string;
-    oldPassword: string;
+    newPassword: string;
+    currentPassword: string;
   }): Promise<{ result: boolean; message: string }> {
-    if ('password' in data || !data.password.length) {
+    if (!('newPassword' in data) || !data.newPassword.length) {
       return { result: false, message: 'Please specify a password.' };
     }
-    if (!this.$checkPassword(data.oldPassword ?? '')) {
+    if (!this.$checkPassword(data.currentPassword ?? '')) {
       return { result: false, message: 'Incorrect password.' };
     }
-    this.$passwordTemp = data.password;
+    this.$passwordTemp = data.newPassword;
     if (await this.$save()) {
       return { result: true, message: 'Your password has been changed.' };
     } else {
@@ -902,13 +895,13 @@ export default class User extends AbleObject<UserData> {
         break;
       case 'digest':
         delete this.$data.salt;
-        this.$data.password = sha256(password).toString(CryptoJS.enc.Utf16);
+        this.$data.password = sha256(password).toString(Base64);
         break;
       case 'salt':
       default:
         this.$data.salt = nanoid();
         this.$data.password = sha256(password + this.$data.salt).toString(
-          CryptoJS.enc.Utf16
+          Base64
         );
         break;
     }
@@ -1358,14 +1351,14 @@ export default class User extends AbleObject<UserData> {
             sendVerification = true;
           }
         } else if (
-          this.$data.originalEmail != null &&
-          this.$data.originalEmail !== this.$data.email
+          this.$originalEmail != null &&
+          this.$originalEmail !== this.$data.email
         ) {
           // The user already has an old email address.
           if (
             Tilmeld.config.emailRateLimit !== '' &&
             this.$data.emailChangeDate != null &&
-            this.$data.emailChangeDate >
+            this.$data.emailChangeDate >=
               strtotime('-' + Tilmeld.config.emailRateLimit) * 1000
           ) {
             throw new EmailChangeRateLimitExceededError(
@@ -1380,7 +1373,8 @@ export default class User extends AbleObject<UserData> {
             );
           } else {
             if (
-              this.$data.secret == null &&
+              this.$data.newEmailSecret == null &&
+              Tilmeld.config.emailRateLimit !== '' &&
               // Make sure the user has at least the rate limit time to cancel
               // an email change.
               (this.$data.emailChangeDate == null ||
@@ -1388,18 +1382,25 @@ export default class User extends AbleObject<UserData> {
                   strtotime('-' + Tilmeld.config.emailRateLimit) * 1000)
             ) {
               // Save the old email in case the cancel change link is clicked.
-              this.$data.cancelEmailAddress = this.$data.originalEmail;
+              this.$data.cancelEmailAddress = this.$originalEmail;
               this.$data.cancelEmailSecret = nanoid();
               this.$data.emailChangeDate = Date.now();
             }
-            this.$data.secret = nanoid();
+            // Save the new address and reset to the old one (until they verify
+            // it).
+            this.$data.newEmailAddress = this.$data.email;
+            this.$data.email = this.$originalEmail;
+            if (Tilmeld.config.emailUsernames) {
+              this.$data.username = this.$data.email;
+            }
+            this.$data.newEmailSecret = nanoid();
             sendVerification = true;
           }
         }
       } else if (
         this.guid != null &&
-        this.$data.originalEmail != null &&
-        this.$data.originalEmail !== this.$data.email &&
+        this.$originalEmail != null &&
+        this.$originalEmail !== this.$data.email &&
         // Make sure the user has at least the rate limit time to cancel an
         // email change.
         (this.$data.emailChangeDate == null ||
@@ -1408,7 +1409,7 @@ export default class User extends AbleObject<UserData> {
       ) {
         // The user doesn't need to verify their new email address, but should
         // be able to cancel the email change from their old address.
-        this.$data.cancelEmailAddress = this.$data.originalEmail;
+        this.$data.cancelEmailAddress = this.$originalEmail;
         this.$data.cancelEmailSecret = nanoid();
         sendVerification = true;
       }
@@ -1423,8 +1424,8 @@ export default class User extends AbleObject<UserData> {
 
     if (this.$passwordTemp != null && this.$passwordTemp !== '') {
       this.$password(this.$passwordTemp);
+      delete this.$passwordTemp;
     }
-    delete this.$passwordTemp;
 
     try {
       Tilmeld.config.validatorUser(this);
@@ -1437,8 +1438,8 @@ export default class User extends AbleObject<UserData> {
     await Nymph.startTransaction(transaction);
 
     if (
-      this.$data.group &&
-      this.$data.group.user &&
+      this.$data.group != null &&
+      this.$data.group.user != null &&
       this.$is(this.$data.group.user)
     ) {
       try {

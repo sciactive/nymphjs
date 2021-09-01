@@ -18,18 +18,21 @@ Tilmeld.init({
   appUrl: 'http://localhost:8080',
   cookieDomain: 'localhost',
   cookiePath: '/',
-  setupPath: '/user-setup',
+  setupPath: '/user',
   emailUsernames: false,
+  verifyRedirect: 'http://localhost:8080',
+  verifyChangeRedirect: 'http://localhost:8080',
+  cancelChangeRedirect: 'http://localhost:8080',
   jwtSecret: 'shhhhh',
 });
 
 const app = express();
 
-app.use('/nymphrest', rest);
+app.use('/rest', rest);
 app.use(
-  '/user-setup',
+  '/user',
   setup({
-    restUrl: 'http://localhost:8080/nymphrest',
+    restUrl: 'http://localhost:8080/rest',
   })
 );
 

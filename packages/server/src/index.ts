@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import Nymph, {
   Entity,
@@ -19,7 +19,7 @@ rest.use(express.json());
 function authenticateTilmeld(
   request: Request,
   response: Response,
-  next: () => void
+  next: NextFunction
 ) {
   if (Nymph.Tilmeld) {
     Nymph.Tilmeld.request = request;
@@ -37,7 +37,7 @@ function authenticateTilmeld(
 function unauthenticateTilmeld(
   _request: Request,
   response: Response,
-  next: () => void
+  next: NextFunction
 ) {
   if (Nymph.Tilmeld) {
     Nymph.Tilmeld.request = null;

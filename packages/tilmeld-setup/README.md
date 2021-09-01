@@ -40,7 +40,10 @@ Tilmeld.init({
   appUrl: 'http://localhost',
   cookieDomain: 'localhost',
   cookiePath: '/',
-  setupPath: '/user-setup',
+  setupPath: '/user',
+  verifyRedirect: 'http://localhost',
+  verifyChangeRedirect: 'http://localhost',
+  cancelChangeRedirect: 'http://localhost',
   jwtSecret: 'shhhhh',
 });
 
@@ -48,12 +51,12 @@ Tilmeld.init({
 const app = express();
 
 // Use the REST server.
-app.use('/nymphrest', rest);
+app.use('/rest', rest);
 // Use the Tilmeld Setup App, passing in the Nymph Client Config.
 app.use(
-  '/user-setup',
+  '/user',
   setup({
-    restUrl: 'http://localhost/nymphrest',
+    restUrl: 'http://localhost/rest',
   })
 );
 
