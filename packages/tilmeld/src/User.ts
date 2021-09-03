@@ -637,7 +637,7 @@ export default class User extends AbleObject<UserData> {
    * @param ability The ability.
    * @returns True or false.
    */
-  public $gatekeeper(ability?: string) {
+  public $gatekeeper(ability?: string): boolean {
     if (ability == null) {
       return User.current()?.$is(this) ?? false;
     }
@@ -657,8 +657,8 @@ export default class User extends AbleObject<UserData> {
       );
     }
     return (
-      (ability in this.$gatekeeperCache && this.$gatekeeperCache[ability]) ||
-      this.$gatekeeperCache['system/admin']
+      (ability in this.$gatekeeperCache && !!this.$gatekeeperCache[ability]) ||
+      !!this.$gatekeeperCache['system/admin']
     );
   }
 
