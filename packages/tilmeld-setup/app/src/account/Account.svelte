@@ -157,6 +157,7 @@
 
   const onLogin = (currentUser: User & CurrentUserData) => {
     user = currentUser;
+    readyEntity();
     originalUsername = user?.username;
     originalEmail = user?.email;
   };
@@ -190,6 +191,8 @@
     User.on('login', onLogin);
     User.on('logout', onLogout);
     user = await User.current();
+    readyEntity();
+    originalUsername = user?.username;
     originalEmail = user?.email;
   });
   onMount(async () => {
@@ -200,6 +203,31 @@
     User.off('login', onLogin);
     User.off('logout', onLogout);
   });
+
+  function readyEntity() {
+    // Make sure all fields are defined.
+    if (user != null && user.username == null) {
+      user.username = '';
+    }
+    if (user != null && user.email == null) {
+      user.email = '';
+    }
+    if (user != null && user.nameFirst == null) {
+      user.nameFirst = '';
+    }
+    if (user != null && user.nameMiddle == null) {
+      user.nameMiddle = '';
+    }
+    if (user != null && user.nameLast == null) {
+      user.nameLast = '';
+    }
+    if (user != null && user.avatar == null) {
+      user.avatar = '';
+    }
+    if (user != null && user.phone == null) {
+      user.phone = '';
+    }
+  }
 
   async function save() {
     if (user == null) {
@@ -215,6 +243,7 @@
 
     try {
       if (await user.$save()) {
+        readyEntity();
         originalEmail = user.email;
         open = false;
         usernameVerifiedMessage = null;

@@ -12,10 +12,18 @@ module.exports = {
     filename: 'index.js',
   },
   resolve: {
-    extensions: ['.mjs', '.js', '.svelte'],
+    alias: {
+      svelte: path.dirname(require.resolve('svelte/package.json')),
+    },
+    extensions: ['.mjs', '.js', '.ts', '.svelte'],
+    mainFields: ['svelte', 'browser', 'module', 'main'],
   },
   module: {
     rules: [
+      {
+        test: /\.ts$/,
+        loader: 'ts-loader',
+      },
       {
         test: /\.svelte$/,
         use: {

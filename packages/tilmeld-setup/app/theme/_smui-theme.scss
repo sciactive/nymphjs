@@ -39,7 +39,7 @@
   )
 );
 
-// Import all the styles for the classes.
+// Import all the typography styles for the classes.
 @use '@material/typography/mdc-typography';
 
 // Main Top App Bar styling.
@@ -173,4 +173,48 @@ big {
 b,
 strong {
   font-weight: bold;
+}
+
+.solo-search-container {
+  padding: 36px 18px;
+}
+
+.solo-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+// Using a * before to make the styles more specific.
+.smui-paper.solo-paper {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  max-width: 600px;
+  margin: 0 12px;
+  padding: 0 12px;
+  height: 48px;
+}
+.smui-paper.solo-paper > * {
+  display: inline-block;
+  margin: 0 12px;
+}
+.smui-paper.solo-paper .solo-icon {
+  height: 60%;
+}
+.mdc-text-field__input.solo-input {
+  flex-grow: 1;
+  color: var(--mdc-theme-on-surface, #000);
+}
+.mdc-text-field__input.solo-input::placeholder {
+  color: var(--mdc-theme-on-surface, #000);
+  opacity: 0.6;
+}
+.mdc-fab.solo-fab {
+  flex-shrink: 0;
+}
+
+.tilmeld-failure {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  color: var(--mdc-theme-error, #f00);
 }

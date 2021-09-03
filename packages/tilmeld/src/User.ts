@@ -46,7 +46,8 @@ export type UserData = {
    */
   nameLast?: string;
   /**
-   * The user's full name.
+   * The user's full name. This is generated from the first, middle, and last
+   * names.
    */
   name?: string;
   /**
@@ -109,7 +110,7 @@ export type UserData = {
   /**
    * The timestamp of when the recovery secret was issued.
    */
-  recoverSecretTime?: number;
+  recoverSecretDate?: number;
   /**
    * The password hash salt.
    */
@@ -118,6 +119,11 @@ export type UserData = {
    * The password or password hash.
    */
   password?: string;
+  /**
+   * Temporary storage for passwords. This will be hashed before going into the
+   * database.
+   */
+  passwordTemp?: string;
 };
 
 export default class User extends AbleObject<UserData> {
@@ -140,10 +146,11 @@ export default class User extends AbleObject<UserData> {
     'abilities',
     'inheritAbilities',
     'recoverSecret',
-    'recoverSecretTime',
+    'recoverSecretDate',
     'password',
     'salt',
     'secret',
+    'newEmailAddress',
     'newEmailSecret',
     'cancelEmailAddress',
     'cancelEmailSecret',
@@ -179,11 +186,6 @@ export default class User extends AbleObject<UserData> {
    * The user's group descendants.
    */
   private $descendantGroups?: (Group & GroupData)[];
-  /**
-   * Temporary storage for passwords. This will be hashed before going into the
-   * database.
-   */
-  private $passwordTemp?: string;
   /**
    * Used to save the current email address to send verification if it changes
    * from the frontend.
@@ -308,7 +310,7 @@ export default class User extends AbleObject<UserData> {
 
       // Create a unique secret.
       getUser.recoverSecret = customAlphabet(nolookalikesSafe, 10)();
-      getUser.recoverSecretTime = Date.now();
+      getUser.recoverSecretDate = Date.now();
       if (!(await getUser.$saveSkipAC())) {
         return { result: false, message: "Couldn't save recovery secret." };
       }
@@ -369,7 +371,7 @@ export default class User extends AbleObject<UserData> {
       data.secret !== user.recoverSecret ||
       strtotime(
         '+' + Tilmeld.config.pwRecoveryTimeLimit,
-        Math.floor((user.recoverSecretTime ?? 0) / 1000)
+        Math.floor((user.recoverSecretDate ?? 0) / 1000)
       ) *
         1000 <
         Date.now()
@@ -386,7 +388,7 @@ export default class User extends AbleObject<UserData> {
 
     user.$password(data.password);
     delete user.recoverSecret;
-    delete user.recoverSecretTime;
+    delete user.recoverSecretDate;
     if (await user.$saveSkipAC()) {
       return {
         result: true,
@@ -458,10 +460,10 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $getAvatar() {
-    if (this.$data.avatar != null) {
+    if (this.$data.avatar != null && this.$data.avatar !== '') {
       return this.$data.avatar;
     }
-    if (this.$data.email == null || !this.$data.email.length) {
+    if (this.$data.email == null || this.$data.email === '') {
       return 'https://secure.gravatar.com/avatar/?d=mm&s=40';
     }
     return (
@@ -581,7 +583,11 @@ export default class User extends AbleObject<UserData> {
       this.$clientEnabledMethods.push('$sendEmailVerification');
     }
 
-    if (user != null && abilities.indexOf('tilmeld/admin') !== -1) {
+    if (
+      user != null &&
+      (abilities.indexOf('tilmeld/admin') !== -1 ||
+        abilities.indexOf('system/admin') !== -1)
+    ) {
       // Users who can edit other users can see most of their data.
       this.$privateData = ['password', 'salt'];
       this.$allowlistData = undefined;
@@ -610,7 +616,7 @@ export default class User extends AbleObject<UserData> {
         'cancelEmailSecret',
         'emailChangeDate',
         'recoverSecret',
-        'recoverSecretTime',
+        'recoverSecretDate',
         'password',
         'salt',
       ];
@@ -738,13 +744,13 @@ export default class User extends AbleObject<UserData> {
             message: {
               to: {
                 name: this.$data.name ?? '',
-                address: this.$data.email ?? '',
+                address: this.$data.cancelEmailAddress ?? '',
               },
             },
             locals: {
               cancelLink: link,
               oldEmail: this.$data.cancelEmailAddress,
-              newEmail: this.$data.email,
+              newEmail: this.$data.newEmailAddress ?? this.$data.email,
             },
           },
           this
@@ -873,7 +879,7 @@ export default class User extends AbleObject<UserData> {
     if (!this.$checkPassword(data.currentPassword ?? '')) {
       return { result: false, message: 'Incorrect password.' };
     }
-    this.$passwordTemp = data.newPassword;
+    this.$data.passwordTemp = data.newPassword;
     if (await this.$save()) {
       return { result: true, message: 'Your password has been changed.' };
     } else {
@@ -973,7 +979,7 @@ export default class User extends AbleObject<UserData> {
           this.guid != null ? 'Username is valid.' : 'Username is available!',
       };
     } else {
-      this.$data.username = this.$data.email;
+      this.$data.email = this.$data.username;
       if (this.$data.username == null || !this.$data.username.length) {
         return { result: false, message: 'Please specify an email.' };
       }
@@ -1105,8 +1111,8 @@ export default class User extends AbleObject<UserData> {
     if (Tilmeld.config.regFields.indexOf('name') !== -1) {
       this.$data.name =
         this.$data.nameFirst +
-        (!this.$data.nameMiddle == null ? '' : ' ' + this.$data.nameMiddle) +
-        (!this.$data.nameLast == null ? '' : ' ' + this.$data.nameLast);
+        (this.$data.nameMiddle == null ? '' : ' ' + this.$data.nameMiddle) +
+        (this.$data.nameLast == null ? '' : ' ' + this.$data.nameLast);
       if (this.$data.name === '') {
         this.$data.name = this.$data.username;
       }
@@ -1295,7 +1301,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public async $save() {
-    if (this.$data.username == null || !this.$data.username.length) {
+    if (this.$data.username == null || !this.$data.username.trim().length) {
       return false;
     }
 
@@ -1324,6 +1330,60 @@ export default class User extends AbleObject<UserData> {
       this.$data.nameFirst +
       (this.$data.nameMiddle ? ' ' + this.$data.nameMiddle : '') +
       (this.$data.nameLast ? ' ' + this.$data.nameLast : '');
+    this.$data.enabled = !!this.$data.enabled;
+
+    // Clear empty values.
+    if (this.$data.nameFirst === '') {
+      delete this.$data.nameFirst;
+    }
+    if (this.$data.nameMiddle === '') {
+      delete this.$data.nameMiddle;
+    }
+    if (this.$data.nameLast === '') {
+      delete this.$data.nameLast;
+    }
+    if (this.$data.name === '') {
+      delete this.$data.name;
+    }
+    if (this.$data.email === '') {
+      delete this.$data.email;
+    }
+    if (this.$data.avatar === '') {
+      delete this.$data.avatar;
+    }
+    if (this.$data.phone === '') {
+      delete this.$data.phone;
+    }
+    if (this.$data.secret === '') {
+      delete this.$data.secret;
+    }
+    if (this.$data.emailChangeDate === 0) {
+      delete this.$data.emailChangeDate;
+    }
+    if (this.$data.newEmailSecret === '') {
+      delete this.$data.newEmailSecret;
+    }
+    if (this.$data.newEmailAddress === '') {
+      delete this.$data.newEmailAddress;
+    }
+    if (this.$data.cancelEmailSecret === '') {
+      delete this.$data.cancelEmailSecret;
+    }
+    if (this.$data.cancelEmailAddress === '') {
+      delete this.$data.cancelEmailAddress;
+    }
+    if (this.$data.recoverSecret === '') {
+      delete this.$data.recoverSecret;
+    }
+    if (this.$data.recoverSecretDate === 0) {
+      delete this.$data.recoverSecretDate;
+    }
+    if (this.$data.password === '') {
+      delete this.$data.password;
+    }
+    if (this.$data.passwordTemp === '') {
+      delete this.$data.passwordTemp;
+    }
 
     // Verification.
     const unCheck = await this.$checkUsername();
@@ -1415,16 +1475,13 @@ export default class User extends AbleObject<UserData> {
       }
     }
 
-    if (
-      (this.$data.password == null || this.$data.password === '') &&
-      (this.$passwordTemp == null || this.$passwordTemp === '')
-    ) {
-      throw new BadDataError('A password is required.');
+    if (this.$data.passwordTemp != null) {
+      this.$password(this.$data.passwordTemp);
     }
+    delete this.$data.passwordTemp;
 
-    if (this.$passwordTemp != null && this.$passwordTemp !== '') {
-      this.$password(this.$passwordTemp);
-      delete this.$passwordTemp;
+    if (this.$data.password == null) {
+      throw new BadDataError('A password is required.');
     }
 
     try {

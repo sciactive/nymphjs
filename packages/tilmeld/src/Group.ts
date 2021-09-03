@@ -65,6 +65,10 @@ export type GroupData = {
    * Whether this group is a default secondary group for new users.
    */
   defaultSecondary?: boolean;
+  /**
+   * Whether this group is a default secondary group for unverified users.
+   */
+  unverifiedSecondary?: boolean;
 };
 
 export default class Group extends AbleObject<GroupData> {
@@ -186,6 +190,7 @@ export default class Group extends AbleObject<GroupData> {
           ilike: [
             ['name', search],
             ['groupname', search],
+            ['email', search],
           ],
         }
       );
@@ -221,7 +226,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public $getAvatar() {
-    if (this.$data.avatar != null) {
+    if (this.$data.avatar != null && this.$data.avatar !== '') {
       return this.$data.avatar;
     }
     if (this.$data.email == null || !this.$data.email.length) {
@@ -238,10 +243,10 @@ export default class Group extends AbleObject<GroupData> {
     this.$referenceWake();
 
     if (
-      Tilmeld.gatekeeper('tilmeld/admin') &&
-      !Tilmeld.gatekeeper('system/admin') &&
       input.data.abilities.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1
+      this.$data.abilities?.indexOf('system/admin') === -1 &&
+      Tilmeld.gatekeeper('tilmeld/admin') &&
+      !Tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to make this group a system admin."
@@ -255,10 +260,10 @@ export default class Group extends AbleObject<GroupData> {
     this.$referenceWake();
 
     if (
-      Tilmeld.gatekeeper('tilmeld/admin') &&
-      !Tilmeld.gatekeeper('system/admin') &&
       patch.set.abilities.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1
+      this.$data.abilities?.indexOf('system/admin') === -1 &&
+      Tilmeld.gatekeeper('tilmeld/admin') &&
+      !Tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to make this group a system admin."
@@ -290,7 +295,8 @@ export default class Group extends AbleObject<GroupData> {
 
     if (
       user != null &&
-      (user.abilities?.indexOf('tilmeld/admin') ?? -1) !== -1
+      ((user.abilities?.indexOf('tilmeld/admin') ?? -1) !== -1 ||
+        (user.abilities?.indexOf('system/admin') ?? -1) !== -1)
     ) {
       // Users who can edit groups can see their data.
       this.$privateData = [];
@@ -540,7 +546,7 @@ export default class Group extends AbleObject<GroupData> {
           this.guid != null ? 'Groupname is valid.' : 'Groupname is available!',
       };
     } else {
-      this.$data.groupname = this.$data.email;
+      this.$data.email = this.$data.groupname;
       if (this.$data.groupname == null || !this.$data.groupname.length) {
         return { result: false, message: 'Please specify an email.' };
       }
@@ -605,7 +611,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public async $save() {
-    if (this.$data.groupname == null || !this.$data.groupname.length) {
+    if (this.$data.groupname == null || !this.$data.groupname.trim().length) {
       return false;
     }
 
@@ -617,6 +623,36 @@ export default class Group extends AbleObject<GroupData> {
     this.$data.email = (this.$data.email ?? '').trim();
     this.$data.name = (this.$data.name ?? '').trim();
     this.$data.phone = (this.$data.phone ?? '').trim();
+    this.$data.enabled = !!this.$data.enabled;
+
+    // Clear empty values.
+    if (this.$data.name === '') {
+      delete this.$data.name;
+    }
+    if (this.$data.email === '') {
+      delete this.$data.email;
+    }
+    if (this.$data.avatar === '') {
+      delete this.$data.avatar;
+    }
+    if (this.$data.phone === '') {
+      delete this.$data.phone;
+    }
+    if (this.$data.parent == null) {
+      delete this.$data.parent;
+    }
+    if (this.$data.user == null) {
+      delete this.$data.user;
+    }
+    if (!this.$data.defaultPrimary) {
+      delete this.$data.defaultPrimary;
+    }
+    if (!this.$data.defaultSecondary) {
+      delete this.$data.defaultSecondary;
+    }
+    if (!this.$data.unverifiedSecondary) {
+      delete this.$data.unverifiedSecondary;
+    }
 
     // Groups should never have 'system/admin' or 'tilmeld/admin' abilities.
     this.$data.abilities = difference(this.$data.abilities ?? [], [

@@ -1,6 +1,6 @@
 import { Nymph, Entity, PubSub } from '@nymphjs/client';
 
-import Group, { GroupData } from './Group';
+import Group, { AdminGroupData, CurrentGroupData } from './Group';
 
 export type EventType = 'register' | 'login' | 'logout';
 export type RegisterCallback = (user: User & CurrentUserData) => void;
@@ -66,11 +66,11 @@ export type CurrentUserData = UserData & {
   /**
    * The user's primary group.
    */
-  group?: Group & GroupData;
+  group?: Group & CurrentGroupData;
   /**
    * The user's secondary groups.
    */
-  groups?: (Group & GroupData)[];
+  groups?: (Group & CurrentGroupData)[];
   /**
    * Whether the user should inherit the abilities of his groups.
    */
@@ -79,10 +79,13 @@ export type CurrentUserData = UserData & {
 
 export type AdminUserData = CurrentUserData & {
   /**
-   * Used to save the current email to send verification if it changes.
+   * The user's primary group.
    */
-  originalEmail?: string;
-
+  group?: Group & AdminGroupData;
+  /**
+   * The user's secondary groups.
+   */
+  groups?: (Group & AdminGroupData)[];
   /**
    * A verification secret.
    */
@@ -91,6 +94,14 @@ export type AdminUserData = CurrentUserData & {
    * The timestamp of when the email address was last changed.
    */
   emailChangeDate?: number;
+  /**
+   * An email change proceed secret.
+   */
+  newEmailSecret?: string;
+  /**
+   * The new email address.
+   */
+  newEmailAddress?: string;
   /**
    * An email change cancellation secret.
    */
@@ -106,7 +117,11 @@ export type AdminUserData = CurrentUserData & {
   /**
    * The timestamp of when the recovery secret was issued.
    */
-  recoverSecretTime?: number;
+  recoverSecretDate?: number;
+  /**
+   * Used by admins to change a user's password. Not saved to the database.
+   */
+  passwordTemp?: string;
 };
 
 let currentToken: string | null = null;

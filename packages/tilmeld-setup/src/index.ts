@@ -139,7 +139,7 @@ export default function setup(options: NymphOptions) {
           Tilmeld.config.emailRateLimit !== '' &&
           user.emailChangeDate != null &&
           user.emailChangeDate <
-            strtotime('-' + Tilmeld.config.emailRateLimit) * 1000
+            (strtotime('-' + Tilmeld.config.emailRateLimit) || 0) * 1000
         ) {
           printError(
             400,

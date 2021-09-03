@@ -1,6 +1,6 @@
 import { Nymph, Entity } from '@nymphjs/client';
 
-import User, { UserData } from './User';
+import User, { CurrentUserData } from './User';
 
 export type GroupData = {
   /**
@@ -32,6 +32,10 @@ export type GroupData = {
    * Whether this group is a default secondary group for new users.
    */
   defaultSecondary?: boolean;
+  /**
+   * Whether this group is a default secondary group for unverified users.
+   */
+  unverifiedSecondary?: boolean;
 };
 
 export type CurrentGroupData = GroupData & {
@@ -50,7 +54,7 @@ export type CurrentGroupData = GroupData & {
   /**
    * If generatePrimary is on, this will be the user who generated this group.
    */
-  user?: (User & UserData) | null;
+  user?: (User & CurrentUserData) | null;
 };
 
 export type AdminGroupData = CurrentGroupData;
