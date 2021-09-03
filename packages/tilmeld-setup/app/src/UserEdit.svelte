@@ -33,13 +33,17 @@
     <section>
       {#if activeTab === 'General'}
         <LayoutGrid style="padding: 0;">
-          <LayoutCell span={9}>
+          <LayoutCell span={4}>
+            <div class="mdc-typography--headline6">GUID</div>
+            <code>{entity.guid}</code>
+          </LayoutCell>
+          <LayoutCell span={4}>
             <FormField>
               <Checkbox bind:checked={entity.enabled} />
               <span slot="label">Enabled (Able to log in)</span>
             </FormField>
           </LayoutCell>
-          <LayoutCell span={3} style="text-align: end;">
+          <LayoutCell span={4} style="text-align: end;">
             <a href="https://en.gravatar.com/" target="_blank">
               <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
             </a>
@@ -675,8 +679,8 @@
     if (entity.recoverSecretDate == null) {
       entity.recoverSecretDate = 0;
     }
-    entity.$getAvatar().then((avatar) => {
-      avatar = avatar;
+    entity.$getAvatar().then((value) => {
+      avatar = value;
     });
     entity.$readyAll(1).then(() => {
       entity = entity;

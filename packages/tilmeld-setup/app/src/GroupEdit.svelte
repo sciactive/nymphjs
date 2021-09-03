@@ -42,13 +42,17 @@
               the values from its user.
             </LayoutCell>
           {/if}
-          <LayoutCell span={9}>
+          <LayoutCell span={4}>
+            <div class="mdc-typography--headline6">GUID</div>
+            <code>{entity.guid}</code>
+          </LayoutCell>
+          <LayoutCell span={4}>
             <FormField>
               <Checkbox bind:checked={entity.enabled} />
               <span slot="label">Enabled (Able to give abilities)</span>
             </FormField>
           </LayoutCell>
-          <LayoutCell span={3} style="text-align: end;">
+          <LayoutCell span={4} style="text-align: end;">
             <a href="https://en.gravatar.com/" target="_blank">
               <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
             </a>
@@ -108,6 +112,7 @@
               type="text"
               style="width: 100%;"
               input$autocomplete="off"
+              disabled={entity.user != null}
             />
           </LayoutCell>
           <LayoutCell span={4}>
@@ -410,8 +415,8 @@
     if (entity.unverifiedSecondary == null) {
       entity.unverifiedSecondary = false;
     }
-    entity.$getAvatar().then((avatar) => {
-      avatar = avatar;
+    entity.$getAvatar().then((value) => {
+      avatar = value;
     });
     entity.$readyAll(1).then(() => {
       entity = entity;
