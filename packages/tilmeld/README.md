@@ -1,5 +1,7 @@
 # Tilmeld - User/Group System for Nymph
 
+(The d is silent.)
+
 Powerful object data storage and querying.
 
 Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
