@@ -132,26 +132,30 @@ function selectorsParser(
     }
   }
 
-  return [selector];
-}
-
-function unQuote(input: string): string {
-  if (input.match(/^".*?[^\\]"$/)) {
-    return input.slice(1, -1).replace(/\\"/g, '"');
+  if (
+    'selector' in selector &&
+    (selector.selector as Selector[]).length === 1 &&
+    Object.keys(selector).length === 2 &&
+    (selector.type === '&' || selector.type === '|')
+  ) {
+    // There is only one subselector, and this selector is a positive match
+    // type, so just return it as the selector.
+    return selector.selector as Selector[];
   }
-  return input;
+
+  return [selector];
 }
 
 function selectorParser(query: string, selector: Selector): string {
   let curQuery = query;
 
   // eg. name=Marty or name="Marty McFly" or enabled=true or someArray=[1,2]
-  const equalsRegex = /(?: |^)(\w+)!?=(""|".*?[^\\]"|[^ ]+)(?= |$)/g;
-  const equalsMatch = curQuery.match(equalsRegex);
-  if (equalsMatch) {
+  const equalRegex = /(?: |^)(\w+)!?=(""|".*?[^\\]"|[^ ]+)(?= |$)/g;
+  const equalMatch = curQuery.match(equalRegex);
+  if (equalMatch) {
     selector.equal = [];
     selector['!equal'] = [];
-    for (let match of equalsMatch) {
+    for (let match of equalMatch) {
       try {
         let [name, value] = match.trim().split('=', 2);
         try {
@@ -162,9 +166,9 @@ function selectorParser(query: string, selector: Selector): string {
           }
         } catch (e: any) {
           if (name.endsWith('!')) {
-            selector['!equal'].push([name.slice(0, -1), unQuote(value)]);
+            selector['!equal'].push([name.slice(0, -1), unQuoteString(value)]);
           } else {
-            selector.equal.push([name, unQuote(value)]);
+            selector.equal.push([name, unQuoteString(value)]);
           }
         }
       } catch (e: any) {
@@ -178,7 +182,34 @@ function selectorParser(query: string, selector: Selector): string {
       delete selector['!equal'];
     }
   }
-  curQuery = curQuery.replace(equalsRegex, '');
+  curQuery = curQuery.replace(equalRegex, '');
+
+  // eg. {790274347f9b3a018c2cedee} or {!790274347f9b3a018c2cedee}
+  const guidRegex = /(?: |^)\{!?([0-9a-f]{24})\}(?= |$)/g;
+  const guidMatch = curQuery.match(guidRegex);
+  if (guidMatch) {
+    selector.guid = [];
+    selector['!guid'] = [];
+    for (let match of guidMatch) {
+      try {
+        let guid = match.trim().replace(/^\{|\}$/g, '');
+        if (guid.startsWith('!')) {
+          selector['!guid'].push(guid.slice(1));
+        } else {
+          selector.guid.push(guid);
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.guid.length) {
+      delete selector.guid;
+    }
+    if (!selector['!guid'].length) {
+      delete selector['!guid'];
+    }
+  }
+  curQuery = curQuery.replace(guidRegex, '');
 
   // eg. [enabled] or [!defaultPrimaryGroup]
   const truthyRegex = /(?: |^)\[(!?\w+)\](?= |$)/g;
@@ -206,6 +237,74 @@ function selectorParser(query: string, selector: Selector): string {
     }
   }
   curQuery = curQuery.replace(truthyRegex, '');
+
+  // eg. user<{790274347f9b3a018c2cedee}> or user!<{790274347f9b3a018c2cedee}>
+  const refRegex = /(?: |^)(\w+)!?<\{([0-9a-f]{24})\}>(?= |$)/g;
+  const refMatch = curQuery.match(refRegex);
+  if (refMatch) {
+    selector.ref = [];
+    selector['!ref'] = [];
+    for (let match of refMatch) {
+      try {
+        let [name, value] = match.trim().slice(0, -1).split('<', 2);
+        if (name.endsWith('!')) {
+          selector['!ref'].push([name.slice(0, -1), value.slice(1, -1)]);
+        } else {
+          selector.ref.push([name, value.slice(1, -1)]);
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.ref.length) {
+      delete selector.ref;
+    }
+    if (!selector['!ref'].length) {
+      delete selector['!ref'];
+    }
+  }
+  curQuery = curQuery.replace(refRegex, '');
+
+  // eg. someArrayOfNumbers<10> or someObject!<"some string">
+  const containRegex = /(?: |^)(\w+)!?(<.*?[^\\]>)(?= |$)/g;
+  const containMatch = curQuery.match(containRegex);
+  if (containMatch) {
+    selector.contain = [];
+    selector['!contain'] = [];
+    for (let match of containMatch) {
+      try {
+        let [name, value] = match.trim().slice(0, -1).split('<', 2);
+        try {
+          if (name.endsWith('!')) {
+            selector['!contain'].push([
+              name.slice(0, -1),
+              JSON.parse(unQuoteAngles(value)),
+            ]);
+          } else {
+            selector.contain.push([name, JSON.parse(unQuoteAngles(value))]);
+          }
+        } catch (e: any) {
+          if (name.endsWith('!')) {
+            selector['!contain'].push([
+              name.slice(0, -1),
+              unQuoteAngles(value),
+            ]);
+          } else {
+            selector.contain.push([name, unQuoteAngles(value)]);
+          }
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.contain.length) {
+      delete selector.contain;
+    }
+    if (!selector['!contain'].length) {
+      delete selector['!contain'];
+    }
+  }
+  curQuery = curQuery.replace(containRegex, '');
 
   // eg. cdate>15
   const gtRegex = /(?: |^)(\w+)>(-?\d+(?:\.\d+)?)(?= |$)/g;
@@ -447,16 +546,16 @@ function selectorParser(query: string, selector: Selector): string {
           if (value.endsWith('"i')) {
             selector['!ilike'].push([
               name.slice(0, -1),
-              unQuote(value.slice(0, -1)),
+              unQuoteString(value.slice(0, -1)),
             ]);
           } else {
-            selector['!like'].push([name.slice(0, -1), unQuote(value)]);
+            selector['!like'].push([name.slice(0, -1), unQuoteString(value)]);
           }
         } else {
           if (value.endsWith('"i')) {
-            selector.ilike.push([name, unQuote(value.slice(0, -1))]);
+            selector.ilike.push([name, unQuoteString(value.slice(0, -1))]);
           } else {
-            selector.like.push([name, unQuote(value)]);
+            selector.like.push([name, unQuoteString(value)]);
           }
         }
       } catch (e: any) {
@@ -479,4 +578,15 @@ function selectorParser(query: string, selector: Selector): string {
   curQuery = curQuery.replace(likeRegex, '');
 
   return curQuery.trim();
+}
+
+function unQuoteString(input: string): string {
+  if (input.match(/^".*?[^\\]"$/)) {
+    return input.slice(1, -1).replace(/\\"/g, '"');
+  }
+  return input;
+}
+
+function unQuoteAngles(input: string): string {
+  return input.replace(/\\</g, '<').replace(/\\>/g, '>');
 }
