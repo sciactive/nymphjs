@@ -113,7 +113,7 @@
 
       {#if saving}
         <div class="tilmeld-account-loading">
-          <CircularProgress style="height: 24px; width: 24px;" indefinite />
+          <CircularProgress style="height: 24px; width: 24px;" indeterminate />
         </div>
       {/if}
     </Content>

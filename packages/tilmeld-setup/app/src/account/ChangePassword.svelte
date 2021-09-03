@@ -46,7 +46,7 @@
 
       {#if changing}
         <div class="tilmeld-password-loading">
-          <CircularProgress style="height: 24px; width: 24px;" indefinite />
+          <CircularProgress style="height: 24px; width: 24px;" indeterminate />
         </div>
       {/if}
     </Content>

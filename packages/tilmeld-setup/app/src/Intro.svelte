@@ -52,7 +52,7 @@
   <h3>Abilities</h3>
   <p>
     Abilities can be granted to users and/or their groups. When you call
-    <code>gatekeeper</code>, it will check for the given ability.
+    <code>$gatekeeper</code>, it will check for the given ability.
   </p>
 
   <h3>Generated Primary Groups</h3>

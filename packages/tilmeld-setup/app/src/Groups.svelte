@@ -1,7 +1,7 @@
 {#if clientConfig == null || user == null}
   <section>
     <div style="display: flex; justify-content: center; align-items: center;">
-      <CircularProgress style="height: 45px; width: 45px;" indefinite />
+      <CircularProgress style="height: 45px; width: 45px;" indeterminate />
     </div>
   </section>
 {:else if entity == null}
@@ -50,7 +50,7 @@
 
     {#if entitiesSearching}
       <div style="display: flex; justify-content: center; align-items: center;">
-        <CircularProgress style="height: 32px; width: 32px;" indefinite />
+        <CircularProgress style="height: 32px; width: 32px;" indeterminate />
       </div>
     {:else if entities != null}
       <DataTable table$aria-label="Group list" style="width: 100%;">

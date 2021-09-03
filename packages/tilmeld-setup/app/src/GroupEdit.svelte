@@ -19,7 +19,7 @@
   {#if clientConfig == null || user == null}
     <section style="padding-top: 0;">
       <div style="display: flex; justify-content: center; align-items: center;">
-        <CircularProgress style="height: 45px; width: 45px;" indefinite />
+        <CircularProgress style="height: 45px; width: 45px;" indeterminate />
       </div>
     </section>
   {:else}
@@ -212,7 +212,10 @@
           <div
             style="display: flex; justify-content: center; align-items: center;"
           >
-            <CircularProgress style="height: 32px; width: 32px;" indefinite />
+            <CircularProgress
+              style="height: 32px; width: 32px;"
+              indeterminate
+            />
           </div>
         {:else if parents != null}
           <DataTable table$aria-label="Parent list" style="width: 100%;">
