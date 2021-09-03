@@ -646,9 +646,15 @@ export default class User extends AbleObject<UserData> {
       let abilities = this.$data.abilities ?? [];
       if (this.$data.inheritAbilities) {
         for (let curGroup of this.$data.groups ?? []) {
-          abilities = abilities.concat(curGroup.abilities ?? []);
+          if (curGroup.enabled) {
+            abilities = abilities.concat(curGroup.abilities ?? []);
+          }
         }
-        if (this.$data.group != null && this.$data.group.cdate != null) {
+        if (
+          this.$data.group != null &&
+          this.$data.group.cdate != null &&
+          this.$data.group.enabled
+        ) {
           abilities = abilities.concat(this.$data.group.abilities ?? []);
         }
       }

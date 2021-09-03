@@ -427,7 +427,7 @@ export default class Group extends AbleObject<GroupData> {
   public $getLevel() {
     let group = Group.factorySync(this.guid ?? undefined);
     let level = 0;
-    while (group.parent != null && group.parent.enabled && level < 1024) {
+    while (group.parent != null && group.parent.cdate != null && level < 1024) {
       level++;
       group = group.parent;
     }
