@@ -12,7 +12,188 @@ npm install --save @nymphjs/query-parser
 
 ## Usage
 
-TODO...
+The query parser will turn a string into an Options and Selectors array for the Nymph Client. It has a syntax that allows for _most_ features of a Nymph query to be expressed in a text input.
+
+```ts
+import queryParser from '@nymphjs/query-parser';
+import { Nymph } from '@nymphjs/client';
+
+import MyEntity from './MyEntity';
+
+async function doQuery() {
+  const query = 'limit:4 foobar (| [archived] mdate<"2 weeks ago")';
+  const [options, ...selectors] = queryParser(query, MyEntity, [
+    'title',
+    'body',
+  ]);
+  /*
+  Options will be
+    {
+      class: MyEntity,
+      limit: 4
+    }
+
+  And selectors will be
+    [
+      {
+        type: "|",
+        truthy: [
+          "archived"
+        ],
+        lt: [
+          ["mdate", null, "2 weeks ago"]
+        ]
+      },
+      {
+        type: "|",
+        ilike: [
+          ["title", "%foobar%"],
+          ["body", "%foobar%"]
+        ]
+      }
+    ]
+  */
+  const entities = await Nymph.getEntities(options, ...selectors);
+}
+```
+
+## Options
+
+You can set limit, offset, and reverse like this.
+
+- `limit:number`
+- `offset:number`
+- `reverse:true`, `reverse:false`, `reverse:1`, or `reverse:0`
+
+These must appear in the top level of the query (outside of any parentheses).
+
+## Clauses
+
+These are the available clauses, and their syntax.
+
+### equal and !equal
+
+Check for string or JSON representation equality.
+
+- `name=string` or `name!=string`
+- `name="string value"` or `name!="string value"`
+  - (Use this if you have a space in your string, or if your string could be interpreted as valid JSON. Escape double quotes with a leading backslash.)
+- `name=JSON` or `name!=JSON`
+  - (Match a JSON encoded value (like `true`, `1`, `[1,2,3]`, or `{"prop":"val"}`).)
+
+### guid and !guid
+
+Check for entity GUID.
+
+- `{guid}` and `{!guid}`
+
+### truthy and !truthy
+
+Check for truthiness.
+
+- `[name]` or `[!name]`
+
+### ref and !ref
+
+Check for a reference to another entity.
+
+- `name<{guid}>` or `name!<{guid}>`
+
+### contain and !contain
+
+Check for a JSON representation appearing within the JSON representation of the named property.
+
+- `name<value>` or `name!<value>`
+  - (Escape angle brackets with a leading backslash. If your value could be interpreted as valid JSON, encode it as a JSON string and use the JSON syntax instead.)
+- `name<JSON>` or `name!<JSON>`
+  - (Search for a JSON encoded value (like `true`, `1`, `[1,2,3]`, or `{"prop":"val"}`).)
+
+### match and !match
+
+Check for POSIX regex match.
+
+- `name~/pattern/` or `name!~/pattern/`
+
+### imatch and !imatch
+
+Check for case insensitive POSIX regex match.
+
+- `name~/pattern/i` or `name!~/pattern/i`
+
+### like and !like
+
+Check for pattern match where \_ is single char wildcard and % is any length wildcard.
+
+- `name~pattern` or `name!~pattern`
+- `name~"pattern"` or `name!~"pattern"`
+  - (Use this if you have a space in your pattern.)
+
+### ilike and !ilike
+
+Check for case insensitive pattern match where \_ is single char wildcard and % is any length wildcard.
+
+- `name~"pattern"i` or `name!~"pattern"i`
+
+### gt
+
+Check a prop's value is greater than a given value.
+
+- `name>number`
+- `name>relative`
+  - (A single relative time value like `now` or `yesterday`.)
+- `name>"relative time value"`
+  - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
+
+### gte
+
+Check a prop's value is greater than or equal to a given value.
+
+- `name>=number`
+- `name>=relative`
+  - (A single relative time value like `now` or `yesterday`.)
+- `name>="relative time value"`
+  - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
+
+### lt
+
+Check a prop's value is less than a given value.
+
+- `name<number`
+- `name<relative`
+  - (A single relative time value like `now` or `yesterday`.)
+- `name<"relative time value"`
+  - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
+
+### lte
+
+Check a prop's value is less than or equal to a given value.
+
+- `name<=number`
+- `name<=relative`
+  - (A single relative time value like `now` or `yesterday`.)
+- `name<="relative time value"`
+  - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
+
+## Selectors
+
+You can specify nested selectors with different types using pairs of parentheses. The first character (or two) inside the parentheses can be a type: "&", "!&", "|", "!|", or "!" (the same as "!&").
+
+Here are some examples of nested selectors.
+
+```
+Either enabled is truthy and abilities contains "subscriber", or abilities contains "lifelong-subscriber".
+
+(| ([enabled] abilities<"subscriber">) abilities<"lifeline-subscriber">)
+
+
+Published is not truthy and cdate is not greater than 6 months ago.
+
+(! [published] cdate>"6 months ago")
+```
+
+## Default Fields
+
+Anything contained in the query (including in selector parentheses) that doesn't match any of the options or clause syntaxes listed above will be added (at the appropriate nesting level) to a selector with an `"|"` type in an `ilike` clause surrounded by "%" characters for each field passed in to the `defaultFields` argument.
 
 # License
 
