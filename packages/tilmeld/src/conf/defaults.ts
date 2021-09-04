@@ -2,10 +2,12 @@ import path from 'path';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
 import Email, { EmailOptions } from 'email-templates';
+import Joi from 'joi';
 
 import Tilmeld from '../Tilmeld';
 import { Config } from './d';
 import User, { UserData } from '../User';
+import Group from '../Group';
 
 export default {
   appName: 'My Nymph App',
@@ -149,38 +151,207 @@ export default {
     }
   },
   userRegisteredRecipient: null,
-  validatorGroup: (group) => {
-    // v::notEmpty()
-    // ->attribute('groupname', v::stringType()->notBlank()->length(1, null))
-    // ->attribute('enabled', v::boolType())
-    // ->attribute('email', v::optional(v::email()), false)
-    // ->attribute('name', v::stringType()->notBlank()->prnt()->length(1, 256))
-    // ->attribute('avatar', v::optional(v::stringType()->url()->prnt()->length(1, 256)), false)
-    // ->attribute('phone', v::optional(v::phone()), false)
-    // ->attribute('parent', v::when(v::nullType(), v::alwaysValid(), v::instance('\Tilmeld\Entities\Group')), false)
-    // ->attribute('user', v::when(v::nullType(), v::alwaysValid(), v::instance('\Tilmeld\Entities\User')), false)
-    // ->attribute('abilities', v::arrayType()->each(v::stringType()->notBlank()->prnt()->length(1, 256)))
-    // ->attribute('defaultPrimary', v::when(v::nullType(), v::alwaysValid(), v::boolType()), false)
-    // ->attribute('defaultSecondary', v::when(v::nullType(), v::alwaysValid(), v::boolType()), false)
-    // ->setName('group object')
+  validatorGroup: (group: Group) => {
+    Joi.attempt(
+      group.$getValidatable(),
+      Joi.object().keys({
+        guid: Joi.alternatives()
+          .try(
+            Joi.any().only().allow(null),
+            Joi.string().trim(false).length(24).hex()
+          )
+          .required(),
+        cdate: Joi.alternatives()
+          .try(Joi.any().only().allow(null), Joi.number())
+          .required(),
+        mdate: Joi.alternatives()
+          .try(Joi.any().only().allow(null), Joi.number())
+          .required(),
+        tags: Joi.array()
+          .items(
+            Joi.string()
+              .pattern(/[\x01-\x1F\x7F]/, {
+                name: 'control characters',
+                invert: true,
+              })
+              .min(1)
+          )
+          .required(),
+        groupname: Joi.string().trim(false).min(1).required(),
+        enabled: Joi.boolean().required(),
+        email: Joi.string()
+          .trim(false)
+          .email({ minDomainSegments: 1, tlds: false })
+          .required(),
+        name: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .min(1)
+          .max(512)
+          .required(),
+        avatar: Joi.string()
+          .trim(false)
+          .uri()
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .min(1)
+          .max(1024),
+        phone: Joi.string()
+          .trim(false)
+          .pattern(/^[0-9]+$/, 'numbers'),
+        parent: Joi.object().instance(Group),
+        user: Joi.object().instance(User),
+        abilities: Joi.array().items(
+          Joi.string()
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .min(1)
+            .max(256)
+        ),
+        defaultPrimary: Joi.boolean(),
+        defaultSecondary: Joi.boolean(),
+        unverifiedSecondary: Joi.boolean(),
+      }),
+      'Invalid Group: '
+    );
   },
-  validatorUser: (user) => {
-    // v::notEmpty()
-    // ->attribute('username', v::stringType()->notBlank()->length(1, null))
-    // ->attribute('enabled', v::boolType())
-    // ->attribute('email', v::optional(v::email()), false)
-    // ->attribute('nameFirst', v::stringType()->notBlank()->prnt()->length(1, 256))
-    // ->attribute('nameMiddle', v::optional(v::stringType()->notBlank()->prnt()->length(1, 256)), false)
-    // ->attribute('nameLast', v::optional(v::stringType()->notBlank()->prnt()->length(1, 256)), false)
-    // ->attribute('name', v::stringType()->notBlank()->prnt()->length(1, 256))
-    // ->attribute('avatar', v::optional(v::stringType()->url()->prnt()->length(1, 256)), false)
-    // ->attribute('phone', v::optional(v::phone()), false)
-    // ->attribute('timezone', v::optional(v::in(\DateTimeZone::listIdentifiers())), false)
-    // ->attribute('group', v::when(v::nullType(), v::alwaysValid(), v::instance('\Tilmeld\Entities\Group')))
-    // ->attribute('groups', v::arrayType()->each(v::instance('\Tilmeld\Entities\Group')))
-    // ->attribute('abilities', v::arrayType()->each(v::stringType()->notBlank()->prnt()->length(1, 256)))
-    // ->attribute('inheritAbilities', v::boolType())
-    // ->attribute('password', v::stringType()->notBlank()->length(1, 1024))
-    // ->setName('user object')
+  validatorUser: (user: User) => {
+    Joi.attempt(
+      user.$getValidatable(),
+      Joi.object().keys({
+        guid: Joi.alternatives()
+          .try(
+            Joi.any().only().allow(null),
+            Joi.string().trim(false).length(24).hex()
+          )
+          .required(),
+        cdate: Joi.alternatives()
+          .try(Joi.any().only().allow(null), Joi.number())
+          .required(),
+        mdate: Joi.alternatives()
+          .try(Joi.any().only().allow(null), Joi.number())
+          .required(),
+        tags: Joi.array()
+          .items(
+            Joi.string()
+              .pattern(/[\x01-\x1F\x7F]/, {
+                name: 'control characters',
+                invert: true,
+              })
+              .min(1)
+          )
+          .required(),
+        username: Joi.string().trim(false).min(1).required(),
+        enabled: Joi.boolean().required(),
+        email: Joi.string()
+          .trim(false)
+          .email({ minDomainSegments: 1, tlds: false })
+          .required(),
+        nameFirst: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .min(1)
+          .max(512)
+          .required(),
+        nameMiddle: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .min(1)
+          .max(512),
+        nameLast: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .min(1)
+          .max(512),
+        name: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .min(1)
+          .max(512)
+          .required(),
+        avatar: Joi.string()
+          .trim(false)
+          .uri()
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .min(1)
+          .max(1024),
+        phone: Joi.string()
+          .trim(false)
+          .pattern(/^[0-9]+$/, 'numbers'),
+        group: Joi.object().instance(Group),
+        groups: Joi.array().items(Joi.object().instance(Group)).required(),
+        abilities: Joi.array().items(
+          Joi.string()
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .min(1)
+            .max(256)
+        ),
+        inheritAbilities: Joi.boolean(),
+        secret: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .length(21),
+        emailChangeDate: Joi.number(),
+        newEmailSecret: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .length(21),
+        newEmailAddress: Joi.string()
+          .trim(false)
+          .email({ minDomainSegments: 1, tlds: false }),
+        cancelEmailSecret: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .length(21),
+        cancelEmailAddress: Joi.string()
+          .trim(false)
+          .email({ minDomainSegments: 1, tlds: false }),
+        recoverSecret: Joi.string()
+          .trim(false)
+          .pattern(/[\x01-\x1F\x7F]/, {
+            name: 'control characters',
+            invert: true,
+          })
+          .length(10),
+        recoverSecretDate: Joi.number(),
+        salt: Joi.string().trim(false).min(1),
+        password: Joi.string().trim(false).min(1).required(),
+      }),
+      'Invalid User: '
+    );
   },
 } as Config;

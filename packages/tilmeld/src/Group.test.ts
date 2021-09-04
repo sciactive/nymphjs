@@ -1,0 +1,47 @@
+import { SQLite3Driver } from '@nymphjs/driver-sqlite3';
+import { Nymph } from '@nymphjs/nymph';
+
+import Tilmeld from './Tilmeld';
+import Group from './Group';
+import defaults from './conf/defaults';
+
+const sqliteConfig = {
+  filename: ':memory:',
+};
+
+Nymph.init({}, new SQLite3Driver(sqliteConfig), Tilmeld);
+Tilmeld.init({
+  appName: 'My App',
+  appUrl: 'http://localhost:8080',
+  cookieDomain: 'localhost',
+  cookiePath: '/',
+  setupPath: '/user',
+  emailUsernames: false,
+  verifyRedirect: 'http://localhost:8080',
+  verifyChangeRedirect: 'http://localhost:8080',
+  cancelChangeRedirect: 'http://localhost:8080',
+  jwtSecret: 'shhhhh',
+});
+
+describe('Group', () => {
+  async function makeNewGroup() {
+    const newGroup = await Group.factory();
+
+    newGroup.groupname = 'new-group';
+    newGroup.email = 'newgroup@localhost';
+    newGroup.name = 'New Group';
+
+    return newGroup;
+  }
+
+  it("doesn't allow unknown keys", async () => {
+    const invalidGroup = await makeNewGroup();
+
+    // @ts-ignore: testing unknown keys
+    invalidGroup.unknown = 'I should cause an error.';
+
+    expect(() => {
+      defaults.validatorGroup(invalidGroup);
+    }).toThrow('Invalid Group:  "unknown" is not allowed');
+  });
+});

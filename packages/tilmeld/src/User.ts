@@ -1390,6 +1390,9 @@ export default class User extends AbleObject<UserData> {
     if (this.$data.passwordTemp === '') {
       delete this.$data.passwordTemp;
     }
+    if (this.$data.inheritAbilities === false) {
+      delete this.$data.inheritAbilities;
+    }
 
     // Verification.
     const unCheck = await this.$checkUsername();
@@ -1433,7 +1436,7 @@ export default class User extends AbleObject<UserData> {
                   strtotime(
                     '+' + Tilmeld.config.emailRateLimit,
                     Math.floor(this.$data.emailChangeDate / 1000)
-                  )
+                  ) * 1000
                 ).toString() +
                 ' to change your email address again.'
             );
