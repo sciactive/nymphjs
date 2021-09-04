@@ -46,6 +46,7 @@
     "@mdi/js": "^5.9.55",
     "@nymphjs/client": "^1.0.0-alpha.0",
     "@nymphjs/driver-sqlite3": "^1.0.0-alpha.0",
+    "@nymphjs/query-parser": "^1.0.0-alpha.0",
     "@nymphjs/server": "^1.0.0-alpha.0",
     "@nymphjs/tilmeld-client": "^1.0.0-alpha.0",
     "@smui/button": "^4.2.0",

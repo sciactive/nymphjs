@@ -586,7 +586,6 @@
   import HelperText from '@smui/textfield/helper-text/index';
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
-  import Fab from '@smui/fab';
   import { Icon, Label } from '@smui/common';
   import Svg from '@smui/common/Svg.svelte';
 

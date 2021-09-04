@@ -91,6 +91,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Nymph } from '@nymphjs/client';
+  import queryParser from '@nymphjs/query-parser';
   import {
     AdminGroupData,
     ClientConfig,
@@ -108,7 +109,6 @@
   import Svg from '@smui/common/Svg.svelte';
 
   import GroupEdit from './GroupEdit.svelte';
-  import queryParser from './queryParser';
 
   let clientConfig: ClientConfig | null = null;
   let user: (User & CurrentUserData) | null = null;

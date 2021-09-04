@@ -333,6 +333,7 @@
     Group,
     User,
   } from '@nymphjs/tilmeld-client';
+  import queryParser from '@nymphjs/query-parser';
   import {
     mdiArrowLeft,
     mdiArrowRight,
@@ -353,10 +354,8 @@
   import HelperText from '@smui/textfield/helper-text/index';
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
-  import Fab from '@smui/fab';
   import { Icon, Label } from '@smui/common';
   import Svg from '@smui/common/Svg.svelte';
-  import queryParser from './queryParser';
 
   const dispatch = createEventDispatcher();
 

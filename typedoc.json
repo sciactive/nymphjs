@@ -6,6 +6,7 @@
     "./packages/driver-sqlite3/",
     "./packages/nymph/",
     "./packages/pubsub/",
+    "./packages/query-parser/",
     "./packages/server/",
     "./packages/tilmeld/",
     "./packages/tilmeld-client/"
