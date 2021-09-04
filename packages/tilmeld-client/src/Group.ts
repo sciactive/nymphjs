@@ -1,4 +1,4 @@
-import { Nymph, Entity } from '@nymphjs/client';
+import { Nymph, Entity, Options, Selector } from '@nymphjs/client';
 
 import User, { CurrentUserData } from './User';
 
@@ -116,15 +116,23 @@ export default class Group extends Entity<GroupData> {
   }
 
   public static async getPrimaryGroups(
-    search?: string
+    options?: Options,
+    selectors?: Selector[]
   ): Promise<(Group & GroupData)[]> {
-    return await Group.serverCallStatic('getPrimaryGroups', [search]);
+    return await Group.serverCallStatic('getPrimaryGroups', [
+      { options, class: Group.class },
+      selectors,
+    ]);
   }
 
   public static async getSecondaryGroups(
-    search?: string
+    options?: Options,
+    selectors?: Selector[]
   ): Promise<(Group & GroupData)[]> {
-    return await Group.serverCallStatic('getSecondaryGroups', [search]);
+    return await Group.serverCallStatic('getSecondaryGroups', [
+      { options, class: Group.class },
+      selectors,
+    ]);
   }
 }
 

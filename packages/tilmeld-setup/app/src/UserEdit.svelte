@@ -566,6 +566,7 @@
     Group,
     User,
   } from '@nymphjs/tilmeld-client';
+  import queryParser from '@nymphjs/query-parser';
   import {
     mdiArrowLeft,
     mdiArrowRight,
@@ -694,14 +695,17 @@
     if (primaryGroupSearch.trim() == '') {
       return;
     }
-    let query = primaryGroupSearch;
-    if (!query.match(/[_%]/)) {
-      query += '%';
-    }
     try {
-      primaryGroups = (await Group.getPrimaryGroups(query)).filter((group) => {
-        return !group.$is(entity.group);
-      });
+      const [options, ...selectors] = queryParser(primaryGroupSearch, Group, [
+        'groupname',
+        'name',
+        'email',
+      ]);
+      primaryGroups = (await Group.getPrimaryGroups(options, selectors)).filter(
+        (group) => {
+          return !group.$is(entity.group);
+        }
+      );
     } catch (e: any) {
       failureMessage = e?.message;
     }
@@ -719,16 +723,17 @@
     if (secondaryGroupSearch.trim() == '') {
       return;
     }
-    let query = secondaryGroupSearch;
-    if (!query.match(/[_%]/)) {
-      query += '%';
-    }
     try {
-      secondaryGroups = (await Group.getSecondaryGroups(query)).filter(
-        (group) => {
-          return !group.$inArray(entity.groups);
-        }
-      );
+      const [options, ...selectors] = queryParser(secondaryGroupSearch, Group, [
+        'groupname',
+        'name',
+        'email',
+      ]);
+      secondaryGroups = (
+        await Group.getSecondaryGroups(options, selectors)
+      ).filter((group) => {
+        return !group.$inArray(entity.groups);
+      });
     } catch (e: any) {
       failureMessage = e?.message;
     }

@@ -3,6 +3,7 @@ import Nymph, {
   EntityInterface,
   EntityJson,
   EntityPatch,
+  Options,
   Selector,
   SerializedEntityData,
 } from '@nymphjs/nymph';
@@ -145,32 +146,51 @@ export default class Group extends AbleObject<GroupData> {
   /**
    * Get all the groups that can be assigned as primary groups.
    *
-   * @param search A search query. If undefined, all will be returned. Uses ilike on name and groupname.
+   * @param options The options for an optional search query.
+   * @param selectors The selectors for an optional search query.
    * @returns An array of the assignable primary groups.
    */
-  public static async getPrimaryGroups(search?: string) {
+  public static async getPrimaryGroups(
+    options?: Options,
+    selectors?: Selector[]
+  ) {
+    if (!Tilmeld.gatekeeper('tilmeld/admin')) {
+      throw new Error("You don't have permission to do that.");
+    }
+
     return await this.getAssignableGroups(
       Tilmeld.config.highestPrimary,
-      search
+      { ...options, class: Group, return: 'entity' },
+      [...(selectors ?? [])]
     );
   }
 
   /**
    * Get all the groups that can be assigned as secondary groups.
    *
-   * @param search A search query. If null, all will be returned. Uses ilike on name and groupname.
+   * @param options The options for an optional search query.
+   * @param selectors The selectors for an optional search query.
    * @returns An array of the assignable secondary groups.
    */
-  public static async getSecondaryGroups(search?: string) {
+  public static async getSecondaryGroups(
+    options?: Options,
+    selectors?: Selector[]
+  ) {
+    if (!Tilmeld.gatekeeper('tilmeld/admin')) {
+      throw new Error("You don't have permission to do that.");
+    }
+
     return await this.getAssignableGroups(
       Tilmeld.config.highestSecondary,
-      search
+      { ...options, class: Group, return: 'entity' },
+      [...(selectors ?? [])]
     );
   }
 
   private static async getAssignableGroups(
     highestParent: string | boolean,
-    search?: string
+    options: Options<typeof Group>,
+    selectors: Selector[]
   ) {
     let assignableGroups: (Group & GroupData)[] = [];
 
@@ -178,49 +198,21 @@ export default class Group extends AbleObject<GroupData> {
       return assignableGroups;
     }
 
-    if (search != null) {
-      assignableGroups = await Nymph.getEntities(
-        { class: Group },
-        {
-          type: '&',
-          equal: ['enabled', true],
-        },
-        {
-          type: '|',
-          ilike: [
-            ['name', search],
-            ['groupname', search],
-            ['email', search],
-          ],
-        }
-      );
-      if (highestParent !== true) {
-        assignableGroups = assignableGroups.filter((group) => {
-          let curGroup = group;
-          while (curGroup.parent != null && curGroup.parent.cdate != null) {
-            if (curGroup.parent.guid === highestParent) {
-              return true;
-            }
-            curGroup = curGroup.parent;
+    assignableGroups = await Nymph.getEntities(
+      { ...options, class: Group },
+      ...selectors
+    );
+    if (highestParent !== true) {
+      assignableGroups = assignableGroups.filter((group) => {
+        let curGroup = group;
+        while (curGroup.parent != null && curGroup.parent.cdate != null) {
+          if (curGroup.parent.guid === highestParent) {
+            return true;
           }
-          return false;
-        });
-      }
-    } else {
-      if (highestParent === true) {
-        assignableGroups = await Nymph.getEntities(
-          { class: Group },
-          {
-            type: '&',
-            equal: ['enabled', true],
-          }
-        );
-      } else {
-        const parent = await Group.factory(highestParent);
-        if (parent.guid != null) {
-          assignableGroups = await parent.$getDescendants();
+          curGroup = curGroup.parent;
         }
-      }
+        return false;
+      });
     }
     return assignableGroups;
   }
