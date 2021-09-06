@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+The Tilmeld Client lets you register, login, and perform user account related functions remotely on a Nymph server.
 
 ## Installation
 
@@ -14,7 +14,7 @@ You can find UMD in `dist`, or TS source in `src`.
 
 ## Usage
 
-TODO...
+The Tilmeld client contains the client versions of the `User` and `Group` entities. It also contains helpers, `getClientConfig`, `login`, `register`, and `checkUsername`.
 
 # License
 

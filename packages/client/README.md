@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+The Nymph Client allows you to query and push data to a Nymph REST server from the browser. You can also subscribe to entities and queries on a Nymph PubSub server and be notified of changes.
 
 ## Installation
 
@@ -34,12 +34,12 @@ This package is the Nymph client for browsers. You can find UMD in `dist`, or TS
 
 ## Usage
 
-For detailed docs, check out the wiki:
+For detailed docs, check out the User Guide on the website:
 
-- [Entity Class](https://github.com/sciactive/nymph/wiki/Entity-Class)
-- [Entity Querying](https://github.com/sciactive/nymph/wiki/Entity-Querying)
-- [Extending the Entity Class](https://github.com/sciactive/nymph/wiki/Extending-the-Entity-Class)
-- [Subscribing to Queries](https://github.com/sciactive/nymph/wiki/Subscribing-to-Queries)
+- [Entity Class](https://nymph.io/user-guide/entity-class)
+- [Entity Querying](https://nymph.io/user-guide/entity-querying)
+- [Extending the Entity Class](https://nymph.io/user-guide/extending-the-entity-class)
+- [Subscribing to Queries](https://nymph.io/user-guide/subscribing-to-queries)
 
 Here's an overview:
 

@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+The REST server lets you configure an endpoint for the Nymph client to query and push data to. The server provides this endpoint as an Express middleware, which can be used in a new or existing Express (or compatible) server.
 
 ## Installation
 

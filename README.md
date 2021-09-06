@@ -2,11 +2,11 @@
 
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
-
 # Getting Started
 
 All you need to start using Nymph is the `@nymphjs/nymph` package and one of the drivers, `@nymphjs/driver-mysql` or `@nymphjs/driver-sqlite3`. Check out the [readme for the Nymph package](packages/nymph/README.md).
+
+You can also set up a REST server to use Nymph remotely, a PubSub server to receive updates for queries, and a user and group management system to provide registration and access control.
 
 # Nymph.js Packages
 
@@ -36,7 +36,7 @@ The Nymph Client allows you to query and push data to a Nymph REST server from t
 
 ## [Node Client](packages/client-node)
 
-The Nymph Node Client let's you do everything the Nymph Client does, but from Node instead of the browser.
+The Nymph Node Client let's you do everything the Nymph Client does, but from Node.JS instead of the browser.
 
 ## [Tilmeld](packages/tilmeld)
 

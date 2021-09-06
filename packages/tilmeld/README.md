@@ -1,10 +1,8 @@
 # Tilmeld - User/Group System for Nymph
 
-(The d is silent.)
-
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+Tilmeld (the d is silent) is a user and group management system for Nymph. It provides strict access controls to protect entities from unauthorized access/modification. It allows for granting and revoking ad hoc abilities to users and groups, then checking for those abilities. It provides authentication services and features protection against XSRF attacks.
 
 ## Installation
 
@@ -14,7 +12,37 @@ npm install --save @nymphjs/tilmeld
 
 ## Usage
 
-TODO...
+When you initialize Nymph, provide it with the Tilmeld class from this package. Then you can initialize Tilmeld itself with its own configuration.
+
+Here's an overview.
+
+```ts
+import SQLite3Driver from '@nymphjs/driver-sqlite3';
+import Nymph from '@nymphjs/nymph';
+import Tilmeld from '@nymphjs/tilmeld';
+
+// Configure Nymph.
+const sqliteConfig = {
+  filename: ':memory:',
+};
+
+Nymph.init({}, new SQLite3Driver(sqliteConfig), Tilmeld);
+Tilmeld.init({
+  appName: 'My App',
+  appUrl: 'http://localhost',
+  cookieDomain: 'localhost',
+  cookiePath: '/',
+  setupPath: '/user',
+  verifyRedirect: 'http://localhost',
+  verifyChangeRedirect: 'http://localhost',
+  cancelChangeRedirect: 'http://localhost',
+  jwtSecret: 'shhhhh',
+});
+```
+
+## Options
+
+See the [config declaration file](src/conf/d.ts).
 
 # License
 

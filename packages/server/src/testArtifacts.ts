@@ -1,7 +1,6 @@
 import NymphServer, {
   Entity as EntityServer,
   EntityInvalidDataError,
-  InvalidParametersError,
 } from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
 import { Entity } from '@nymphjs/client';

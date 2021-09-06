@@ -622,7 +622,7 @@ export default class Nymph {
    * # For UIDs, the name is in angle brackets (<>) and the value follows
    * # in square brackets ([]).
    * # This starts a new entity.
-   * {1234abcd}<entity_etype>[tag,list,with,commas]
+   * {1234abcd}<etype>[tag,list,with,commas]
    * # For entities, the GUID is in curly brackets ({}), then the etype in
    * #  angle brackets, then the comma separated tag list follows in square
    * #  brackets ([]).
@@ -634,7 +634,7 @@ export default class Nymph {
    *     name="admin"
    * # White space before/after "=" and at beginning/end of line is ignored.
    *         username  =     "admin"
-   * {2}<entity_etype>[tag,list]
+   * {2}<etype>[tag,list]
    *     another="This is another entity."
    *     newline="\n"
    * ```

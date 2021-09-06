@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+The PubSub server provides a WebSocket server that allows Nymph to publish changes and the Nymph Client to subscribe to those changes. You can subscribe to individual entities, entity queries, or UIDs.
 
 ## Installation
 
@@ -113,6 +113,10 @@ const wsServer = new WebSocketServer({
 
 const pubsub = new PubSub(pubSubConfig, wsServer);
 ```
+
+## Options
+
+See the [config declaration file](src/conf/d.ts).
 
 # License
 

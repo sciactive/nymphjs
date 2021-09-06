@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+The Nymph core provides the base level classes and utilities to query the database, save data to it, and define different data types.
 
 ## Installation
 
@@ -91,6 +91,10 @@ export default class Todo extends Entity<TodoData> {
 
 Nymph.setEntityClass(Todo.class, Todo);
 ```
+
+## Options
+
+See the [config declaration file](src/conf/d.ts).
 
 # License
 

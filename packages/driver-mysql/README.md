@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-Note: this library is being migrated from a PHP backend with JS frontend to a Node.js/TS backend with a TS frontend. This is a work in progress.
+The MySQL driver lets you configure Nymph to query and save data to a MySQL database.
 
 ## Installation
 
