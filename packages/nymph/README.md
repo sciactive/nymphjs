@@ -37,7 +37,7 @@ Nymph.init({}, new MySQLDriver(mysqlConfig));
 // and Nymph's query methods like `getEntities` to retrieve them.
 
 async function run() {
-  const myEntity = new Todo();
+  const myEntity = await Todo.factory();
   myEntity.text = 'Get it done!';
   await myEntity.$save();
 
