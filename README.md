@@ -8,11 +8,11 @@ Note: this library is being migrated from a PHP backend with JS frontend to a No
 
 All you need to start using Nymph is the `@nymphjs/nymph` package and one of the drivers, `@nymphjs/driver-mysql` or `@nymphjs/driver-sqlite3`. Check out the [readme for the Nymph package](packages/nymph/README.md).
 
-# Nymph Packages
+# Nymph.js Packages
 
-## [Nymph (Core)](packages/nymph)
+## [Nymph](packages/nymph)
 
-The Nymph core provides the base level utilities to query the database, save data to it, and define different data types.
+The Nymph core provides the base level classes and utilities to query the database, save data to it, and define different data types.
 
 ## [MySQL Driver](packages/driver-mysql)
 

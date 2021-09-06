@@ -378,7 +378,7 @@ export default class Nymph {
    * - lte - An array with a name, then value. True if the named property is
    *   less than or equal to the value.
    * - ref - An array with a name, then either an entity, or a GUID. True if
-   *   the named property is the entity or an array containing the entity.
+   *   the named property is the entity or contains the entity.
    * - qref - An array with a name, then a full query (including options). True
    *   if the named property is an entity that matches the query or an array
    *   containing an entity that matches the query.
