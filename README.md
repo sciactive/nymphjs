@@ -8,6 +8,8 @@ All you need to start using Nymph is the `@nymphjs/nymph` package and one of the
 
 You can also set up a REST server to use Nymph remotely, a PubSub server to receive updates for queries, and a user and group management system to provide registration and access control.
 
+Check out the [user guide](https://nymph.io/user-guide/introduction) for information about how to use Nymph once you have it set up.
+
 # Nymph.js Packages
 
 ## [Nymph](packages/nymph)
