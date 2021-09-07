@@ -813,33 +813,35 @@ export default abstract class NymphDriver {
       result,
       process: () => {
         let row = rowFetchCallback();
-        while (row != null) {
-          const guid = getGUIDCallback(row);
-          const tagsAndDates = getTagsAndDatesCallback(row);
-          const tags = tagsAndDates.tags;
-          const cdate = tagsAndDates.cdate;
-          const mdate = tagsAndDates.mdate;
-          let dataNameAndSValue = getDataNameAndSValueCallback(row);
-          // Data.
-          const data: EntityData = {};
-          // Serialized data.
-          const sdata: SerializedEntityData = {};
-          if (dataNameAndSValue.name !== '') {
-            // This do will keep going and adding the data until the
-            // next entity is reached. $row will end on the next entity.
-            do {
-              dataNameAndSValue = getDataNameAndSValueCallback(row);
-              sdata[dataNameAndSValue.name] = dataNameAndSValue.svalue;
-              row = rowFetchCallback();
-            } while (row != null && getGUIDCallback(row) === guid);
-          } else {
-            // Make sure that $row is incremented :)
+        if (options.return === 'guid') {
+          while (row != null) {
+            (entities as string[]).push(getGUIDCallback(row));
             row = rowFetchCallback();
           }
-          if (options.return === 'guid') {
-            // @ts-ignore: ts doesn't know the return type here.
-            entities.push(guid);
-          } else {
+        } else {
+          while (row != null) {
+            const guid = getGUIDCallback(row);
+            const tagsAndDates = getTagsAndDatesCallback(row);
+            const tags = tagsAndDates.tags;
+            const cdate = tagsAndDates.cdate;
+            const mdate = tagsAndDates.mdate;
+            let dataNameAndSValue = getDataNameAndSValueCallback(row);
+            // Data.
+            const data: EntityData = {};
+            // Serialized data.
+            const sdata: SerializedEntityData = {};
+            if (dataNameAndSValue.name !== '') {
+              // This do will keep going and adding the data until the
+              // next entity is reached. $row will end on the next entity.
+              do {
+                dataNameAndSValue = getDataNameAndSValueCallback(row);
+                sdata[dataNameAndSValue.name] = dataNameAndSValue.svalue;
+                row = rowFetchCallback();
+              } while (row != null && getGUIDCallback(row) === guid);
+            } else {
+              // Make sure that $row is incremented :)
+              row = rowFetchCallback();
+            }
             const entity = EntityClass.factorySync() as ReturnType<
               T['factorySync']
             >;

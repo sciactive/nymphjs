@@ -1484,21 +1484,28 @@ export default class MySQLDriver extends NymphDriver {
           )}`;
         }
         const whereClause = queryParts.join(') AND (');
-        query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
-          FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
-          LEFT JOIN ${MySQLDriver.escape(
-            `${this.prefix}data_${etype}`
-          )} d ON e.\`guid\`=d.\`guid\`
-          INNER JOIN ${MySQLDriver.escape(
-            `${this.prefix}comparisons_${etype}`
-          )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
-          INNER JOIN (
-            SELECT ie.\`guid\`
+        if (options.return === 'guid') {
+          query = `SELECT LOWER(HEX(ie.\`guid\`)) as \`guid\`
             FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
             WHERE (${whereClause})
-            ORDER BY ie.${sortBy}${limit}${offset}
-          ) f ON e.\`guid\`=f.\`guid\`
-          ORDER BY e.${sortBy};`;
+            ORDER BY ie.${sortBy}${limit}${offset};`;
+        } else {
+          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
+            FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
+            LEFT JOIN ${MySQLDriver.escape(
+              `${this.prefix}data_${etype}`
+            )} d ON e.\`guid\`=d.\`guid\`
+            INNER JOIN ${MySQLDriver.escape(
+              `${this.prefix}comparisons_${etype}`
+            )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
+            INNER JOIN (
+              SELECT ie.\`guid\`
+              FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
+              WHERE (${whereClause})
+              ORDER BY ie.${sortBy}${limit}${offset}
+            ) f ON e.\`guid\`=f.\`guid\`
+            ORDER BY e.${sortBy};`;
+        }
       }
     } else {
       if (subquery) {
@@ -1516,31 +1523,37 @@ export default class MySQLDriver extends NymphDriver {
             isNaN(Number(options.offset)) ? 0 : Number(options.offset)
           )}`;
         }
-        if (limit || offset) {
-          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
-            FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
-            LEFT JOIN ${MySQLDriver.escape(
-              `${this.prefix}data_${etype}`
-            )} d ON e.\`guid\`=d.\`guid\`
-            INNER JOIN ${MySQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`
-            )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
-            INNER JOIN (
-              SELECT ie.\`guid\`
-              FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
-              ORDER BY ie.${sortBy}${limit}${offset}
-            ) f ON e.\`guid\`=f.\`guid\`
-            ORDER BY e.${sortBy};`;
+        if (options.return === 'guid') {
+          query = `SELECT LOWER(HEX(ie.\`guid\`)) as \`guid\`
+            FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
+            ORDER BY ie.${sortBy}${limit}${offset};`;
         } else {
-          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
-            FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
-            LEFT JOIN ${MySQLDriver.escape(
-              `${this.prefix}data_${etype}`
-            )} d ON e.\`guid\`=d.\`guid\`
-            INNER JOIN ${MySQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`
-            )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
-            ORDER BY e.${sortBy};`;
+          if (limit || offset) {
+            query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
+              FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
+              LEFT JOIN ${MySQLDriver.escape(
+                `${this.prefix}data_${etype}`
+              )} d ON e.\`guid\`=d.\`guid\`
+              INNER JOIN ${MySQLDriver.escape(
+                `${this.prefix}comparisons_${etype}`
+              )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
+              INNER JOIN (
+                SELECT ie.\`guid\`
+                FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
+                ORDER BY ie.${sortBy}${limit}${offset}
+              ) f ON e.\`guid\`=f.\`guid\`
+              ORDER BY e.${sortBy};`;
+          } else {
+            query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
+              FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
+              LEFT JOIN ${MySQLDriver.escape(
+                `${this.prefix}data_${etype}`
+              )} d ON e.\`guid\`=d.\`guid\`
+              INNER JOIN ${MySQLDriver.escape(
+                `${this.prefix}comparisons_${etype}`
+              )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
+              ORDER BY e.${sortBy};`;
+          }
         }
       }
     }

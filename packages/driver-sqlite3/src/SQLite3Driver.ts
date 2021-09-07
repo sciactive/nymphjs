@@ -1248,21 +1248,28 @@ export default class SQLite3Driver extends NymphDriver {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
         const whereClause = queryParts.join(') AND (');
-        query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
-          FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
-          LEFT JOIN ${SQLite3Driver.escape(
-            this.prefix + 'data_' + etype
-          )} d USING ("guid")
-          INNER JOIN ${SQLite3Driver.escape(
-            this.prefix + 'comparisons_' + etype
-          )} c USING ("guid", "name")
-          INNER JOIN (
-            SELECT "guid"
+        if (options.return === 'guid') {
+          query = `SELECT "guid"
             FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} ie
             WHERE (${whereClause})
-            ORDER BY ie.${sortBy}${limit}${offset}
-          ) f USING ("guid")
-          ORDER BY ${sortBy};`;
+            ORDER BY ie.${sortBy}${limit}${offset};`;
+        } else {
+          query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
+            FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
+            LEFT JOIN ${SQLite3Driver.escape(
+              this.prefix + 'data_' + etype
+            )} d USING ("guid")
+            INNER JOIN ${SQLite3Driver.escape(
+              this.prefix + 'comparisons_' + etype
+            )} c USING ("guid", "name")
+            INNER JOIN (
+              SELECT "guid"
+              FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} ie
+              WHERE (${whereClause})
+              ORDER BY ie.${sortBy}${limit}${offset}
+            ) f USING ("guid")
+            ORDER BY ${sortBy};`;
+        }
       }
     } else {
       if (subquery) {
@@ -1276,31 +1283,39 @@ export default class SQLite3Driver extends NymphDriver {
         if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
-        if (limit || offset) {
-          query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
-            FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
-            LEFT JOIN ${SQLite3Driver.escape(
-              this.prefix + 'data_' + etype
-            )} d USING ("guid")
-            INNER JOIN ${SQLite3Driver.escape(
-              this.prefix + 'comparisons_' + etype
-            )} c USING ("guid", "name")
-            INNER JOIN (
-              SELECT "guid"
-              FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} ie
-              ORDER BY ie.${sortBy}${limit}${offset}
-            ) f USING ("guid")
-            ORDER BY ${sortBy};`;
+        if (options.return === 'guid') {
+          query = `SELECT "guid"
+            FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} ie
+            ORDER BY ie.${sortBy}${limit}${offset}`;
         } else {
-          query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
-            FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
-            LEFT JOIN ${SQLite3Driver.escape(
-              this.prefix + 'data_' + etype
-            )} d USING ("guid")
-            INNER JOIN ${SQLite3Driver.escape(
-              this.prefix + 'comparisons_' + etype
-            )} c USING ("guid", "name")
-            ORDER BY ${sortBy};`;
+          if (limit || offset) {
+            query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
+              FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
+              LEFT JOIN ${SQLite3Driver.escape(
+                this.prefix + 'data_' + etype
+              )} d USING ("guid")
+              INNER JOIN ${SQLite3Driver.escape(
+                this.prefix + 'comparisons_' + etype
+              )} c USING ("guid", "name")
+              INNER JOIN (
+                SELECT "guid"
+                FROM ${SQLite3Driver.escape(
+                  this.prefix + 'entities_' + etype
+                )} ie
+                ORDER BY ie.${sortBy}${limit}${offset}
+              ) f USING ("guid")
+              ORDER BY ${sortBy};`;
+          } else {
+            query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
+              FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
+              LEFT JOIN ${SQLite3Driver.escape(
+                this.prefix + 'data_' + etype
+              )} d USING ("guid")
+              INNER JOIN ${SQLite3Driver.escape(
+                this.prefix + 'comparisons_' + etype
+              )} c USING ("guid", "name")
+              ORDER BY ${sortBy};`;
+          }
         }
       }
     }

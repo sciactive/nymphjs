@@ -1309,6 +1309,51 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
 
+  it('guid return', async () => {
+    await createTestEntities();
+
+    // Testing guid return using logic operations...
+    const resultGuid = await Nymph.getEntities(
+      { class: TestModel, return: 'guid' },
+      {
+        type: '&',
+        '!ref': [
+          ['refArray', newGUID()],
+          ['refArray', newGUID()],
+        ],
+        '!lte': ['number', 29.99],
+      },
+      {
+        type: '|',
+        '!lte': [
+          ['number', 29.99],
+          ['number', 30],
+        ],
+      },
+      {
+        type: '!&',
+        '!equal': ['string', 'test'],
+        '!contain': [
+          ['array', 'full'],
+          ['array', 'of'],
+          ['array', 'values'],
+          ['array', 500],
+        ],
+      },
+      {
+        type: '!|',
+        '!equal': ['string', 'test'],
+        contain: [
+          ['array', 'full'],
+          ['array', 'of'],
+          ['array', 'values'],
+          ['array', 500],
+        ],
+      }
+    );
+    expect(resultGuid.indexOf(testEntity.guid ?? '')).toBeGreaterThan(-1);
+  });
+
   it('deep selector', async () => {
     await createTestEntities();
 
@@ -1475,6 +1520,17 @@ This one's zip code is 92064.`;
         expect(
           resultEntities[i + 1][sort as 'cdate' | 'mdate']
         ).toBeGreaterThan(resultEntities[i][sort as 'cdate' | 'mdate'] ?? 0);
+      }
+
+      // And test the same with guid return...
+      let resultGuids = await Nymph.getEntities({
+        class: TestModel,
+        sort: sort as 'cdate' | 'mdate',
+        return: 'guid',
+      });
+      expect(resultGuids.length).toBeGreaterThan(100);
+      for (let i = 0; i < resultGuids.length - 1; i++) {
+        expect(resultGuids[i]).toEqual(resultEntities[i].guid);
       }
 
       // Retrieving entities reverse sorted...
