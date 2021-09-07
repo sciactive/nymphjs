@@ -14,7 +14,7 @@ import {
   ResponseCallback,
   Selector,
 } from './Nymph.types';
-import { entitiesToReferences } from './utils';
+import { entitiesToReferences, entityConstructorsToClassNames } from './utils';
 
 let requester: HttpRequester;
 
@@ -274,7 +274,10 @@ export default class Nymph {
       dataType: 'json',
       data: {
         action: 'entity',
-        data: [{ ...options, class: options.class.class }, ...selectors],
+        data: [
+          { ...options, class: options.class.class },
+          ...entityConstructorsToClassNames(selectors),
+        ],
       },
     });
 
@@ -307,7 +310,10 @@ export default class Nymph {
       dataType: 'json',
       data: {
         action: 'entities',
-        data: [{ ...options, class: options.class.class }, ...selectors],
+        data: [
+          { ...options, class: options.class.class },
+          ...entityConstructorsToClassNames(selectors),
+        ],
       },
     });
 
@@ -401,7 +407,7 @@ export default class Nymph {
           entity,
           stateless,
           method,
-          params: entitiesToReferences(params),
+          params: entitiesToReferences(entityConstructorsToClassNames(params)),
         },
       },
     });
@@ -426,7 +432,7 @@ export default class Nymph {
           class: className,
           static: true,
           method: method,
-          params: entitiesToReferences(params),
+          params: entitiesToReferences(entityConstructorsToClassNames(params)),
         },
       },
     });

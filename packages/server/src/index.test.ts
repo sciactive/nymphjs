@@ -128,6 +128,19 @@ describe('Nymph REST Server and Client', () => {
     );
 
     expect(checkSteve?.guid).toEqual(steve.guid);
+
+    const checkSteveQref = await Nymph.getEntity(
+      { class: Employee },
+      {
+        type: '&',
+        qref: [
+          'subordinates',
+          [{ class: Employee }, { type: '&', guid: jane.guid }],
+        ],
+      }
+    );
+
+    expect(checkSteveQref?.guid).toEqual(steve.guid);
   });
 
   it('add, check, and remove tags', async () => {

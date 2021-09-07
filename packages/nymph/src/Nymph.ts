@@ -396,9 +396,9 @@ export default class Nymph {
    *   less than or equal to the value.
    * - ref - An array with a name, then either an entity, or a GUID. True if
    *   the named property is the entity or contains the entity.
-   * - qref - An array with a name, then a full query (including options). True
-   *   if the named property is an entity that matches the query or contains an
-   *   entity that matches the query.
+   * - qref - An array with a name, then a full query (including options) in an
+   *   array. True if the named property is an entity that matches the query or
+   *   contains an entity that matches the query.
    * - selector - A selector. (Keep in mind, you can also use an array of these,
    *   just like any other clause.)
    *
