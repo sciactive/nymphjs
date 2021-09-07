@@ -1,4 +1,5 @@
 import SQLite3 from 'better-sqlite3';
+import { customAlphabet } from 'nanoid';
 import Nymph, {
   NymphDriver,
   EntityConstructor,
@@ -19,6 +20,11 @@ import {
   SQLite3DriverConfig,
   SQLite3DriverConfigDefaults as defaults,
 } from './conf';
+
+const makeTableSuffix = customAlphabet(
+  '0123456789abcdefghijklmnopqrstuvwxyz',
+  20
+);
 
 /**
  * The SQLite3 Nymph database driver.
@@ -285,7 +291,7 @@ export default class SQLite3Driver extends NymphDriver {
   private query<T extends () => any>(
     runQuery: T,
     query: string,
-    etype?: string
+    etypes: string[] = []
   ): ReturnType<T> {
     try {
       return runQuery();
@@ -297,7 +303,7 @@ export default class SQLite3Driver extends NymphDriver {
         errorMsg.match(/^no such table: /) &&
         this.createTables()
       ) {
-        if (etype != null) {
+        for (let etype of etypes) {
           this.createTables(etype);
         }
         try {
@@ -320,42 +326,42 @@ export default class SQLite3Driver extends NymphDriver {
   private queryIter(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
-    }: { etype?: string; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
       () => this.link.prepare(query).iterate(params),
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
   private queryGet(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
-    }: { etype?: string; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
       () => this.link.prepare(query).get(params),
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
   private queryRun(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
-    }: { etype?: string; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
       () => this.link.prepare(query).run(params),
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
@@ -393,7 +399,7 @@ export default class SQLite3Driver extends NymphDriver {
           `${this.prefix}entities_${etype}`
         )} WHERE "guid"=@guid;`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -404,7 +410,7 @@ export default class SQLite3Driver extends NymphDriver {
           `${this.prefix}data_${etype}`
         )} WHERE "guid"=@guid;`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -415,7 +421,7 @@ export default class SQLite3Driver extends NymphDriver {
           `${this.prefix}comparisons_${etype}`
         )} WHERE "guid"=@guid;`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -426,7 +432,7 @@ export default class SQLite3Driver extends NymphDriver {
           `${this.prefix}references_${etype}`
         )} WHERE "guid"=@guid;`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -561,11 +567,18 @@ export default class SQLite3Driver extends NymphDriver {
     etype: string,
     count = { i: 0 },
     params: { [k: string]: any } = {},
-    subquery = false
+    subquery = false,
+    tableSuffix = '',
+    etypes: string[] = []
   ) {
     if (typeof options.class?.alterOptions === 'function') {
       options = options.class.alterOptions(options);
     }
+    const eTable = `e${tableSuffix}`;
+    const dTable = `d${tableSuffix}`;
+    const cTable = `c${tableSuffix}`;
+    const fTable = `f${tableSuffix}`;
+    const ieTable = `ie${tableSuffix}`;
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -583,7 +596,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const guid = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid"=@' +
+                  ieTable +
+                  '."guid"=@' +
                   guid;
                 params[guid] = curGuid;
               }
@@ -597,7 +611,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const tag = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."tags" LIKE @' +
+                  ieTable +
+                  '."tags" LIKE @' +
                   tag +
                   " ESCAPE '\\'";
                 params[tag] =
@@ -617,7 +632,8 @@ export default class SQLite3Driver extends NymphDriver {
                 }
                 const name = `param${++count.i}`;
                 curQuery +=
-                  'ie."guid" ' +
+                  ieTable +
+                  '."guid" ' +
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'data_' + etype) +
@@ -636,18 +652,23 @@ export default class SQLite3Driver extends NymphDriver {
                 if (curVar === 'cdate') {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(ie."cdate" NOT NULL)';
+                    '(' +
+                    ieTable +
+                    '."cdate" NOT NULL)';
                   break;
                 } else if (curVar === 'mdate') {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(ie."mdate" NOT NULL)';
+                    '(' +
+                    ieTable +
+                    '."mdate" NOT NULL)';
                   break;
                 } else {
                   const name = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    'ie."guid" IN (SELECT "guid" FROM ' +
+                    ieTable +
+                    '."guid" IN (SELECT "guid" FROM ' +
                     SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                     ' WHERE "name"=@' +
                     name +
@@ -665,7 +686,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."cdate"=@' +
+                  ieTable +
+                  '."cdate"=@' +
                   cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
@@ -676,7 +698,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."mdate"=@' +
+                  ieTable +
+                  '."mdate"=@' +
                   mdate;
                 params[mdate] = Number(curValue[1]);
                 break;
@@ -688,7 +711,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -705,7 +729,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -731,7 +756,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -751,7 +777,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."cdate"=' +
+                  ieTable +
+                  '."cdate"=' +
                   cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
@@ -762,7 +789,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."mdate"=' +
+                  ieTable +
+                  '."mdate"=' +
                   mdate;
                 params[mdate] = Number(curValue[1]);
                 break;
@@ -788,13 +816,17 @@ export default class SQLite3Driver extends NymphDriver {
                   const stringParam = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(ie."guid" IN (SELECT "guid" FROM ' +
+                    '(' +
+                    ieTable +
+                    '."guid" IN (SELECT "guid" FROM ' +
                     SQLite3Driver.escape(this.prefix + 'data_' + etype) +
                     ' WHERE "name"=@' +
                     name +
                     ' AND instr("value", @' +
                     value +
-                    ')) OR ie."guid" IN (SELECT "guid" FROM ' +
+                    ')) OR ' +
+                    ieTable +
+                    '."guid" IN (SELECT "guid" FROM ' +
                     SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                     ' WHERE "name"=@' +
                     name +
@@ -805,7 +837,8 @@ export default class SQLite3Driver extends NymphDriver {
                 } else {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    'ie."guid" IN (SELECT "guid" FROM ' +
+                    ieTable +
+                    '."guid" IN (SELECT "guid" FROM ' +
                     SQLite3Driver.escape(this.prefix + 'data_' + etype) +
                     ' WHERE "name"=@' +
                     name +
@@ -826,7 +859,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."cdate" REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '."cdate" REGEXP @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -838,7 +873,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."mdate" REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '."mdate" REGEXP @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -851,7 +888,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -871,7 +909,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."cdate" REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '."cdate" REGEXP @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -883,7 +923,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."mdate" REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '."mdate" REGEXP @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -896,7 +938,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -916,7 +959,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."cdate" LIKE @' +
+                  '(' +
+                  ieTable +
+                  '."cdate" LIKE @' +
                   cdate +
                   " ESCAPE '\\')";
                 params[cdate] = curValue[1];
@@ -928,7 +973,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."mdate" LIKE @' +
+                  '(' +
+                  ieTable +
+                  '."mdate" LIKE @' +
                   mdate +
                   " ESCAPE '\\')";
                 params[mdate] = curValue[1];
@@ -941,7 +988,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -961,7 +1009,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."cdate" LIKE @' +
+                  '(' +
+                  ieTable +
+                  '."cdate" LIKE @' +
                   cdate +
                   " ESCAPE '\\')";
                 params[cdate] = curValue[1];
@@ -973,7 +1023,9 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie."mdate" LIKE @' +
+                  '(' +
+                  ieTable +
+                  '."mdate" LIKE @' +
                   mdate +
                   " ESCAPE '\\')";
                 params[mdate] = curValue[1];
@@ -986,7 +1038,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -1006,7 +1059,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."cdate">@' +
+                  ieTable +
+                  '."cdate">@' +
                   cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
@@ -1017,7 +1071,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."mdate">@' +
+                  ieTable +
+                  '."mdate">@' +
                   mdate;
                 params[mdate] = Number(curValue[1]);
                 break;
@@ -1029,7 +1084,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -1049,7 +1105,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."cdate">=@' +
+                  ieTable +
+                  '."cdate">=@' +
                   cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
@@ -1060,7 +1117,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."mdate">=@' +
+                  ieTable +
+                  '."mdate">=@' +
                   mdate;
                 params[mdate] = Number(curValue[1]);
                 break;
@@ -1072,7 +1130,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -1092,7 +1151,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."cdate"<@' +
+                  ieTable +
+                  '."cdate"<@' +
                   cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
@@ -1103,7 +1163,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."mdate"<@' +
+                  ieTable +
+                  '."mdate"<@' +
                   mdate;
                 params[mdate] = Number(curValue[1]);
                 break;
@@ -1115,7 +1176,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -1135,7 +1197,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."cdate"<=@' +
+                  ieTable +
+                  '."cdate"<=@' +
                   cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
@@ -1146,7 +1209,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."mdate"<=@' +
+                  ieTable +
+                  '."mdate"<=@' +
                   mdate;
                 params[mdate] = Number(curValue[1]);
                 break;
@@ -1158,7 +1222,8 @@ export default class SQLite3Driver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie."guid" IN (SELECT "guid" FROM ' +
+                  ieTable +
+                  '."guid" IN (SELECT "guid" FROM ' +
                   SQLite3Driver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE "name"=@' +
                   name +
@@ -1186,7 +1251,8 @@ export default class SQLite3Driver extends NymphDriver {
               const guid = `param${++count.i}`;
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                'ie."guid" IN (SELECT "guid" FROM ' +
+                ieTable +
+                '."guid" IN (SELECT "guid" FROM ' +
                 SQLite3Driver.escape(this.prefix + 'references_' + etype) +
                 ' WHERE "name"=@' +
                 name +
@@ -1197,13 +1263,16 @@ export default class SQLite3Driver extends NymphDriver {
               params[guid] = curQguid;
               break;
             case 'selector':
+            case '!selector':
               const subquery = this.makeEntityQuery(
                 options,
                 [curValue],
                 etype,
                 count,
                 params,
-                true
+                true,
+                tableSuffix,
+                etypes
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1213,6 +1282,39 @@ export default class SQLite3Driver extends NymphDriver {
                 '(' +
                 subquery.query +
                 ')';
+              break;
+            case 'qref':
+            case '!qref':
+              const [qrefOptions, ...qrefSelectors] = curValue[1] as [
+                Options,
+                ...FormattedSelector[]
+              ];
+              const QrefEntityClass = qrefOptions.class as EntityConstructor;
+              const qrefQuery = this.makeEntityQuery(
+                { ...qrefOptions, return: 'guid', class: QrefEntityClass },
+                qrefSelectors,
+                QrefEntityClass.ETYPE,
+                count,
+                params,
+                false,
+                makeTableSuffix(),
+                etypes
+              );
+              if (curQuery) {
+                curQuery += typeIsOr ? ' OR ' : ' AND ';
+              }
+              const qrefName = `param${++count.i}`;
+              curQuery +=
+                (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                ieTable +
+                '."guid" IN (SELECT "guid" FROM ' +
+                SQLite3Driver.escape(this.prefix + 'references_' + etype) +
+                ' WHERE "name"=@' +
+                qrefName +
+                ' AND "reference" IN (' +
+                qrefQuery.query +
+                '))';
+              params[qrefName] = curValue[0];
               break;
           }
         }
@@ -1250,25 +1352,39 @@ export default class SQLite3Driver extends NymphDriver {
         const whereClause = queryParts.join(') AND (');
         if (options.return === 'guid') {
           query = `SELECT "guid"
-            FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} ie
+            FROM ${SQLite3Driver.escape(
+              this.prefix + 'entities_' + etype
+            )} ${ieTable}
             WHERE (${whereClause})
-            ORDER BY ie.${sortBy}${limit}${offset};`;
+            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
         } else {
-          query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
-            FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
+          query = `SELECT
+              ${eTable}."guid",
+              ${eTable}."tags",
+              ${eTable}."cdate",
+              ${eTable}."mdate",
+              ${dTable}."name",
+              ${dTable}."value",
+              ${cTable}."string",
+              ${cTable}."number"
+            FROM ${SQLite3Driver.escape(
+              this.prefix + 'entities_' + etype
+            )} ${eTable}
             LEFT JOIN ${SQLite3Driver.escape(
               this.prefix + 'data_' + etype
-            )} d USING ("guid")
+            )} ${dTable} USING ("guid")
             INNER JOIN ${SQLite3Driver.escape(
               this.prefix + 'comparisons_' + etype
-            )} c USING ("guid", "name")
+            )} ${cTable} USING ("guid", "name")
             INNER JOIN (
               SELECT "guid"
-              FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} ie
+              FROM ${SQLite3Driver.escape(
+                this.prefix + 'entities_' + etype
+              )} ${ieTable}
               WHERE (${whereClause})
-              ORDER BY ie.${sortBy}${limit}${offset}
-            ) f USING ("guid")
-            ORDER BY ${sortBy};`;
+              ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+            ) ${fTable} USING ("guid")
+            ORDER BY ${eTable}.${sortBy}`;
         }
       }
     } else {
@@ -1285,15 +1401,27 @@ export default class SQLite3Driver extends NymphDriver {
         }
         if (options.return === 'guid') {
           query = `SELECT "guid"
-            FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} ie
-            ORDER BY ie.${sortBy}${limit}${offset}`;
+            FROM ${SQLite3Driver.escape(
+              this.prefix + 'entities_' + etype
+            )} ${ieTable}
+            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
         } else {
           if (limit || offset) {
-            query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
-              FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
+            query = `SELECT
+                ${eTable}."guid",
+                ${eTable}."tags",
+                ${eTable}."cdate",
+                ${eTable}."mdate",
+                ${dTable}."name",
+                ${dTable}."value",
+                ${cTable}."string",
+                ${cTable}."number"
+              FROM ${SQLite3Driver.escape(
+                this.prefix + 'entities_' + etype
+              )} ${eTable}
               LEFT JOIN ${SQLite3Driver.escape(
                 this.prefix + 'data_' + etype
-              )} d USING ("guid")
+              )} ${dTable} USING ("guid")
               INNER JOIN ${SQLite3Driver.escape(
                 this.prefix + 'comparisons_' + etype
               )} c USING ("guid", "name")
@@ -1301,28 +1429,43 @@ export default class SQLite3Driver extends NymphDriver {
                 SELECT "guid"
                 FROM ${SQLite3Driver.escape(
                   this.prefix + 'entities_' + etype
-                )} ie
-                ORDER BY ie.${sortBy}${limit}${offset}
-              ) f USING ("guid")
-              ORDER BY ${sortBy};`;
+                )} ${ieTable}
+                ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+              ) ${fTable} USING ("guid")
+              ORDER BY ${eTable}.${sortBy}`;
           } else {
-            query = `SELECT e."guid", e."tags", e."cdate", e."mdate", d."name", d."value", c."string", c."number"
-              FROM ${SQLite3Driver.escape(this.prefix + 'entities_' + etype)} e
+            query = `SELECT
+                ${eTable}."guid",
+                ${eTable}."tags",
+                ${eTable}."cdate",
+                ${eTable}."mdate",
+                ${dTable}."name",
+                ${dTable}."value",
+                ${cTable}."string",
+                ${cTable}."number"
+              FROM ${SQLite3Driver.escape(
+                this.prefix + 'entities_' + etype
+              )} ${eTable}
               LEFT JOIN ${SQLite3Driver.escape(
                 this.prefix + 'data_' + etype
-              )} d USING ("guid")
+              )} ${dTable} USING ("guid")
               INNER JOIN ${SQLite3Driver.escape(
                 this.prefix + 'comparisons_' + etype
-              )} c USING ("guid", "name")
-              ORDER BY ${sortBy};`;
+              )} ${cTable} USING ("guid", "name")
+              ORDER BY ${eTable}.${sortBy}`;
           }
         }
       }
     }
 
+    if (etypes.indexOf(etype) === -1) {
+      etypes.push(etype);
+    }
+
     return {
       query,
       params,
+      etypes,
     };
   }
 
@@ -1333,12 +1476,12 @@ export default class SQLite3Driver extends NymphDriver {
   ): {
     result: any;
   } {
-    const { query, params } = this.makeEntityQuery(
+    const { query, params, etypes } = this.makeEntityQuery(
       options,
       formattedSelectors,
       etype
     );
-    const result = this.queryIter(query, { etype, params })[Symbol.iterator]();
+    const result = this.queryIter(query, { etypes, params })[Symbol.iterator]();
     return {
       result,
     };
@@ -1428,7 +1571,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}entities_${etype}`
             )} WHERE "guid"=@guid;`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
               },
@@ -1439,7 +1582,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}data_${etype}`
             )} WHERE "guid"=@guid;`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
               },
@@ -1450,7 +1593,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}comparisons_${etype}`
             )} WHERE "guid"=@guid;`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
               },
@@ -1461,7 +1604,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}references_${etype}`
             )} WHERE "guid"=@guid;`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
               },
@@ -1472,7 +1615,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}entities_${etype}`
             )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
                 tags: ',' + tags.join(',') + ',',
@@ -1500,7 +1643,7 @@ export default class SQLite3Driver extends NymphDriver {
                 `${this.prefix}data_${etype}`
               )} ("guid", "name", "value") VALUES (@guid, @name, @storageValue);`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                   name,
@@ -1513,7 +1656,7 @@ export default class SQLite3Driver extends NymphDriver {
                 `${this.prefix}comparisons_${etype}`
               )} ("guid", "name", "truthy", "string", "number") VALUES (@guid, @name, @truthy, @string, @number);`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                   name,
@@ -1530,7 +1673,7 @@ export default class SQLite3Driver extends NymphDriver {
                   `${this.prefix}references_${etype}`
                 )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                     name,
@@ -1686,7 +1829,7 @@ export default class SQLite3Driver extends NymphDriver {
             `${this.prefix}data_${etype}`
           )} ("guid", "name", "value") VALUES (@guid, @name, @storageValue);`,
           {
-            etype,
+            etypes: [etype],
             params: {
               guid,
               name,
@@ -1699,7 +1842,7 @@ export default class SQLite3Driver extends NymphDriver {
             `${this.prefix}comparisons_${etype}`
           )} ("guid", "name", "truthy", "string", "number") VALUES (@guid, @name, @truthy, @string, @number);`,
           {
-            etype,
+            etypes: [etype],
             params: {
               guid,
               name,
@@ -1716,7 +1859,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}references_${etype}`
             )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
                 name,
@@ -1742,7 +1885,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}entities_${etype}`
             )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @cdate);`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
                 tags: ',' + tags.join(',') + ',',
@@ -1759,7 +1902,7 @@ export default class SQLite3Driver extends NymphDriver {
               `${this.prefix}entities_${etype}`
             )} SET "tags"=@tags, "mdate"=@mdate WHERE "guid"=@guid AND "mdate" <= @emdate;`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 tags: ',' + tags.join(',') + ',',
                 mdate,
@@ -1775,7 +1918,7 @@ export default class SQLite3Driver extends NymphDriver {
                 `${this.prefix}data_${etype}`
               )} WHERE "guid"=@guid;`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                 },
@@ -1786,7 +1929,7 @@ export default class SQLite3Driver extends NymphDriver {
                 `${this.prefix}comparisons_${etype}`
               )} WHERE "guid"=@guid;`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                 },
@@ -1797,7 +1940,7 @@ export default class SQLite3Driver extends NymphDriver {
                 `${this.prefix}references_${etype}`
               )} WHERE "guid"=@guid;`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                 },

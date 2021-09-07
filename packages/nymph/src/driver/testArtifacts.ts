@@ -1506,6 +1506,74 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
 
+  it('qref', async () => {
+    await createTestEntities();
+
+    // Retrieving entity by qref...
+    const resultEntity = await Nymph.getEntities(
+      { class: TestModel },
+      {
+        type: '&',
+        qref: [
+          'reference',
+          [{ class: TestModel }, { type: '&', equal: ['test', 'good'] }],
+        ],
+      }
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+  });
+
+  it('not qref', async () => {
+    await createTestEntities();
+
+    // Retrieving entity by !qref...
+    const resultEntity = await Nymph.getEntities(
+      { class: TestModel },
+      {
+        type: '&',
+        '!qref': [
+          'reference',
+          [{ class: TestModel }, { type: '&', equal: ['test', 'pickles'] }],
+        ],
+      }
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+  });
+
+  it('wrong qref class', async () => {
+    await createTestEntities();
+
+    // Testing wrong qref...
+    const resultEntity = await Nymph.getEntities(
+      { class: TestModel },
+      {
+        type: '&',
+        qref: [
+          'reference',
+          [{ class: TestBModel }, { type: '&', equal: ['test', 'good'] }],
+        ],
+      }
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(false);
+  });
+
+  it('wrong qref data', async () => {
+    await createTestEntities();
+
+    // Testing wrong qref...
+    const resultEntity = await Nymph.getEntities(
+      { class: TestModel },
+      {
+        type: '&',
+        qref: [
+          'reference',
+          [{ class: TestModel }, { type: '&', equal: ['test', 'pickles'] }],
+        ],
+      }
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(false);
+  });
+
   it('sort option', async () => {
     await createMultipleTestEntities();
 

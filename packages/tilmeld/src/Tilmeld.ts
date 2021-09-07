@@ -1,4 +1,8 @@
-import Nymph, { EntityInterface, Options, Selector } from '@nymphjs/nymph';
+import Nymph, {
+  EntityInterface,
+  FormattedSelector,
+  Options,
+} from '@nymphjs/nymph';
 import { Request, Response } from 'express';
 
 import { Config, ConfigDefaults as defaults } from './conf';
@@ -86,7 +90,10 @@ export default class Tilmeld {
 
   private static initAccessControl() {
     // Check for the skip access control option and add AC selectors.
-    const getEntities = function (options: Options, selectors: Selector[]) {
+    const handleQuery = function (
+      options: Options,
+      selectors: FormattedSelector[]
+    ) {
       if (
         !options ||
         !('skipAc' in options) ||
@@ -104,9 +111,11 @@ export default class Tilmeld {
               selectors[0].type !== '&' ||
               (!('guid' in selectors[0]) && !('equal' in selectors[0])) ||
               ('guid' in selectors[0] &&
-                typeof selectors[0].guid !== 'string') ||
+                selectors[0].guid?.length === 1 &&
+                typeof selectors[0].guid?.[0] !== 'string') ||
               ('equal' in selectors[0] &&
-                selectors[0]['equal']?.[0] !== 'username'))
+                selectors[0].equal?.length === 1 &&
+                selectors[0].equal?.[0]?.[0] !== 'username'))
           ) {
             // If the user is not specifically searching for a GUID or username,
             // and they're not allowed to search, it should fail.
@@ -315,8 +324,7 @@ export default class Tilmeld {
       }
     };
 
-    Nymph.on('beforeGetEntity', getEntities);
-    Nymph.on('beforeGetEntities', getEntities);
+    Nymph.on('query', handleQuery);
 
     Nymph.on('beforeSaveEntity', addAccess);
     Nymph.on('beforeSaveEntity', validate);
@@ -334,7 +342,7 @@ export default class Tilmeld {
    */
   public static addAccessControlSelectors(
     options: Options,
-    selectors: Selector[]
+    selectors: FormattedSelector[]
   ) {
     const user = this.currentUser;
 
@@ -360,15 +368,17 @@ export default class Tilmeld {
       selectors.push({
         type: '|',
         // Other access control is sufficient.
-        gte: ['acOther', Tilmeld.READ_ACCESS],
+        gte: [['acOther', Tilmeld.READ_ACCESS]],
         // The user and group are not set.
-        selector: {
-          type: '&',
-          '!defined': ['user', 'group'],
-        },
+        selector: [
+          {
+            type: '&',
+            '!defined': ['user', 'group'],
+          },
+        ],
       });
     } else {
-      const subSelectors: Selector[] = [
+      const subSelectors: FormattedSelector[] = [
         {
           type: '&',
           '!defined': ['user', 'group'],
@@ -376,14 +386,14 @@ export default class Tilmeld {
         // It is owned by the user.
         {
           type: '&',
-          ref: ['user', user],
-          gte: ['acUser', Tilmeld.READ_ACCESS],
+          ref: [['user', user]],
+          gte: [['acUser', Tilmeld.READ_ACCESS]],
         },
       ];
-      const selector: Selector = {
+      const selector: FormattedSelector = {
         type: '|',
         // Other access control is sufficient.
-        gte: ['acOther', Tilmeld.READ_ACCESS],
+        gte: [['acOther', Tilmeld.READ_ACCESS]],
         // The user and group are not set.
         selector: subSelectors,
         // The user is listed in acRead, acWrite, or acFull.
@@ -393,8 +403,8 @@ export default class Tilmeld {
           ['acFull', user],
         ],
       };
-      const groupRefs: Selector['ref'] = [];
-      const acRefs: Selector['ref'] = [];
+      const groupRefs: FormattedSelector['ref'] = [];
+      const acRefs: FormattedSelector['ref'] = [];
       if (user.group != null && user.group.guid != null) {
         // It belongs to the user's primary group.
         groupRefs.push(['group', user.group]);
@@ -427,11 +437,13 @@ export default class Tilmeld {
       if (groupRefs.length) {
         subSelectors.push({
           type: '&',
-          gte: ['acGroup', Tilmeld.READ_ACCESS],
-          selector: {
-            type: '|',
-            ref: groupRefs,
-          },
+          gte: [['acGroup', Tilmeld.READ_ACCESS]],
+          selector: [
+            {
+              type: '|',
+              ref: groupRefs,
+            },
+          ],
         });
       }
       // All the acRead, acWrite, and acFull refs.

@@ -277,8 +277,7 @@ export default abstract class NymphDriver {
           );
         } else {
           if (key === 'qref' || key === '!qref') {
-            // TODO: implement qref clauses
-            throw new Error('not implemented');
+            throw new Error("Can't use checkData on qref clauses.");
           } else {
             // Check if it doesn't pass any for &, check if it
             // passes any for |.
@@ -533,7 +532,10 @@ export default abstract class NymphDriver {
     return false;
   }
 
-  public formatSelectors(selectors: Selector[]): FormattedSelector[] {
+  public formatSelectors(
+    selectors: Selector[],
+    options: Options = {}
+  ): FormattedSelector[] {
     const newSelectors: FormattedSelector[] = [];
 
     for (const curSelector of selectors) {
@@ -549,17 +551,37 @@ export default abstract class NymphDriver {
           continue;
         }
 
-        if (key === 'qref' || key === '!qref') {
-          throw new Error("qref isn't implemented yet.");
-        }
-
         if (value === undefined) {
           continue;
         }
 
-        if (key === 'selector' || key === '!selector') {
+        if (key === 'qref' || key === '!qref') {
+          const tmpArr = (
+            Array.isArray(((value as Selector['qref']) ?? [])[0])
+              ? value
+              : [value]
+          ) as [string, [Options, ...Selector[]]][];
+          const formatArr: [string, [Options, ...FormattedSelector[]]][] = [];
+          for (let i = 0; i < tmpArr.length; i++) {
+            const name = tmpArr[i][0];
+            const [qrefOptions, ...qrefSelectors] = tmpArr[i][1];
+            const QrefEntityClass =
+              typeof qrefOptions.class === 'string'
+                ? Nymph.getEntityClass(qrefOptions.class)
+                : qrefOptions.class ?? Nymph.getEntityClass('Entity');
+            const newOptions = {
+              ...qrefOptions,
+              class: QrefEntityClass,
+              source: options.source,
+            };
+            const newSelectors = this.formatSelectors(qrefSelectors, options);
+            Nymph.runQueryCallbacks(newOptions, newSelectors);
+            formatArr[i] = [name, [newOptions, ...newSelectors]];
+          }
+          newSelector[key] = formatArr;
+        } else if (key === 'selector' || key === '!selector') {
           const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-          newSelector[key] = this.formatSelectors(tmpArr);
+          newSelector[key] = this.formatSelectors(tmpArr, options);
         } else if (!Array.isArray(value)) {
           // @ts-ignore: ts doesn't know what value is here.
           newSelector[key] = [[value]];
@@ -806,7 +828,8 @@ export default abstract class NymphDriver {
       }
     }
 
-    const formattedSelectors = this.formatSelectors(selectors);
+    const formattedSelectors = this.formatSelectors(selectors, options);
+    Nymph.runQueryCallbacks(options, formattedSelectors);
     const { result } = performQueryCallback(options, formattedSelectors, etype);
 
     return {

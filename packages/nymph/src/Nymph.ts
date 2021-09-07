@@ -24,6 +24,8 @@ import {
   NymphBeforeDeleteUIDCallback,
   NymphAfterDeleteUIDCallback,
   NymphEventType,
+  NymphQueryCallback,
+  FormattedSelector,
 } from './Nymph.types';
 
 /**
@@ -42,6 +44,7 @@ export default class Nymph {
   public static Tilmeld: any = undefined;
   private static connectCallbacks: NymphConnectCallback[] = [];
   private static disconnectCallbacks: NymphDisconnectCallback[] = [];
+  private static queryCallbacks: NymphQueryCallback[] = [];
   private static beforeGetEntityCallbacks: NymphBeforeGetEntityCallback[] = [];
   private static beforeGetEntitiesCallbacks: NymphBeforeGetEntitiesCallback[] =
     [];
@@ -124,6 +127,20 @@ export default class Nymph {
       }
     }
     return await result;
+  }
+
+  /**
+   * Run all the query callbacks on a query.
+   */
+  public static async runQueryCallbacks(
+    options: Options,
+    selectors: FormattedSelector[]
+  ) {
+    for (let callback of this.queryCallbacks) {
+      if (callback) {
+        callback(options, selectors);
+      }
+    }
   }
 
   /**
@@ -380,8 +397,8 @@ export default class Nymph {
    * - ref - An array with a name, then either an entity, or a GUID. True if
    *   the named property is the entity or contains the entity.
    * - qref - An array with a name, then a full query (including options). True
-   *   if the named property is an entity that matches the query or an array
-   *   containing an entity that matches the query.
+   *   if the named property is an entity that matches the query or contains an
+   *   entity that matches the query.
    * - selector - A selector. (Keep in mind, you can also use an array of these,
    *   just like any other clause.)
    *
@@ -671,6 +688,8 @@ export default class Nymph {
       ? NymphConnectCallback
       : T extends 'disconnect'
       ? NymphDisconnectCallback
+      : T extends 'query'
+      ? NymphQueryCallback
       : T extends 'beforeGetEntity'
       ? NymphBeforeGetEntityCallback
       : T extends 'beforeGetEntities'
@@ -709,6 +728,8 @@ export default class Nymph {
       ? 'connectCallbacks'
       : T extends 'disconnect'
       ? 'disconnectCallbacks'
+      : T extends 'query'
+      ? 'queryCallbacks'
       : T extends 'beforeGetEntity'
       ? 'beforeGetEntityCallbacks'
       : T extends 'beforeGetEntities'
@@ -756,6 +777,8 @@ export default class Nymph {
       ? NymphConnectCallback
       : T extends 'disconnect'
       ? NymphDisconnectCallback
+      : T extends 'query'
+      ? NymphQueryCallback
       : T extends 'beforeGetEntity'
       ? NymphBeforeGetEntityCallback
       : T extends 'beforeGetEntities'
@@ -794,6 +817,8 @@ export default class Nymph {
       ? 'connectCallbacks'
       : T extends 'disconnect'
       ? 'disconnectCallbacks'
+      : T extends 'query'
+      ? 'queryCallbacks'
       : T extends 'beforeSaveEntity'
       ? 'beforeSaveEntityCallbacks'
       : T extends 'beforeGetEntity'

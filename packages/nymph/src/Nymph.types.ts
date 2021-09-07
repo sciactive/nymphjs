@@ -3,6 +3,7 @@ import { EntityConstructor, EntityInterface } from './Entity.types';
 export type NymphEventType =
   | 'connect'
   | 'disconnect'
+  | 'query'
   | 'beforeGetEntity'
   | 'beforeGetEntities'
   | 'beforeSaveEntity'
@@ -21,6 +22,11 @@ export type NymphEventType =
   | 'afterDeleteUID';
 export type NymphConnectCallback = (result: Promise<boolean>) => void;
 export type NymphDisconnectCallback = (result: Promise<boolean>) => void;
+/** The NymphQueryCallback will be called on both top level and qref queries. */
+export type NymphQueryCallback = (
+  options: Options,
+  selectors: FormattedSelector[]
+) => void;
 export type NymphBeforeGetEntityCallback = (
   options: Options,
   selectors: Selector[]

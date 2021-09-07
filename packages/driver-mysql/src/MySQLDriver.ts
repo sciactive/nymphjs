@@ -3,6 +3,7 @@ import cp from 'child_process';
 import { default as MySQLType } from '@types/mysql';
 // @ts-ignore: replace with mysql once https://github.com/mysqljs/mysql/pull/2233 is merged.
 import vlaskyMysql from '@vlasky/mysql';
+import { customAlphabet } from 'nanoid';
 import Nymph, {
   NymphDriver,
   EntityConstructor,
@@ -25,6 +26,11 @@ import {
 } from './conf';
 
 const mysql = vlaskyMysql as typeof MySQLType;
+
+const makeTableSuffix = customAlphabet(
+  '0123456789abcdefghijklmnopqrstuvwxyz',
+  20
+);
 
 /**
  * The MySQL Nymph database driver.
@@ -260,7 +266,7 @@ export default class MySQLDriver extends NymphDriver {
   private async query<T extends () => any>(
     runQuery: T,
     query: string,
-    etype?: string
+    etypes: string[] = []
     // @ts-ignore: The return type of T is a promise.
   ): ReturnType<T> {
     try {
@@ -269,7 +275,7 @@ export default class MySQLDriver extends NymphDriver {
       const errorCode = e?.errno;
       if (errorCode === 1146 && this.createTables()) {
         // If the tables don't exist yet, create them.
-        if (etype != null) {
+        for (let etype of etypes) {
           this.createTables(etype);
         }
         try {
@@ -305,7 +311,7 @@ export default class MySQLDriver extends NymphDriver {
   private querySync<T extends () => any>(
     runQuery: T,
     query: string,
-    etype?: string
+    etypes: string[] = []
   ): ReturnType<T> {
     try {
       return runQuery();
@@ -313,7 +319,7 @@ export default class MySQLDriver extends NymphDriver {
       const errorCode = e?.errno;
       if (errorCode === 1146 && this.createTables()) {
         // If the tables don't exist yet, create them.
-        if (etype != null) {
+        for (let etype of etypes) {
           this.createTables(etype);
         }
         try {
@@ -349,10 +355,10 @@ export default class MySQLDriver extends NymphDriver {
   private queryIter(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
     }: {
-      etype?: string;
+      etypes?: string[];
       params?: { [k: string]: any };
     } = {}
   ) {
@@ -377,16 +383,16 @@ export default class MySQLDriver extends NymphDriver {
         return results;
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
   private queryIterSync(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
-    }: { etype?: string; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     const { query: newQuery, params: newParams } = this.translateQuery(
       query,
@@ -417,17 +423,17 @@ export default class MySQLDriver extends NymphDriver {
         return results;
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
   private queryGet(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
     }: {
-      etype?: string;
+      etypes?: string[];
       params?: { [k: string]: any };
     } = {}
   ) {
@@ -452,17 +458,17 @@ export default class MySQLDriver extends NymphDriver {
         return results[0];
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
   private queryRun(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
     }: {
-      etype?: string;
+      etypes?: string[];
       params?: { [k: string]: any };
     } = {}
   ) {
@@ -487,16 +493,16 @@ export default class MySQLDriver extends NymphDriver {
         return { changes: results.changedRows ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
   private queryRunSync(
     query: string,
     {
-      etype,
+      etypes = [],
       params = {},
-    }: { etype?: string; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     const { query: newQuery, params: newParams } = this.translateQuery(
       query,
@@ -527,7 +533,7 @@ export default class MySQLDriver extends NymphDriver {
         return { changes: results.changedRows ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etype
+      etypes
     );
   }
 
@@ -578,7 +584,7 @@ export default class MySQLDriver extends NymphDriver {
           `${this.prefix}entities_${etype}`
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -589,7 +595,7 @@ export default class MySQLDriver extends NymphDriver {
           `${this.prefix}data_${etype}`
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -600,7 +606,7 @@ export default class MySQLDriver extends NymphDriver {
           `${this.prefix}comparisons_${etype}`
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -611,7 +617,7 @@ export default class MySQLDriver extends NymphDriver {
           `${this.prefix}references_${etype}`
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
-          etype,
+          etypes: [etype],
           params: {
             guid,
           },
@@ -748,11 +754,18 @@ export default class MySQLDriver extends NymphDriver {
     etype: string,
     count = { i: 0 },
     params: { [k: string]: any } = {},
-    subquery = false
+    subquery = false,
+    tableSuffix = '',
+    etypes: string[] = []
   ) {
     if (typeof options.class?.alterOptions === 'function') {
       options = options.class.alterOptions(options);
     }
+    const eTable = `e${tableSuffix}`;
+    const dTable = `d${tableSuffix}`;
+    const cTable = `c${tableSuffix}`;
+    const fTable = `f${tableSuffix}`;
+    const ieTable = `ie${tableSuffix}`;
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -770,7 +783,8 @@ export default class MySQLDriver extends NymphDriver {
                 const guid = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid`=UNHEX(@' +
+                  ieTable +
+                  '.`guid`=UNHEX(@' +
                   guid +
                   ')';
                 params[guid] = curGuid;
@@ -785,12 +799,12 @@ export default class MySQLDriver extends NymphDriver {
                       curQuery += ' OR ';
                     }
                     const tag = `param${++count.i}`;
-                    curQuery += 'ie.`tags` NOT REGEXP @' + tag;
+                    curQuery += ieTable + '.`tags` NOT REGEXP @' + tag;
                     params[tag] = ' ' + curTag + ' ';
                   }
                 } else {
                   const tag = `param${++count.i}`;
-                  curQuery += 'ie.`tags` NOT REGEXP @' + tag;
+                  curQuery += ieTable + '.`tags` NOT REGEXP @' + tag;
                   params[tag] = ' (' + curValue.join('|') + ') ';
                 }
               } else {
@@ -803,7 +817,9 @@ export default class MySQLDriver extends NymphDriver {
                   groupQuery += (typeIsOr ? ' ' : ' +') + curTag;
                 }
                 curQuery +=
-                  'MATCH (ie.`tags`) AGAINST (@' +
+                  'MATCH (' +
+                  ieTable +
+                  '.`tags`) AGAINST (@' +
                   groupQueryParam +
                   ' IN BOOLEAN MODE)';
                 params[groupQueryParam] = groupQuery;
@@ -817,7 +833,8 @@ export default class MySQLDriver extends NymphDriver {
                 }
                 const name = `param${++count.i}`;
                 curQuery +=
-                  'ie.`guid` ' +
+                  ieTable +
+                  '.`guid` ' +
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'data_' + etype) +
@@ -836,18 +853,23 @@ export default class MySQLDriver extends NymphDriver {
                 if (curVar === 'cdate') {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(ie.`cdate` NOT NULL)';
+                    '(' +
+                    ieTable +
+                    '.`cdate` NOT NULL)';
                   break;
                 } else if (curVar === 'mdate') {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(ie.`mdate` NOT NULL)';
+                    '(' +
+                    ieTable +
+                    '.`mdate` NOT NULL)';
                   break;
                 } else {
                   const name = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    'ie.`guid` IN (SELECT `guid` FROM ' +
+                    ieTable +
+                    '.`guid` IN (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                     ' WHERE `name`=@' +
                     name +
@@ -865,7 +887,8 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`cdate`=@' +
+                  ieTable +
+                  '.`cdate`=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -878,7 +901,8 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`mdate`=@' +
+                  ieTable +
+                  '.`mdate`=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -892,7 +916,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -909,7 +934,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -935,7 +961,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -955,7 +982,8 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`cdate`=' +
+                  ieTable +
+                  '.`cdate`=' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -968,7 +996,8 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`mdate`=' +
+                  ieTable +
+                  '.`mdate`=' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -996,13 +1025,17 @@ export default class MySQLDriver extends NymphDriver {
                   const stringParam = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(ie.`guid` IN (SELECT `guid` FROM ' +
+                    '(' +
+                    ieTable +
+                    '.`guid` IN (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'data_' + etype) +
                     ' WHERE `name`=@' +
                     name +
                     ' AND INSTR(`value`, @' +
                     value +
-                    ')) OR ie.`guid` IN (SELECT `guid` FROM ' +
+                    ')) OR ' +
+                    ieTable +
+                    '.`guid` IN (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                     ' WHERE `name`=@' +
                     name +
@@ -1013,7 +1046,8 @@ export default class MySQLDriver extends NymphDriver {
                 } else {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    'ie.`guid` IN (SELECT `guid` FROM ' +
+                    ieTable +
+                    '.`guid` IN (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'data_' + etype) +
                     ' WHERE `name`=@' +
                     name +
@@ -1034,7 +1068,9 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`cdate` REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '.`cdate` REGEXP @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1046,7 +1082,9 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`mdate` REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '.`mdate` REGEXP @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1059,7 +1097,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1079,7 +1118,9 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`cdate` REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '.`cdate` REGEXP @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1091,7 +1132,9 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`mdate` REGEXP @' +
+                  '(' +
+                  ieTable +
+                  '.`mdate` REGEXP @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1104,7 +1147,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1124,7 +1168,9 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`cdate` LIKE @' +
+                  '(' +
+                  ieTable +
+                  '.`cdate` LIKE @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1136,7 +1182,9 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`mdate` LIKE @' +
+                  '(' +
+                  ieTable +
+                  '.`mdate` LIKE @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1149,7 +1197,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1169,7 +1218,9 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`cdate` LIKE @' +
+                  '(' +
+                  ieTable +
+                  '.`cdate` LIKE @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1181,7 +1232,9 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(ie.`mdate` LIKE @' +
+                  '(' +
+                  ieTable +
+                  '.`mdate` LIKE @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1194,7 +1247,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1214,7 +1268,8 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`cdate`>@' +
+                  ieTable +
+                  '.`cdate`>@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1227,7 +1282,8 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`mdate`>@' +
+                  ieTable +
+                  '.`mdate`>@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1241,7 +1297,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1263,7 +1320,8 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`cdate`>=@' +
+                  ieTable +
+                  '.`cdate`>=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1276,7 +1334,8 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`mdate`>=@' +
+                  ieTable +
+                  '.`mdate`>=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1290,7 +1349,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1312,7 +1372,8 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`cdate`<@' +
+                  ieTable +
+                  '.`cdate`<@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1325,7 +1386,8 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`mdate`<@' +
+                  ieTable +
+                  '.`mdate`<@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1339,7 +1401,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1361,7 +1424,8 @@ export default class MySQLDriver extends NymphDriver {
                 const cdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`cdate`<=@' +
+                  ieTable +
+                  '.`cdate`<=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1374,7 +1438,8 @@ export default class MySQLDriver extends NymphDriver {
                 const mdate = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`mdate`<=@' +
+                  ieTable +
+                  '.`mdate`<=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1388,7 +1453,8 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'ie.`guid` IN (SELECT `guid` FROM ' +
+                  ieTable +
+                  '.`guid` IN (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
                   ' WHERE `name`=@' +
                   name +
@@ -1418,7 +1484,8 @@ export default class MySQLDriver extends NymphDriver {
               const guid = `param${++count.i}`;
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                'ie.`guid` IN (SELECT `guid` FROM ' +
+                ieTable +
+                '.`guid` IN (SELECT `guid` FROM ' +
                 MySQLDriver.escape(this.prefix + 'references_' + etype) +
                 ' WHERE `name`=@' +
                 name +
@@ -1429,13 +1496,16 @@ export default class MySQLDriver extends NymphDriver {
               params[guid] = curQguid;
               break;
             case 'selector':
+            case '!selector':
               const subquery = this.makeEntityQuery(
                 options,
                 [curValue],
                 etype,
                 count,
                 params,
-                true
+                true,
+                tableSuffix,
+                etypes
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1445,6 +1515,39 @@ export default class MySQLDriver extends NymphDriver {
                 '(' +
                 subquery.query +
                 ')';
+              break;
+            case 'qref':
+            case '!qref':
+              const [qrefOptions, ...qrefSelectors] = curValue[1] as [
+                Options,
+                ...FormattedSelector[]
+              ];
+              const QrefEntityClass = qrefOptions.class as EntityConstructor;
+              const qrefQuery = this.makeEntityQuery(
+                { ...qrefOptions, return: 'guid', class: QrefEntityClass },
+                qrefSelectors,
+                QrefEntityClass.ETYPE,
+                count,
+                params,
+                false,
+                makeTableSuffix(),
+                etypes
+              );
+              if (curQuery) {
+                curQuery += typeIsOr ? ' OR ' : ' AND ';
+              }
+              const qrefName = `param${++count.i}`;
+              curQuery +=
+                (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                ieTable +
+                '.`guid` IN (SELECT `guid` FROM ' +
+                MySQLDriver.escape(this.prefix + 'references_' + etype) +
+                ' WHERE `name`=@' +
+                qrefName +
+                ' AND `reference` IN (' +
+                qrefQuery.query +
+                '))';
+              params[qrefName] = curValue[0];
               break;
           }
         }
@@ -1485,26 +1588,44 @@ export default class MySQLDriver extends NymphDriver {
         }
         const whereClause = queryParts.join(') AND (');
         if (options.return === 'guid') {
-          query = `SELECT LOWER(HEX(ie.\`guid\`)) as \`guid\`
-            FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
+          const guidColumn =
+            tableSuffix === ''
+              ? `LOWER(HEX(${ieTable}.\`guid\`))`
+              : `${ieTable}.\`guid\``;
+          query = `SELECT ${guidColumn} as \`guid\`
+            FROM ${MySQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} ${ieTable}
             WHERE (${whereClause})
-            ORDER BY ie.${sortBy}${limit}${offset};`;
+            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
         } else {
-          query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
-            FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
+          query = `SELECT
+              LOWER(HEX(${eTable}.\`guid\`)) as \`guid\`,
+              ${eTable}.\`tags\`,
+              ${eTable}.\`cdate\`,
+              ${eTable}.\`mdate\`,
+              ${dTable}.\`name\`,
+              ${dTable}.\`value\`,
+              ${cTable}.\`string\`,
+              ${cTable}.\`number\`
+            FROM ${MySQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} ${eTable}
             LEFT JOIN ${MySQLDriver.escape(
               `${this.prefix}data_${etype}`
-            )} d ON e.\`guid\`=d.\`guid\`
+            )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
             INNER JOIN ${MySQLDriver.escape(
               `${this.prefix}comparisons_${etype}`
-            )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
+            )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
             INNER JOIN (
-              SELECT ie.\`guid\`
-              FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
+              SELECT ${ieTable}.\`guid\`
+              FROM ${MySQLDriver.escape(
+                `${this.prefix}entities_${etype}`
+              )} ${ieTable}
               WHERE (${whereClause})
-              ORDER BY ie.${sortBy}${limit}${offset}
-            ) f ON e.\`guid\`=f.\`guid\`
-            ORDER BY e.${sortBy};`;
+              ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+            ) ${fTable} ON ${eTable}.\`guid\`=${fTable}.\`guid\`
+            ORDER BY ${eTable}.${sortBy}`;
         }
       }
     } else {
@@ -1524,43 +1645,76 @@ export default class MySQLDriver extends NymphDriver {
           )}`;
         }
         if (options.return === 'guid') {
-          query = `SELECT LOWER(HEX(ie.\`guid\`)) as \`guid\`
-            FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
-            ORDER BY ie.${sortBy}${limit}${offset};`;
+          const guidColumn =
+            tableSuffix === ''
+              ? `LOWER(HEX(${ieTable}.\`guid\`))`
+              : `${ieTable}.\`guid\``;
+          query = `SELECT ${guidColumn} as \`guid\`
+            FROM ${MySQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} ${ieTable}
+            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
         } else {
           if (limit || offset) {
-            query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
-              FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
+            query = `SELECT
+                LOWER(HEX(${eTable}.\`guid\`)) as \`guid\`,
+                ${eTable}.\`tags\`,
+                ${eTable}.\`cdate\`,
+                ${eTable}.\`mdate\`,
+                ${dTable}.\`name\`,
+                ${dTable}.\`value\`,
+                ${cTable}.\`string\`,
+                ${cTable}.\`number\`
+              FROM ${MySQLDriver.escape(
+                `${this.prefix}entities_${etype}`
+              )} ${eTable}
               LEFT JOIN ${MySQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} d ON e.\`guid\`=d.\`guid\`
+              )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
               INNER JOIN ${MySQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
-              )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
+              )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
               INNER JOIN (
-                SELECT ie.\`guid\`
-                FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} ie
-                ORDER BY ie.${sortBy}${limit}${offset}
-              ) f ON e.\`guid\`=f.\`guid\`
-              ORDER BY e.${sortBy};`;
+                SELECT ${ieTable}.\`guid\`
+                FROM ${MySQLDriver.escape(
+                  `${this.prefix}entities_${etype}`
+                )} ${ieTable}
+                ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+              ) ${fTable} ON ${eTable}.\`guid\`=${fTable}.\`guid\`
+              ORDER BY ${eTable}.${sortBy}`;
           } else {
-            query = `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, c.\`string\`, c.\`number\`
-              FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
+            query = `SELECT
+                LOWER(HEX(${eTable}.\`guid\`)) as \`guid\`,
+                ${eTable}.\`tags\`,
+                ${eTable}.\`cdate\`,
+                ${eTable}.\`mdate\`,
+                ${dTable}.\`name\`,
+                ${dTable}.\`value\`,
+                ${cTable}.\`string\`,
+                ${cTable}.\`number\`
+              FROM ${MySQLDriver.escape(
+                `${this.prefix}entities_${etype}`
+              )} ${eTable}
               LEFT JOIN ${MySQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} d ON e.\`guid\`=d.\`guid\`
+              )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
               INNER JOIN ${MySQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
-              )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
-              ORDER BY e.${sortBy};`;
+              )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
+              ORDER BY ${eTable}.${sortBy}`;
           }
         }
       }
     }
 
+    if (etypes.indexOf(etype) === -1) {
+      etypes.push(etype);
+    }
+
     return {
       query,
       params,
+      etypes,
     };
   }
 
@@ -1571,12 +1725,12 @@ export default class MySQLDriver extends NymphDriver {
   ): {
     result: any;
   } {
-    const { query, params } = this.makeEntityQuery(
+    const { query, params, etypes } = this.makeEntityQuery(
       options,
       formattedSelectors,
       etype
     );
-    const result = this.queryIter(query, { etype, params }).then((val) =>
+    const result = this.queryIter(query, { etypes, params }).then((val) =>
       val[Symbol.iterator]()
     );
     return {
@@ -1591,12 +1745,12 @@ export default class MySQLDriver extends NymphDriver {
   ): {
     result: any;
   } {
-    const { query, params } = this.makeEntityQuery(
+    const { query, params, etypes } = this.makeEntityQuery(
       options,
       formattedSelectors,
       etype
     );
-    const result = this.queryIterSync(query, { etype, params })[
+    const result = this.queryIterSync(query, { etypes, params })[
       Symbol.iterator
     ]();
     return {
@@ -1717,7 +1871,7 @@ export default class MySQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`
             )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
                 tags: ' ' + tags.join(' ') + ' ',
@@ -1737,7 +1891,7 @@ export default class MySQLDriver extends NymphDriver {
                 `${this.prefix}data_${etype}`
               )} WHERE \`guid\`=UNHEX(@guid);`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                 },
@@ -1750,7 +1904,7 @@ export default class MySQLDriver extends NymphDriver {
                 `${this.prefix}comparisons_${etype}`
               )} WHERE \`guid\`=UNHEX(@guid);`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                 },
@@ -1763,7 +1917,7 @@ export default class MySQLDriver extends NymphDriver {
                 `${this.prefix}references_${etype}`
               )} WHERE \`guid\`=UNHEX(@guid);`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                 },
@@ -1792,7 +1946,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}data_${etype}`
                 )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                     name,
@@ -1807,7 +1961,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}comparisons_${etype}`
                 )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                     name,
@@ -1826,7 +1980,7 @@ export default class MySQLDriver extends NymphDriver {
                     `${this.prefix}references_${etype}`
                   )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
                   {
-                    etype,
+                    etypes: [etype],
                     params: {
                       guid,
                       name,
@@ -1997,7 +2151,7 @@ export default class MySQLDriver extends NymphDriver {
               `${this.prefix}data_${etype}`
             )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
                 name,
@@ -2012,7 +2166,7 @@ export default class MySQLDriver extends NymphDriver {
               `${this.prefix}comparisons_${etype}`
             )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
                 name,
@@ -2031,7 +2185,7 @@ export default class MySQLDriver extends NymphDriver {
                 `${this.prefix}references_${etype}`
               )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
               {
-                etype,
+                etypes: [etype],
                 params: {
                   guid,
                   name,
@@ -2059,7 +2213,7 @@ export default class MySQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`
             )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @cdate);`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 guid,
                 tags: ' ' + tags.join(' ') + ' ',
@@ -2079,7 +2233,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}entities_${etype}`
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                   },
@@ -2092,7 +2246,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}data_${etype}`
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                   },
@@ -2105,7 +2259,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}comparisons_${etype}`
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                   },
@@ -2118,7 +2272,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}references_${etype}`
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                   },
@@ -2145,7 +2299,7 @@ export default class MySQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`
             )} SET \`tags\`=@tags, \`mdate\`=@mdate WHERE \`guid\`=UNHEX(@guid) AND \`mdate\` <= @emdate;`,
             {
-              etype,
+              etypes: [etype],
               params: {
                 tags: ' ' + tags.join(' ') + ' ',
                 mdate,
@@ -2163,7 +2317,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}data_${etype}`
                 )} WHERE \`guid\`=UNHEX(@guid);`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                   },
@@ -2176,7 +2330,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}comparisons_${etype}`
                 )} WHERE \`guid\`=UNHEX(@guid);`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                   },
@@ -2189,7 +2343,7 @@ export default class MySQLDriver extends NymphDriver {
                   `${this.prefix}references_${etype}`
                 )} WHERE \`guid\`=UNHEX(@guid);`,
                 {
-                  etype,
+                  etypes: [etype],
                   params: {
                     guid,
                   },
