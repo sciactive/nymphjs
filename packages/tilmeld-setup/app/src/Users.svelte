@@ -96,6 +96,7 @@
     AdminUserData,
     ClientConfig,
     CurrentUserData,
+    Group,
     User,
   } from '@nymphjs/tilmeld-client';
   import { mdiMagnify, mdiArrowRight, mdiPlus } from '@mdi/js';
@@ -129,11 +130,21 @@
     entitiesSearching = true;
     failureMessage = null;
     try {
-      const query = queryParser(entitySearch, User, [
-        'username',
-        'name',
-        'email',
-      ]);
+      const query = queryParser(
+        entitySearch,
+        User,
+        ['username', 'name', 'email'],
+        {
+          User: {
+            class: User,
+            defaultFields: ['username', 'name', 'email'],
+          },
+          Group: {
+            class: Group,
+            defaultFields: ['groupname', 'name', 'email'],
+          },
+        }
+      );
       entities = await Nymph.getEntities(...query);
     } catch (e: any) {
       failureMessage = e?.message;

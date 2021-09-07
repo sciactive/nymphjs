@@ -5,16 +5,25 @@ export default function queryParser<
 >(
   query: string,
   entityClass: T,
-  defaultFields: string[] = ['name']
+  defaultFields: string[] = ['name'],
+  qrefMap: {
+    [k: string]: { class: EntityConstructor; defaultFields?: string[] };
+  } = {}
 ): [Options<T>, ...Selector[]] {
   const options: Options<T> = { class: entityClass };
-  return [options, ...selectorsParser(query, '&', defaultFields, options)];
+  return [
+    options,
+    ...selectorsParser(query, '&', defaultFields, qrefMap, options),
+  ];
 }
 
 function selectorsParser(
   query: string,
   type: '&' | '|' | '!&' | '!|' = '&',
-  defaultFields: string[] = ['name'],
+  defaultFields: string[],
+  qrefMap: {
+    [k: string]: { class: EntityConstructor; defaultFields?: string[] };
+  },
   options?: Options
 ): Selector[] {
   const selector: Selector = { type };
@@ -82,12 +91,12 @@ function selectorsParser(
         selectorQuery = selectorQuery.slice(1);
       }
       selector.selector.push(
-        ...selectorsParser(selectorQuery, type, defaultFields)
+        ...selectorsParser(selectorQuery, type, defaultFields, qrefMap)
       );
     }
   }
 
-  curQuery = selectorParser(curQuery, selector);
+  curQuery = selectorParser(curQuery, selector, qrefMap);
 
   if (options) {
     const limitRegex = /(?: |^)limit:(\d+)(?= |$)/;
@@ -146,8 +155,53 @@ function selectorsParser(
   return [selector];
 }
 
-function selectorParser(query: string, selector: Selector): string {
+function selectorParser(
+  query: string,
+  selector: Selector,
+  qrefMap: {
+    [k: string]: { class: EntityConstructor; defaultFields?: string[] };
+  }
+): string {
   let curQuery = query;
+
+  // eg. user<{User name="Hunter"}> or user!<{User name="Hunter"}>
+  const qrefRegex = /(?: |^)(\w+)!?<\{(\w+) (.*?[^\\])\}>(?= |$)/g;
+  const qrefMatch = curQuery.match(qrefRegex);
+  if (qrefMatch) {
+    selector.qref = [];
+    selector['!qref'] = [];
+    for (let match of qrefMatch) {
+      try {
+        let [name, value] = match.trim().slice(0, -1).split('<', 2);
+        value = unQuoteCurlies(value.slice(1, -1));
+        let [className, qrefQuery] = value.split(' ', 2);
+        const EntityClass = qrefMap[className].class;
+        if (EntityClass == null) {
+          continue;
+        }
+        const qref = queryParser(
+          qrefQuery,
+          EntityClass,
+          qrefMap[className].defaultFields,
+          qrefMap
+        );
+        if (name.endsWith('!')) {
+          selector['!qref'].push([name.slice(0, -1), qref]);
+        } else {
+          selector.qref.push([name, qref]);
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.qref.length) {
+      delete selector.qref;
+    }
+    if (!selector['!qref'].length) {
+      delete selector['!qref'];
+    }
+  }
+  curQuery = curQuery.replace(qrefRegex, '');
 
   // eg. name=Marty or name="Marty McFly" or enabled=true or someArray=[1,2]
   const equalRegex = /(?: |^)(\w+)!?=(""|".*?[^\\]"|[^ ]+)(?= |$)/g;
@@ -183,60 +237,6 @@ function selectorParser(query: string, selector: Selector): string {
     }
   }
   curQuery = curQuery.replace(equalRegex, '');
-
-  // eg. {790274347f9b3a018c2cedee} or {!790274347f9b3a018c2cedee}
-  const guidRegex = /(?: |^)\{!?([0-9a-f]{24})\}(?= |$)/g;
-  const guidMatch = curQuery.match(guidRegex);
-  if (guidMatch) {
-    selector.guid = [];
-    selector['!guid'] = [];
-    for (let match of guidMatch) {
-      try {
-        let guid = match.trim().replace(/^\{|\}$/g, '');
-        if (guid.startsWith('!')) {
-          selector['!guid'].push(guid.slice(1));
-        } else {
-          selector.guid.push(guid);
-        }
-      } catch (e: any) {
-        continue;
-      }
-    }
-    if (!selector.guid.length) {
-      delete selector.guid;
-    }
-    if (!selector['!guid'].length) {
-      delete selector['!guid'];
-    }
-  }
-  curQuery = curQuery.replace(guidRegex, '');
-
-  // eg. [enabled] or [!defaultPrimaryGroup]
-  const truthyRegex = /(?: |^)\[(!?\w+)\](?= |$)/g;
-  const truthyMatch = curQuery.match(truthyRegex);
-  if (truthyMatch) {
-    selector.truthy = [];
-    selector['!truthy'] = [];
-    for (let match of truthyMatch) {
-      try {
-        let name = match.trim().replace(/^\[|\]$/g, '');
-        if (name.startsWith('!')) {
-          selector['!truthy'].push(name.slice(1));
-        } else {
-          selector.truthy.push(name);
-        }
-      } catch (e: any) {
-        continue;
-      }
-    }
-    if (!selector.truthy.length) {
-      delete selector.truthy;
-    }
-    if (!selector['!truthy'].length) {
-      delete selector['!truthy'];
-    }
-  }
-  curQuery = curQuery.replace(truthyRegex, '');
 
   // eg. user<{790274347f9b3a018c2cedee}> or user!<{790274347f9b3a018c2cedee}>
   const refRegex = /(?: |^)(\w+)!?<\{([0-9a-f]{24})\}>(?= |$)/g;
@@ -305,6 +305,155 @@ function selectorParser(query: string, selector: Selector): string {
     }
   }
   curQuery = curQuery.replace(containRegex, '');
+
+  // eg. name~/Hunter/ or name!~/hunter/i
+  const posixRegex = /(?: |^)(\w+)!?~(\/\/|\/.*?[^\\]\/)i?(?= |$)/g;
+  const posixMatch = curQuery.match(posixRegex);
+  if (posixMatch) {
+    selector.match = [];
+    selector['!match'] = [];
+    selector.imatch = [];
+    selector['!imatch'] = [];
+    for (let match of posixMatch) {
+      try {
+        let [name, value] = match.trim().split('~', 2);
+        if (name.endsWith('!')) {
+          if (value.endsWith('i')) {
+            selector['!imatch'].push([
+              name.slice(0, -1),
+              value.replace(/^\/|\/i$/g, ''),
+            ]);
+          } else {
+            selector['!match'].push([
+              name.slice(0, -1),
+              value.replace(/^\/|\/$/g, ''),
+            ]);
+          }
+        } else {
+          if (value.endsWith('i')) {
+            selector.imatch.push([name, value.replace(/^\/|\/i$/g, '')]);
+          } else {
+            selector.match.push([name, value.replace(/^\/|\/$/g, '')]);
+          }
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.match.length) {
+      delete selector.match;
+    }
+    if (!selector['!match'].length) {
+      delete selector['!match'];
+    }
+    if (!selector.imatch.length) {
+      delete selector.imatch;
+    }
+    if (!selector['!imatch'].length) {
+      delete selector['!imatch'];
+    }
+  }
+  curQuery = curQuery.replace(posixRegex, '');
+
+  // eg. name~Hunter or name!~"hunter"i
+  const likeRegex = /(?: |^)(\w+)!?~(""i?|".*?[^\\]"i?|[^ ]+)(?= |$)/g;
+  const likeMatch = curQuery.match(likeRegex);
+  if (likeMatch) {
+    selector.like = [];
+    selector['!like'] = [];
+    selector.ilike = [];
+    selector['!ilike'] = [];
+    for (let match of likeMatch) {
+      try {
+        let [name, value] = match.trim().split('~', 2);
+        if (name.endsWith('!')) {
+          if (value.endsWith('"i')) {
+            selector['!ilike'].push([
+              name.slice(0, -1),
+              unQuoteString(value.slice(0, -1)),
+            ]);
+          } else {
+            selector['!like'].push([name.slice(0, -1), unQuoteString(value)]);
+          }
+        } else {
+          if (value.endsWith('"i')) {
+            selector.ilike.push([name, unQuoteString(value.slice(0, -1))]);
+          } else {
+            selector.like.push([name, unQuoteString(value)]);
+          }
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.like.length) {
+      delete selector.like;
+    }
+    if (!selector['!like'].length) {
+      delete selector['!like'];
+    }
+    if (!selector.ilike.length) {
+      delete selector.ilike;
+    }
+    if (!selector['!ilike'].length) {
+      delete selector['!ilike'];
+    }
+  }
+  curQuery = curQuery.replace(likeRegex, '');
+
+  // eg. {790274347f9b3a018c2cedee} or {!790274347f9b3a018c2cedee}
+  const guidRegex = /(?: |^)\{!?([0-9a-f]{24})\}(?= |$)/g;
+  const guidMatch = curQuery.match(guidRegex);
+  if (guidMatch) {
+    selector.guid = [];
+    selector['!guid'] = [];
+    for (let match of guidMatch) {
+      try {
+        let guid = match.trim().replace(/^\{|\}$/g, '');
+        if (guid.startsWith('!')) {
+          selector['!guid'].push(guid.slice(1));
+        } else {
+          selector.guid.push(guid);
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.guid.length) {
+      delete selector.guid;
+    }
+    if (!selector['!guid'].length) {
+      delete selector['!guid'];
+    }
+  }
+  curQuery = curQuery.replace(guidRegex, '');
+
+  // eg. [enabled] or [!defaultPrimaryGroup]
+  const truthyRegex = /(?: |^)\[(!?\w+)\](?= |$)/g;
+  const truthyMatch = curQuery.match(truthyRegex);
+  if (truthyMatch) {
+    selector.truthy = [];
+    selector['!truthy'] = [];
+    for (let match of truthyMatch) {
+      try {
+        let name = match.trim().replace(/^\[|\]$/g, '');
+        if (name.startsWith('!')) {
+          selector['!truthy'].push(name.slice(1));
+        } else {
+          selector.truthy.push(name);
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.truthy.length) {
+      delete selector.truthy;
+    }
+    if (!selector['!truthy'].length) {
+      delete selector['!truthy'];
+    }
+  }
+  curQuery = curQuery.replace(truthyRegex, '');
 
   // eg. cdate>15
   const gtRegex = /(?: |^)(\w+)>(-?\d+(?:\.\d+)?)(?= |$)/g;
@@ -482,111 +631,23 @@ function selectorParser(query: string, selector: Selector): string {
   }
   curQuery = curQuery.replace(lteRelativeRegex, '');
 
-  // eg. name~/Hunter/ or name!~/hunter/i
-  const posixRegex = /(?: |^)(\w+)!?~(\/\/|\/.*?[^\\]\/)i?(?= |$)/g;
-  const posixMatch = curQuery.match(posixRegex);
-  if (posixMatch) {
-    selector.match = [];
-    selector['!match'] = [];
-    selector.imatch = [];
-    selector['!imatch'] = [];
-    for (let match of posixMatch) {
-      try {
-        let [name, value] = match.trim().split('~', 2);
-        if (name.endsWith('!')) {
-          if (value.endsWith('i')) {
-            selector['!imatch'].push([
-              name.slice(0, -1),
-              value.replace(/^\/|\/i$/g, ''),
-            ]);
-          } else {
-            selector['!match'].push([
-              name.slice(0, -1),
-              value.replace(/^\/|\/$/g, ''),
-            ]);
-          }
-        } else {
-          if (value.endsWith('i')) {
-            selector.imatch.push([name, value.replace(/^\/|\/i$/g, '')]);
-          } else {
-            selector.match.push([name, value.replace(/^\/|\/$/g, '')]);
-          }
-        }
-      } catch (e: any) {
-        continue;
-      }
-    }
-    if (!selector.match.length) {
-      delete selector.match;
-    }
-    if (!selector['!match'].length) {
-      delete selector['!match'];
-    }
-    if (!selector.imatch.length) {
-      delete selector.imatch;
-    }
-    if (!selector['!imatch'].length) {
-      delete selector['!imatch'];
-    }
-  }
-  curQuery = curQuery.replace(posixRegex, '');
-
-  // eg. name~Hunter or name!~"hunter"i
-  const likeRegex = /(?: |^)(\w+)!?~(""i?|".*?[^\\]"i?|[^ ]+)(?= |$)/g;
-  const likeMatch = curQuery.match(likeRegex);
-  if (likeMatch) {
-    selector.like = [];
-    selector['!like'] = [];
-    selector.ilike = [];
-    selector['!ilike'] = [];
-    for (let match of likeMatch) {
-      try {
-        let [name, value] = match.trim().split('~', 2);
-        if (name.endsWith('!')) {
-          if (value.endsWith('"i')) {
-            selector['!ilike'].push([
-              name.slice(0, -1),
-              unQuoteString(value.slice(0, -1)),
-            ]);
-          } else {
-            selector['!like'].push([name.slice(0, -1), unQuoteString(value)]);
-          }
-        } else {
-          if (value.endsWith('"i')) {
-            selector.ilike.push([name, unQuoteString(value.slice(0, -1))]);
-          } else {
-            selector.like.push([name, unQuoteString(value)]);
-          }
-        }
-      } catch (e: any) {
-        continue;
-      }
-    }
-    if (!selector.like.length) {
-      delete selector.like;
-    }
-    if (!selector['!like'].length) {
-      delete selector['!like'];
-    }
-    if (!selector.ilike.length) {
-      delete selector.ilike;
-    }
-    if (!selector['!ilike'].length) {
-      delete selector['!ilike'];
-    }
-  }
-  curQuery = curQuery.replace(likeRegex, '');
-
   return curQuery.trim();
 }
 
 function unQuoteString(input: string): string {
   if (input.match(/^".*?[^\\]"$/)) {
-    return input.slice(1, -1).replace(/\\"/g, '"');
+    return input.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
   }
   return input;
 }
 
 function unQuoteAngles(input: string): string {
-  return input.replace(/\\</g, '<').replace(/\\>/g, '>');
+  return input.replace(/\\</g, '<').replace(/\\>/g, '>').replace(/\\\\/g, '\\');
+}
+
+function unQuoteCurlies(input: string): string {
+  return input
+    .replace(/\\\{/g, '{')
+    .replace(/\\\}/g, '}')
+    .replace(/\\\\/g, '\\');
 }

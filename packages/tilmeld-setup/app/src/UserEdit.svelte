@@ -696,11 +696,21 @@
       return;
     }
     try {
-      const [options, ...selectors] = queryParser(primaryGroupSearch, Group, [
-        'groupname',
-        'name',
-        'email',
-      ]);
+      const [options, ...selectors] = queryParser(
+        primaryGroupSearch,
+        Group,
+        ['groupname', 'name', 'email'],
+        {
+          User: {
+            class: User,
+            defaultFields: ['username', 'name', 'email'],
+          },
+          Group: {
+            class: Group,
+            defaultFields: ['groupname', 'name', 'email'],
+          },
+        }
+      );
       primaryGroups = (await Group.getPrimaryGroups(options, selectors)).filter(
         (group) => {
           return !group.$is(entity.group);
@@ -724,11 +734,21 @@
       return;
     }
     try {
-      const [options, ...selectors] = queryParser(secondaryGroupSearch, Group, [
-        'groupname',
-        'name',
-        'email',
-      ]);
+      const [options, ...selectors] = queryParser(
+        secondaryGroupSearch,
+        Group,
+        ['groupname', 'name', 'email'],
+        {
+          User: {
+            class: User,
+            defaultFields: ['username', 'name', 'email'],
+          },
+          Group: {
+            class: Group,
+            defaultFields: ['groupname', 'name', 'email'],
+          },
+        }
+      );
       secondaryGroups = (
         await Group.getSecondaryGroups(options, selectors)
       ).filter((group) => {

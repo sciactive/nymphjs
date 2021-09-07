@@ -18,18 +18,27 @@ The query parser will turn a string into an Options and Selectors array for the 
 import queryParser from '@nymphjs/query-parser';
 import { Nymph } from '@nymphjs/client';
 
-import MyEntity from './MyEntity';
+import BlogPost from './BlogPost';
+import Category from './Category';
 
 async function doQuery() {
-  const query = 'limit:4 foobar (| [archived] mdate<"2 weeks ago")';
-  const [options, ...selectors] = queryParser(query, MyEntity, [
-    'title',
-    'body',
-  ]);
+  const query =
+    'limit:4 foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>';
+  const [options, ...selectors] = queryParser(
+    query,
+    BlogPost,
+    ['title', 'body'],
+    {
+      cat: {
+        class: Category,
+        defaultFields: ['name'],
+      },
+    }
+  );
   /*
   Options will be
     {
-      class: MyEntity,
+      class: BlogPost,
       limit: 4
     }
 
@@ -42,6 +51,21 @@ async function doQuery() {
         ],
         lt: [
           ["mdate", null, "2 weeks ago"]
+        ]
+      },
+      {
+        type: "&",
+        qref: [
+          "category",
+          [
+            {
+              class: Category
+            },
+            {
+              type: "|",
+              ilike: ["name", "%Tech%"]
+            }
+          ]
         ]
       },
       {
@@ -98,6 +122,14 @@ Check for truthiness.
 Check for a reference to another entity.
 
 - `name<{guid}>` or `name!<{guid}>`
+
+### qref and !qref
+
+Check for a reference to another entity using a query.
+
+- `name<{refclassname inner query}>` or `name!<{refclassname inner query}>`
+  - (Esacpe curly brackets with a leading backslash.)
+  - (Requires a map of refclassname to their actual class and default fields.)
 
 ### contain and !contain
 

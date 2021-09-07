@@ -175,7 +175,7 @@ export type Selector = {
   ref?: Clause<PrimitiveSelector['ref']>;
   '!ref'?: Clause<PrimitiveSelector['ref']>;
 
-  qref?: [string, [Options, ...Selector[]]];
+  qref?: Clause<[string, [Options, ...Selector[]]]>;
   '!qref'?: Selector['qref'];
 
   selector?: Clause<Selector>;

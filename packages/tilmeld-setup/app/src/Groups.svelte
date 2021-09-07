@@ -130,11 +130,21 @@
     entitiesSearching = true;
     failureMessage = null;
     try {
-      const query = queryParser(entitySearch, Group, [
-        'username',
-        'name',
-        'email',
-      ]);
+      const query = queryParser(
+        entitySearch,
+        Group,
+        ['username', 'name', 'email'],
+        {
+          User: {
+            class: User,
+            defaultFields: ['username', 'name', 'email'],
+          },
+          Group: {
+            class: Group,
+            defaultFields: ['groupname', 'name', 'email'],
+          },
+        }
+      );
       entities = await Nymph.getEntities(...query);
     } catch (e: any) {
       failureMessage = e?.message;
