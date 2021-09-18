@@ -106,7 +106,7 @@
   import { Input } from '@smui/textfield';
   import Fab from '@smui/fab';
   import { Icon } from '@smui/common';
-  import Svg from '@smui/common/Svg.svelte';
+  import { Svg } from '@smui/common/elements';
 
   import GroupEdit from './GroupEdit.svelte';
 

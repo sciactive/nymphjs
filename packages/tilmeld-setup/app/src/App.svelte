@@ -131,8 +131,7 @@
   import List, { Item, Text, Separator } from '@smui/list';
   import Menu from '@smui/menu';
   import { Icon } from '@smui/common';
-  import Img from '@smui/common/Img.svelte';
-  import Svg from '@smui/common/Svg.svelte';
+  import { Img, Svg } from '@smui/common/elements';
 
   import Login from './account/Login.svelte';
   import Account from './account/Account.svelte';

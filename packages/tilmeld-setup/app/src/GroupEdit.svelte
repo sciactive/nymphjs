@@ -355,7 +355,7 @@
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
   import { Icon, Label } from '@smui/common';
-  import Svg from '@smui/common/Svg.svelte';
+  import { Svg } from '@smui/common/elements';
 
   const dispatch = createEventDispatcher();
 
