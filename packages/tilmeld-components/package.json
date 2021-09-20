@@ -1,0 +1,56 @@
+{
+  "name": "@nymphjs/tilmeld-components",
+  "version": "1.0.0-alpha.1",
+  "description": "NymphJS - Tilmeld Front End Components",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "src/index.d.ts",
+  "svelte": "src/index.ts",
+  "keywords": [
+    "nymph",
+    "ORM",
+    "object relational mapper"
+  ],
+  "scripts": {
+    "clean": "test -d dist && rm -r dist || true",
+    "build": "webpack",
+    "watch": "webpack --watch",
+    "prepare": "npm run clean && npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sciactive/nymphjs.git"
+  },
+  "author": "Hunter Perrin <hperrin@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/sciactive/nymphjs/issues"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@nymphjs/tilmeld-client": "^1.0.0-alpha.1",
+    "@smui/button": "^5.0.0-beta.5",
+    "@smui/circular-progress": "^5.0.0-beta.5",
+    "@smui/dialog": "^5.0.0-beta.5",
+    "@smui/form-field": "^5.0.0-beta.5",
+    "@smui/radio": "^5.0.0-beta.5",
+    "@smui/textfield": "^5.0.0-beta.5",
+    "@tsconfig/recommended": "^1.0.1",
+    "@tsconfig/svelte": "^2.0.1",
+    "@types/jest": "^27.0.1",
+    "jest": "^27.0.6",
+    "svelte": "^3.42.4",
+    "svelte-check": "^2.2.5",
+    "svelte-loader": "^3.1.2",
+    "svelte-preprocess": "^4.8.0",
+    "ts-jest": "^27.0.5",
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.3.5",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0"
+  }
+}

@@ -134,8 +134,8 @@
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
-  import Button, { Label } from '@smui/button';
   import HelperText from '@smui/textfield/helper-text/index';
+  import Button, { Label } from '@smui/button';
   import { ClientConfig, CurrentUserData, User } from '@nymphjs/tilmeld-client';
   import ChangePassword from './ChangePassword.svelte';
 

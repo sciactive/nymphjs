@@ -5,25 +5,18 @@ module.exports = {
   mode: 'production',
   devtool: 'source-map',
   entry: {
-    TilmeldSetupApp: './app/index.ts',
+    TilmeldComponents: './src/index.ts',
   },
   output: {
-    path: path.resolve(__dirname, 'dist', 'app'),
+    path: path.resolve(__dirname, 'dist'),
     filename: 'index.js',
   },
   resolve: {
-    alias: {
-      svelte: path.dirname(require.resolve('svelte/package.json')),
-    },
     extensions: ['.mjs', '.js', '.ts', '.svelte'],
     mainFields: ['svelte', 'browser', 'module', 'main'],
   },
   module: {
     rules: [
-      {
-        test: /\.ts$/,
-        loader: 'ts-loader',
-      },
       {
         test: /\.svelte$/,
         use: {
@@ -32,6 +25,10 @@ module.exports = {
             preprocess: sveltePreprocess(),
           },
         },
+      },
+      {
+        test: /\.ts$/,
+        loader: 'ts-loader',
       },
     ],
   },

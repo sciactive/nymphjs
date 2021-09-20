@@ -124,6 +124,7 @@
 <script lang="ts">
   import { onMount, SvelteComponent } from 'svelte';
   import { ClientConfig, CurrentUserData, User } from '@nymphjs/tilmeld-client';
+  import { Login, Account } from '@nymphjs/tilmeld-components';
   import { mdiGithub, mdiTwitter } from '@mdi/js';
   import TopAppBar, { Row, Section, Title } from '@smui/top-app-bar';
   import Drawer, { Content, Scrim, AppContent } from '@smui/drawer';
@@ -132,9 +133,6 @@
   import Menu from '@smui/menu';
   import { Icon } from '@smui/common';
   import { Img, Svg } from '@smui/common/elements';
-
-  import Login from './account/Login.svelte';
-  import Account from './account/Account.svelte';
 
   import Intro from './Intro.svelte';
   import Users from './Users.svelte';
