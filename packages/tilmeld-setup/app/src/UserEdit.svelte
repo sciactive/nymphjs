@@ -261,34 +261,36 @@
             </Row>
           </Head>
           <Body>
-            {#each entity.groups as curEntity, index (curEntity.guid)}
-              <Row>
-                {#if !clientConfig.emailUsernames}
-                  <Cell>{curEntity.groupname}</Cell>
-                {/if}
-                <Cell>{curEntity.name}</Cell>
-                <Cell>{curEntity.email}</Cell>
-                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
-                <Cell>
-                  <IconButton
-                    on:click={() => {
-                      entity.groups.splice(index, 1);
-                      entity = entity;
-                    }}
-                  >
-                    <Icon component={Svg} viewBox="0 0 24 24">
-                      <path fill="currentColor" d={mdiMinus} />
-                    </Icon>
-                  </IconButton>
-                </Cell>
-              </Row>
-            {:else}
-              <Row>
-                <Cell colspan={clientConfig.emailUsernames ? 4 : 5}>
-                  No secondary groups
-                </Cell>
-              </Row>
-            {/each}
+            {#if entity.groups}
+              {#each entity.groups as curEntity, index (curEntity.guid)}
+                <Row>
+                  {#if !clientConfig.emailUsernames}
+                    <Cell>{curEntity.groupname}</Cell>
+                  {/if}
+                  <Cell>{curEntity.name}</Cell>
+                  <Cell>{curEntity.email}</Cell>
+                  <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+                  <Cell>
+                    <IconButton
+                      on:click={() => {
+                        entity.groups?.splice(index, 1);
+                        entity = entity;
+                      }}
+                    >
+                      <Icon component={Svg} viewBox="0 0 24 24">
+                        <path fill="currentColor" d={mdiMinus} />
+                      </Icon>
+                    </IconButton>
+                  </Cell>
+                </Row>
+              {:else}
+                <Row>
+                  <Cell colspan={clientConfig.emailUsernames ? 4 : 5}>
+                    No secondary groups
+                  </Cell>
+                </Row>
+              {/each}
+            {/if}
           </Body>
         </DataTable>
 
@@ -346,8 +348,8 @@
               {#each secondaryGroups as curEntity, index (curEntity.guid)}
                 <Row
                   on:click={() => {
-                    entity.groups.push(curEntity);
-                    secondaryGroups.splice(index, 1);
+                    entity.groups?.push(curEntity);
+                    secondaryGroups?.splice(index, 1);
                     entity = entity;
                   }}
                   style="cursor: pointer;"
@@ -369,29 +371,31 @@
         <h5 style="margin-top: 0;">Abilities</h5>
 
         <List nonInteractive>
-          {#each entity.abilities as ability, index (ability)}
-            <Item>
-              <Text>
-                {ability}
-              </Text>
-              <Meta>
-                <IconButton
-                  on:click={() => {
-                    entity.abilities.splice(index, 1);
-                    entity = entity;
-                  }}
-                >
-                  <Icon component={Svg} viewBox="0 0 24 24">
-                    <path fill="currentColor" d={mdiMinus} />
-                  </Icon>
-                </IconButton>
-              </Meta>
-            </Item>
-          {:else}
-            <Item>
-              <Text>No abilities</Text>
-            </Item>
-          {/each}
+          {#if entity.abilities}
+            {#each entity.abilities as ability, index (ability)}
+              <Item>
+                <Text>
+                  {ability}
+                </Text>
+                <Meta>
+                  <IconButton
+                    on:click={() => {
+                      entity.abilities?.splice(index, 1);
+                      entity = entity;
+                    }}
+                  >
+                    <Icon component={Svg} viewBox="0 0 24 24">
+                      <path fill="currentColor" d={mdiMinus} />
+                    </Icon>
+                  </IconButton>
+                </Meta>
+              </Item>
+            {:else}
+              <Item>
+                <Text>No abilities</Text>
+              </Item>
+            {/each}
+          {/if}
         </List>
 
         <h6>Add Ability</h6>
@@ -594,29 +598,29 @@
 
   export let entity: User & AdminUserData;
 
-  let clientConfig: ClientConfig | null = null;
-  let user: (User & CurrentUserData) | null = null;
+  let clientConfig: ClientConfig | undefined = undefined;
+  let user: (User & CurrentUserData) | undefined = undefined;
   let sysAdmin = false;
   let activeTab: 'General' | 'Groups' | 'Abilities' | 'Security' = 'General';
   let primaryGroupSearch = '';
   let secondaryGroupSearch = '';
   let ability = '';
   let avatar = 'https://secure.gravatar.com/avatar/?d=mm&s=40';
-  let failureMessage: string | null = null;
+  let failureMessage: string | undefined = undefined;
   let passwordVerify = '';
-  let passwordVerified: boolean | null = null;
-  let usernameTimer: NodeJS.Timeout | null = null;
-  let usernameVerified: boolean | null = null;
-  let usernameVerifiedMessage: string | null = null;
-  let emailTimer: NodeJS.Timeout | null = null;
-  let emailVerified: boolean | null = null;
-  let emailVerifiedMessage: string | null = null;
+  let passwordVerified: boolean | undefined = undefined;
+  let usernameTimer: NodeJS.Timeout | undefined = undefined;
+  let usernameVerified: boolean | undefined = undefined;
+  let usernameVerifiedMessage: string | undefined = undefined;
+  let emailTimer: NodeJS.Timeout | undefined = undefined;
+  let emailVerified: boolean | undefined = undefined;
+  let emailVerifiedMessage: string | undefined = undefined;
   let saving = false;
-  let success: boolean | null = null;
+  let success: boolean | undefined = undefined;
 
   onMount(async () => {
-    user = await User.current();
-    sysAdmin = await user.$gatekeeper('system/admin');
+    user = (await User.current()) ?? undefined;
+    sysAdmin = (await user?.$gatekeeper('system/admin')) ?? false;
   });
   onMount(async () => {
     clientConfig = await User.getClientConfig();
@@ -688,10 +692,10 @@
   }
 
   let primaryGroupsSearching = false;
-  let primaryGroups: (Group & AdminGroupData)[] | null = null;
+  let primaryGroups: (Group & AdminGroupData)[] | undefined = undefined;
   async function searchPrimaryGroups() {
     primaryGroupsSearching = true;
-    failureMessage = null;
+    failureMessage = undefined;
     if (primaryGroupSearch.trim() == '') {
       return;
     }
@@ -721,15 +725,16 @@
     }
     primaryGroupsSearching = false;
   }
-  function primaryGroupSearchKeyDown(event: KeyboardEvent) {
+  function primaryGroupSearchKeyDown(event: CustomEvent | KeyboardEvent) {
+    event = event as KeyboardEvent;
     if (event.key === 'Enter') searchPrimaryGroups();
   }
 
   let secondaryGroupsSearching = false;
-  let secondaryGroups: (Group & AdminGroupData)[] | null = null;
+  let secondaryGroups: (Group & AdminGroupData)[] | undefined = undefined;
   async function searchSecondaryGroups() {
     secondaryGroupsSearching = true;
-    failureMessage = null;
+    failureMessage = undefined;
     if (secondaryGroupSearch.trim() == '') {
       return;
     }
@@ -752,14 +757,15 @@
       secondaryGroups = (
         await Group.getSecondaryGroups(options, selectors)
       ).filter((group) => {
-        return !group.$inArray(entity.groups);
+        return !group.$inArray(entity.groups ?? []);
       });
     } catch (e: any) {
       failureMessage = e?.message;
     }
     secondaryGroupsSearching = false;
   }
-  function secondaryGroupSearchKeyDown(event: KeyboardEvent) {
+  function secondaryGroupSearchKeyDown(event: CustomEvent | KeyboardEvent) {
+    event = event as KeyboardEvent;
     if (event.key === 'Enter') searchSecondaryGroups();
   }
 
@@ -770,8 +776,8 @@
     }
     usernameTimer = setTimeout(async () => {
       if (entity.username === '') {
-        usernameVerified = null;
-        usernameVerifiedMessage = null;
+        usernameVerified = undefined;
+        usernameVerifiedMessage = undefined;
         return;
       }
       try {
@@ -793,8 +799,8 @@
     }
     emailTimer = setTimeout(async () => {
       if (entity.email === '') {
-        emailVerified = null;
-        emailVerifiedMessage = null;
+        emailVerified = undefined;
+        emailVerifiedMessage = undefined;
         return;
       }
       try {
@@ -814,7 +820,7 @@
       (entity.passwordTemp == null || entity.passwordTemp === '') &&
       passwordVerify === ''
     ) {
-      passwordVerified = null;
+      passwordVerified = undefined;
     }
     passwordVerified = entity.passwordTemp === passwordVerify;
   }
@@ -823,24 +829,25 @@
     if (ability === '') {
       return;
     }
-    entity.abilities.push(ability);
+    entity.abilities?.push(ability);
     ability = '';
     entity = entity;
   }
-  function abilityKeyDown(event: KeyboardEvent) {
+  function abilityKeyDown(event: CustomEvent | KeyboardEvent) {
+    event = event as KeyboardEvent;
     if (event.key === 'Enter') addAbility();
   }
 
   function addTilmeldAdminAbility() {
-    if (entity.abilities.indexOf('tilmeld/admin') === -1) {
-      entity.abilities.push('tilmeld/admin');
+    if (entity.abilities?.indexOf('tilmeld/admin') === -1) {
+      entity.abilities?.push('tilmeld/admin');
       entity = entity;
     }
   }
 
   function addSystemAdminAbility() {
-    if (entity.abilities.indexOf('system/admin') === -1) {
-      entity.abilities.push('system/admin');
+    if (entity.abilities?.indexOf('system/admin') === -1) {
+      entity.abilities?.push('system/admin');
       entity = entity;
     }
   }
@@ -855,12 +862,12 @@
     }
 
     saving = true;
-    failureMessage = null;
+    failureMessage = undefined;
     try {
       if (await entity.$save()) {
         success = true;
         setTimeout(() => {
-          success = null;
+          success = undefined;
         }, 1000);
         readyEntity();
       } else {
@@ -874,7 +881,7 @@
   }
 
   async function deleteEntity() {
-    failureMessage = null;
+    failureMessage = undefined;
     if (confirm('Are you sure you want to delete this?')) {
       saving = true;
       try {

@@ -44,7 +44,7 @@
               <Text>Account Details</Text>
             </Item>
             <Separator />
-            <Item on:SMUI:action={() => user.$logout()}>
+            <Item on:SMUI:action={() => user?.$logout()}>
               <Text>Logout</Text>
             </Item>
           </List>
@@ -73,7 +73,7 @@
                 nonInteractive={!('route' in section)}
                 on:click={() => {
                   if ('route' in section) {
-                    active = section.route;
+                    active = section.route ?? Intro;
                   }
                 }}
                 activated={active === section.route}
@@ -139,6 +139,7 @@
   import Intro from './Intro.svelte';
   import Users from './Users.svelte';
   import Groups from './Groups.svelte';
+  import type { SvelteComponentDev } from 'svelte/internal';
 
   const DEFAULT_AVATAR = 'https://secure.gravatar.com/avatar/?d=mm&s=40';
 
@@ -146,11 +147,11 @@
   let miniWindow = false;
   let drawerOpen = false;
   let accountMenu: any;
-  let active: SvelteComponentConstructor<any, any> = Intro;
+  let active: typeof SvelteComponentDev = Intro;
   let clientConfig: ClientConfig;
-  let user: (User & CurrentUserData) | null = null;
+  let user: (User & CurrentUserData) | undefined = undefined;
   let userAvatar: string = DEFAULT_AVATAR;
-  let tilmeldAdmin: boolean | null = null;
+  let tilmeldAdmin: boolean | undefined = undefined;
   let accountOpen = false;
 
   $: if (active && mainContent) {
@@ -162,7 +163,7 @@
     user.$gatekeeper('tilmeld/admin').then((value) => (tilmeldAdmin = value));
     user.$getAvatar().then((value) => (userAvatar = value));
   } else {
-    tilmeldAdmin = null;
+    tilmeldAdmin = undefined;
     userAvatar = DEFAULT_AVATAR;
   }
 
@@ -170,7 +171,7 @@
     | {
         name: string;
         indent: number;
-        route?: SvelteComponentConstructor<any, any>;
+        route?: typeof SvelteComponentDev;
         component?: SvelteComponent;
       }
     | { name: string; separator: true }
@@ -200,14 +201,14 @@
     user = currentUser;
   };
   const onLogout = () => {
-    user = null;
+    user = undefined;
   };
 
   onMount(setMiniWindow);
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    user = await User.current();
+    user = (await User.current()) ?? undefined;
   });
   onMount(async () => {
     clientConfig = await User.getClientConfig();

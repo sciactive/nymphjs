@@ -141,18 +141,18 @@
 
   export let open = false;
 
-  let clientConfig: ClientConfig | null = null;
-  let user: (User & CurrentUserData) | null = null;
+  let clientConfig: ClientConfig | undefined = undefined;
+  let user: (User & CurrentUserData) | undefined = undefined;
   let saving = false;
-  let originalUsername: string | null = null;
-  let originalEmail: string | null = null;
-  let failureMessage: string | null = null;
-  let usernameTimer: NodeJS.Timeout | null = null;
-  let usernameVerified: boolean | null = null;
-  let usernameVerifiedMessage: string | null = null;
-  let emailTimer: NodeJS.Timeout | null = null;
-  let emailVerified: boolean | null = null;
-  let emailVerifiedMessage: string | null = null;
+  let originalUsername: string | undefined = undefined;
+  let originalEmail: string | undefined = undefined;
+  let failureMessage: string | undefined = undefined;
+  let usernameTimer: NodeJS.Timeout | undefined = undefined;
+  let usernameVerified: boolean | undefined = undefined;
+  let usernameVerifiedMessage: string | undefined = undefined;
+  let emailTimer: NodeJS.Timeout | undefined = undefined;
+  let emailVerified: boolean | undefined = undefined;
+  let emailVerifiedMessage: string | undefined = undefined;
   let changePasswordOpen = false;
 
   const onLogin = (currentUser: User & CurrentUserData) => {
@@ -162,9 +162,9 @@
     originalEmail = user?.email;
   };
   const onLogout = () => {
-    user = null;
-    originalUsername = null;
-    originalEmail = null;
+    user = undefined;
+    originalUsername = undefined;
+    originalEmail = undefined;
   };
 
   $: if (user && user.username !== originalUsername) {
@@ -174,7 +174,7 @@
       clearTimeout(usernameTimer);
     }
     usernameVerified = true;
-    usernameVerifiedMessage = null;
+    usernameVerifiedMessage = undefined;
   }
 
   $: if (user && user.email !== originalEmail) {
@@ -184,13 +184,13 @@
       clearTimeout(emailTimer);
     }
     emailVerified = true;
-    emailVerifiedMessage = null;
+    emailVerifiedMessage = undefined;
   }
 
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    user = await User.current();
+    user = (await User.current()) ?? undefined;
     readyEntity();
     originalUsername = user?.username;
     originalEmail = user?.email;
@@ -234,10 +234,10 @@
       return;
     }
 
-    failureMessage = null;
+    failureMessage = undefined;
     saving = true;
 
-    if (clientConfig.emailUsernames) {
+    if (clientConfig?.emailUsernames) {
       user.username = user.email;
     }
 
@@ -246,8 +246,8 @@
         readyEntity();
         originalEmail = user.email;
         open = false;
-        usernameVerifiedMessage = null;
-        emailVerifiedMessage = null;
+        usernameVerifiedMessage = undefined;
+        emailVerifiedMessage = undefined;
       } else {
         failureMessage = 'Error saving account changes.';
       }
@@ -258,17 +258,18 @@
   }
 
   function checkUsername() {
-    usernameVerified = null;
-    usernameVerifiedMessage = null;
+    usernameVerified = undefined;
+    usernameVerifiedMessage = undefined;
     if (usernameTimer) {
       clearTimeout(usernameTimer);
-      usernameTimer = null;
+      usernameTimer = undefined;
     }
     usernameTimer = setTimeout(async () => {
       try {
-        const data = await user.$checkUsername();
-        usernameVerified = data.result;
-        usernameVerifiedMessage = data.message;
+        const data = await user?.$checkUsername();
+        usernameVerified = data?.result ?? false;
+        usernameVerifiedMessage =
+          data?.message ?? 'Error getting verification.';
       } catch (e: any) {
         usernameVerified = false;
         usernameVerifiedMessage = e?.message;
@@ -277,17 +278,17 @@
   }
 
   function checkEmail() {
-    emailVerified = null;
-    emailVerifiedMessage = null;
+    emailVerified = undefined;
+    emailVerifiedMessage = undefined;
     if (emailTimer) {
       clearTimeout(emailTimer);
-      emailTimer = null;
+      emailTimer = undefined;
     }
     emailTimer = setTimeout(async () => {
       try {
-        const data = await user.$checkEmail();
-        emailVerified = data.result;
-        emailVerifiedMessage = data.message;
+        const data = await user?.$checkEmail();
+        emailVerified = data?.result ?? false;
+        emailVerifiedMessage = data?.message ?? 'Error getting verification.';
       } catch (e: any) {
         emailVerified = false;
         emailVerifiedMessage = e?.message;

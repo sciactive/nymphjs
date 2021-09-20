@@ -257,29 +257,31 @@
         <h5 style="margin-top: 0;">Abilities</h5>
 
         <List nonInteractive>
-          {#each entity.abilities as ability, index (ability)}
-            <Item>
-              <Text>
-                {ability}
-              </Text>
-              <Meta>
-                <IconButton
-                  on:click={() => {
-                    entity.abilities.splice(index, 1);
-                    entity = entity;
-                  }}
-                >
-                  <Icon component={Svg} viewBox="0 0 24 24">
-                    <path fill="currentColor" d={mdiMinus} />
-                  </Icon>
-                </IconButton>
-              </Meta>
-            </Item>
-          {:else}
-            <Item>
-              <Text>No abilities</Text>
-            </Item>
-          {/each}
+          {#if entity.abilities}
+            {#each entity.abilities as ability, index (ability)}
+              <Item>
+                <Text>
+                  {ability}
+                </Text>
+                <Meta>
+                  <IconButton
+                    on:click={() => {
+                      entity.abilities?.splice(index, 1);
+                      entity = entity;
+                    }}
+                  >
+                    <Icon component={Svg} viewBox="0 0 24 24">
+                      <path fill="currentColor" d={mdiMinus} />
+                    </Icon>
+                  </IconButton>
+                </Meta>
+              </Item>
+            {:else}
+              <Item>
+                <Text>No abilities</Text>
+              </Item>
+            {/each}
+          {/if}
         </List>
 
         <h6>Add Ability</h6>
@@ -361,24 +363,24 @@
 
   export let entity: Group & AdminGroupData;
 
-  let clientConfig: ClientConfig | null = null;
-  let user: (User & CurrentUserData) | null = null;
+  let clientConfig: ClientConfig | undefined = undefined;
+  let user: (User & CurrentUserData) | undefined = undefined;
   let activeTab: 'General' | 'Parent' | 'Abilities' = 'General';
   let parentSearch = '';
   let ability = '';
   let avatar = 'https://secure.gravatar.com/avatar/?d=mm&s=40';
-  let failureMessage: string | null = null;
-  let groupnameTimer: NodeJS.Timeout | null = null;
-  let groupnameVerified: boolean | null = null;
-  let groupnameVerifiedMessage: string | null = null;
-  let emailTimer: NodeJS.Timeout | null = null;
-  let emailVerified: boolean | null = null;
-  let emailVerifiedMessage: string | null = null;
+  let failureMessage: string | undefined = undefined;
+  let groupnameTimer: NodeJS.Timeout | undefined = undefined;
+  let groupnameVerified: boolean | undefined = undefined;
+  let groupnameVerifiedMessage: string | undefined = undefined;
+  let emailTimer: NodeJS.Timeout | undefined = undefined;
+  let emailVerified: boolean | undefined = undefined;
+  let emailVerifiedMessage: string | undefined = undefined;
   let saving = false;
-  let success: boolean | null = null;
+  let success: boolean | undefined = undefined;
 
   onMount(async () => {
-    user = await User.current();
+    user = (await User.current()) ?? undefined;
   });
   onMount(async () => {
     clientConfig = await User.getClientConfig();
@@ -423,10 +425,10 @@
   }
 
   let parentsSearching = false;
-  let parents: (Group & AdminGroupData)[] | null = null;
+  let parents: (Group & AdminGroupData)[] | undefined = undefined;
   async function searchParents() {
-    parentsSearching = null;
-    failureMessage = null;
+    parentsSearching = true;
+    failureMessage = undefined;
     if (parentSearch.trim() == '') {
       return;
     }
@@ -454,7 +456,8 @@
     }
     parentsSearching = false;
   }
-  function parentSearchKeyDown(event: KeyboardEvent) {
+  function parentSearchKeyDown(event: CustomEvent | KeyboardEvent) {
+    event = event as KeyboardEvent;
     if (event.key === 'Enter') searchParents();
   }
 
@@ -465,8 +468,8 @@
     }
     groupnameTimer = setTimeout(async () => {
       if (entity.groupname === '') {
-        groupnameVerified = null;
-        groupnameVerifiedMessage = null;
+        groupnameVerified = undefined;
+        groupnameVerifiedMessage = undefined;
         return;
       }
       try {
@@ -488,8 +491,8 @@
     }
     emailTimer = setTimeout(async () => {
       if (entity.email === '') {
-        emailVerified = null;
-        emailVerifiedMessage = null;
+        emailVerified = undefined;
+        emailVerifiedMessage = undefined;
         return;
       }
       try {
@@ -508,7 +511,7 @@
     if (ability === '') {
       return;
     }
-    failureMessage = null;
+    failureMessage = undefined;
     if (ability === 'tilmeld/admin') {
       failureMessage = "Groups aren't allowed to be Tilmeld admins.";
       return;
@@ -517,22 +520,23 @@
       failureMessage = "Groups aren't allowed to be system admins.";
       return;
     }
-    entity.abilities.push(ability);
+    entity.abilities?.push(ability);
     ability = '';
     entity = entity;
   }
-  function abilityKeyDown(event: KeyboardEvent) {
+  function abilityKeyDown(event: CustomEvent | KeyboardEvent) {
+    event = event as KeyboardEvent;
     if (event.key === 'Enter') addAbility();
   }
 
   async function saveEntity() {
     saving = true;
-    failureMessage = null;
+    failureMessage = undefined;
     try {
       if (await entity.$save()) {
         success = true;
         setTimeout(() => {
-          success = null;
+          success = undefined;
         }, 1000);
         readyEntity();
       } else {
@@ -546,7 +550,7 @@
   }
 
   async function deleteEntity() {
-    failureMessage = null;
+    failureMessage = undefined;
     if (confirm('Are you sure you want to delete this?')) {
       saving = true;
       try {

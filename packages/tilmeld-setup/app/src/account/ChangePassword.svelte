@@ -74,10 +74,10 @@
 
   export let open = false;
 
-  let clientConfig: ClientConfig | null = null;
-  let user: (User & CurrentUserData) | null = null;
+  let clientConfig: ClientConfig | undefined = undefined;
+  let user: (User & CurrentUserData) | undefined = undefined;
   let changing = false;
-  let failureMessage = null;
+  let failureMessage: string | undefined = undefined;
 
   /** User provided. You can bind to it if you need to. */
   export let currentPassword = '';
@@ -89,7 +89,7 @@
   $: {
     if (!open) {
       changing = false;
-      failureMessage = null;
+      failureMessage = undefined;
       currentPassword = '';
       newPassword = '';
       newPassword2 = '';
@@ -100,13 +100,13 @@
     user = currentUser;
   };
   const onLogout = () => {
-    user = null;
+    user = undefined;
   };
 
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    user = await User.current();
+    user = (await User.current()) ?? undefined;
   });
 
   onDestroy(() => {
@@ -128,11 +128,11 @@
       return;
     }
 
-    failureMessage = null;
+    failureMessage = undefined;
     changing = true;
 
     // Get the current user again, in case their data has changed.
-    user = await User.current();
+    user = (await User.current()) ?? undefined;
 
     if (user == null) {
       failureMessage = 'You must be logged in.';

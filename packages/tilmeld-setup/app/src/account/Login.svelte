@@ -155,10 +155,10 @@
 {/if}
 
 <script lang="ts">
-  import { onMount, createEventDispatcher, SvelteComponent } from 'svelte';
+  import { onMount, createEventDispatcher } from 'svelte';
   import CircularProgress from '@smui/circular-progress';
   import Button, { Label } from '@smui/button';
-  import Textfield from '@smui/textfield';
+  import Textfield, { TextfieldComponentDev } from '@smui/textfield';
   import HelperText from '@smui/textfield/helper-text/index';
   import {
     getClientConfig,
@@ -195,20 +195,20 @@
   /** User provided. You can bind to it if you need to. */
   export let phone = '';
 
-  let clientConfig: ClientConfig | null = null;
-  let usernameElem: SvelteComponent;
-  let successLoginMessage: string | null = null;
-  let successRegisteredMessage: string | null = null;
-  let failureMessage: string | null = null;
-  let usernameTimer: NodeJS.Timeout | null = null;
-  let usernameVerified: boolean | null = null;
-  let usernameVerifiedMessage: string | null = null;
+  let clientConfig: ClientConfig | undefined = undefined;
+  let usernameElem: TextfieldComponentDev;
+  let successLoginMessage: string | undefined = undefined;
+  let successRegisteredMessage: string | undefined = undefined;
+  let failureMessage: string | undefined = undefined;
+  let usernameTimer: NodeJS.Timeout | undefined = undefined;
+  let usernameVerified: boolean | undefined = undefined;
+  let usernameVerifiedMessage: string | undefined = undefined;
   let registering = false;
   let loggingIn = false;
   let recoverOpen = false;
 
-  $: nameFirst = name.match(/^(.*?)(?: ([^ ]+))?$/)[1] || '';
-  $: nameLast = name.match(/^(.*?)(?: ([^ ]+))?$/)[2] || '';
+  $: nameFirst = name?.match(/^(.*?)(?: ([^ ]+))?$/)?.[1] ?? '';
+  $: nameLast = name?.match(/^(.*?)(?: ([^ ]+))?$/)?.[2] ?? '';
 
   let _previousExistingUser = existingUser;
   $: if (existingUser !== _previousExistingUser) {
@@ -232,8 +232,8 @@
   });
 
   async function login() {
-    successLoginMessage = null;
-    failureMessage = null;
+    successLoginMessage = undefined;
+    failureMessage = undefined;
     loggingIn = true;
     try {
       const data = await loginAction(username, password);
@@ -246,14 +246,14 @@
   }
 
   async function register() {
-    successRegisteredMessage = null;
-    successLoginMessage = null;
-    failureMessage = null;
+    successRegisteredMessage = undefined;
+    successLoginMessage = undefined;
+    failureMessage = undefined;
     registering = true;
     try {
       const data = await registerAction({
         username,
-        usernameVerified,
+        usernameVerified: !!usernameVerified,
         password,
         password2,
         email,
@@ -274,11 +274,11 @@
   }
 
   function checkUsername(newValue: string) {
-    usernameVerified = null;
-    usernameVerifiedMessage = null;
+    usernameVerified = undefined;
+    usernameVerifiedMessage = undefined;
     if (usernameTimer) {
       clearTimeout(usernameTimer);
-      usernameTimer = null;
+      usernameTimer = undefined;
     }
     if (newValue === '' || existingUser) {
       return;

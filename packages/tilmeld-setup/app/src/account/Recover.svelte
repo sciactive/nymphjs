@@ -176,10 +176,10 @@
 {/if}
 
 <script lang="ts">
-  import { onMount, SvelteComponent } from 'svelte';
+  import { onMount } from 'svelte';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
-  import Textfield from '@smui/textfield';
+  import Textfield, { TextfieldComponentDev } from '@smui/textfield';
   import Button, { Label } from '@smui/button';
   import FormField from '@smui/form-field';
   import Radio from '@smui/radio';
@@ -199,12 +199,12 @@
   /** User provided. You can bind to it if you need to. */
   export let password2 = '';
 
-  let clientConfig: ClientConfig | null = null;
+  let clientConfig: ClientConfig | undefined = undefined;
   let recovering = false;
   let hasSentSecret: number | boolean = false;
-  let accountElem: SvelteComponent;
-  let failureMessage: string | null = null;
-  let successRecoveredMessage: string | null = null;
+  let accountElem: TextfieldComponentDev;
+  let failureMessage: string | undefined = undefined;
+  let successRecoveredMessage: string | undefined = undefined;
 
   $: {
     if (open && autofocus && accountElem) {
@@ -220,14 +220,14 @@
     if (account === '') {
       failureMessage =
         'You need to enter ' +
-        (clientConfig.emailUsernames || recoveryType === 'username'
+        (clientConfig?.emailUsernames || recoveryType === 'username'
           ? 'an email address'
           : 'a username') +
         '.';
       return;
     }
 
-    failureMessage = null;
+    failureMessage = undefined;
     recovering = true;
 
     try {
@@ -254,7 +254,7 @@
     if (account === '') {
       failureMessage =
         'You need to enter ' +
-        (clientConfig.emailUsernames || recoveryType === 'username'
+        (clientConfig?.emailUsernames || recoveryType === 'username'
           ? 'an email address'
           : 'a username') +
         '.';
@@ -269,7 +269,7 @@
       return;
     }
 
-    failureMessage = null;
+    failureMessage = undefined;
     recovering = true;
     try {
       const data = await User.recover({

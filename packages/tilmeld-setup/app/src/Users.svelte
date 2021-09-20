@@ -83,7 +83,7 @@
   <UserEdit
     {entity}
     on:leave={() => {
-      entity = null;
+      entity = undefined;
     }}
   />
 {/if}
@@ -110,25 +110,25 @@
 
   import UserEdit from './UserEdit.svelte';
 
-  let clientConfig: ClientConfig | null = null;
-  let user: (User & CurrentUserData) | null = null;
+  let clientConfig: ClientConfig | undefined = undefined;
+  let user: (User & CurrentUserData) | undefined = undefined;
   let entitySearch = '';
-  let failureMessage: string | null = null;
+  let failureMessage: string | undefined = undefined;
 
-  let entity: (User & AdminUserData) | null = null;
+  let entity: (User & AdminUserData) | undefined = undefined;
 
   onMount(async () => {
-    user = await User.current();
+    user = (await User.current()) ?? undefined;
   });
   onMount(async () => {
     clientConfig = await User.getClientConfig();
   });
 
   let entitiesSearching = false;
-  let entities: (User & AdminUserData)[] | null = null;
+  let entities: (User & AdminUserData)[] | undefined = undefined;
   async function searchEntities() {
     entitiesSearching = true;
-    failureMessage = null;
+    failureMessage = undefined;
     try {
       const query = queryParser(
         entitySearch,
@@ -151,7 +151,8 @@
     }
     entitiesSearching = false;
   }
-  function entitySearchKeyDown(event: KeyboardEvent) {
+  function entitySearchKeyDown(event: CustomEvent | KeyboardEvent) {
+    event = event as KeyboardEvent;
     if (event.key === 'Enter') searchEntities();
   }
 </script>
