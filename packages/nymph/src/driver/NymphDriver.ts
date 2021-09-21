@@ -3,6 +3,7 @@ import { difference } from 'lodash';
 import ReadLines from 'n-readlines';
 import strtotime from 'locutus/php/datetime/strtotime';
 
+import type { Nymph } from '../Nymph';
 import newGUID from '../newGUID';
 import {
   EntityConstructor,
@@ -11,7 +12,6 @@ import {
   SerializedEntityData,
 } from '../Entity.types';
 import { InvalidParametersError, UnableToConnectError } from '../errors';
-import Nymph from '../Nymph';
 import { Selector, Options, FormattedSelector } from '../Nymph.types';
 import { xor } from '../utils';
 
@@ -24,6 +24,14 @@ function escapeRegExp(string: string): string {
  * A Nymph database driver.
  */
 export default abstract class NymphDriver {
+  protected nymph: Nymph = new Proxy({} as Nymph, {
+    get() {
+      throw new Error(
+        'Attempted access of Nymph instance before driver initialization!'
+      );
+    },
+  });
+
   /**
    * A cache to make entity retrieval faster.
    */
@@ -47,7 +55,7 @@ export default abstract class NymphDriver {
 
   abstract connect(): Promise<boolean>;
   abstract isConnected(): boolean;
-  abstract startTransaction(name: string): Promise<boolean>;
+  abstract startTransaction(name: string): Promise<Nymph>;
   abstract commit(name: string): Promise<boolean>;
   abstract rollback(name: string): Promise<boolean>;
   abstract inTransaction(): Promise<boolean>;
@@ -97,6 +105,17 @@ export default abstract class NymphDriver {
   abstract renameUID(oldName: string, newName: string): Promise<boolean>;
   abstract saveEntity(entity: EntityInterface): Promise<boolean>;
   abstract setUID(name: string, value: number): Promise<boolean>;
+
+  /**
+   * Initialize the Nymph driver.
+   *
+   * This is meant to be called internally by Nymph. Don't call this directly.
+   *
+   * @param nymph The Nymph instance.
+   */
+  public init(nymph: Nymph) {
+    this.nymph = nymph;
+  }
 
   protected posixRegexMatch(
     pattern: string,
@@ -567,15 +586,15 @@ export default abstract class NymphDriver {
             const [qrefOptions, ...qrefSelectors] = tmpArr[i][1];
             const QrefEntityClass =
               typeof qrefOptions.class === 'string'
-                ? Nymph.getEntityClass(qrefOptions.class)
-                : qrefOptions.class ?? Nymph.getEntityClass('Entity');
+                ? this.nymph.getEntityClass(qrefOptions.class)
+                : qrefOptions.class ?? this.nymph.getEntityClass('Entity');
             const newOptions = {
               ...qrefOptions,
               class: QrefEntityClass,
               source: options.source,
             };
             const newSelectors = this.formatSelectors(qrefSelectors, options);
-            Nymph.runQueryCallbacks(newOptions, newSelectors);
+            this.nymph.runQueryCallbacks(newOptions, newSelectors);
             formatArr[i] = [name, [newOptions, ...newSelectors]];
           }
           newSelector[key] = formatArr;
@@ -786,12 +805,13 @@ export default abstract class NymphDriver {
     }
 
     let entities: ReturnType<T['factorySync']>[] | string[] = [];
-    const EntityClass = options.class ?? (Nymph.getEntityClass('Entity') as T);
+    const EntityClass =
+      options.class ?? (this.nymph.getEntityClass('Entity') as T);
     const etype = EntityClass.ETYPE;
 
     // Check if the requested entity is cached.
     if (
-      Nymph.config.cache &&
+      this.nymph.config.cache &&
       !options.skipCache &&
       'guid' in selectors[0] &&
       typeof selectors[0].guid === 'number'
@@ -829,7 +849,7 @@ export default abstract class NymphDriver {
     }
 
     const formattedSelectors = this.formatSelectors(selectors, options);
-    Nymph.runQueryCallbacks(options, formattedSelectors);
+    this.nymph.runQueryCallbacks(options, formattedSelectors);
     const { result } = performQueryCallback(options, formattedSelectors, etype);
 
     return {
@@ -868,6 +888,7 @@ export default abstract class NymphDriver {
             const entity = EntityClass.factorySync() as ReturnType<
               T['factorySync']
             >;
+            entity.$nymph = this.nymph;
             if (options.skipAc != null) {
               entity.$useSkipAc(!!options.skipAc);
             }
@@ -881,7 +902,7 @@ export default abstract class NymphDriver {
             }
             entity.$putData(data, sdata);
             this.putDataCounter--;
-            if (Nymph.config.cache) {
+            if (this.nymph.config.cache) {
               this.pushCache(guid, cdate, mdate, tags, data, sdata);
             }
             // @ts-ignore: ts doesn't know the return type here.
@@ -951,7 +972,7 @@ export default abstract class NymphDriver {
       }
     } else {
       // Removed any cached versions of this entity.
-      if (Nymph.config.cache) {
+      if (this.nymph.config.cache) {
         this.cleanCache(entity.guid);
       }
       success = await saveExistingEntityCallback(
@@ -971,7 +992,7 @@ export default abstract class NymphDriver {
       success = await commitTransactionCallback(success);
     }
     // Cache the entity.
-    if (success && Nymph.config.cache) {
+    if (success && this.nymph.config.cache) {
       this.pushCache(
         entity.guid as string,
         entity.cdate as number,
@@ -1003,8 +1024,9 @@ export default abstract class NymphDriver {
     }
     this.entityCount[guid]++;
     if (guid in this.entityCache) {
-      const entity = Nymph.getEntityClass(className).factorySync() as T;
+      const entity = this.nymph.getEntityClass(className).factorySync() as T;
       if (entity) {
+        entity.$nymph = this.nymph;
         entity.$useSkipAc(!!useSkipAc);
         entity.guid = guid;
         entity.cdate = this.entityCache[guid]['cdate'];
@@ -1047,7 +1069,7 @@ export default abstract class NymphDriver {
     }
     this.entityCount[guid]++;
     // Check the threshold.
-    if (this.entityCount[guid] < Nymph.config.cacheThreshold) {
+    if (this.entityCount[guid] < this.nymph.config.cacheThreshold) {
       return;
     }
     // Cache the entity.
@@ -1059,8 +1081,8 @@ export default abstract class NymphDriver {
       sdata: sdata,
     };
     while (
-      Nymph.config.cacheLimit &&
-      Object.keys(this.entityCache).length >= Nymph.config.cacheLimit
+      this.nymph.config.cacheLimit &&
+      Object.keys(this.entityCache).length >= this.nymph.config.cacheLimit
     ) {
       // Find which entity has been accessed the least.
       const least =

@@ -1,4 +1,5 @@
 import { EmailOptions } from 'email-templates';
+import type Tilmeld from '../Tilmeld';
 import Group, { GroupData } from '../Group';
 import User, { UserData } from '../User';
 
@@ -194,7 +195,7 @@ export interface Config {
   /**
    * Function to build the JWT for user sessions.
    */
-  jwtBuilder: (user: User) => string;
+  jwtBuilder: (config: Config, user: User) => string;
   /**
    * Function to verify that a JWT was signed with the secret key, vaildate its
    * data, validate the XSRF token, and extract the GUID.
@@ -205,6 +206,7 @@ export interface Config {
    * timestamp otherwise.
    */
   jwtExtract: (
+    config: Config,
     token: string,
     xsrfToken?: string
   ) => { guid: string; expire: Date } | null;
@@ -238,7 +240,11 @@ export interface Config {
    *  - lastName
    *  - email
    */
-  sendEmail: (config: EmailOptions, user: User & UserData) => Promise<boolean>;
+  sendEmail: (
+    tilmeld: Tilmeld,
+    options: EmailOptions,
+    user: User & UserData
+  ) => Promise<boolean>;
   /**
    * The address you'd like to receive a notification of registered users, if
    * any.

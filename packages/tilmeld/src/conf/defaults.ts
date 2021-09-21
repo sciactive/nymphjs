@@ -49,32 +49,32 @@ export default {
   jwtSecret: '',
   jwtExpire: 60 * 60 * 24 * 7 * 8, // 8 weeks(ish)
   jwtRenew: 60 * 60 * 24 * 7 * 2, // 2 weeks(ish)
-  jwtBuilder: (user) => {
-    const secret = Tilmeld.config.jwtSecret;
+  jwtBuilder: (config, user) => {
+    const secret = config.jwtSecret;
     if (secret === '') {
       throw new Error('JWT secret is not configured.');
     }
 
     return jwt.sign(
       {
-        iss: Tilmeld.config.appUrl,
+        iss: config.appUrl,
         nbf: Date.now() / 1000,
         guid: user.guid,
         xsrfToken: 'TILMELDXSRF-' + nanoid(),
       },
       secret,
-      { expiresIn: Tilmeld.config.jwtExpire }
+      { expiresIn: config.jwtExpire }
     );
   },
-  jwtExtract: (token, xsrfToken?) => {
-    const secret = Tilmeld.config.jwtSecret;
+  jwtExtract: (config, token, xsrfToken?) => {
+    const secret = config.jwtSecret;
     if (secret === '') {
       throw new Error('JWT secret is not configured.');
     }
 
     try {
       const payload = jwt.verify(token, secret, {
-        issuer: Tilmeld.config.appUrl,
+        issuer: config.appUrl,
         clockTolerance: 10,
       });
 
@@ -104,12 +104,12 @@ export default {
     }
   },
   emailTemplateDir: path.join(__dirname, '..', '..', 'emails'),
-  sendEmail: async (options: EmailOptions, user: User & UserData) => {
-    const appUrl = new URL(Tilmeld.config.appUrl);
+  sendEmail: async (tilmeld, options, user) => {
+    const appUrl = new URL(tilmeld.config.appUrl);
     const email = new Email({
       message: {
         from: {
-          name: Tilmeld.config.appName,
+          name: tilmeld.config.appName,
           address: `noreply@${appUrl.hostname}`,
         },
       },
@@ -118,13 +118,13 @@ export default {
       const result = await email.send({
         ...options,
         template: path.join(
-          Tilmeld.config.emailTemplateDir,
+          tilmeld.config.emailTemplateDir,
           options.template ?? '.'
         ),
         locals: {
           // System
-          siteName: Tilmeld.config.appName,
-          siteLink: Tilmeld.config.appUrl,
+          siteName: tilmeld.config.appName,
+          siteLink: tilmeld.config.appUrl,
           // Recipient
           toUsername: user.username ?? '',
           toName: user.name ?? '',
@@ -133,13 +133,13 @@ export default {
           toEmail: user.email ?? '',
           toPhone: user.phone ?? '',
           // Current User with Tilmeld.
-          ...(User.current()
+          ...(tilmeld.User.current()
             ? {
-                username: User.current(true).username,
-                name: User.current(true).name,
-                firstName: User.current(true).nameFirst,
-                lastName: User.current(true).nameLast,
-                email: User.current(true).email,
+                username: tilmeld.User.current(true).username,
+                name: tilmeld.User.current(true).name,
+                firstName: tilmeld.User.current(true).nameFirst,
+                lastName: tilmeld.User.current(true).nameLast,
+                email: tilmeld.User.current(true).email,
               }
             : {}),
           ...options.locals,
@@ -151,7 +151,7 @@ export default {
     }
   },
   userRegisteredRecipient: null,
-  validatorGroup: (group: Group) => {
+  validatorGroup: (group) => {
     Joi.attempt(
       group.$getValidatable(),
       Joi.object().keys({
@@ -222,7 +222,7 @@ export default {
       'Invalid Group: '
     );
   },
-  validatorUser: (user: User) => {
+  validatorUser: (user) => {
     Joi.attempt(
       user.$getValidatable(),
       Joi.object().keys({

@@ -1,5 +1,5 @@
 import Entity from './Entity';
-import Nymph from './Nymph';
+import nymph from './Nymph';
 
 export type TestModelData = {
   name?: string;
@@ -72,7 +72,7 @@ export class TestModel extends Entity<TestModelData> {
   }
 }
 
-Nymph.setEntityClass(TestModel.class, TestModel);
+nymph.setEntityClass(TestModel.class, TestModel);
 
 /**
  * This class is a test class that extends the Entity class.
@@ -90,4 +90,4 @@ export class TestBModel extends TestModel {
   }
 }
 
-Nymph.setEntityClass(TestBModel.class, TestBModel);
+nymph.setEntityClass(TestBModel.class, TestBModel);

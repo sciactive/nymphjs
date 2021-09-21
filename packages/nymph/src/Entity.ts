@@ -11,7 +11,7 @@ import {
   SerializedEntityData,
 } from './Entity.types';
 import { EntityConflictError, InvalidParametersError } from './errors';
-import Nymph from './Nymph';
+import nymph, { Nymph } from './Nymph';
 import {
   entitiesToReferences,
   referencesToEntities,
@@ -92,6 +92,10 @@ export default class Entity<T extends EntityData = EntityData>
   implements EntityInterface
 {
   /**
+   * The instance of Nymph to use for queries.
+   */
+  public static nymph = nymph;
+  /**
    * A unique name for this type of entity used to separate its data from other
    * types of entities in the database.
    */
@@ -104,6 +108,7 @@ export default class Entity<T extends EntityData = EntityData>
    */
   public static class = 'Entity';
 
+  public $nymph: Nymph = Entity.nymph;
   public guid: string | null = null;
   public cdate: number | null = null;
   public mdate: number | null = null;
@@ -211,6 +216,7 @@ export default class Entity<T extends EntityData = EntityData>
         if (this.$sdata.hasOwnProperty(name)) {
           data[name] = referencesToEntities(
             JSON.parse(this.$sdata[name]),
+            this.$nymph,
             this.$skipAc
           );
           delete this.$sdata[name];
@@ -249,7 +255,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
     if (guid != null) {
-      const entity = Nymph.driver.getEntitySync(
+      const entity = this.$nymph.driver.getEntitySync(
         { class: this.constructor as EntityConstructor },
         { type: '&', guid }
       );
@@ -331,7 +337,7 @@ export default class Entity<T extends EntityData = EntityData>
   public static async factory(guid?: string) {
     const entity = new this();
     if (guid != null) {
-      const entity = await Nymph.getEntity(
+      const entity = await this.nymph.getEntity(
         {
           class: this as any as EntityConstructor,
         },
@@ -369,7 +375,7 @@ export default class Entity<T extends EntityData = EntityData>
     const data = this.$getData(true);
     for (const key in data) {
       if (this.$privateData.indexOf(key) === -1) {
-        obj.data[key] = entitiesToReferences(data[key]);
+        obj.data[key] = entitiesToReferences(data[key], this.$nymph);
       }
     }
     return obj;
@@ -412,7 +418,7 @@ export default class Entity<T extends EntityData = EntityData>
   public async $delete(): Promise<boolean> {
     this.$referenceWake();
 
-    return await Nymph.deleteEntity(this);
+    return await this.$nymph.deleteEntity(this);
   }
 
   public $equals(object: any) {
@@ -449,7 +455,7 @@ export default class Entity<T extends EntityData = EntityData>
         const unused: any = (this as any)[key];
       }
     }
-    return entitiesToReferences({ ...this.$dataStore });
+    return entitiesToReferences({ ...this.$dataStore }, this.$nymph);
   }
 
   public $getSData() {
@@ -487,7 +493,7 @@ export default class Entity<T extends EntityData = EntityData>
       cdate: this.cdate,
       mdate: this.mdate,
       tags: this.tags,
-      ...referencesToEntities(this.$dataStore, this.$skipAc),
+      ...referencesToEntities(this.$dataStore, this.$nymph, this.$skipAc),
     };
   }
 
@@ -578,7 +584,10 @@ export default class Entity<T extends EntityData = EntityData>
 
     const protectedData: EntityData = {};
     const protectedProps = [...this.$protectedData];
-    if (Nymph.Tilmeld && !Nymph.Tilmeld.gatekeeper('tilmeld/admin')) {
+    if (
+      this.$nymph.tilmeld &&
+      !this.$nymph.tilmeld.gatekeeper('tilmeld/admin')
+    ) {
       protectedProps.push('user');
       protectedProps.push('group');
     }
@@ -640,6 +649,7 @@ export default class Entity<T extends EntityData = EntityData>
       }
       (this.$data as any)[name] = referencesToEntities(
         patch.set[name],
+        this.$nymph,
         this.$skipAc
       );
     }
@@ -692,6 +702,7 @@ export default class Entity<T extends EntityData = EntityData>
     for (const name in data) {
       (this.$dataStore as any)[name] = referencesToEntities(
         data[name],
+        this.$nymph,
         this.$skipAc
       );
     }
@@ -739,8 +750,8 @@ export default class Entity<T extends EntityData = EntityData>
     if (!this.$isASleepingReference || this.$sleepingReference == null) {
       return true;
     }
-    const EntityClass = Nymph.getEntityClass(this.$sleepingReference[2]);
-    const entity = Nymph.driver.getEntitySync(
+    const EntityClass = this.$nymph.getEntityClass(this.$sleepingReference[2]);
+    const entity = this.$nymph.driver.getEntitySync(
       {
         class: EntityClass,
         skipAc: this.$skipAc,
@@ -766,7 +777,7 @@ export default class Entity<T extends EntityData = EntityData>
     if (this.guid == null) {
       return false;
     }
-    const refresh = await Nymph.getEntity(
+    const refresh = await this.$nymph.getEntity(
       {
         class: this.constructor as EntityConstructor,
         skipCache: true,
@@ -793,7 +804,7 @@ export default class Entity<T extends EntityData = EntityData>
   public async $save(): Promise<boolean> {
     this.$referenceWake();
 
-    return await Nymph.saveEntity(this);
+    return await this.$nymph.saveEntity(this);
   }
 
   public $toReference() {
@@ -815,4 +826,4 @@ export default class Entity<T extends EntityData = EntityData>
   }
 }
 
-Nymph.setEntityClass(Entity.class, Entity);
+Entity.nymph.setEntityClass(Entity.class, Entity);

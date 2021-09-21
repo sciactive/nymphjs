@@ -1,8 +1,9 @@
 import { Config, ConfigDefaults as defaults } from './conf';
 import { NymphDriver } from './driver';
+import PreInitializedDriver from './driver/PreInitializedDriver';
 import { EntityConstructor, EntityInterface } from './Entity.types';
 import { ClassNotAvailableError } from './errors';
-import {
+import type {
   Selector,
   Options,
   NymphConnectCallback,
@@ -26,6 +27,7 @@ import {
   NymphEventType,
   NymphQueryCallback,
   FormattedSelector,
+  TilmeldInterface,
 } from './Nymph.types';
 
 /**
@@ -37,49 +39,109 @@ import {
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export default class Nymph {
-  public static config: Config;
-  public static driver: NymphDriver;
-  public static entityClasses: { [k: string]: EntityConstructor } = {};
-  public static Tilmeld: any = undefined;
-  private static connectCallbacks: NymphConnectCallback[] = [];
-  private static disconnectCallbacks: NymphDisconnectCallback[] = [];
-  private static queryCallbacks: NymphQueryCallback[] = [];
-  private static beforeGetEntityCallbacks: NymphBeforeGetEntityCallback[] = [];
-  private static beforeGetEntitiesCallbacks: NymphBeforeGetEntitiesCallback[] =
-    [];
-  private static beforeSaveEntityCallbacks: NymphBeforeSaveEntityCallback[] =
-    [];
-  private static afterSaveEntityCallbacks: NymphAfterSaveEntityCallback[] = [];
-  private static beforeDeleteEntityCallbacks: NymphBeforeDeleteEntityCallback[] =
-    [];
-  private static afterDeleteEntityCallbacks: NymphAfterDeleteEntityCallback[] =
-    [];
-  private static beforeDeleteEntityByIDCallbacks: NymphBeforeDeleteEntityByIDCallback[] =
-    [];
-  private static afterDeleteEntityByIDCallbacks: NymphAfterDeleteEntityByIDCallback[] =
-    [];
-  private static beforeNewUIDCallbacks: NymphBeforeNewUIDCallback[] = [];
-  private static afterNewUIDCallbacks: NymphAfterNewUIDCallback[] = [];
-  private static beforeSetUIDCallbacks: NymphBeforeSetUIDCallback[] = [];
-  private static afterSetUIDCallbacks: NymphAfterSetUIDCallback[] = [];
-  private static beforeRenameUIDCallbacks: NymphBeforeRenameUIDCallback[] = [];
-  private static afterRenameUIDCallbacks: NymphAfterRenameUIDCallback[] = [];
-  private static beforeDeleteUIDCallbacks: NymphBeforeDeleteUIDCallback[] = [];
-  private static afterDeleteUIDCallbacks: NymphAfterDeleteUIDCallback[] = [];
+export class Nymph {
+  /**
+   * The PubSub config.
+   */
+  public config: Config;
 
-  public static setEntityClass(
-    className: string,
-    entityClass: EntityConstructor
-  ) {
+  /**
+   * The Nymph database driver.
+   */
+  public driver: NymphDriver;
+
+  /**
+   * An optional Tilmeld user/group manager instance.
+   */
+  public tilmeld?: TilmeldInterface = undefined;
+
+  /**
+   * A simple map of names to Entity classes.
+   */
+  public entityClasses: { [k: string]: EntityConstructor } = {};
+
+  private connectCallbacks: NymphConnectCallback[] = [];
+  private disconnectCallbacks: NymphDisconnectCallback[] = [];
+  private queryCallbacks: NymphQueryCallback[] = [];
+  private beforeGetEntityCallbacks: NymphBeforeGetEntityCallback[] = [];
+  private beforeGetEntitiesCallbacks: NymphBeforeGetEntitiesCallback[] = [];
+  private beforeSaveEntityCallbacks: NymphBeforeSaveEntityCallback[] = [];
+  private afterSaveEntityCallbacks: NymphAfterSaveEntityCallback[] = [];
+  private beforeDeleteEntityCallbacks: NymphBeforeDeleteEntityCallback[] = [];
+  private afterDeleteEntityCallbacks: NymphAfterDeleteEntityCallback[] = [];
+  private beforeDeleteEntityByIDCallbacks: NymphBeforeDeleteEntityByIDCallback[] =
+    [];
+  private afterDeleteEntityByIDCallbacks: NymphAfterDeleteEntityByIDCallback[] =
+    [];
+  private beforeNewUIDCallbacks: NymphBeforeNewUIDCallback[] = [];
+  private afterNewUIDCallbacks: NymphAfterNewUIDCallback[] = [];
+  private beforeSetUIDCallbacks: NymphBeforeSetUIDCallback[] = [];
+  private afterSetUIDCallbacks: NymphAfterSetUIDCallback[] = [];
+  private beforeRenameUIDCallbacks: NymphBeforeRenameUIDCallback[] = [];
+  private afterRenameUIDCallbacks: NymphAfterRenameUIDCallback[] = [];
+  private beforeDeleteUIDCallbacks: NymphBeforeDeleteUIDCallback[] = [];
+  private afterDeleteUIDCallbacks: NymphAfterDeleteUIDCallback[] = [];
+
+  public setEntityClass(className: string, entityClass: EntityConstructor) {
     this.entityClasses[className] = entityClass;
   }
 
-  public static getEntityClass(className: string): EntityConstructor {
+  public getEntityClass(className: string): EntityConstructor {
     if (className in this.entityClasses) {
-      return this.entityClasses[className];
+      const EntityClass = this.entityClasses[className];
+      EntityClass.nymph = this;
+      return EntityClass;
     }
     throw new ClassNotAvailableError('Tried to use class: ' + className);
+  }
+
+  public constructor() {
+    this.config = { ...defaults };
+    this.driver = new PreInitializedDriver();
+  }
+
+  public clone() {
+    const nymph = new Nymph();
+    nymph.config = this.config;
+    nymph.driver = this.driver;
+    nymph.tilmeld = this.tilmeld;
+    nymph.entityClasses = this.entityClasses;
+    if (nymph.tilmeld) {
+      nymph.tilmeld.nymph = nymph;
+    }
+
+    const events = [
+      'connect',
+      'disconnect',
+      'query',
+      'beforeGetEntity',
+      'beforeGetEntities',
+      'beforeSaveEntity',
+      'afterSaveEntity',
+      'beforeDeleteEntity',
+      'afterDeleteEntity',
+      'beforeDeleteEntityByID',
+      'afterDeleteEntityByID',
+      'beforeNewUID',
+      'afterNewUID',
+      'beforeSetUID',
+      'afterSetUID',
+      'beforeRenameUID',
+      'afterRenameUID',
+      'beforeDeleteUID',
+      'afterDeleteUID',
+    ];
+
+    for (let event of events) {
+      const prop = event + 'Callbacks';
+      // @ts-ignore: The callback should be the right type here.
+      const callbacks = this[prop];
+      for (let callback of callbacks) {
+        nymph.on(event as NymphEventType, callback);
+      }
+    }
+
+    return nymph;
   }
 
   /**
@@ -87,16 +149,22 @@ export default class Nymph {
    *
    * @param config The Nymph configuration.
    * @param driver The Nymph database driver.
-   * @param Tilmeld The Tilmeld user/group manager, if you want to use it.
+   * @param tilmeld The Tilmeld user/group manager instance, if you want to use it.
    */
-  public static init(
+  public init(
     config: Partial<Config>,
     driver: NymphDriver,
-    Tilmeld?: any
+    tilmeld?: TilmeldInterface
   ) {
     this.config = { ...defaults, ...config };
     this.driver = driver;
-    this.Tilmeld = Tilmeld;
+    if (typeof tilmeld !== 'undefined') {
+      this.tilmeld = tilmeld;
+    }
+    this.driver.init(this);
+    if (this.tilmeld) {
+      this.tilmeld.init(this);
+    }
   }
 
   /**
@@ -104,7 +172,7 @@ export default class Nymph {
    *
    * @returns Whether the instance is connected to the database.
    */
-  public static async connect(): Promise<boolean> {
+  public async connect(): Promise<boolean> {
     const result = this.driver.connect();
     for (let callback of this.connectCallbacks) {
       if (callback) {
@@ -119,7 +187,7 @@ export default class Nymph {
    *
    * @returns Whether the instance is connected to the database.
    */
-  public static async disconnect(): Promise<boolean> {
+  public async disconnect(): Promise<boolean> {
     const result = this.driver.disconnect();
     for (let callback of this.disconnectCallbacks) {
       if (callback) {
@@ -132,7 +200,7 @@ export default class Nymph {
   /**
    * Run all the query callbacks on a query.
    */
-  public static async runQueryCallbacks(
+  public async runQueryCallbacks(
     options: Options,
     selectors: FormattedSelector[]
   ) {
@@ -144,22 +212,18 @@ export default class Nymph {
   }
 
   /**
-   * Start an atomic transaction.
+   * Start an atomic transaction and returns a new instance of Nymph.
    *
-   * If this function returns true, all proceeding changes will wait to be
-   * written to the database's permanent storage until commit() is called. You
-   * can also undo all the changes since this function ran with rollback().
-   *
-   * If it returns false instead of throwing an error, that probably means the
-   * driver or the database doesn't support transaction. You should call
-   * `rollback(name)` immediately in this case.
+   * All proceeding changes using this new instance will wait to be written to
+   * the database's permanent storage until commit() is called. You can also
+   * undo all the changes since this function ran with rollback().
    *
    * Transactions will nest as long as every name is unique. Internally, Nymph
    * uses names prefixed with "nymph-".
    *
    * @returns True on success, false on failure.
    */
-  public static async startTransaction(name: string): Promise<boolean> {
+  public async startTransaction(name: string): Promise<Nymph> {
     return await this.driver.startTransaction(name);
   }
 
@@ -168,7 +232,7 @@ export default class Nymph {
    *
    * @returns True on success, false on failure.
    */
-  public static async commit(name: string): Promise<boolean> {
+  public async commit(name: string): Promise<boolean> {
     return await this.driver.commit(name);
   }
 
@@ -177,7 +241,7 @@ export default class Nymph {
    *
    * @returns True on success, false on failure.
    */
-  public static async rollback(name: string): Promise<boolean> {
+  public async rollback(name: string): Promise<boolean> {
     return await this.driver.rollback(name);
   }
 
@@ -186,7 +250,7 @@ export default class Nymph {
    *
    * @returns True if there is a transaction.
    */
-  public static async inTransaction(): Promise<boolean> {
+  public async inTransaction(): Promise<boolean> {
     return await this.driver.inTransaction();
   }
 
@@ -211,7 +275,7 @@ export default class Nymph {
    * @param name The UID's name.
    * @returns The UID's new value, or null on failure.
    */
-  public static async newUID(name: string): Promise<number | null> {
+  public async newUID(name: string): Promise<number | null> {
     for (let callback of this.beforeNewUIDCallbacks) {
       if (callback) {
         callback(name);
@@ -231,7 +295,7 @@ export default class Nymph {
    * @param name The UID's name.
    * @returns The UID's value, or null on failure and if it doesn't exist.
    */
-  public static async getUID(name: string): Promise<number | null> {
+  public async getUID(name: string): Promise<number | null> {
     return await this.driver.getUID(name);
   }
 
@@ -242,7 +306,7 @@ export default class Nymph {
    * @param value The value.
    * @returns True on success, false on failure.
    */
-  public static async setUID(name: string, value: number): Promise<boolean> {
+  public async setUID(name: string, value: number): Promise<boolean> {
     for (let callback of this.beforeSetUIDCallbacks) {
       if (callback) {
         callback(name, value);
@@ -263,7 +327,7 @@ export default class Nymph {
    * @param name The UID's name.
    * @returns True on success, false on failure.
    */
-  public static async deleteUID(name: string): Promise<boolean> {
+  public async deleteUID(name: string): Promise<boolean> {
     for (let callback of this.beforeDeleteUIDCallbacks) {
       if (callback) {
         callback(name);
@@ -285,10 +349,7 @@ export default class Nymph {
    * @param newName The new name.
    * @returns True on success, false on failure.
    */
-  public static async renameUID(
-    oldName: string,
-    newName: string
-  ): Promise<boolean> {
+  public async renameUID(oldName: string, newName: string): Promise<boolean> {
     for (let callback of this.beforeRenameUIDCallbacks) {
       if (callback) {
         callback(oldName, newName);
@@ -314,7 +375,7 @@ export default class Nymph {
    * @param entity The entity.
    * @returns True on success, false on failure.
    */
-  public static async saveEntity(entity: EntityInterface): Promise<boolean> {
+  public async saveEntity(entity: EntityInterface): Promise<boolean> {
     for (let callback of this.beforeSaveEntityCallbacks) {
       if (callback) {
         callback(entity);
@@ -488,21 +549,15 @@ export default class Nymph {
    * @todo An option to place a total count in a var.
    * @todo Use an asterisk to specify any variable.
    */
-  public static async getEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string[]>;
-  public static async getEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[]>;
-  public static async getEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[]> {
@@ -527,33 +582,23 @@ export default class Nymph {
    * @param selectors Unlimited optional selectors to search for, or a single GUID. If none are given, all entities are searched for the given options.
    * @returns An entity, or null on failure or nothing found.
    */
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']> | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
   ): Promise<string | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string
   ): Promise<ReturnType<T['factorySync']> | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
   ): Promise<ReturnType<T['factorySync']> | string | null> {
@@ -583,7 +628,7 @@ export default class Nymph {
    * @param entity The entity.
    * @returns True on success, false on failure.
    */
-  public static async deleteEntity(entity: EntityInterface): Promise<boolean> {
+  public async deleteEntity(entity: EntityInterface): Promise<boolean> {
     for (let callback of this.beforeDeleteEntityCallbacks) {
       if (callback) {
         callback(entity);
@@ -605,7 +650,7 @@ export default class Nymph {
    * @param className The entity's class name.
    * @returns True on success, false on failure.
    */
-  public static async deleteEntityByID(
+  public async deleteEntityByID(
     guid: string,
     className?: string
   ): Promise<boolean> {
@@ -659,7 +704,7 @@ export default class Nymph {
    * @param filename The file to export to.
    * @returns True on success, false on failure.
    */
-  public static async export(filename: string): Promise<boolean> {
+  public async export(filename: string): Promise<boolean> {
     return await this.driver.export(filename);
   }
 
@@ -668,7 +713,7 @@ export default class Nymph {
    *
    * @returns True on success, false on failure.
    */
-  public static async exportPrint(): Promise<boolean> {
+  public async exportPrint(): Promise<boolean> {
     return await this.driver.exportPrint();
   }
 
@@ -678,11 +723,11 @@ export default class Nymph {
    * @param filename The file to import from.
    * @returns True on success, false on failure.
    */
-  public static async import(filename: string): Promise<boolean> {
+  public async import(filename: string): Promise<boolean> {
     return await this.driver.import(filename);
   }
 
-  public static on<T extends NymphEventType>(
+  public on<T extends NymphEventType>(
     event: T,
     callback: T extends 'connect'
       ? NymphConnectCallback
@@ -771,7 +816,7 @@ export default class Nymph {
     return () => this.off(event, callback);
   }
 
-  public static off<T extends NymphEventType>(
+  public off<T extends NymphEventType>(
     event: T,
     callback: T extends 'connect'
       ? NymphConnectCallback
@@ -864,3 +909,5 @@ export default class Nymph {
     return true;
   }
 }
+
+export default new Nymph();

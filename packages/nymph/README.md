@@ -20,7 +20,7 @@ Here's an overview:
 
 ```ts
 // main.ts
-import { Nymph } from '@nymphjs/nymph';
+import nymph from '@nymphjs/nymph';
 import MySQLDriver from '@nymphjs/driver-mysql';
 import Todo from './Todo';
 
@@ -31,7 +31,7 @@ const mysqlConfig = {
   password: 'your_password',
 };
 
-Nymph.init({}, new MySQLDriver(mysqlConfig));
+nymph.init({}, new MySQLDriver(mysqlConfig));
 
 // You are set up. Now you can use entity classes like `Todo` to store data,
 // and Nymph's query methods like `getEntities` to retrieve them.
@@ -41,7 +41,7 @@ async function run() {
   myEntity.text = 'Get it done!';
   await myEntity.$save();
 
-  const otherPendingTodos = await Nymph.getEntities(
+  const otherPendingTodos = await nymph.getEntities(
     { class: Todo },
     { type: '&', '!guid': myEntity.guid, equal: ['done', false] }
   );

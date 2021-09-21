@@ -1,4 +1,5 @@
 import { EntityConstructor, EntityInterface } from './Entity.types';
+import { Nymph } from './Nymph';
 
 export type NymphEventType =
   | 'connect'
@@ -236,3 +237,15 @@ export type FormattedSelector = {
   selector?: FormattedSelector[];
   '!selector'?: FormattedSelector['selector'];
 };
+
+export interface TilmeldInterface {
+  nymph: Nymph;
+  request: any;
+  response: any;
+  init(nymph: Nymph): void;
+  gatekeeper(ability?: string): boolean;
+  authenticate(): void;
+  clearSession(): void;
+  extractToken(token: string): any;
+  fillSession(user: any): void;
+}

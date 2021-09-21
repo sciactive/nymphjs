@@ -1,9 +1,9 @@
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import NymphServer from '@nymphjs/nymph';
+import nymphServer from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
 import { PubSub } from '@nymphjs/client';
-import rest from '@nymphjs/server';
+import createRestServer from '@nymphjs/server';
 import { Employee, EmployeeData } from '@nymphjs/server/dist/testArtifacts.js';
 
 import createServer from './index';
@@ -19,14 +19,14 @@ const pubSubConfig = {
   logger: () => {},
 };
 
-NymphServer.init({}, new SQLite3Driver(sqliteConfig));
-PubSubServer.initPublisher(pubSubConfig);
+nymphServer.init({}, new SQLite3Driver(sqliteConfig));
+PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
 const app = express();
-app.use(rest);
+app.use(createRestServer(nymphServer));
 const server = app.listen(5080);
 
-const pubsub = createServer(5081, pubSubConfig);
+const pubsub = createServer(5081, pubSubConfig, nymphServer);
 
 Nymph.init({
   restUrl: 'http://localhost:5080/',
@@ -344,7 +344,7 @@ describe('Nymph REST Server and Client', () => {
       );
 
       await Nymph.setUID('testRenameUID', 456);
-      await NymphServer.renameUID('testRenameUID', 'newRenameUID');
+      await nymphServer.renameUID('testRenameUID', 'newRenameUID');
     });
   });
 
@@ -363,7 +363,7 @@ describe('Nymph REST Server and Client', () => {
       );
 
       await Nymph.setUID('testRename2UID', 456);
-      await NymphServer.renameUID('testRename2UID', 'newRename2UID');
+      await nymphServer.renameUID('testRename2UID', 'newRename2UID');
     });
   });
 

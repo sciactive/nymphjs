@@ -1,9 +1,11 @@
-import Nymph, {
+import {
+  Nymph,
   EntityConstructor,
   EntityInterface,
   Options,
   Selector,
   SerializedEntityData,
+  TilmeldInterface,
 } from '@nymphjs/nymph';
 import {
   request,
@@ -37,9 +39,25 @@ import {
  * @see http://nymph.io/
  */
 export default class PubSub {
+  /**
+   * The Nymph instance.
+   */
+  public nymph: Nymph;
+
+  /**
+   * The PubSub config.
+   */
   public config: Config;
+
+  /**
+   * The WebSocket server.
+   */
   public server: WebSocketServer;
-  public tilmeld: any;
+
+  /**
+   * An optional Tilmeld user/group manager instance.
+   */
+  public tilmeld?: TilmeldInterface;
 
   private sessions = new Map<connection, string>();
   protected querySubs: {
@@ -58,14 +76,14 @@ export default class PubSub {
     [uidName: string]: Map<connection, { count: boolean }>;
   } = {};
 
-  public static initPublisher(config: Partial<Config>) {
+  public static initPublisher(config: Partial<Config>, nymph: Nymph) {
     const configWithDefaults: Config = { ...defaults, ...config };
 
-    Nymph.on('beforeSaveEntity', (entity: EntityInterface) => {
+    nymph.on('beforeSaveEntity', (entity: EntityInterface) => {
       const guid = entity.guid;
       const etype = (entity.constructor as EntityConstructor).ETYPE;
 
-      const off = Nymph.on(
+      const off = nymph.on(
         'afterSaveEntity',
         async (result: Promise<boolean>) => {
           off();
@@ -86,11 +104,11 @@ export default class PubSub {
       );
     });
 
-    Nymph.on('beforeDeleteEntity', (entity: EntityInterface) => {
+    nymph.on('beforeDeleteEntity', (entity: EntityInterface) => {
       const guid = entity.guid;
       const etype = (entity.constructor as EntityConstructor).ETYPE;
 
-      const off = Nymph.on(
+      const off = nymph.on(
         'afterDeleteEntity',
         async (result: Promise<boolean>) => {
           off();
@@ -110,11 +128,11 @@ export default class PubSub {
       );
     });
 
-    Nymph.on('beforeDeleteEntityByID', (guid: string, className?: string) => {
+    nymph.on('beforeDeleteEntityByID', (guid: string, className?: string) => {
       try {
-        const etype = Nymph.getEntityClass(className ?? 'Entity').ETYPE;
+        const etype = nymph.getEntityClass(className ?? 'Entity').ETYPE;
 
-        const off = Nymph.on(
+        const off = nymph.on(
           'afterDeleteEntityByID',
           async (result: Promise<boolean>) => {
             off();
@@ -137,8 +155,8 @@ export default class PubSub {
       }
     });
 
-    Nymph.on('beforeNewUID', (name: string) => {
-      const off = Nymph.on(
+    nymph.on('beforeNewUID', (name: string) => {
+      const off = nymph.on(
         'afterNewUID',
         async (result: Promise<number | null>) => {
           off();
@@ -159,8 +177,8 @@ export default class PubSub {
       );
     });
 
-    Nymph.on('beforeSetUID', (name: string, value: number) => {
-      const off = Nymph.on('afterSetUID', async (result: Promise<boolean>) => {
+    nymph.on('beforeSetUID', (name: string, value: number) => {
+      const off = nymph.on('afterSetUID', async (result: Promise<boolean>) => {
         off();
         if (!(await result)) {
           return;
@@ -177,8 +195,8 @@ export default class PubSub {
       });
     });
 
-    Nymph.on('beforeRenameUID', (oldName: string, newName: string) => {
-      const off = Nymph.on(
+    nymph.on('beforeRenameUID', (oldName: string, newName: string) => {
+      const off = nymph.on(
         'afterRenameUID',
         async (result: Promise<boolean>) => {
           off();
@@ -198,8 +216,8 @@ export default class PubSub {
       );
     });
 
-    Nymph.on('beforeDeleteUID', (name: string) => {
-      const off = Nymph.on(
+    nymph.on('beforeDeleteUID', (name: string) => {
+      const off = nymph.on(
         'afterDeleteUID',
         async (result: Promise<boolean>) => {
           off();
@@ -262,9 +280,11 @@ export default class PubSub {
    */
   public constructor(
     config: Partial<Config>,
+    nymph: Nymph,
     server: WebSocketServer,
-    tilmeld?: any
+    tilmeld?: TilmeldInterface
   ) {
+    this.nymph = nymph;
     this.config = { ...defaults, ...config };
     this.server = server;
     this.tilmeld = tilmeld;
@@ -484,7 +504,7 @@ export default class PubSub {
     let EntityClass: EntityConstructor;
     try {
       args = JSON.parse(data.query);
-      EntityClass = Nymph.getEntityClass(args[0].class);
+      EntityClass = this.nymph.getEntityClass(args[0].class);
     } catch (e: any) {
       return;
     }
@@ -518,7 +538,7 @@ export default class PubSub {
         }
       }
       this.querySubs[etype][serialArgs].set(from, {
-        current: await Nymph.getEntities(options, ...selectors),
+        current: await this.nymph.getEntities(options, ...selectors),
         query: data.query,
         count: !!data.count,
       });
@@ -753,7 +773,7 @@ export default class PubSub {
           const [clientOptions, ...selectors] = JSON.parse(curQuery);
           const options: Options = {
             ...clientOptions,
-            class: Nymph.getEntityClass(clientOptions.class),
+            class: this.nymph.getEntityClass(clientOptions.class),
             return: 'entity',
             source: 'client',
           };
@@ -767,7 +787,7 @@ export default class PubSub {
               this.tilmeld.fillSession(user);
             }
           }
-          current = await Nymph.getEntities(options, ...selectors);
+          current = await this.nymph.getEntities(options, ...selectors);
         } catch (e: any) {
           this.config.logger(
             'error',
@@ -866,7 +886,7 @@ export default class PubSub {
         // Check if it matches the query.
         try {
           let [clientOptions, ...selectors] = JSON.parse(curQuery);
-          const EntityClass = Nymph.getEntityClass(clientOptions.class);
+          const EntityClass = this.nymph.getEntityClass(clientOptions.class);
           const options: Options = {
             ...clientOptions,
             class: EntityClass,
@@ -882,11 +902,11 @@ export default class PubSub {
               `Received entity data class is not valid: ${data.entity.class}`
             );
           }
-          const DataEntityClass = Nymph.getEntityClass(data.entity.class);
+          const DataEntityClass = this.nymph.getEntityClass(data.entity.class);
 
           if (
             EntityClass.ETYPE === DataEntityClass.ETYPE &&
-            Nymph.driver.checkData(
+            this.nymph.driver.checkData(
               entityData,
               entitySData,
               selectors,
@@ -939,7 +959,7 @@ export default class PubSub {
     ) as string[];
     let value = data.value;
     if (data.event === 'renameUID' && data.newName) {
-      value = (await Nymph.getUID(data.newName)) ?? undefined;
+      value = (await this.nymph.getUID(data.newName)) ?? undefined;
     }
 
     for (let name of names) {

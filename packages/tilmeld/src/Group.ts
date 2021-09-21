@@ -1,4 +1,4 @@
-import Nymph, {
+import {
   EntityData,
   EntityInterface,
   EntityJson,
@@ -73,6 +73,10 @@ export type GroupData = {
 };
 
 export default class Group extends AbleObject<GroupData> {
+  /**
+   * The instance of Tilmeld to use for queries.
+   */
+  public static tilmeld: Tilmeld;
   static ETYPE = 'tilmeld_group';
   static class = 'Group';
 
@@ -112,7 +116,7 @@ export default class Group extends AbleObject<GroupData> {
   ): Promise<Group & GroupData> {
     const entity = new this();
     if (groupname != null) {
-      const entity = await Nymph.getEntity(
+      const entity = await this.nymph.getEntity(
         {
           class: this,
         },
@@ -154,13 +158,13 @@ export default class Group extends AbleObject<GroupData> {
     options?: Options,
     selectors?: Selector[]
   ) {
-    if (!Tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!this.tilmeld.gatekeeper('tilmeld/admin')) {
       throw new Error("You don't have permission to do that.");
     }
 
     return await this.getAssignableGroups(
-      Tilmeld.config.highestPrimary,
-      { ...options, class: Group, return: 'entity' },
+      this.tilmeld.config.highestPrimary,
+      { ...options, class: this.tilmeld.Group, return: 'entity' },
       [...(selectors ?? [])]
     );
   }
@@ -176,13 +180,13 @@ export default class Group extends AbleObject<GroupData> {
     options?: Options,
     selectors?: Selector[]
   ) {
-    if (!Tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!this.tilmeld.gatekeeper('tilmeld/admin')) {
       throw new Error("You don't have permission to do that.");
     }
 
     return await this.getAssignableGroups(
-      Tilmeld.config.highestSecondary,
-      { ...options, class: Group, return: 'entity' },
+      this.tilmeld.config.highestSecondary,
+      { ...options, class: this.tilmeld.Group, return: 'entity' },
       [...(selectors ?? [])]
     );
   }
@@ -198,8 +202,8 @@ export default class Group extends AbleObject<GroupData> {
       return assignableGroups;
     }
 
-    assignableGroups = await Nymph.getEntities(
-      { ...options, class: Group },
+    assignableGroups = await this.nymph.getEntities(
+      { ...options, class: this.tilmeld.Group },
       ...selectors
     );
     if (highestParent !== true) {
@@ -232,13 +236,14 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     this.$referenceWake();
 
     if (
-      input.data.abilities.indexOf('system/admin') !== -1 &&
+      input.data.abilities?.indexOf('system/admin') !== -1 &&
       this.$data.abilities?.indexOf('system/admin') === -1 &&
-      Tilmeld.gatekeeper('tilmeld/admin') &&
-      !Tilmeld.gatekeeper('system/admin')
+      tilmeld.gatekeeper('tilmeld/admin') &&
+      !tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to make this group a system admin."
@@ -249,13 +254,14 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     this.$referenceWake();
 
     if (
-      patch.set.abilities.indexOf('system/admin') !== -1 &&
+      patch.set.abilities?.indexOf('system/admin') !== -1 &&
       this.$data.abilities?.indexOf('system/admin') === -1 &&
-      Tilmeld.gatekeeper('tilmeld/admin') &&
-      !Tilmeld.gatekeeper('system/admin')
+      tilmeld.gatekeeper('tilmeld/admin') &&
+      !tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to make this group a system admin."
@@ -276,12 +282,13 @@ export default class Group extends AbleObject<GroupData> {
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
   public $updateDataProtection(givenUser?: User & UserData) {
-    let user = givenUser ?? User.current();
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let user = givenUser ?? tilmeld.User.current();
 
     this.$privateData = Group.DEFAULT_PRIVATE_DATA;
     this.$allowlistData = Group.DEFAULT_ALLOWLIST_DATA;
 
-    if (Tilmeld.config.emailUsernames) {
+    if (tilmeld.config.emailUsernames) {
       this.$privateData.push('groupname');
     }
 
@@ -310,9 +317,10 @@ export default class Group extends AbleObject<GroupData> {
    * @returns True or false.
    */
   public $isDescendant(givenGroup: (Group & GroupData) | string): boolean {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let group: Group & GroupData;
     if (typeof givenGroup === 'string') {
-      group = Group.factorySync(givenGroup);
+      group = tilmeld.Group.factorySync(givenGroup);
     } else {
       group = givenGroup;
     }
@@ -338,8 +346,9 @@ export default class Group extends AbleObject<GroupData> {
    * @returns An array of groups.
    */
   public async $getChildren() {
-    return await Nymph.getEntities(
-      { class: Group },
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    return await this.$nymph.getEntities(
+      { class: tilmeld.Group },
       {
         type: '&',
         equal: ['enabled', true],
@@ -357,9 +366,10 @@ export default class Group extends AbleObject<GroupData> {
   public async $getDescendants(
     andSelf = false
   ): Promise<(Group & GroupData)[]> {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let groups: (Group & GroupData)[] = [];
-    const entities = await Nymph.getEntities(
-      { class: Group },
+    const entities = await this.$nymph.getEntities(
+      { class: tilmeld.Group },
       {
         type: '&',
         equal: ['enabled', true],
@@ -382,12 +392,13 @@ export default class Group extends AbleObject<GroupData> {
    * @returns An array of groups.
    */
   public $getDescendantsSync(andSelf = false): (Group & GroupData)[] {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let groups: (Group & GroupData)[] = [];
     let entity: EntityInterface | null;
     let offset = 0;
     do {
-      entity = Nymph.driver.getEntitySync(
-        { class: Group, offset },
+      entity = this.$nymph.driver.getEntitySync(
+        { class: tilmeld.Group, offset },
         {
           type: '&',
           equal: ['enabled', true],
@@ -417,7 +428,8 @@ export default class Group extends AbleObject<GroupData> {
    * @returns The level of the group.
    */
   public $getLevel() {
-    let group = Group.factorySync(this.guid ?? undefined);
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let group = tilmeld.Group.factorySync(this.guid ?? undefined);
     let level = 0;
     while (group.parent != null && group.parent.cdate != null && level < 1024) {
       level++;
@@ -439,13 +451,14 @@ export default class Group extends AbleObject<GroupData> {
     limit?: number,
     offset?: number
   ): Promise<(User & UserData)[]> {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let groups: (Group & GroupData)[] = [];
     if (descendants) {
       groups = await this.$getDescendants();
     }
-    return await Nymph.getEntities(
+    return await this.$nymph.getEntities(
       {
-        class: User,
+        class: tilmeld.User,
         limit,
         offset,
       },
@@ -480,37 +493,38 @@ export default class Group extends AbleObject<GroupData> {
     result: boolean;
     message: string;
   }> {
-    if (!Tilmeld.config.emailUsernames) {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    if (!tilmeld.config.emailUsernames) {
       if (this.$data.groupname == null || !this.$data.groupname.length) {
         return { result: false, message: 'Please specify a groupname.' };
       }
       if (
-        Tilmeld.config.maxUsernameLength > 0 &&
-        this.$data.groupname.length > Tilmeld.config.maxUsernameLength
+        tilmeld.config.maxUsernameLength > 0 &&
+        this.$data.groupname.length > tilmeld.config.maxUsernameLength
       ) {
         return {
           result: false,
           message:
             'Groupnames must not exceed ' +
-            Tilmeld.config.maxUsernameLength +
+            tilmeld.config.maxUsernameLength +
             ' characters.',
         };
       }
       if (
         difference(
           this.$data.groupname.split(''),
-          Tilmeld.config.validChars.split('')
+          tilmeld.config.validChars.split('')
         ).length
       ) {
         return {
           result: false,
-          message: Tilmeld.config.validCharsNotice,
+          message: tilmeld.config.validCharsNotice,
         };
       }
-      if (!Tilmeld.config.validRegex.test(this.$data.groupname)) {
+      if (!tilmeld.config.validRegex.test(this.$data.groupname)) {
         return {
           result: false,
-          message: Tilmeld.config.validRegexNotice,
+          message: tilmeld.config.validRegexNotice,
         };
       }
 
@@ -524,8 +538,8 @@ export default class Group extends AbleObject<GroupData> {
       if (this.guid != null) {
         selector['!guid'] = this.guid;
       }
-      const test = await Nymph.getEntity(
-        { class: Group, skipAc: true },
+      const test = await this.$nymph.getEntity(
+        { class: tilmeld.Group, skipAc: true },
         selector
       );
       if (test != null) {
@@ -543,14 +557,14 @@ export default class Group extends AbleObject<GroupData> {
         return { result: false, message: 'Please specify an email.' };
       }
       if (
-        Tilmeld.config.maxUsernameLength > 0 &&
-        this.$data.groupname.length > Tilmeld.config.maxUsernameLength
+        tilmeld.config.maxUsernameLength > 0 &&
+        this.$data.groupname.length > tilmeld.config.maxUsernameLength
       ) {
         return {
           result: false,
           message:
             'Emails must not exceed ' +
-            Tilmeld.config.maxUsernameLength +
+            tilmeld.config.maxUsernameLength +
             ' characters.',
         };
       }
@@ -565,16 +579,17 @@ export default class Group extends AbleObject<GroupData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     if (this.$data.email === '') {
       return { result: true, message: '' };
     }
     if (this.$data.email == null) {
       return { result: false, message: 'Please specify a valid email.' };
     }
-    if (!Tilmeld.config.validEmailRegex.test(this.$data.email)) {
+    if (!tilmeld.config.validEmailRegex.test(this.$data.email)) {
       return {
         result: false,
-        message: Tilmeld.config.validEmailRegexNotice,
+        message: tilmeld.config.validEmailRegexNotice,
       };
     }
     const selector: Selector = {
@@ -584,8 +599,8 @@ export default class Group extends AbleObject<GroupData> {
     if (this.guid != null) {
       selector['!guid'] = this.guid;
     }
-    const test = await Nymph.getEntity(
-      { class: Group, skipAc: true },
+    const test = await this.$nymph.getEntity(
+      { class: tilmeld.Group, skipAc: true },
       selector
     );
     if (test != null) {
@@ -603,13 +618,14 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public async $save() {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
     if (this.$data.groupname == null || !this.$data.groupname.trim().length) {
       return false;
     }
 
     // Formatting.
     this.$data.groupname = this.$data.groupname.trim();
-    if (Tilmeld.config.emailUsernames) {
+    if (tilmeld.config.emailUsernames) {
       this.$data.email = this.$data.groupname;
     }
     this.$data.email = (this.$data.email ?? '').trim();
@@ -659,7 +675,7 @@ export default class Group extends AbleObject<GroupData> {
     if (!unCheck.result) {
       throw new BadUsernameError(unCheck.message);
     }
-    if (!Tilmeld.config.emailUsernames) {
+    if (!tilmeld.config.emailUsernames) {
       const emCheck = await this.$checkEmail();
       if (!emCheck.result) {
         throw new BadEmailError(emCheck.message);
@@ -679,15 +695,15 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     try {
-      Tilmeld.config.validatorGroup(this);
+      tilmeld.config.validatorGroup(this);
     } catch (e: any) {
       throw new BadDataError(e?.message);
     }
 
     // Only one default primary group is allowed.
     if (this.$data.defaultPrimary) {
-      const currentPrimary = await Nymph.getEntity(
-        { class: Group },
+      const currentPrimary = await this.$nymph.getEntity(
+        { class: tilmeld.Group },
         { type: '&', truthy: 'defaultPrimary' }
       );
       if (currentPrimary != null && !this.$is(currentPrimary)) {
@@ -721,28 +737,29 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public async $delete() {
-    if (!Tilmeld.gatekeeper('tilmeld/admin')) {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete groups.");
     }
 
     const transaction = 'tilmeld-delete-' + this.guid;
-    await Nymph.startTransaction(transaction);
+    const tnymph = await this.$nymph.startTransaction(transaction);
 
     // Delete descendants.
     const descendants = await this.$getDescendants();
     if (descendants.length) {
       for (let curGroup of descendants) {
         if (!(await curGroup.$delete())) {
-          await Nymph.rollback(transaction);
+          await tnymph.rollback(transaction);
           return false;
         }
       }
     }
 
     // Remove users from this primary group.
-    const primaryUsers = await Nymph.getEntities(
+    const primaryUsers = await tnymph.getEntities(
       {
-        class: User,
+        class: tilmeld.User,
         skipAc: true,
       },
       {
@@ -753,15 +770,15 @@ export default class Group extends AbleObject<GroupData> {
     for (let user of primaryUsers) {
       delete user.group;
       if (!(await user.$save())) {
-        await Nymph.rollback(transaction);
+        await tnymph.rollback(transaction);
         return false;
       }
     }
 
     // Remove users from this secondary group.
-    const secondaryUsers = await Nymph.getEntities(
+    const secondaryUsers = await tnymph.getEntities(
       {
-        class: User,
+        class: tilmeld.User,
         skipAc: true,
       },
       {
@@ -772,7 +789,7 @@ export default class Group extends AbleObject<GroupData> {
     for (let user of secondaryUsers) {
       user.$delGroup(this);
       if (!(await user.$save())) {
-        await Nymph.rollback(transaction);
+        await tnymph.rollback(transaction);
         return false;
       }
     }
@@ -780,12 +797,10 @@ export default class Group extends AbleObject<GroupData> {
     // Delete the group.
     const success = await super.$delete();
     if (success) {
-      await Nymph.commit(transaction);
+      await tnymph.commit(transaction);
     } else {
-      await Nymph.rollback(transaction);
+      await tnymph.rollback(transaction);
     }
     return success;
   }
 }
-
-Nymph.setEntityClass(Group.class, Group);

@@ -1,14 +1,22 @@
 import express from 'express';
 import strtotime from 'locutus/php/datetime/strtotime';
 import { NymphOptions } from '@nymphjs/client';
-import Nymph from '@nymphjs/nymph';
-import Tilmeld, { User, Group } from '@nymphjs/tilmeld';
+import { Nymph } from '@nymphjs/nymph';
+import type { Tilmeld } from '@nymphjs/tilmeld';
 
-export default function setup(options: NymphOptions) {
+export default function setup(options: NymphOptions, nymph: Nymph) {
   const app = express();
 
+  if (!nymph.tilmeld) {
+    throw new Error(
+      'You need to configure Tilmeld on your Nymph instance first.'
+    );
+  }
+
+  const tilmeld = nymph.tilmeld as Tilmeld;
+
   app.use('/verify', async (request, response, next) => {
-    if (!Tilmeld.config.verifyEmail || request.query.action == null) {
+    if (!tilmeld.config.verifyEmail || request.query.action == null) {
       next();
     }
 
@@ -66,7 +74,7 @@ export default function setup(options: NymphOptions) {
 </html>`);
     }
 
-    const user = await User.factory(`${request.query.id}`);
+    const user = await tilmeld.User.factory(`${request.query.id}`);
 
     if (user.guid == null) {
       printError(500, 'An error occurred.');
@@ -84,9 +92,9 @@ export default function setup(options: NymphOptions) {
           return;
         }
 
-        if (Tilmeld.config.unverifiedAccess) {
-          user.groups = await Nymph.getEntities(
-            { class: Group, skipAc: true },
+        if (tilmeld.config.unverifiedAccess) {
+          user.groups = await nymph.getEntities(
+            { class: tilmeld.Group, skipAc: true },
             { type: '&', equal: ['defaultSecondary', true] }
           );
         }
@@ -106,7 +114,7 @@ export default function setup(options: NymphOptions) {
 
         user.email = user.newEmailAddress;
         user.$originalEmail = user.newEmailAddress;
-        if (Tilmeld.config.emailUsernames) {
+        if (tilmeld.config.emailUsernames) {
           user.username = user.email;
           const unCheck = await user.$checkUsername();
           if (!unCheck.result) {
@@ -136,10 +144,10 @@ export default function setup(options: NymphOptions) {
         }
 
         if (
-          Tilmeld.config.emailRateLimit !== '' &&
+          tilmeld.config.emailRateLimit !== '' &&
           user.emailChangeDate != null &&
           user.emailChangeDate <
-            (strtotime('-' + Tilmeld.config.emailRateLimit) || 0) * 1000
+            (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000
         ) {
           printError(
             400,
@@ -150,7 +158,7 @@ export default function setup(options: NymphOptions) {
 
         user.email = user.cancelEmailAddress;
         user.$originalEmail = user.cancelEmailAddress;
-        if (Tilmeld.config.emailUsernames) {
+        if (tilmeld.config.emailUsernames) {
           user.username = user.email;
         }
 
@@ -167,19 +175,19 @@ export default function setup(options: NymphOptions) {
         default:
           printSuccess(
             'Your account has been verified.',
-            Tilmeld.config.verifyRedirect
+            tilmeld.config.verifyRedirect
           );
           break;
         case 'verifychange':
           printSuccess(
             'Your new email address has been verified.',
-            Tilmeld.config.verifyChangeRedirect
+            tilmeld.config.verifyChangeRedirect
           );
           break;
         case 'cancelchange':
           printSuccess(
             'The email address change has been canceled.',
-            Tilmeld.config.cancelChangeRedirect
+            tilmeld.config.cancelChangeRedirect
           );
           break;
       }

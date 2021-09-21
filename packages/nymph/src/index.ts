@@ -14,8 +14,7 @@ export { newGUID };
 export * from './Nymph.types';
 
 export * from './Nymph';
-import Nymph from './Nymph';
-export { Nymph };
-export default Nymph;
+import nymph from './Nymph';
+export default nymph;
 
 export * from './utils';

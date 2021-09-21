@@ -1,3 +1,4 @@
+import type { Nymph, TilmeldInterface } from '@nymphjs/nymph';
 import http from 'http';
 import { server as WebSocketServer } from 'websocket';
 
@@ -6,7 +7,9 @@ import PubSub from './PubSub';
 
 export default function createServer(
   port = 8080,
-  config: Partial<Config> = {}
+  config: Partial<Config> = {},
+  nymph: Nymph,
+  tilmeld?: TilmeldInterface
 ) {
   const server = http.createServer((_request, response) => {
     response.writeHead(404);
@@ -31,7 +34,7 @@ export default function createServer(
     autoAcceptConnections: false,
   });
 
-  const pubsub = new PubSub(config, wsServer);
+  const pubsub = new PubSub(config, nymph, wsServer, tilmeld);
 
   const _close = pubsub.close;
   pubsub.close = () => {

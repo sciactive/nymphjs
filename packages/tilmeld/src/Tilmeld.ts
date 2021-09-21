@@ -1,7 +1,9 @@
-import Nymph, {
+import {
+  Nymph,
   EntityInterface,
   FormattedSelector,
   Options,
+  TilmeldInterface,
 } from '@nymphjs/nymph';
 import { Request, Response } from 'express';
 
@@ -20,21 +22,36 @@ import { AccessControlData } from './Tilmeld.types';
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export default class Tilmeld {
+export default class Tilmeld implements TilmeldInterface {
   public static NO_ACCESS = 0;
   public static READ_ACCESS = 1;
   public static WRITE_ACCESS = 2;
   public static FULL_ACCESS = 4;
 
   /**
+   * The Nymph instance.
+   */
+  public nymph: Nymph;
+
+  /**
    * The Tilmeld config.
    */
-  public static config: Config;
+  public config: Config;
 
   /**
    * The currently logged in user.
    */
-  public static currentUser: (User & UserData) | null = null;
+  public currentUser: (User & UserData) | null = null;
+
+  /**
+   * The user class for this instance of Tilmeld.
+   */
+  public User: typeof User = User;
+
+  /**
+   * The group class for this instance of Tilmeld.
+   */
+  public Group: typeof Group = Group;
 
   /**
    * If you will be performing authentication functions (logging in/out), you
@@ -50,8 +67,18 @@ export default class Tilmeld {
    * If you want to support cookie based authentication (which still requires an
    * XSRF token for security), you should enable the cookie parser middleware.
    */
-  public static request: Request | null = null;
-  public static response: Response | null = null;
+  public request: Request | null = null;
+  public response: Response | null = null;
+
+  /**
+   * Create a new instance of Tilmeld.
+   *
+   * @param config The Tilmeld configuration.
+   */
+  public constructor(config: Partial<Config> & { jwtSecret: string }) {
+    this.nymph = new Nymph();
+    this.config = { ...defaults, ...config };
+  }
 
   /**
    * Check to see if the current user has an ability.
@@ -62,7 +89,7 @@ export default class Tilmeld {
    * @param ability The ability.
    * @returns Whether the user has the given ability.
    */
-  public static gatekeeper(ability?: string): boolean {
+  public gatekeeper(ability?: string): boolean {
     if (this.currentUser == null) {
       return false;
     }
@@ -72,15 +99,29 @@ export default class Tilmeld {
   /**
    * Initialize Tilmeld.
    *
-   * @param config The Tilmeld configuration.
+   * This is meant to be called internally by Nymph. Don't call this directly.
+   *
+   * @param nymph The Nymph instance.
    */
-  public static init(config: Partial<Config> & { jwtSecret: string }) {
-    this.config = { ...defaults, ...config };
+  public init(nymph: Nymph) {
+    this.nymph = nymph;
 
     // Set up access control hooks when Nymph is called.
-    if (Nymph.driver == null) {
+    if (this.nymph.driver == null) {
       throw new Error("Tilmeld can't be configured before Nymph.");
     }
+
+    // Configure the classes.
+    class NymphUser extends User {}
+    NymphUser.nymph = this.nymph;
+    NymphUser.tilmeld = this;
+    this.User = NymphUser;
+    this.nymph.setEntityClass(NymphUser.class, NymphUser);
+    class NymphGroup extends Group {}
+    NymphGroup.nymph = this.nymph;
+    NymphGroup.tilmeld = this;
+    this.Group = NymphGroup;
+    this.nymph.setEntityClass(NymphGroup.class, NymphGroup);
 
     this.initAccessControl();
     if (this.request != null) {
@@ -88,7 +129,9 @@ export default class Tilmeld {
     }
   }
 
-  private static initAccessControl() {
+  private initAccessControl() {
+    const tilmeld = this;
+
     // Check for the skip access control option and add AC selectors.
     const handleQuery = function (
       options: Options,
@@ -102,10 +145,10 @@ export default class Tilmeld {
       ) {
         if (options?.source === 'client') {
           if (
-            !Tilmeld.gatekeeper('tilmeld/admin') &&
-            ((!Tilmeld.config.enableUserSearch &&
+            !tilmeld.gatekeeper('tilmeld/admin') &&
+            ((!tilmeld.config.enableUserSearch &&
               options.class?.factorySync() instanceof User) ||
-              (!Tilmeld.config.enableGroupSearch &&
+              (!tilmeld.config.enableGroupSearch &&
                 options.class?.factorySync() instanceof Group)) &&
             (selectors[0] == null ||
               selectors[0].type !== '&' ||
@@ -123,7 +166,7 @@ export default class Tilmeld {
           }
         }
         // Add access control selectors
-        Tilmeld.addAccessControlSelectors(options, selectors);
+        tilmeld.addAccessControlSelectors(options, selectors);
       }
     };
 
@@ -136,7 +179,7 @@ export default class Tilmeld {
         return;
       }
       // Test for permissions.
-      if (Tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
+      if (tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
         throw new AccessControlError('No permission to delete.');
       }
     };
@@ -146,8 +189,8 @@ export default class Tilmeld {
       guid: string,
       className?: string
     ) {
-      const entity = Nymph.driver.getEntitySync(
-        { class: Nymph.getEntityClass(className ?? 'Entity') },
+      const entity = tilmeld.nymph.driver.getEntitySync(
+        { class: tilmeld.nymph.getEntityClass(className ?? 'Entity') },
         { type: '&', guid: guid }
       );
       if (entity != null) {
@@ -199,7 +242,7 @@ export default class Tilmeld {
 
         // Restore original AC properties and check permissions.
         setAcProperties(originalAc);
-        if (Tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
+        if (tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
           // Only allow changes to AC properties if the user has full access.
           // TODO: only allow changes to `user` and `group` if tilmeld admin or
           //       group is user's group.
@@ -208,7 +251,7 @@ export default class Tilmeld {
       }
 
       // Test for permissions.
-      if (!Tilmeld.checkPermissions(entity, Tilmeld.WRITE_ACCESS)) {
+      if (!tilmeld.checkPermissions(entity, Tilmeld.WRITE_ACCESS)) {
         throw new AccessControlError('No permission to write.');
       }
     };
@@ -230,7 +273,7 @@ export default class Tilmeld {
      * - acOther = Tilmeld::NO_ACCESS
      */
     const addAccess = function (entity: EntityInterface & AccessControlData) {
-      const user = Tilmeld.currentUser;
+      const user = tilmeld.currentUser;
       if (
         user != null &&
         entity.guid == null &&
@@ -324,14 +367,14 @@ export default class Tilmeld {
       }
     };
 
-    Nymph.on('query', handleQuery);
+    this.nymph.on('query', handleQuery);
 
-    Nymph.on('beforeSaveEntity', addAccess);
-    Nymph.on('beforeSaveEntity', validate);
-    Nymph.on('beforeSaveEntity', checkPermissionsSaveAndFilterAcChanges);
+    this.nymph.on('beforeSaveEntity', addAccess);
+    this.nymph.on('beforeSaveEntity', validate);
+    this.nymph.on('beforeSaveEntity', checkPermissionsSaveAndFilterAcChanges);
 
-    Nymph.on('beforeDeleteEntity', checkPermissionsDelete);
-    Nymph.on('beforeDeleteEntityByID', checkPermissionsDeleteByID);
+    this.nymph.on('beforeDeleteEntity', checkPermissionsDelete);
+    this.nymph.on('beforeDeleteEntityByID', checkPermissionsDeleteByID);
   }
 
   /**
@@ -340,7 +383,7 @@ export default class Tilmeld {
    *
    * @param optionsAndSelectors The options and selectors of the query.
    */
-  public static addAccessControlSelectors(
+  public addAccessControlSelectors(
     options: Options,
     selectors: FormattedSelector[]
   ) {
@@ -358,7 +401,8 @@ export default class Tilmeld {
       throw new Error('No options in argument.');
     } else if (
       'class' in options &&
-      (options.class === User || options.class === Group)
+      (options.class?.factorySync() instanceof User ||
+        options.class?.factorySync() instanceof Group)
     ) {
       // They are requesting a user/group. Always accessible for reading.
       return;
@@ -521,7 +565,7 @@ export default class Tilmeld {
    * @param user The user to check permissions for. If null, uses the current user. If false, checks for public access.
    * @returns Whether the current user has at least `type` permission for the entity.
    */
-  public static checkPermissions(
+  public checkPermissions(
     entity: EntityInterface & AccessControlData,
     type = Tilmeld.READ_ACCESS,
     user?: (User & UserData) | false
@@ -532,11 +576,11 @@ export default class Tilmeld {
     }
 
     let userOrNull: (User & UserData) | null = null;
-    let userOrEmpty: User & UserData = User.factorySync();
+    let userOrEmpty: User & UserData = this.User.factorySync();
     // Calculate the user.
     if (user == null) {
       userOrNull = this.currentUser;
-      userOrEmpty = User.current(true);
+      userOrEmpty = this.User.current(true);
     } else if (user !== false) {
       userOrNull = user;
       userOrEmpty = user;
@@ -633,7 +677,7 @@ export default class Tilmeld {
    *
    * @param user The user.
    */
-  public static fillSession(user: User & UserData) {
+  public fillSession(user: User & UserData) {
     // Read groups right now, since gatekeeper needs them, so
     // $udpateDataProtection will fail to read them (since it runs gatekeeper).
     const _group = user.group;
@@ -652,7 +696,7 @@ export default class Tilmeld {
   /**
    * Clear session user data.
    */
-  public static clearSession() {
+  public clearSession() {
     const user = this.currentUser;
     this.currentUser = null;
     if (user) {
@@ -672,15 +716,15 @@ export default class Tilmeld {
    * @param token The authentication token.
    * @returns The user on success, null on failure.
    */
-  public static async extractToken(token: string) {
-    const extract = this.config.jwtExtract(token);
+  public async extractToken(token: string) {
+    const extract = this.config.jwtExtract(this.config, token);
     if (extract == null) {
       return null;
     }
     const { guid } = extract;
 
-    const user = await Nymph.getEntity(
-      { class: User },
+    const user = await this.nymph.getEntity(
+      { class: this.User },
       {
         type: '&',
         guid: guid,
@@ -699,7 +743,7 @@ export default class Tilmeld {
    * @param skipXsrfToken Skip the XSRF token check.
    * @returns True if a user was authenticated, false on any failure.
    */
-  public static authenticate(skipXsrfToken = false) {
+  public authenticate(skipXsrfToken = false) {
     if (this.request == null) {
       return false;
     }
@@ -727,7 +771,7 @@ export default class Tilmeld {
     ) {
       // The request is for the setup app, or we were told to skip the XSRF
       // check, so don't check for the XSRF token.
-      extract = this.config.jwtExtract(authToken);
+      extract = this.config.jwtExtract(this.config, authToken);
     } else {
       // The request is for something else, so check for a valid XSRF token,
       // unless the auth token is provided by a header (instead of a cookie).
@@ -736,7 +780,7 @@ export default class Tilmeld {
         return false;
       }
 
-      extract = this.config.jwtExtract(authToken, xsrfToken);
+      extract = this.config.jwtExtract(this.config, authToken, xsrfToken);
     }
 
     if (extract == null) {
@@ -745,7 +789,7 @@ export default class Tilmeld {
     }
     const { guid, expire } = extract;
 
-    const user = User.factorySync(guid);
+    const user = this.User.factorySync(guid);
     if (user.guid == null || !user.enabled) {
       this.logout();
       return false;
@@ -768,10 +812,10 @@ export default class Tilmeld {
    * @param sendAuthHeader When true, a custom header with the auth token will be sent.
    * @returns True on success, false on failure.
    */
-  public static login(user: User & UserData, sendAuthHeader: boolean) {
+  public login(user: User & UserData, sendAuthHeader: boolean) {
     if (user.guid != null && user.enabled) {
       if (this.response && !this.response.headersSent) {
-        const token = this.config.jwtBuilder(user);
+        const token = this.config.jwtBuilder(this.config, user);
         const appUrl = new URL(this.config.appUrl);
         this.response.cookie('TILMELDAUTH', token, {
           domain: this.config.cookieDomain,
@@ -794,7 +838,7 @@ export default class Tilmeld {
   /**
    * Logs the current user out of the system.
    */
-  public static logout() {
+  public logout() {
     this.clearSession();
     if (this.response && !this.response.headersSent) {
       this.response.clearCookie('TILMELDAUTH', {

@@ -4,7 +4,7 @@ import { default as MySQLType } from '@types/mysql';
 // @ts-ignore: replace with mysql once https://github.com/mysqljs/mysql/pull/2233 is merged.
 import vlaskyMysql from '@vlasky/mysql';
 import { customAlphabet } from 'nanoid';
-import Nymph, {
+import {
   NymphDriver,
   EntityConstructor,
   EntityData,
@@ -25,6 +25,11 @@ import {
   MySQLDriverConfigDefaults as defaults,
 } from './conf';
 
+type MySQLDriverTransaction = {
+  connection: MySQLType.PoolConnection | null;
+  count: number;
+};
+
 const mysql = vlaskyMysql as typeof MySQLType;
 
 const makeTableSuffix = customAlphabet(
@@ -42,8 +47,7 @@ export default class MySQLDriver extends NymphDriver {
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: MySQLType.Pool;
-  protected connection: MySQLType.PoolConnection | null = null;
-  protected transactionsStarted = 0;
+  protected transaction: MySQLDriverTransaction | null = null;
 
   static escape(input: string) {
     return mysql.escapeId(input);
@@ -53,7 +57,11 @@ export default class MySQLDriver extends NymphDriver {
     return mysql.escape(input);
   }
 
-  constructor(config: Partial<MySQLDriverConfig>) {
+  constructor(
+    config: Partial<MySQLDriverConfig>,
+    link?: MySQLType.Pool,
+    transaction?: MySQLDriverTransaction
+  ) {
     super();
     this.config = { ...defaults, ...config };
     const { host, user, password, database, port, customPoolConfig } =
@@ -66,12 +74,21 @@ export default class MySQLDriver extends NymphDriver {
       port,
     };
     this.prefix = this.config.prefix;
-    this.connect();
+    if (link != null) {
+      this.link = link;
+      this.connected = true;
+    }
+    if (transaction != null) {
+      this.transaction = transaction;
+    }
+    if (link == null) {
+      this.connect();
+    }
   }
 
   private getConnection(): Promise<MySQLType.PoolConnection> {
-    if (this.connection != null) {
-      return Promise.resolve(this.connection);
+    if (this.transaction != null && this.transaction.connection != null) {
+      return Promise.resolve(this.transaction.connection);
     }
     return new Promise((resolve, reject) =>
       this.link.getConnection((err, con) => (err ? reject(err) : resolve(con)))
@@ -87,7 +104,12 @@ export default class MySQLDriver extends NymphDriver {
     // If we think we're connected, try pinging the server.
     try {
       if (this.connected) {
-        const connection = await this.getConnection();
+        const connection: MySQLType.PoolConnection = await new Promise(
+          (resolve, reject) =>
+            this.link.getConnection((err, con) =>
+              err ? reject(err) : resolve(con)
+            )
+        );
         await new Promise((resolve) =>
           connection.ping(() => {
             resolve(0);
@@ -102,7 +124,7 @@ export default class MySQLDriver extends NymphDriver {
     // Connecting, selecting database
     if (!this.connected) {
       try {
-        this.link = await mysql.createPool(this.mysqlConfig);
+        this.link = mysql.createPool(this.mysqlConfig);
         this.connected = true;
       } catch (e: any) {
         if (
@@ -136,7 +158,7 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async inTransaction() {
-    return this.transactionsStarted > 0;
+    return !!this.transaction;
   }
 
   /**
@@ -368,18 +390,22 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) =>
-          (this.connection ?? this.link).query(
-            newQuery,
-            newParams,
-            (error, results) => {
-              if (error) {
-                reject(error);
+        const results: any = await new Promise((resolve, reject) => {
+          try {
+            (this.transaction?.connection ?? this.link).query(
+              newQuery,
+              newParams,
+              (error, results) => {
+                if (error) {
+                  reject(error);
+                }
+                resolve(results);
               }
-              resolve(results);
-            }
-          )
-        );
+            );
+          } catch (e) {
+            reject(e);
+          }
+        });
         return results;
       },
       `${query} -- ${JSON.stringify(params)}`,
@@ -443,18 +469,22 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) =>
-          (this.connection ?? this.link).query(
-            newQuery,
-            newParams,
-            (error, results) => {
-              if (error) {
-                reject(error);
+        const results: any = await new Promise((resolve, reject) => {
+          try {
+            (this.transaction?.connection ?? this.link).query(
+              newQuery,
+              newParams,
+              (error, results) => {
+                if (error) {
+                  reject(error);
+                }
+                resolve(results);
               }
-              resolve(results);
-            }
-          )
-        );
+            );
+          } catch (e) {
+            reject(e);
+          }
+        });
         return results[0];
       },
       `${query} -- ${JSON.stringify(params)}`,
@@ -479,16 +509,20 @@ export default class MySQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: any = await new Promise((resolve, reject) => {
-          (this.connection ?? this.link).query(
-            newQuery,
-            newParams,
-            (error, results) => {
-              if (error) {
-                reject(error);
+          try {
+            (this.transaction?.connection ?? this.link).query(
+              newQuery,
+              newParams,
+              (error, results) => {
+                if (error) {
+                  reject(error);
+                }
+                resolve(results);
               }
-              resolve(results);
-            }
-          );
+            );
+          } catch (e) {
+            reject(e);
+          }
         });
         return { changes: results.changedRows ?? 0 };
       },
@@ -543,26 +577,21 @@ export default class MySQLDriver extends NymphDriver {
         'Transaction commit attempted without a name.'
       );
     }
-    if (this.config.transactions) {
-      if (this.transactionsStarted === 0) {
-        return true;
-      }
-      await this.queryRun(`RELEASE SAVEPOINT ${MySQLDriver.escape(name)};`);
-      this.transactionsStarted--;
-      if (this.transactionsStarted === 0) {
-        await this.queryRun('COMMIT;');
-        this.connection?.release();
-        this.connection = null;
-      }
+    if (!this.transaction || this.transaction.count === 0) {
+      this.transaction = null;
       return true;
     }
-    // Use a single connection when a transaction is requested.
-    this.transactionsStarted--;
-    if (this.transactionsStarted === 0) {
-      this.connection?.release();
-      this.connection = null;
+    if (this.config.transactions) {
+      await this.queryRun(`RELEASE SAVEPOINT ${MySQLDriver.escape(name)};`);
     }
-    return false;
+    this.transaction.count--;
+    if (this.transaction.count === 0) {
+      await this.queryRun('COMMIT;');
+      this.transaction.connection?.release();
+      this.transaction.connection = null;
+      this.transaction = null;
+    }
+    return true;
   }
 
   public async deleteEntityByID(
@@ -571,13 +600,13 @@ export default class MySQLDriver extends NymphDriver {
   ) {
     let EntityClass: EntityConstructor;
     if (typeof className === 'string' || className == null) {
-      const GetEntityClass = Nymph.getEntityClass(className ?? 'Entity');
+      const GetEntityClass = this.nymph.getEntityClass(className ?? 'Entity');
       EntityClass = GetEntityClass;
     } else {
       EntityClass = className;
     }
     const etype = EntityClass.ETYPE;
-    await this.startTransaction('nymph-delete');
+    await this.internalTransaction('nymph-delete');
     try {
       await this.queryRun(
         `DELETE FROM ${MySQLDriver.escape(
@@ -625,7 +654,7 @@ export default class MySQLDriver extends NymphDriver {
       );
       await this.commit('nymph-delete');
       // Remove any cached versions of this entity.
-      if (Nymph.config.cache) {
+      if (this.nymph.config.cache) {
         this.cleanCache(guid);
       }
       return true;
@@ -2007,7 +2036,7 @@ export default class MySQLDriver extends NymphDriver {
           );
         },
         async () => {
-          await this.startTransaction('nymph-import');
+          await this.internalTransaction('nymph-import');
         },
         async () => {
           await this.commit('nymph-import');
@@ -2025,7 +2054,7 @@ export default class MySQLDriver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
-    await this.startTransaction('nymph-newuid');
+    await this.internalTransaction('nymph-newuid');
     try {
       const lock = await this.queryGet(
         `SELECT GET_LOCK(${MySQLDriver.escapeValue(
@@ -2101,26 +2130,21 @@ export default class MySQLDriver extends NymphDriver {
         'Transaction rollback attempted without a name.'
       );
     }
-    if (this.config.transactions) {
-      if (this.transactionsStarted === 0) {
-        return true;
-      }
-      await this.queryRun(`ROLLBACK TO SAVEPOINT ${MySQLDriver.escape(name)};`);
-      this.transactionsStarted--;
-      if (this.transactionsStarted === 0) {
-        await this.queryRun('ROLLBACK;');
-        this.connection?.release();
-        this.connection = null;
-      }
+    if (!this.transaction || this.transaction.count === 0) {
+      this.transaction = null;
       return true;
     }
-    // Use a single connection when a transaction is requested.
-    this.transactionsStarted--;
-    if (this.transactionsStarted === 0) {
-      this.connection?.release();
-      this.connection = null;
+    if (this.config.transactions) {
+      await this.queryRun(`ROLLBACK TO SAVEPOINT ${MySQLDriver.escape(name)};`);
     }
-    return false;
+    this.transaction.count--;
+    if (this.transaction.count === 0) {
+      await this.queryRun('ROLLBACK;');
+      this.transaction.connection?.release();
+      this.transaction.connection = null;
+      this.transaction = null;
+    }
+    return true;
   }
 
   public async saveEntity(entity: EntityInterface) {
@@ -2360,7 +2384,7 @@ export default class MySQLDriver extends NymphDriver {
           return success;
         },
         async () => {
-          await this.startTransaction('nymph-save');
+          await this.internalTransaction('nymph-save');
         },
         async (success) => {
           if (success) {
@@ -2397,27 +2421,45 @@ export default class MySQLDriver extends NymphDriver {
     return true;
   }
 
-  public async startTransaction(name: string) {
+  private async internalTransaction(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
         'Transaction start attempted without a name.'
       );
     }
-    if (this.config.transactions) {
+
+    if (!this.transaction || this.transaction.count === 0) {
       // Lock to one connection.
-      if (this.transactionsStarted === 0) {
-        this.connection = await this.getConnection();
+      this.transaction = {
+        count: 0,
+        connection: await this.getConnection(),
+      };
+      if (this.config.transactions) {
+        // We're not in a transaction yet, so start one.
         await this.queryRun('START TRANSACTION;');
       }
+    }
+
+    if (this.config.transactions) {
       await this.queryRun(`SAVEPOINT ${MySQLDriver.escape(name)};`);
-      this.transactionsStarted++;
-      return true;
     }
-    // Use a single connection when a transaction is requested.
-    if (this.transactionsStarted === 0) {
-      this.connection = await this.getConnection();
+
+    this.transaction.count++;
+
+    return this.transaction;
+  }
+
+  public async startTransaction(name: string) {
+    const inTransaction = this.inTransaction();
+    const transaction = await this.internalTransaction(name);
+    if (!inTransaction) {
+      this.transaction = null;
     }
-    this.transactionsStarted++;
-    return false;
+
+    const nymph = this.nymph.clone();
+    nymph.driver = new MySQLDriver(this.config, this.link, transaction);
+    nymph.driver.init(nymph);
+
+    return nymph;
   }
 }

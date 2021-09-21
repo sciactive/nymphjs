@@ -17,24 +17,25 @@ You need to install Express, Nymph, and a Nymph driver, then you can use the RES
 ```ts
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import Nymph from '@nymphjs/nymph';
-import rest from '@nymphjs/server';
+import nymph from '@nymphjs/nymph';
+import createServer from '@nymphjs/server';
 
 // Import all the entities you will be using on the server.
 import './entities/MyEntity';
 
 // Configure Nymph.
-const sqliteConfig = {
-  filename: ':memory:',
-};
-
-Nymph.init({}, new SQLite3Driver(sqliteConfig));
+nymph.init(
+  {},
+  new SQLite3Driver({
+    filename: ':memory:',
+  })
+);
 
 // Create your Express app.
 const app = express();
 
-// Use the REST server (with an optional path).
-app.use('/rest', rest);
+// Create and use the REST server (with an optional path).
+app.use('/rest', createServer(nymph));
 
 // Do anything else you need to do...
 

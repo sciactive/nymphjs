@@ -1,3 +1,4 @@
+import { Nymph } from './Nymph';
 import { Options } from './Nymph.types';
 
 export type ACProperties = {
@@ -113,6 +114,10 @@ export interface DataObjectInterface {
  * Entity interface.
  */
 export interface EntityInterface extends DataObjectInterface {
+  /**
+   * The instance of Nymph to use for queries.
+   */
+  $nymph: Nymph;
   /**
    * The entity's Globally Unique ID.
    *
@@ -267,6 +272,10 @@ export interface EntityInterface extends DataObjectInterface {
 }
 
 export type EntityConstructor = (new (guid?: string) => EntityInterface) & {
+  /**
+   * The instance of Nymph to use for queries.
+   */
+  nymph: Nymph;
   /**
    * A unique name for this type of entity used to separate its data from other
    * types of entities in the database.

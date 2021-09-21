@@ -1,6 +1,6 @@
 import SQLite3 from 'better-sqlite3';
 import { customAlphabet } from 'nanoid';
-import Nymph, {
+import {
   NymphDriver,
   EntityConstructor,
   EntityData,
@@ -385,7 +385,7 @@ export default class SQLite3Driver extends NymphDriver {
   ) {
     let EntityClass: EntityConstructor;
     if (typeof className === 'string' || className == null) {
-      const GetEntityClass = Nymph.getEntityClass(className ?? 'Entity');
+      const GetEntityClass = this.nymph.getEntityClass(className ?? 'Entity');
       EntityClass = GetEntityClass;
     } else {
       EntityClass = className;
@@ -440,7 +440,7 @@ export default class SQLite3Driver extends NymphDriver {
       );
       await this.commit('nymph-delete');
       // Remove any cached versions of this entity.
-      if (Nymph.config.cache) {
+      if (this.nymph.config.cache) {
         this.cleanCache(guid);
       }
       return true;
@@ -2006,6 +2006,6 @@ export default class SQLite3Driver extends NymphDriver {
     }
     this.queryRun(`SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.transactionsStarted++;
-    return true;
+    return this.nymph;
   }
 }

@@ -18,26 +18,26 @@ Here's an overview.
 
 ```ts
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import Nymph from '@nymphjs/nymph';
 import Tilmeld from '@nymphjs/tilmeld';
+import nymph from '@nymphjs/nymph';
 
-// Configure Nymph.
-const sqliteConfig = {
-  filename: ':memory:',
-};
-
-Nymph.init({}, new SQLite3Driver(sqliteConfig), Tilmeld);
-Tilmeld.init({
-  appName: 'My App',
-  appUrl: 'http://localhost',
-  cookieDomain: 'localhost',
-  cookiePath: '/',
-  setupPath: '/user',
-  verifyRedirect: 'http://localhost',
-  verifyChangeRedirect: 'http://localhost',
-  cancelChangeRedirect: 'http://localhost',
-  jwtSecret: 'shhhhh',
-});
+nymph.init(
+  {},
+  new SQLite3Driver({
+    filename: ':memory:',
+  }),
+  new Tilmeld({
+    appName: 'My App',
+    appUrl: 'http://localhost',
+    cookieDomain: 'localhost',
+    cookiePath: '/',
+    setupPath: '/user',
+    verifyRedirect: 'http://localhost',
+    verifyChangeRedirect: 'http://localhost',
+    cancelChangeRedirect: 'http://localhost',
+    jwtSecret: 'shhhhh',
+  })
+);
 ```
 
 ## Options

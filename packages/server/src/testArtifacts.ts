@@ -1,4 +1,4 @@
-import NymphServer, {
+import nymphServer, {
   Entity as EntityServer,
   EntityInvalidDataError,
 } from '@nymphjs/nymph';
@@ -98,7 +98,7 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     }
     // Generate employee ID.
     if (this.$data.id == null) {
-      this.$data.id = (await NymphServer.newUID('employee')) ?? undefined;
+      this.$data.id = (await nymphServer.newUID('employee')) ?? undefined;
     }
     return await super.$save();
   }
@@ -130,7 +130,7 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
   }
 }
 
-NymphServer.setEntityClass(EmployeeModel.class, EmployeeModel);
+nymphServer.setEntityClass(EmployeeModel.class, EmployeeModel);
 
 export class BadFunctionCallError extends Error {
   constructor(message: string) {

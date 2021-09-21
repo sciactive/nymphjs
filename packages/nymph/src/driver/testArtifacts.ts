@@ -2,7 +2,7 @@ import fs from 'fs';
 import strtotime from 'locutus/php/datetime/strtotime';
 
 import newGUID from '../newGUID';
-import Nymph from '../Nymph';
+import nymph from '../Nymph';
 import { TestBModel, TestModel, TestModelData } from '../testArtifacts';
 
 export function QueriesTest(it: (name: string, fn: () => void) => void) {
@@ -50,7 +50,7 @@ This one's zip code is 92064.`;
     expect(await entityReferenceTest.$save()).toEqual(true);
 
     // Test synchronous getEntity.
-    testEntity = Nymph.driver.getEntitySync(
+    testEntity = nymph.driver.getEntitySync(
       { class: TestModel },
       testGuid
     ) as TestModel & TestModelData;
@@ -58,7 +58,7 @@ This one's zip code is 92064.`;
     expect(testEntity.guid).toEqual(testGuid);
 
     // Test asynchronous getEntity.
-    testEntity = (await Nymph.getEntity(
+    testEntity = (await nymph.getEntity(
       { class: TestModel },
       testGuid
     )) as TestModel & TestModelData;
@@ -84,13 +84,13 @@ This one's zip code is 92064.`;
   }
 
   it('delete old test data', async () => {
-    let all = await Nymph.getEntities({ class: TestModel });
+    let all = await nymph.getEntities({ class: TestModel });
     expect(Array.isArray(all)).toEqual(true);
     for (const cur of all) {
       expect(await cur.$delete()).toEqual(true);
     }
 
-    all = await Nymph.getEntities({ class: TestModel });
+    all = await nymph.getEntities({ class: TestModel });
     expect(all.length).toEqual(0);
   });
 
@@ -117,7 +117,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by GUID...
-    let resultEntity = await Nymph.getEntity({ class: TestModel }, testGuid);
+    let resultEntity = await nymph.getEntity({ class: TestModel }, testGuid);
     expect(testEntity.$is(resultEntity)).toEqual(true);
 
     // Using class constructor...
@@ -125,7 +125,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$is(resultEntity)).toEqual(true);
 
     // Testing wrong GUID...
-    resultEntity = await Nymph.getEntity({ class: TestModel }, newGUID());
+    resultEntity = await nymph.getEntity({ class: TestModel }, newGUID());
     expect(testEntity.$is(resultEntity)).toEqual(false);
   });
 
@@ -133,54 +133,56 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Verify not in a transaction.
-    expect(await Nymph.inTransaction()).toEqual(false);
+    expect(await nymph.inTransaction()).toEqual(false);
 
-    const transaction = await Nymph.startTransaction('test');
+    let transaction = await nymph.startTransaction('test');
+    testEntity.$nymph = transaction;
 
-    if (!transaction) {
+    if (!(await transaction.inTransaction())) {
       console.log(
         'This Nymph driver or database seems to not support transactions. Skipping transaction tests.'
       );
-      await Nymph.rollback('test');
+      await transaction.rollback('test');
       return;
     }
-
-    // Verify in a transaction.
-    expect(await Nymph.inTransaction()).toEqual(true);
 
     // Change a value in the test entity.
     testEntity.string = 'bad value';
     expect(await testEntity.$save()).toEqual(true);
 
     // Rollback the transaction.
-    await Nymph.rollback('test');
+    await transaction.rollback('test');
 
     // Verify not in a transaction.
-    expect(await Nymph.inTransaction()).toEqual(false);
+    expect(await transaction.inTransaction()).toEqual(false);
 
     // Verify the value is correct.
     await testEntity.$refresh();
     expect(testEntity.string).toEqual('test');
 
     // Start a new transaction.
-    await Nymph.startTransaction('test');
+    transaction = await nymph.startTransaction('test');
+    testEntity.$nymph = transaction;
 
     // Verify in a transaction.
-    expect(await Nymph.inTransaction()).toEqual(true);
+    expect(await transaction.inTransaction()).toEqual(true);
 
     // Delete the entity.
     expect(await testEntity.$delete()).toEqual(true);
-    const resultEntity = await Nymph.getEntity({ class: TestModel }, testGuid);
+    const resultEntity = await transaction.getEntity(
+      { class: TestModel },
+      testGuid
+    );
     expect(resultEntity).toBeNull();
 
     // Rollback the transaction.
-    await Nymph.rollback('test');
+    await transaction.rollback('test');
 
     // Verify not in a transaction.
-    expect(await Nymph.inTransaction()).toEqual(false);
+    expect(await transaction.inTransaction()).toEqual(false);
 
     // Verify it's back.
-    testEntity = (await Nymph.getEntity(
+    testEntity = (await transaction.getEntity(
       { class: TestModel },
       testGuid
     )) as TestModel & TestModelData;
@@ -188,20 +190,22 @@ This one's zip code is 92064.`;
     expect(testEntity.guid).toEqual(testGuid);
 
     // Start a new transaction.
-    await Nymph.startTransaction('test');
+    transaction = await nymph.startTransaction('test');
+    testEntity.$nymph = transaction;
 
     // Verify in a transaction.
-    expect(await Nymph.inTransaction()).toEqual(true);
+    expect(await transaction.inTransaction()).toEqual(true);
 
     // Make a change.
     testEntity.string = 'fish';
     expect(await testEntity.$save()).toEqual(true);
 
     // Commit the transaction.
-    await Nymph.commit('test');
+    await transaction.commit('test');
+    testEntity.$nymph = nymph;
 
     // Verify not in a transaction.
-    expect(await Nymph.inTransaction()).toEqual(false);
+    expect(await transaction.inTransaction()).toEqual(false);
 
     // Verify the value is correct.
     await testEntity.$refresh();
@@ -218,7 +222,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing entity order, offset, limit...
-    const resultEntities = await Nymph.getEntities(
+    const resultEntities = await nymph.getEntities(
       {
         class: TestModel,
         reverse: true,
@@ -236,7 +240,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by GUID and tags...
-    const resultEntity = await Nymph.getEntity(
+    const resultEntity = await nymph.getEntity(
       { class: TestModel },
       { type: '&', guid: testGuid, tag: 'test' }
     );
@@ -247,7 +251,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by GUID and tags...
-    const resultEntity = await Nymph.getEntity(
+    const resultEntity = await nymph.getEntity(
       { class: TestModel },
       { type: '|', guid: [testGuid, newGUID()] }
     );
@@ -258,7 +262,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by GUID and tags...
-    const resultEntity = await Nymph.getEntity(
+    const resultEntity = await nymph.getEntity(
       { class: TestModel },
       { type: '|', guid: [newGUID(), newGUID()] }
     );
@@ -269,7 +273,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by !GUID...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', '!guid': newGUID(), tag: 'test' }
     );
@@ -280,7 +284,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by !tags...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', guid: testGuid, '!tag': ['barbecue', 'pickles'] }
     );
@@ -291,7 +295,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing GUID and wrong tags...
-    const resultEntity = await Nymph.getEntity(
+    const resultEntity = await nymph.getEntity(
       { class: TestModel },
       { type: '&', guid: testGuid, tag: ['pickles'] }
     );
@@ -302,7 +306,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by tags...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' }
     );
@@ -313,7 +317,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong tags...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'pickles' }
     );
@@ -324,7 +328,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by tags inclusively...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '|', tag: ['pickles', 'test', 'barbecue'] }
     );
@@ -335,7 +339,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong inclusive tags...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '|', tag: ['pickles', 'barbecue'] }
     );
@@ -346,7 +350,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by mixed tags...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
       { type: '|', tag: ['pickles', 'test', 'barbecue'] }
@@ -358,7 +362,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong inclusive mixed tags...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
       { type: '|', tag: ['pickles', 'barbecue'] }
@@ -370,7 +374,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong exclusive mixed tags...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'pickles' },
       { type: '|', tag: ['test', 'barbecue'] }
@@ -382,7 +386,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by defined...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', defined: 'string' }
     );
@@ -393,7 +397,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by !defined...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', '!defined': 'pickles' }
     );
@@ -404,7 +408,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by defined in not and clause...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '!&', defined: 'pickles' },
       { type: '&', tag: 'test' }
@@ -416,7 +420,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by equal...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', equal: ['string', 'test'] }
     );
@@ -430,7 +434,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.guid).toEqual(refGuid);
 
     // Retrieving entity by !equal...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', '!equal': ['string', 'wrong'] }
     );
@@ -442,7 +446,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by like...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', like: ['string', 't_s%'] }
     );
@@ -456,7 +460,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.guid).toEqual(refGuid);
 
     // Retrieving entity by !like...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', '!like': ['string', 'wr_n%'] }
     );
@@ -468,7 +472,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by ilike...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', ilike: ['string', 'T_s%'] }
     );
@@ -482,7 +486,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.guid).toEqual(refGuid);
 
     // Retrieving entity by !ilike...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', '!ilike': ['string', 'wr_n%'] }
     );
@@ -494,7 +498,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by like...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', like: ['string', 'T_s%'] }
     );
@@ -505,7 +509,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by tags and equal...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', equal: ['string', 'test'] }
     );
@@ -516,7 +520,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong tags and right equal...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'pickles', equal: ['string', 'test'] }
     );
@@ -527,7 +531,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing right tags and wrong equal...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', equal: ['string', 'pickles'] }
     );
@@ -538,7 +542,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong tags and wrong equal...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'pickles', equal: ['string', 'pickles'] }
     );
@@ -549,14 +553,14 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by contain...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', contain: ['array', 'values'] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by contain with full match...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', contain: ['string', 'test'] }
     );
@@ -567,7 +571,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by !contain...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
       { type: '!&', contain: ['array', 'pickles'] }
@@ -579,14 +583,14 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong contain...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', contain: ['array', 'pickles'] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Testing wrong contain...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', contain: ['string', 'pickles'] }
     );
@@ -597,17 +601,17 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by regex match...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', match: ['match', '.*'] } // anything
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', match: ['match', 'Edward McCheese'] } // a substring
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
       {
@@ -619,7 +623,7 @@ This one's zip code is 92064.`;
       } // inclusive test
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -628,7 +632,7 @@ This one's zip code is 92064.`;
       } // a simple email
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -643,7 +647,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by regex match...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', imatch: ['match', 'edward mccheese'] } // a substring
     );
@@ -654,17 +658,17 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong regex match...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', match: ['match', 'Q'] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'pickle', match: ['match', '.*'] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -681,7 +685,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by regex match...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', match: ['match', 'edward mccheese'] } // a substring
     );
@@ -692,7 +696,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by regex + equal inclusively...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
       { type: '|', equal: ['string', 'pickles'], match: ['string', 'test'] }
@@ -704,7 +708,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by inequality...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -717,7 +721,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -730,7 +734,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -743,7 +747,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -756,7 +760,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -769,7 +773,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -786,7 +790,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by inequality...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -799,7 +803,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -812,7 +816,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -825,7 +829,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -838,7 +842,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -851,7 +855,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -868,7 +872,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by inequality...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -881,7 +885,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -894,7 +898,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -907,7 +911,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -920,7 +924,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -933,7 +937,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -950,7 +954,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by inequality...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -963,7 +967,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -976,7 +980,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -989,7 +993,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1002,7 +1006,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1015,7 +1019,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by inequality...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1032,7 +1036,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by !inequality...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
       { type: '!&', gte: ['number', 60] }
@@ -1044,7 +1048,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong inequality...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', lte: ['number', 29.99] }
     );
@@ -1055,7 +1059,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by time...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', gt: ['cdate', (testEntity.cdate ?? 0) - 120] }
     );
@@ -1066,7 +1070,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong time...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', gte: ['cdate', (testEntity.cdate ?? 0) + 1] }
     );
@@ -1079,7 +1083,7 @@ This one's zip code is 92064.`;
     const referenceEntity = await TestModel.factory(refGuid);
 
     // Retrieving entity by relative time...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', gt: ['timestamp', null, '-1 day'] }
     );
@@ -1087,7 +1091,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by relative time inclusively...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1101,7 +1105,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by relative time...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', gt: ['timestamp', null, '-3 days'] }
     );
@@ -1109,7 +1113,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by relative time...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', gt: ['cdate', null, '-1 day'] }
     );
@@ -1123,7 +1127,7 @@ This one's zip code is 92064.`;
     const referenceEntity = await TestModel.factory(refGuid);
 
     // Retrieving entity by relative time...
-    let resultEntity = await Nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', gt: ['timestamp', null, '+1 day'] }
     );
@@ -1131,7 +1135,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by relative time...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', lt: ['timestamp', null, '-3 days'] }
     );
@@ -1139,7 +1143,7 @@ This one's zip code is 92064.`;
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
 
     // Retrieving entity by relative time...
-    resultEntity = await Nymph.getEntities(
+    resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test', gt: ['cdate', null, '+1 day'] }
     );
@@ -1161,7 +1165,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', ref: ['reference', refGuid] }
     );
@@ -1172,7 +1176,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by !reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
       { type: '!&', ref: ['reference', newGUID()] }
@@ -1184,7 +1188,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', ref: ['reference', newGUID()] }
     );
@@ -1195,7 +1199,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing non-existent reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', ref: ['pickle', refGuid] }
     );
@@ -1206,7 +1210,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by inclusive reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1223,7 +1227,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong inclusive reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1240,7 +1244,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by array reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', ref: ['refArray', refGuid] }
     );
@@ -1251,7 +1255,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong array reference...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1268,7 +1272,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing logic operations...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1313,7 +1317,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing guid return using logic operations...
-    const resultGuid = await Nymph.getEntities(
+    const resultGuid = await nymph.getEntities(
       { class: TestModel, return: 'guid' },
       {
         type: '&',
@@ -1358,7 +1362,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing deep selectors...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1403,7 +1407,7 @@ This one's zip code is 92064.`;
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
-    const resultEntity2 = await Nymph.getEntities(
+    const resultEntity2 = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1448,7 +1452,7 @@ This one's zip code is 92064.`;
     );
     expect(testEntity.$inArray(resultEntity2)).toEqual(true);
 
-    const resultEntity3 = await Nymph.getEntities(
+    const resultEntity3 = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1464,7 +1468,7 @@ This one's zip code is 92064.`;
     );
     expect(testEntity.$inArray(resultEntity3)).toEqual(true);
 
-    const resultEntity4 = await Nymph.getEntities(
+    const resultEntity4 = await nymph.getEntities(
       { class: TestModel },
       {
         type: '|',
@@ -1489,7 +1493,7 @@ This one's zip code is 92064.`;
 
   it('wrong deep selector', async () => {
     // Testing wrong deep selectors...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1510,7 +1514,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by qref...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1527,7 +1531,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Retrieving entity by !qref...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1544,7 +1548,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong qref...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1561,7 +1565,7 @@ This one's zip code is 92064.`;
     await createTestEntities();
 
     // Testing wrong qref...
-    const resultEntity = await Nymph.getEntities(
+    const resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -1579,7 +1583,7 @@ This one's zip code is 92064.`;
 
     for (const sort of ['cdate', 'mdate']) {
       // Retrieving entities sorted...
-      let resultEntities = await Nymph.getEntities({
+      let resultEntities = await nymph.getEntities({
         class: TestModel,
         sort: sort as 'cdate' | 'mdate',
       });
@@ -1591,7 +1595,7 @@ This one's zip code is 92064.`;
       }
 
       // And test the same with guid return...
-      let resultGuids = await Nymph.getEntities({
+      let resultGuids = await nymph.getEntities({
         class: TestModel,
         sort: sort as 'cdate' | 'mdate',
         return: 'guid',
@@ -1602,7 +1606,7 @@ This one's zip code is 92064.`;
       }
 
       // Retrieving entities reverse sorted...
-      resultEntities = await Nymph.getEntities({
+      resultEntities = await nymph.getEntities({
         class: TestModel,
         sort: sort as 'cdate' | 'mdate',
         reverse: true,
@@ -1616,7 +1620,7 @@ This one's zip code is 92064.`;
 
       // And again with other selectors.
       // Retrieving entities sorted...
-      resultEntities = await Nymph.getEntities(
+      resultEntities = await nymph.getEntities(
         { class: TestModel, sort: sort as 'cdate' | 'mdate' },
         { type: '&', match: ['name', '^Multi Test '] }
       );
@@ -1628,7 +1632,7 @@ This one's zip code is 92064.`;
       }
 
       // Retrieving entities reverse sorted...
-      resultEntities = await Nymph.getEntities(
+      resultEntities = await nymph.getEntities(
         { class: TestModel, sort: sort as 'cdate' | 'mdate', reverse: true },
         { type: '&', match: ['name', '^Multi Test '] }
       );
@@ -1656,7 +1660,7 @@ This one's zip code is 92064.`;
     expect(await testEntity.$delete()).toEqual(true);
     expect(testEntity.guid).toBeNull();
 
-    const entity = await Nymph.getEntity(
+    const entity = await nymph.getEntity(
       { class: TestModel },
       { type: '&', guid: testGuid }
     );
@@ -1667,72 +1671,72 @@ This one's zip code is 92064.`;
 
 export function UIDTest(it: (name: string, fn: () => void) => void) {
   it('delete old test data', async () => {
-    expect(await Nymph.deleteUID('TestUID')).toEqual(true);
-    expect(await Nymph.deleteUID('NewUID')).toEqual(true);
+    expect(await nymph.deleteUID('TestUID')).toEqual(true);
+    expect(await nymph.deleteUID('NewUID')).toEqual(true);
   });
 
   it('new UID', async () => {
-    expect(await Nymph.newUID('TestUID')).toEqual(1);
+    expect(await nymph.newUID('TestUID')).toEqual(1);
   });
 
   it('increment UID', async () => {
-    expect(await Nymph.newUID('TestUID')).toEqual(2);
+    expect(await nymph.newUID('TestUID')).toEqual(2);
   });
 
   it('retrieve UID', async () => {
-    expect(await Nymph.getUID('TestUID')).toEqual(2);
+    expect(await nymph.getUID('TestUID')).toEqual(2);
   });
 
   it('rename UID', async () => {
-    expect(await Nymph.renameUID('TestUID', 'NewUID')).toEqual(true);
-    expect(await Nymph.getUID('TestUID')).toBeNull();
-    expect(await Nymph.getUID('NewUID')).toEqual(2);
-    expect(await Nymph.renameUID('NewUID', 'TestUID')).toEqual(true);
-    expect(await Nymph.getUID('NewUID')).toBeNull();
-    expect(await Nymph.getUID('TestUID')).toEqual(2);
+    expect(await nymph.renameUID('TestUID', 'NewUID')).toEqual(true);
+    expect(await nymph.getUID('TestUID')).toBeNull();
+    expect(await nymph.getUID('NewUID')).toEqual(2);
+    expect(await nymph.renameUID('NewUID', 'TestUID')).toEqual(true);
+    expect(await nymph.getUID('NewUID')).toBeNull();
+    expect(await nymph.getUID('TestUID')).toEqual(2);
   });
 
   it('set UID', async () => {
-    expect(await Nymph.setUID('TestUID', 5)).toEqual(true);
-    expect(await Nymph.getUID('TestUID')).toEqual(5);
+    expect(await nymph.setUID('TestUID', 5)).toEqual(true);
+    expect(await nymph.getUID('TestUID')).toEqual(5);
   });
 
   it('delete UID', async () => {
-    expect(await Nymph.deleteUID('TestUID')).toEqual(true);
-    expect(await Nymph.getUID('TestUID')).toBeNull();
+    expect(await nymph.deleteUID('TestUID')).toEqual(true);
+    expect(await nymph.getUID('TestUID')).toBeNull();
   });
 }
 
 export function ExportImportTest(it: (name: string, fn: () => void) => void) {
   async function deleteTestData() {
-    let all = await Nymph.getEntities({ class: TestModel });
+    let all = await nymph.getEntities({ class: TestModel });
     expect(Array.isArray(all)).toEqual(true);
     for (const cur of all) {
       expect(await cur.$delete()).toEqual(true);
     }
 
-    all = await Nymph.getEntities({ class: TestModel });
+    all = await nymph.getEntities({ class: TestModel });
     expect(all.length).toEqual(0);
 
-    all = await Nymph.getEntities({ class: TestBModel });
+    all = await nymph.getEntities({ class: TestBModel });
     expect(Array.isArray(all)).toEqual(true);
     for (const cur of all) {
       expect(await cur.$delete()).toEqual(true);
     }
 
-    all = await Nymph.getEntities({ class: TestBModel });
+    all = await nymph.getEntities({ class: TestBModel });
     expect(all.length).toEqual(0);
 
-    expect(await Nymph.deleteUID('TestUID')).toEqual(true);
-    expect(await Nymph.deleteUID('TestUID2')).toEqual(true);
+    expect(await nymph.deleteUID('TestUID')).toEqual(true);
+    expect(await nymph.deleteUID('TestUID2')).toEqual(true);
   }
 
   async function checkEntityDataAndCount() {
-    expect(await Nymph.getUID('TestUID')).toEqual(2);
-    expect(await Nymph.getUID('TestUID2')).toEqual(1);
+    expect(await nymph.getUID('TestUID')).toEqual(2);
+    expect(await nymph.getUID('TestUID2')).toEqual(1);
 
-    const models = await Nymph.getEntities({ class: TestModel });
-    const bmodels = await Nymph.getEntities({ class: TestBModel });
+    const models = await nymph.getEntities({ class: TestModel });
+    const bmodels = await nymph.getEntities({ class: TestBModel });
 
     expect(models.length).toEqual(30);
     expect(bmodels.length).toEqual(10);
@@ -1760,9 +1764,9 @@ export function ExportImportTest(it: (name: string, fn: () => void) => void) {
   });
 
   it('setup data', async () => {
-    expect(await Nymph.newUID('TestUID')).toEqual(1);
-    expect(await Nymph.newUID('TestUID')).toEqual(2);
-    expect(await Nymph.newUID('TestUID2')).toEqual(1);
+    expect(await nymph.newUID('TestUID')).toEqual(1);
+    expect(await nymph.newUID('TestUID')).toEqual(2);
+    expect(await nymph.newUID('TestUID2')).toEqual(1);
 
     for (let i = 0; i < 20; i++) {
       const EntityClass = i < 15 ? TestModel : TestBModel;
@@ -1794,7 +1798,7 @@ export function ExportImportTest(it: (name: string, fn: () => void) => void) {
   });
 
   it('export data', async () => {
-    expect(await Nymph.export(__dirname + '/testentityexport.nex')).toEqual(
+    expect(await nymph.export(__dirname + '/testentityexport.nex')).toEqual(
       true
     );
   });
@@ -1804,14 +1808,14 @@ export function ExportImportTest(it: (name: string, fn: () => void) => void) {
   });
 
   it('import data', async () => {
-    expect(await Nymph.getUID('TestUID')).toBeNull();
-    expect(await Nymph.getUID('TestUID2')).toBeNull();
-    const models = await Nymph.getEntities({ class: TestModel });
-    const bmodels = await Nymph.getEntities({ class: TestBModel });
+    expect(await nymph.getUID('TestUID')).toBeNull();
+    expect(await nymph.getUID('TestUID2')).toBeNull();
+    const models = await nymph.getEntities({ class: TestModel });
+    const bmodels = await nymph.getEntities({ class: TestBModel });
     expect(models.length).toEqual(0);
     expect(bmodels.length).toEqual(0);
 
-    expect(await Nymph.import(__dirname + '/testentityexport.nex')).toEqual(
+    expect(await nymph.import(__dirname + '/testentityexport.nex')).toEqual(
       true
     );
 

@@ -1,16 +1,10 @@
 import { SQLite3Driver } from '@nymphjs/driver-sqlite3';
-import { Nymph } from '@nymphjs/nymph';
+import nymph from '@nymphjs/nymph';
 
 import Tilmeld from './Tilmeld';
-import User from './User';
 import defaults from './conf/defaults';
 
-const sqliteConfig = {
-  filename: ':memory:',
-};
-
-Nymph.init({}, new SQLite3Driver(sqliteConfig), Tilmeld);
-Tilmeld.init({
+const tilmeld = new Tilmeld({
   appName: 'My App',
   appUrl: 'http://localhost:8080',
   cookieDomain: 'localhost',
@@ -22,6 +16,15 @@ Tilmeld.init({
   cancelChangeRedirect: 'http://localhost:8080',
   jwtSecret: 'shhhhh',
 });
+nymph.init(
+  {},
+  new SQLite3Driver({
+    filename: ':memory:',
+  }),
+  tilmeld
+);
+
+const User = tilmeld.User;
 
 describe('User', () => {
   async function makeNewUser() {

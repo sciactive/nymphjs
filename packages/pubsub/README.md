@@ -16,27 +16,27 @@ A Nymph installation will not publish changes unless you initialize PubSub publi
 
 ```ts
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import Nymph from '@nymphjs/nymph';
+import nymph from '@nymphjs/nymph';
 import { PubSub } from '@nymphjs/pubsub';
 
 const pubSubConfig = {
   entries: ['ws://yourpubsubserver.tld:8080/'], // This should be set to your PubSub server URL(s).
 };
 
-Nymph.init(
+nymph.init(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
   })
 );
-PubSub.initPublisher(pubSubConfig);
+PubSub.initPublisher(pubSubConfig, nymph);
 ```
 
 Now, on your PubSub server, you can use the createServer function to create a new PubSub server using HTTP (without TLS). If you want, this can be done on the same server you use as a REST server, with a different port.
 
 ```ts
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import Nymph from '@nymphjs/nymph';
+import nymph from '@nymphjs/nymph';
 import createServer, { PubSub } from '@nymphjs/pubsub';
 
 const pubSubConfig = {
@@ -47,15 +47,16 @@ const pubSubConfig = {
   entries: ['ws://yourpubsubserver.tld:8080/'],
 };
 
-Nymph.init(
+nymph.init(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
   })
 );
-PubSub.initPublisher(pubSubConfig); // Don't forget to do this; even here.
+// Don't forget to do this; even here!
+PubSub.initPublisher(pubSubConfig, nymph);
 
-const pubsub = createServer(8080, pubSubConfig);
+const pubsub = createServer(8080, pubSubConfig, nymph);
 ```
 
 If you need to provide custom handling in your server (like TLS), you can use the PubSub class directly and provide it a WebSocket server instance.
@@ -64,7 +65,7 @@ If you need to provide custom handling in your server (like TLS), you can use th
 import http from 'http';
 import { server as WebSocketServer } from 'websocket';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import Nymph from '@nymphjs/nymph';
+import nymph from '@nymphjs/nymph';
 import { PubSub } from '@nymphjs/pubsub';
 
 const pubSubConfig = {
@@ -77,13 +78,14 @@ const pubSubConfig = {
 
 // Set up Nymph.
 
-Nymph.init(
+nymph.init(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
   })
 );
-PubSub.initPublisher(pubSubConfig); // Don't forget to do this; even here.
+// Don't forget to do this; even here!
+PubSub.initPublisher(pubSubConfig, nymph);
 
 // Set up the PubSub server.
 
@@ -111,7 +113,7 @@ const wsServer = new WebSocketServer({
   autoAcceptConnections: false,
 });
 
-const pubsub = new PubSub(pubSubConfig, wsServer);
+const pubsub = new PubSub(pubSubConfig, nymph, wsServer);
 ```
 
 ## Options
