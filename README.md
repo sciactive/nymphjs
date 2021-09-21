@@ -4,7 +4,7 @@ Powerful object data storage and querying.
 
 # Getting Started
 
-All you need to start using Nymph is the `@nymphjs/nymph` package and one of the drivers, `@nymphjs/driver-mysql` or `@nymphjs/driver-sqlite3`. Check out the [readme for the Nymph package](packages/nymph/README.md).
+All you need to start using Nymph is the `@nymphjs/nymph` package and one of the drivers, `@nymphjs/driver-mysql`, `@nymphjs/driver-postgresql`, or `@nymphjs/driver-sqlite3`. Check out the [readme for the Nymph package](packages/nymph/README.md).
 
 You can also set up a REST server to use Nymph remotely, a PubSub server to receive updates for queries, and a user and group management system to provide registration and access control.
 
@@ -19,6 +19,10 @@ The Nymph core provides the base level classes and utilities to query the databa
 ## [MySQL Driver](packages/driver-mysql)
 
 The MySQL driver lets you configure Nymph to query and save data to a MySQL database.
+
+## [PostgreSQL Driver](packages/driver-postgresql)
+
+The PostgreSQL driver lets you configure Nymph to query and save data to a Postgres database.
 
 ## [SQLite3 Driver](packages/driver-sqlite3)
 
@@ -47,6 +51,10 @@ Tilmeld (the d is silent) is a user and group management system for Nymph. It pr
 ## [Tilmeld Client](packages/tilmeld-client)
 
 The Tilmeld Client lets you register, login, and perform user account related functions remotely on a Nymph server.
+
+## [Tilmeld Components](packages/tilmeld-components)
+
+The Tilmeld Components are front end registration/login, account recovery, account details, and password change components build with (Svelte)[https://svelte.dev/] and (SMUI)[https://sveltematerialui.com/].
 
 ## [Tilmeld Setup](packages/tilmeld-setup)
 

@@ -1,8 +1,6 @@
 import cp from 'child_process';
-// @ts-ignore: types are wonky with @vlasky/mysql.
-import { default as MySQLType } from '@types/mysql';
-// @ts-ignore: replace with mysql once https://github.com/mysqljs/mysql/pull/2233 is merged.
-import vlaskyMysql from '@vlasky/mysql';
+import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
+import format from 'pg-format';
 import { customAlphabet } from 'nanoid';
 import {
   NymphDriver,
@@ -21,16 +19,19 @@ import {
 } from '@nymphjs/nymph';
 
 import {
-  MySQLDriverConfig,
-  MySQLDriverConfigDefaults as defaults,
+  PostgreSQLDriverConfig,
+  PostgreSQLDriverConfigDefaults as defaults,
 } from './conf';
 
-type MySQLDriverTransaction = {
-  connection: MySQLType.PoolConnection | null;
-  count: number;
+type PostgreSQLDriverConnection = {
+  client: PoolClient;
+  done: () => void;
 };
 
-const mysql = vlaskyMysql as typeof MySQLType;
+type PostgreSQLDriverTransaction = {
+  connection: PostgreSQLDriverConnection | null;
+  count: number;
+};
 
 const makeTableSuffix = customAlphabet(
   '0123456789abcdefghijklmnopqrstuvwxyz',
@@ -38,35 +39,35 @@ const makeTableSuffix = customAlphabet(
 );
 
 /**
- * The MySQL Nymph database driver.
+ * The PostgreSQL Nymph database driver.
  */
-export default class MySQLDriver extends NymphDriver {
-  public config: MySQLDriverConfig;
-  private mysqlConfig: MySQLType.PoolConfig;
+export default class PostgreSQLDriver extends NymphDriver {
+  public config: PostgreSQLDriverConfig;
+  private postgresqlConfig: PoolConfig;
   protected prefix: string;
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
-  protected link: MySQLType.Pool;
-  protected transaction: MySQLDriverTransaction | null = null;
+  protected link: Pool;
+  protected transaction: PostgreSQLDriverTransaction | null = null;
 
   static escape(input: string) {
-    return mysql.escapeId(input);
+    return format.ident(input);
   }
 
   static escapeValue(input: string) {
-    return mysql.escape(input);
+    return format.literal(input);
   }
 
   constructor(
-    config: Partial<MySQLDriverConfig>,
-    link?: MySQLType.Pool,
-    transaction?: MySQLDriverTransaction
+    config: Partial<PostgreSQLDriverConfig>,
+    link?: Pool,
+    transaction?: PostgreSQLDriverTransaction
   ) {
     super();
     this.config = { ...defaults, ...config };
     const { host, user, password, database, port, customPoolConfig } =
       this.config;
-    this.mysqlConfig = customPoolConfig ?? {
+    this.postgresqlConfig = customPoolConfig ?? {
       host,
       user,
       password,
@@ -86,36 +87,41 @@ export default class MySQLDriver extends NymphDriver {
     }
   }
 
-  private getConnection(): Promise<MySQLType.PoolConnection> {
+  private getConnection(): Promise<PostgreSQLDriverConnection> {
     if (this.transaction != null && this.transaction.connection != null) {
       return Promise.resolve(this.transaction.connection);
     }
     return new Promise((resolve, reject) =>
-      this.link.getConnection((err, con) => (err ? reject(err) : resolve(con)))
+      this.link.connect((err, client, done) =>
+        err ? reject(err) : resolve({ client, done })
+      )
     );
   }
 
   /**
-   * Connect to the MySQL database.
+   * Connect to the PostgreSQL database.
    *
-   * @returns Whether this instance is connected to a MySQL database.
+   * @returns Whether this instance is connected to a PostgreSQL database.
    */
   public async connect() {
     // If we think we're connected, try pinging the server.
     try {
       if (this.connected) {
-        const connection: MySQLType.PoolConnection = await new Promise(
+        const connection: PostgreSQLDriverConnection = await new Promise(
           (resolve, reject) =>
-            this.link.getConnection((err, con) =>
-              err ? reject(err) : resolve(con)
+            this.link.connect((err, client, done) =>
+              err ? reject(err) : resolve({ client, done })
             )
         );
-        await new Promise((resolve) =>
-          connection.ping(() => {
+        await new Promise((resolve, reject) =>
+          connection.client.query('SELECT 1;', [], (err, res) => {
+            if (err) {
+              reject(err);
+            }
             resolve(0);
           })
         );
-        connection.release();
+        connection.done();
       }
     } catch (e: any) {
       this.connected = false;
@@ -124,14 +130,14 @@ export default class MySQLDriver extends NymphDriver {
     // Connecting, selecting database
     if (!this.connected) {
       try {
-        this.link = mysql.createPool(this.mysqlConfig);
+        this.link = new Pool(this.postgresqlConfig);
         this.connected = true;
       } catch (e: any) {
         if (
-          this.mysqlConfig.host === 'localhost' &&
-          this.mysqlConfig.user === 'nymph' &&
-          this.mysqlConfig.password === 'password' &&
-          this.mysqlConfig.database === 'nymph'
+          this.postgresqlConfig.host === 'localhost' &&
+          this.postgresqlConfig.user === 'nymph' &&
+          this.postgresqlConfig.password === 'password' &&
+          this.postgresqlConfig.database === 'nymph'
         ) {
           throw new NotConfiguredError(
             "It seems the config hasn't been set up correctly."
@@ -145,9 +151,9 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   /**
-   * Disconnect from the MySQL database.
+   * Disconnect from the PostgreSQL database.
    *
-   * @returns Whether this instance is connected to a MySQL database.
+   * @returns Whether this instance is connected to a PostgreSQL database.
    */
   public async disconnect() {
     if (this.connected) {
@@ -164,7 +170,7 @@ export default class MySQLDriver extends NymphDriver {
   /**
    * Check connection status.
    *
-   * @returns Whether this instance is connected to a MySQL database.
+   * @returns Whether this instance is connected to a PostgreSQL database.
    */
   public isConnected() {
     return this.connected;
@@ -177,91 +183,269 @@ export default class MySQLDriver extends NymphDriver {
    * @returns True on success, false on failure.
    */
   private createTables(etype: string | null = null) {
-    this.queryRunSync('SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";');
-    let foreignKeyDataTableGuid = '';
-    let foreignKeyDataComparisonsTableGuid = '';
-    let foreignKeyReferencesTableGuid = '';
-    if (this.config.foreignKeys) {
-      foreignKeyDataTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`
-      )}(\`guid\`) ON DELETE CASCADE`;
-      foreignKeyDataComparisonsTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`
-      )}(\`guid\`) ON DELETE CASCADE`;
-      foreignKeyReferencesTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`
-      )}(\`guid\`) ON DELETE CASCADE`;
-    }
     if (etype != null) {
       // Create the entity table.
       this.queryRunSync(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`
         )} (
-          \`guid\` BINARY(12) NOT NULL,
-          \`tags\` LONGTEXT,
-          \`cdate\` DOUBLE PRECISION NOT NULL,
-          \`mdate\` DOUBLE PRECISION NOT NULL,
-          PRIMARY KEY (\`guid\`),
-          INDEX \`id_cdate\` USING BTREE (\`cdate\`),
-          INDEX \`id_mdate\` USING BTREE (\`mdate\`),
-          FULLTEXT \`id_tags\` (\`tags\`)
-        ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+          "guid" BYTEA NOT NULL,
+          "tags" TEXT[],
+          "cdate" DOUBLE PRECISION NOT NULL,
+          "mdate" DOUBLE PRECISION NOT NULL,
+          PRIMARY KEY ("guid")
+        ) WITH ( OIDS=FALSE );`
+      );
+      this.queryRunSync(
+        `ALTER TABLE ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}`
+        )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}_id_cdate`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}_id_cdate`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}`
+        )} USING btree ("cdate");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}_id_mdate`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}_id_mdate`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}`
+        )} USING btree ("mdate");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}_id_tags`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}_id_tags`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}`
+        )} USING gin ("tags");`
       );
       // Create the data table.
       this.queryRunSync(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} (
-          \`guid\` BINARY(12) NOT NULL${foreignKeyDataTableGuid},
-          \`name\` TEXT NOT NULL,
-          \`value\` LONGTEXT NOT NULL,
-          PRIMARY KEY (\`guid\`,\`name\`(255)),
-          INDEX \`id_name\` USING HASH (\`name\`(255)),
-          INDEX \`id_name_value\` USING BTREE (\`name\`(255), \`value\`(512))
-        ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+          "guid" BYTEA NOT NULL,
+          "name" TEXT NOT NULL,
+          "value" TEXT NOT NULL,
+          PRIMARY KEY ("guid", "name"),
+          FOREIGN KEY ("guid")
+            REFERENCES ${PostgreSQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
+        ) WITH ( OIDS=FALSE );`
+      );
+      this.queryRunSync(
+        `ALTER TABLE ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`
+        )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_guid`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_guid`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`
+        )} USING btree ("guid");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`
+        )} USING btree ("name");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_guid_name__user`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_guid_name__user`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`
+        )} USING btree ("guid") WHERE "name" = 'user'::text;`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_guid_name__group`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_guid_name__group`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`
+        )} USING btree ("guid") WHERE "name" = 'group'::text;`
       );
       // Create the data comparisons table.
       this.queryRunSync(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
         )} (
-          \`guid\` BINARY(12) NOT NULL${foreignKeyDataComparisonsTableGuid},
-          \`name\` TEXT NOT NULL,
-          \`truthy\` BOOLEAN,
-          \`string\` LONGTEXT,
-          \`number\` DOUBLE,
-          PRIMARY KEY (\`guid\`, \`name\`(255)),
-          INDEX \`id_name\` USING HASH (\`name\`(255))
-        ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+          "guid" BYTEA NOT NULL,
+          "name" TEXT NOT NULL,
+          "truthy" BOOLEAN,
+          "string" TEXT,
+          "number" DOUBLE PRECISION,
+          PRIMARY KEY ("guid", "name"),
+          FOREIGN KEY ("guid")
+            REFERENCES ${PostgreSQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
+        ) WITH ( OIDS=FALSE );`
+      );
+      this.queryRunSync(
+        `ALTER TABLE ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`
+        )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_guid`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_guid`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`
+        )} USING btree ("guid");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_name`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_name`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`
+        )} USING btree ("name");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_guid_name_truthy`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_guid_name_truthy`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`
+        )} USING btree ("guid", "name") WHERE "truthy" = TRUE;`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_guid_name_falsy`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_guid_name_falsy`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`
+        )} USING btree ("guid", "name") WHERE "truthy" <> TRUE;`
       );
       // Create the references table.
       this.queryRunSync(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`
         )} (
-          \`guid\` BINARY(12) NOT NULL${foreignKeyReferencesTableGuid},
-          \`name\` TEXT NOT NULL,
-          \`reference\` BINARY(12) NOT NULL,
-          PRIMARY KEY (\`guid\`, \`name\`(255), \`reference\`),
-          INDEX \`id_name_reference\` USING BTREE (\`name\`(255), \`reference\`)
-        ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+          "guid" BYTEA NOT NULL,
+          "name" TEXT NOT NULL,
+          "reference" BYTEA NOT NULL,
+          PRIMARY KEY ("guid", "name", "reference"),
+          FOREIGN KEY ("guid")
+            REFERENCES ${PostgreSQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
+        ) WITH ( OIDS=FALSE );`
+      );
+      this.queryRunSync(
+        `ALTER TABLE ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}`
+        )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_guid`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_guid`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}`
+        )} USING btree ("guid");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_name`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_name`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}`
+        )} USING btree ("name");`
+      );
+      this.queryRunSync(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_reference`
+        )};`
+      );
+      this.queryRunSync(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_reference`
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}`
+        )} USING btree ("reference");`
       );
     } else {
       // Create the UID table.
       this.queryRunSync(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}uids`
         )} (
-          \`name\` TEXT NOT NULL,
-          \`cur_uid\` BIGINT(20) UNSIGNED NOT NULL,
-          PRIMARY KEY (\`name\`(100))
-        ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+          "name" TEXT NOT NULL,
+          "cur_uid" BIGINT NOT NULL,
+          PRIMARY KEY ("name")
+        ) WITH ( OIDS = FALSE );`
+      );
+      this.queryRunSync(
+        `ALTER TABLE ${PostgreSQLDriver.escape(
+          `${this.prefix}uids`
+        )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
       );
     }
     return true;
@@ -276,10 +460,11 @@ export default class MySQLDriver extends NymphDriver {
 
     let paramRegex = /@[a-zA-Z0-9]+/;
     let match;
+    let i = 1;
     while ((match = query.match(paramRegex))) {
       const param = match[0].substr(1);
       params.push(origParams[param]);
-      query = query.replace(paramRegex, () => '?');
+      query = query.replace(paramRegex, () => '$' + i++);
     }
 
     return { query, params };
@@ -294,8 +479,8 @@ export default class MySQLDriver extends NymphDriver {
     try {
       return await runQuery();
     } catch (e: any) {
-      const errorCode = e?.errno;
-      if (errorCode === 1146 && this.createTables()) {
+      const errorCode = e?.code;
+      if (errorCode === '42P01' && this.createTables()) {
         // If the tables don't exist yet, create them.
         for (let etype of etypes) {
           this.createTables(etype);
@@ -304,23 +489,7 @@ export default class MySQLDriver extends NymphDriver {
           return await runQuery();
         } catch (e2: any) {
           throw new QueryFailedError(
-            'Query failed: ' + e2?.errno + ' - ' + e2?.message,
-            query
-          );
-        }
-      } else if (errorCode === 2006) {
-        // If the MySQL server disconnected, reconnect to it.
-        if (!this.connect()) {
-          throw new QueryFailedError(
-            'Query failed: ' + e?.errno + ' - ' + e?.message,
-            query
-          );
-        }
-        try {
-          return await runQuery();
-        } catch (e2: any) {
-          throw new QueryFailedError(
-            'Query failed: ' + e2?.errno + ' - ' + e2?.message,
+            'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query
           );
         }
@@ -338,8 +507,8 @@ export default class MySQLDriver extends NymphDriver {
     try {
       return runQuery();
     } catch (e: any) {
-      const errorCode = e?.errno;
-      if (errorCode === 1146 && this.createTables()) {
+      const errorCode = e?.code;
+      if (errorCode === '42P01' && this.createTables()) {
         // If the tables don't exist yet, create them.
         for (let etype of etypes) {
           this.createTables(etype);
@@ -348,23 +517,7 @@ export default class MySQLDriver extends NymphDriver {
           return runQuery();
         } catch (e2: any) {
           throw new QueryFailedError(
-            'Query failed: ' + e2?.errno + ' - ' + e2?.message,
-            query
-          );
-        }
-      } else if (errorCode === 2006) {
-        // If the MySQL server disconnected, reconnect to it.
-        if (!this.connect()) {
-          throw new QueryFailedError(
-            'Query failed: ' + e?.errno + ' - ' + e?.message,
-            query
-          );
-        }
-        try {
-          return runQuery();
-        } catch (e2: any) {
-          throw new QueryFailedError(
-            'Query failed: ' + e2?.errno + ' - ' + e2?.message,
+            'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query
           );
         }
@@ -390,23 +543,21 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) => {
-          try {
-            (this.transaction?.connection ?? this.link).query(
-              newQuery,
-              newParams,
-              (error, results) => {
-                if (error) {
-                  reject(error);
-                }
-                resolve(results);
-              }
-            );
-          } catch (e) {
-            reject(e);
+        const results: QueryResult<any> = await new Promise(
+          (resolve, reject) => {
+            try {
+              (this.transaction?.connection?.client ?? this.link)
+                .query(newQuery, newParams)
+                .then(
+                  (results) => resolve(results),
+                  (error) => reject(error)
+                );
+            } catch (e) {
+              reject(e);
+            }
           }
-        });
-        return results;
+        );
+        return results.rows;
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes
@@ -428,10 +579,10 @@ export default class MySQLDriver extends NymphDriver {
       () => {
         const output = cp.spawnSync(
           process.argv0,
-          [__dirname + '/runMysqlSync.js'],
+          [__dirname + '/runPostgresqlSync.js'],
           {
             input: JSON.stringify({
-              mysqlConfig: this.mysqlConfig,
+              postgresqlConfig: this.postgresqlConfig,
               query: newQuery,
               params: newParams,
             }),
@@ -442,8 +593,7 @@ export default class MySQLDriver extends NymphDriver {
           }
         );
         try {
-          const { results } = JSON.parse(output.stdout);
-          return results;
+          return JSON.parse(output.stdout).rows;
         } catch (e) {
           // Do nothing.
         }
@@ -477,23 +627,21 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) => {
-          try {
-            (this.transaction?.connection ?? this.link).query(
-              newQuery,
-              newParams,
-              (error, results) => {
-                if (error) {
-                  reject(error);
-                }
-                resolve(results);
-              }
-            );
-          } catch (e) {
-            reject(e);
+        const results: QueryResult<any> = await new Promise(
+          (resolve, reject) => {
+            try {
+              (this.transaction?.connection?.client ?? this.link)
+                .query(newQuery, newParams)
+                .then(
+                  (results) => resolve(results),
+                  (error) => reject(error)
+                );
+            } catch (e) {
+              reject(e);
+            }
           }
-        });
-        return results[0];
+        );
+        return results.rows[0];
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes
@@ -516,23 +664,21 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) => {
-          try {
-            (this.transaction?.connection ?? this.link).query(
-              newQuery,
-              newParams,
-              (error, results) => {
-                if (error) {
-                  reject(error);
-                }
-                resolve(results);
-              }
-            );
-          } catch (e) {
-            reject(e);
+        const results: QueryResult<any> = await new Promise(
+          (resolve, reject) => {
+            try {
+              (this.transaction?.connection?.client ?? this.link)
+                .query(newQuery, newParams)
+                .then(
+                  (results) => resolve(results),
+                  (error) => reject(error)
+                );
+            } catch (e) {
+              reject(e);
+            }
           }
-        });
-        return { changes: results.changedRows ?? 0 };
+        );
+        return { rowCount: results.rowCount ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes
@@ -554,10 +700,10 @@ export default class MySQLDriver extends NymphDriver {
       () => {
         const output = cp.spawnSync(
           process.argv0,
-          [__dirname + '/runMysqlSync.js'],
+          [__dirname + '/runPostgresqlSync.js'],
           {
             input: JSON.stringify({
-              mysqlConfig: this.mysqlConfig,
+              postgresqlConfig: this.postgresqlConfig,
               query: newQuery,
               params: newParams,
             }),
@@ -568,8 +714,8 @@ export default class MySQLDriver extends NymphDriver {
           }
         );
         try {
-          const { results } = JSON.parse(output.stdout);
-          return { changes: results.changedRows ?? 0 };
+          const results = JSON.parse(output.stdout);
+          return { rowCount: results.rowCount ?? 0 };
         } catch (e) {
           // Do nothing.
         }
@@ -597,13 +743,11 @@ export default class MySQLDriver extends NymphDriver {
       this.transaction = null;
       return true;
     }
-    if (this.config.transactions) {
-      await this.queryRun(`RELEASE SAVEPOINT ${MySQLDriver.escape(name)};`);
-    }
+    await this.queryRun(`RELEASE SAVEPOINT ${PostgreSQLDriver.escape(name)};`);
     this.transaction.count--;
     if (this.transaction.count === 0) {
       await this.queryRun('COMMIT;');
-      this.transaction.connection?.release();
+      this.transaction.connection?.done();
       this.transaction.connection = null;
       this.transaction = null;
     }
@@ -625,9 +769,9 @@ export default class MySQLDriver extends NymphDriver {
     await this.internalTransaction('nymph-delete');
     try {
       await this.queryRun(
-        `DELETE FROM ${MySQLDriver.escape(
+        `DELETE FROM ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`
-        )} WHERE \`guid\`=UNHEX(@guid);`,
+        )} WHERE "guid"=decode(@guid, 'hex');`,
         {
           etypes: [etype],
           params: {
@@ -636,9 +780,9 @@ export default class MySQLDriver extends NymphDriver {
         }
       );
       await this.queryRun(
-        `DELETE FROM ${MySQLDriver.escape(
+        `DELETE FROM ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`
-        )} WHERE \`guid\`=UNHEX(@guid);`,
+        )} WHERE "guid"=decode(@guid, 'hex');`,
         {
           etypes: [etype],
           params: {
@@ -647,9 +791,9 @@ export default class MySQLDriver extends NymphDriver {
         }
       );
       await this.queryRun(
-        `DELETE FROM ${MySQLDriver.escape(
+        `DELETE FROM ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
-        )} WHERE \`guid\`=UNHEX(@guid);`,
+        )} WHERE "guid"=decode(@guid, 'hex');`,
         {
           etypes: [etype],
           params: {
@@ -658,9 +802,9 @@ export default class MySQLDriver extends NymphDriver {
         }
       );
       await this.queryRun(
-        `DELETE FROM ${MySQLDriver.escape(
+        `DELETE FROM ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`
-        )} WHERE \`guid\`=UNHEX(@guid);`,
+        )} WHERE "guid"=decode(@guid, 'hex');`,
         {
           etypes: [etype],
           params: {
@@ -685,9 +829,9 @@ export default class MySQLDriver extends NymphDriver {
       throw new InvalidParametersError('Name not given for UID');
     }
     await this.queryRun(
-      `DELETE FROM ${MySQLDriver.escape(
+      `DELETE FROM ${PostgreSQLDriver.escape(
         `${this.prefix}uids`
-      )} WHERE \`name\`=@name;`,
+      )} WHERE "name"=@name;`,
       {
         params: {
           name,
@@ -712,9 +856,9 @@ export default class MySQLDriver extends NymphDriver {
 
     // Export UIDs.
     let uids = await this.queryIter(
-      `SELECT * FROM ${MySQLDriver.escape(
+      `SELECT * FROM ${PostgreSQLDriver.escape(
         `${this.prefix}uids`
-      )} ORDER BY \`name\`;`
+      )} ORDER BY "name";`
     );
     for (const uid of uids) {
       writeLine(`<${uid.name}>[${uid.cur_uid}]`);
@@ -727,10 +871,12 @@ export default class MySQLDriver extends NymphDriver {
     writeLine('');
 
     // Get the etypes.
-    const tables = await this.queryIter('SHOW TABLES;');
+    const tables = await this.queryIter(
+      'SELECT relname FROM pg_stat_user_tables ORDER BY relname;'
+    );
     const etypes = [];
     for (const tableRow of tables) {
-      const table = tableRow[Object.keys(tableRow)[0]];
+      const table = tableRow.relname;
       if (table.startsWith(this.prefix + 'entities_')) {
         etypes.push(table.substr((this.prefix + 'entities_').length));
       }
@@ -740,21 +886,21 @@ export default class MySQLDriver extends NymphDriver {
       // Export entities.
       const dataIterator = (
         await this.queryIter(
-          `SELECT LOWER(HEX(e.\`guid\`)) as \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\` AS \`dname\`, d.\`value\` AS \`dvalue\`, c.\`string\`, c.\`number\`
-          FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
-          LEFT JOIN ${MySQLDriver.escape(
+          `SELECT encode(e."guid", 'hex') as "guid", e."tags", e."cdate", e."mdate", d."name" AS "dname", d."value" AS "dvalue", c."string", c."number"
+          FROM ${PostgreSQLDriver.escape(`${this.prefix}entities_${etype}`)} e
+          LEFT JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}data_${etype}`
-          )} d ON e.\`guid\`=d.\`guid\`
-          INNER JOIN ${MySQLDriver.escape(
+          )} d ON e."guid"=d."guid"
+          INNER JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}comparisons_${etype}`
-          )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
-          ORDER BY e.\`guid\`;`
+          )} c ON d."guid"=c."guid" AND d."name"=c."name"
+          ORDER BY e."guid";`
         )
       )[Symbol.iterator]();
       let datum = dataIterator.next();
       while (!datum.done) {
         const guid = datum.value.guid;
-        const tags = datum.value.tags.slice(1, -1).split(' ').join(',');
+        const tags = datum.value.tags.join(',');
         const cdate = datum.value.cdate;
         const mdate = datum.value.mdate;
         writeLine(`{${guid}}<${etype}>[${tags}]`);
@@ -766,7 +912,7 @@ export default class MySQLDriver extends NymphDriver {
           do {
             const value =
               datum.value.dvalue === 'N'
-                ? JSON.stringify(datum.value.number)
+                ? JSON.stringify(Number(datum.value.number))
                 : datum.value.dvalue === 'S'
                 ? JSON.stringify(datum.value.string)
                 : datum.value.dvalue;
@@ -784,7 +930,7 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   /**
-   * Generate the MySQL query.
+   * Generate the PostgreSQL query.
    * @param options The options array.
    * @param formattedSelectors The formatted selector array.
    * @param etype
@@ -829,45 +975,25 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid`=UNHEX(@' +
+                  '."guid"=decode(@' +
                   guid +
-                  ')';
+                  ", 'hex')";
                 params[guid] = curGuid;
               }
               break;
             case 'tag':
             case '!tag':
-              if (xor(typeIsNot, clauseNot)) {
-                if (typeIsOr) {
-                  for (const curTag of curValue) {
-                    if (curQuery) {
-                      curQuery += ' OR ';
-                    }
-                    const tag = `param${++count.i}`;
-                    curQuery += ieTable + '.`tags` NOT REGEXP @' + tag;
-                    params[tag] = ' ' + curTag + ' ';
-                  }
-                } else {
-                  const tag = `param${++count.i}`;
-                  curQuery += ieTable + '.`tags` NOT REGEXP @' + tag;
-                  params[tag] = ' (' + curValue.join('|') + ') ';
-                }
-              } else {
+              for (const curTag of curValue) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const groupQueryParam = `param${++count.i}`;
-                let groupQuery = '';
-                for (const curTag of curValue) {
-                  groupQuery += (typeIsOr ? ' ' : ' +') + curTag;
-                }
+                const tag = `param${++count.i}`;
                 curQuery +=
-                  'MATCH (' +
-                  ieTable +
-                  '.`tags`) AGAINST (@' +
-                  groupQueryParam +
-                  ' IN BOOLEAN MODE)';
-                params[groupQueryParam] = groupQuery;
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  '@' +
+                  tag +
+                  ' <@ ie."tags"';
+                params[tag] = [curTag];
               }
               break;
             case 'defined':
@@ -879,11 +1005,11 @@ export default class MySQLDriver extends NymphDriver {
                 const name = `param${++count.i}`;
                 curQuery +=
                   ieTable +
-                  '.`guid` ' +
+                  '."guid" ' +
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `name`=@' +
+                  'IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
+                  ' WHERE "name"=@' +
                   name +
                   ')';
                 params[name] = curVar;
@@ -900,25 +1026,27 @@ export default class MySQLDriver extends NymphDriver {
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     '(' +
                     ieTable +
-                    '.`cdate` NOT NULL)';
+                    '."cdate" NOT NULL)';
                   break;
                 } else if (curVar === 'mdate') {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     '(' +
                     ieTable +
-                    '.`mdate` NOT NULL)';
+                    '."mdate" NOT NULL)';
                   break;
                 } else {
                   const name = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
-                    MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                    ' WHERE `name`=@' +
+                    '."guid" IN (SELECT "guid" FROM ' +
+                    PostgreSQLDriver.escape(
+                      this.prefix + 'comparisons_' + etype
+                    ) +
+                    ' WHERE "name"=@' +
                     name +
-                    ' AND `truthy`=TRUE)';
+                    ' AND "truthy"=TRUE)';
                   params[name] = curVar;
                 }
               }
@@ -933,7 +1061,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`=@' +
+                  '."cdate"=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -947,7 +1075,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`=@' +
+                  '."mdate"=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -962,11 +1090,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `number`=@' +
+                  ' AND "number"=@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -980,11 +1110,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `string`=@' +
+                  ' AND "string"=@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1007,11 +1139,11 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `value`=@' +
+                  ' AND "value"=@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1028,7 +1160,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`=' +
+                  '."cdate"=' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1042,7 +1174,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`=' +
+                  '."mdate"=' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1072,19 +1204,21 @@ export default class MySQLDriver extends NymphDriver {
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     '(' +
                     ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
-                    MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE `name`=@' +
+                    '."guid" IN (SELECT "guid" FROM ' +
+                    PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
+                    ' WHERE "name"=@' +
                     name +
-                    ' AND INSTR(`value`, @' +
+                    ' AND position(@' +
                     value +
-                    ')) OR ' +
+                    ' IN "value")>0) OR ' +
                     ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
-                    MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                    ' WHERE `name`=@' +
+                    '."guid" IN (SELECT "guid" FROM ' +
+                    PostgreSQLDriver.escape(
+                      this.prefix + 'comparisons_' + etype
+                    ) +
+                    ' WHERE "name"=@' +
                     name +
-                    ' AND `string`=@' +
+                    ' AND "string"=@' +
                     stringParam +
                     '))';
                   params[stringParam] = stringValue;
@@ -1092,13 +1226,13 @@ export default class MySQLDriver extends NymphDriver {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
-                    MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE `name`=@' +
+                    '."guid" IN (SELECT "guid" FROM ' +
+                    PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
+                    ' WHERE "name"=@' +
                     name +
-                    ' AND INSTR(`value`, @' +
+                    ' AND position(@' +
                     value +
-                    '))';
+                    ' IN "value")>0)';
                 }
                 params[name] = curValue[0];
                 params[value] = svalue;
@@ -1115,7 +1249,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` REGEXP @' +
+                  '."cdate" ~ @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1129,7 +1263,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`mdate` REGEXP @' +
+                  '."mdate" ~ @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1143,11 +1277,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `string` REGEXP @' +
+                  ' AND "string" ~ @' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1165,7 +1301,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` REGEXP @' +
+                  '."cdate" ~* @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1179,7 +1315,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`mdate` REGEXP @' +
+                  '."mdate" ~* @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1193,13 +1329,15 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND LOWER(`string`) REGEXP LOWER(@' +
+                  ' AND "string" ~* @' +
                   value +
-                  '))';
+                  ')';
                 params[name] = curValue[0];
                 params[value] = curValue[1];
               }
@@ -1215,7 +1353,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` LIKE @' +
+                  '."cdate" LIKE @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1229,7 +1367,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`mdate` LIKE @' +
+                  '."mdate" LIKE @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1243,11 +1381,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `string` LIKE @' +
+                  ' AND "string" LIKE @' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1265,7 +1405,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` LIKE @' +
+                  '."cdate" ILIKE @' +
                   cdate +
                   ')';
                 params[cdate] = curValue[1];
@@ -1279,7 +1419,7 @@ export default class MySQLDriver extends NymphDriver {
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`mdate` LIKE @' +
+                  '."mdate" ILIKE @' +
                   mdate +
                   ')';
                 params[mdate] = curValue[1];
@@ -1293,13 +1433,15 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND LOWER(`string`) LIKE LOWER(@' +
+                  ' AND "string" ILIKE @' +
                   value +
-                  '))';
+                  ')';
                 params[name] = curValue[0];
                 params[value] = curValue[1];
               }
@@ -1314,7 +1456,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`>@' +
+                  '."cdate">@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1328,7 +1470,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`>@' +
+                  '."mdate">@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1343,11 +1485,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `number`>@' +
+                  ' AND "number">@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1366,7 +1510,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`>=@' +
+                  '."cdate">=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1380,7 +1524,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`>=@' +
+                  '."mdate">=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1395,11 +1539,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `number`>=@' +
+                  ' AND "number">=@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1418,7 +1564,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`<@' +
+                  '."cdate"<@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1432,7 +1578,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`<@' +
+                  '."mdate"<@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1447,11 +1593,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `number`<@' +
+                  ' AND "number"<@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1470,7 +1618,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`<=@' +
+                  '."cdate"<=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1484,7 +1632,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`<=@' +
+                  '."mdate"<=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1499,11 +1647,13 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  '."guid" IN (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(
+                    this.prefix + 'comparisons_' + etype
+                  ) +
+                  ' WHERE "name"=@' +
                   name +
-                  ' AND `number`<=@' +
+                  ' AND "number"<=@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1530,13 +1680,13 @@ export default class MySQLDriver extends NymphDriver {
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                 ieTable +
-                '.`guid` IN (SELECT `guid` FROM ' +
-                MySQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE `name`=@' +
+                '."guid" IN (SELECT "guid" FROM ' +
+                PostgreSQLDriver.escape(this.prefix + 'references_' + etype) +
+                ' WHERE "name"=@' +
                 name +
-                ' AND `reference`=UNHEX(@' +
+                ' AND "reference"=decode(@' +
                 guid +
-                '))';
+                ", 'hex'))";
               params[name] = curValue[0];
               params[guid] = curQguid;
               break;
@@ -1586,11 +1736,11 @@ export default class MySQLDriver extends NymphDriver {
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                 ieTable +
-                '.`guid` IN (SELECT `guid` FROM ' +
-                MySQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE `name`=@' +
+                '."guid" IN (SELECT "guid" FROM ' +
+                PostgreSQLDriver.escape(this.prefix + 'references_' + etype) +
+                ' WHERE "name"=@' +
                 qrefName +
-                ' AND `reference` IN (' +
+                ' AND "reference" IN (' +
                 qrefQuery.query +
                 '))';
               params[qrefName] = curValue[0];
@@ -1604,11 +1754,11 @@ export default class MySQLDriver extends NymphDriver {
     let sortBy: string;
     switch (sort) {
       case 'mdate':
-        sortBy = '`mdate`';
+        sortBy = '"mdate"';
         break;
       case 'cdate':
       default:
-        sortBy = '`cdate`';
+        sortBy = '"cdate"';
         break;
     }
     if (options.reverse) {
@@ -1636,41 +1786,41 @@ export default class MySQLDriver extends NymphDriver {
         if (options.return === 'guid') {
           const guidColumn =
             tableSuffix === ''
-              ? `LOWER(HEX(${ieTable}.\`guid\`))`
-              : `${ieTable}.\`guid\``;
-          query = `SELECT ${guidColumn} as \`guid\`
-            FROM ${MySQLDriver.escape(
+              ? `encode(${ieTable}."guid", 'hex')`
+              : `${ieTable}."guid"`;
+          query = `SELECT ${guidColumn} as "guid"
+            FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
             )} ${ieTable}
             WHERE (${whereClause})
             ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
         } else {
           query = `SELECT
-              LOWER(HEX(${eTable}.\`guid\`)) as \`guid\`,
-              ${eTable}.\`tags\`,
-              ${eTable}.\`cdate\`,
-              ${eTable}.\`mdate\`,
-              ${dTable}.\`name\`,
-              ${dTable}.\`value\`,
-              ${cTable}.\`string\`,
-              ${cTable}.\`number\`
-            FROM ${MySQLDriver.escape(
+              encode(${eTable}."guid", 'hex') as "guid",
+              ${eTable}."tags",
+              ${eTable}."cdate",
+              ${eTable}."mdate",
+              ${dTable}."name",
+              ${dTable}."value",
+              ${cTable}."string",
+              ${cTable}."number"
+            FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
             )} ${eTable}
-            LEFT JOIN ${MySQLDriver.escape(
+            LEFT JOIN ${PostgreSQLDriver.escape(
               `${this.prefix}data_${etype}`
-            )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
-            INNER JOIN ${MySQLDriver.escape(
+            )} ${dTable} ON ${eTable}."guid"=${dTable}."guid"
+            INNER JOIN ${PostgreSQLDriver.escape(
               `${this.prefix}comparisons_${etype}`
-            )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
+            )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
             INNER JOIN (
-              SELECT ${ieTable}.\`guid\`
-              FROM ${MySQLDriver.escape(
+              SELECT ${ieTable}."guid"
+              FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`
               )} ${ieTable}
               WHERE (${whereClause})
               ORDER BY ${ieTable}.${sortBy}${limit}${offset}
-            ) ${fTable} ON ${eTable}.\`guid\`=${fTable}.\`guid\`
+            ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
             ORDER BY ${eTable}.${sortBy}`;
         }
       }
@@ -1693,60 +1843,60 @@ export default class MySQLDriver extends NymphDriver {
         if (options.return === 'guid') {
           const guidColumn =
             tableSuffix === ''
-              ? `LOWER(HEX(${ieTable}.\`guid\`))`
-              : `${ieTable}.\`guid\``;
-          query = `SELECT ${guidColumn} as \`guid\`
-            FROM ${MySQLDriver.escape(
+              ? `encode(${ieTable}."guid", 'hex')`
+              : `${ieTable}."guid"`;
+          query = `SELECT ${guidColumn} as "guid"
+            FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
             )} ${ieTable}
             ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
         } else {
           if (limit || offset) {
             query = `SELECT
-                LOWER(HEX(${eTable}.\`guid\`)) as \`guid\`,
-                ${eTable}.\`tags\`,
-                ${eTable}.\`cdate\`,
-                ${eTable}.\`mdate\`,
-                ${dTable}.\`name\`,
-                ${dTable}.\`value\`,
-                ${cTable}.\`string\`,
-                ${cTable}.\`number\`
-              FROM ${MySQLDriver.escape(
+                encode(${eTable}."guid", 'hex') as "guid",
+                ${eTable}."tags",
+                ${eTable}."cdate",
+                ${eTable}."mdate",
+                ${dTable}."name",
+                ${dTable}."value",
+                ${cTable}."string",
+                ${cTable}."number"
+              FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`
               )} ${eTable}
-              LEFT JOIN ${MySQLDriver.escape(
+              LEFT JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
-              INNER JOIN ${MySQLDriver.escape(
+              )} ${dTable} ON ${eTable}."guid"=${dTable}."guid"
+              INNER JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
-              )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
+              )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
               INNER JOIN (
-                SELECT ${ieTable}.\`guid\`
-                FROM ${MySQLDriver.escape(
+                SELECT ${ieTable}."guid"
+                FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}entities_${etype}`
                 )} ${ieTable}
                 ORDER BY ${ieTable}.${sortBy}${limit}${offset}
-              ) ${fTable} ON ${eTable}.\`guid\`=${fTable}.\`guid\`
+              ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
               ORDER BY ${eTable}.${sortBy}`;
           } else {
             query = `SELECT
-                LOWER(HEX(${eTable}.\`guid\`)) as \`guid\`,
-                ${eTable}.\`tags\`,
-                ${eTable}.\`cdate\`,
-                ${eTable}.\`mdate\`,
-                ${dTable}.\`name\`,
-                ${dTable}.\`value\`,
-                ${cTable}.\`string\`,
-                ${cTable}.\`number\`
-              FROM ${MySQLDriver.escape(
+                encode(${eTable}."guid", 'hex') as "guid",
+                ${eTable}."tags",
+                ${eTable}."cdate",
+                ${eTable}."mdate",
+                ${dTable}."name",
+                ${dTable}."value",
+                ${cTable}."string",
+                ${cTable}."number"
+              FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`
               )} ${eTable}
-              LEFT JOIN ${MySQLDriver.escape(
+              LEFT JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
-              INNER JOIN ${MySQLDriver.escape(
+              )} ${dTable} ON ${eTable}."guid"=${dTable}."guid"
+              INNER JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
-              )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
+              )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
               ORDER BY ${eTable}.${sortBy}`;
           }
         }
@@ -1829,7 +1979,7 @@ export default class MySQLDriver extends NymphDriver {
       () => undefined,
       (row) => row.guid,
       (row) => ({
-        tags: row.tags.length > 2 ? row.tags.slice(1, -1).split(' ') : [],
+        tags: row.tags,
         cdate: isNaN(Number(row.cdate)) ? null : Number(row.cdate),
         mdate: isNaN(Number(row.mdate)) ? null : Number(row.mdate),
       }),
@@ -1837,7 +1987,7 @@ export default class MySQLDriver extends NymphDriver {
         name: row.name,
         svalue:
           row.value === 'N'
-            ? JSON.stringify(row.number)
+            ? JSON.stringify(Number(row.number))
             : row.value === 'S'
             ? JSON.stringify(row.string)
             : row.value,
@@ -1873,7 +2023,7 @@ export default class MySQLDriver extends NymphDriver {
       () => undefined,
       (row) => row.guid,
       (row) => ({
-        tags: row.tags.length > 2 ? row.tags.slice(1, -1).split(',') : [],
+        tags: row.tags,
         cdate: isNaN(Number(row.cdate)) ? null : Number(row.cdate),
         mdate: isNaN(Number(row.mdate)) ? null : Number(row.mdate),
       }),
@@ -1881,7 +2031,7 @@ export default class MySQLDriver extends NymphDriver {
         name: row.name,
         svalue:
           row.value === 'N'
-            ? JSON.stringify(row.number)
+            ? JSON.stringify(Number(row.number))
             : row.value === 'S'
             ? JSON.stringify(row.string)
             : row.value,
@@ -1895,16 +2045,16 @@ export default class MySQLDriver extends NymphDriver {
       throw new InvalidParametersError('Name not given for UID.');
     }
     const result = await this.queryGet(
-      `SELECT \`cur_uid\` FROM ${MySQLDriver.escape(
+      `SELECT "cur_uid" FROM ${PostgreSQLDriver.escape(
         `${this.prefix}uids`
-      )} WHERE \`name\`=@name;`,
+      )} WHERE "name"=@name;`,
       {
         params: {
           name: name,
         },
       }
     );
-    return (result?.cur_uid as number | null) ?? null;
+    return result?.cur_uid == null ? null : Number(result.cur_uid);
   }
 
   public async import(filename: string) {
@@ -1913,14 +2063,25 @@ export default class MySQLDriver extends NymphDriver {
         filename,
         async (guid, tags, sdata, etype) => {
           await this.queryRun(
-            `REPLACE INTO ${MySQLDriver.escape(
+            `DELETE FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
-            )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
+            )} WHERE "guid"=decode(@guid, 'hex');`,
             {
               etypes: [etype],
               params: {
                 guid,
-                tags: ' ' + tags.join(' ') + ' ',
+              },
+            }
+          );
+          await this.queryRun(
+            `INSERT INTO ${PostgreSQLDriver.escape(
+              `${this.prefix}entities_${etype}`
+            )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @mdate);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+                tags,
                 cdate: isNaN(Number(JSON.parse(sdata.cdate)))
                   ? null
                   : Number(JSON.parse(sdata.cdate)),
@@ -1933,9 +2094,9 @@ export default class MySQLDriver extends NymphDriver {
           const promises = [];
           promises.push(
             this.queryRun(
-              `DELETE FROM ${MySQLDriver.escape(
+              `DELETE FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid);`,
+              )} WHERE "guid"=decode(@guid, 'hex');`,
               {
                 etypes: [etype],
                 params: {
@@ -1946,9 +2107,9 @@ export default class MySQLDriver extends NymphDriver {
           );
           promises.push(
             this.queryRun(
-              `DELETE FROM ${MySQLDriver.escape(
+              `DELETE FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid);`,
+              )} WHERE "guid"=decode(@guid, 'hex');`,
               {
                 etypes: [etype],
                 params: {
@@ -1959,9 +2120,9 @@ export default class MySQLDriver extends NymphDriver {
           );
           promises.push(
             this.queryRun(
-              `DELETE FROM ${MySQLDriver.escape(
+              `DELETE FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}references_${etype}`
-              )} WHERE \`guid\`=UNHEX(@guid);`,
+              )} WHERE "guid"=decode(@guid, 'hex');`,
               {
                 etypes: [etype],
                 params: {
@@ -1988,9 +2149,9 @@ export default class MySQLDriver extends NymphDriver {
             const promises = [];
             promises.push(
               this.queryRun(
-                `INSERT INTO ${MySQLDriver.escape(
+                `INSERT INTO ${PostgreSQLDriver.escape(
                   `${this.prefix}data_${etype}`
-                )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
+                )} ("guid", "name", "value") VALUES (decode(@guid, 'hex'), @name, @storageValue);`,
                 {
                   etypes: [etype],
                   params: {
@@ -2003,9 +2164,9 @@ export default class MySQLDriver extends NymphDriver {
             );
             promises.push(
               this.queryRun(
-                `INSERT INTO ${MySQLDriver.escape(
+                `INSERT INTO ${PostgreSQLDriver.escape(
                   `${this.prefix}comparisons_${etype}`
-                )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
+                )} ("guid", "name", "truthy", "string", "number") VALUES (decode(@guid, 'hex'), @name, @truthy, @string, @number);`,
                 {
                   etypes: [etype],
                   params: {
@@ -2022,9 +2183,9 @@ export default class MySQLDriver extends NymphDriver {
             for (const reference of references) {
               promises.push(
                 this.queryRun(
-                  `INSERT INTO ${MySQLDriver.escape(
+                  `INSERT INTO ${PostgreSQLDriver.escape(
                     `${this.prefix}references_${etype}`
-                  )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
+                  )} ("guid", "name", "reference") VALUES (decode(@guid, 'hex'), @name, decode(@reference, 'hex'));`,
                   {
                     etypes: [etype],
                     params: {
@@ -2041,9 +2202,19 @@ export default class MySQLDriver extends NymphDriver {
         },
         async (name, curUid) => {
           await this.queryRun(
-            `INSERT INTO ${MySQLDriver.escape(
+            `DELETE FROM ${PostgreSQLDriver.escape(
               `${this.prefix}uids`
-            )} (\`name\`, \`cur_uid\`) VALUES (@name, @curUid) ON DUPLICATE KEY UPDATE \`cur_uid\`=@curUid;`,
+            )} WHERE "name"=@name;`,
+            {
+              params: {
+                name,
+              },
+            }
+          );
+          await this.queryRun(
+            `INSERT INTO ${PostgreSQLDriver.escape(
+              `${this.prefix}uids`
+            )} ("name", "cur_uid") VALUES (@name, @curUid);`,
             {
               params: {
                 name,
@@ -2074,50 +2245,47 @@ export default class MySQLDriver extends NymphDriver {
     await this.internalTransaction('nymph-newuid');
     try {
       const lock = await this.queryGet(
-        `SELECT GET_LOCK(${MySQLDriver.escapeValue(
-          `${this.prefix}uids_${name}`
-        )}, 10) AS \`lock\`;`
-      );
-      if (lock.lock !== 1) {
-        throw new QueryFailedError("Couldn't get lock for UID: " + name);
-      }
-      let curUid: number | null = null;
-      await this.queryRun(
-        `INSERT INTO ${MySQLDriver.escape(
+        `SELECT "cur_uid" FROM ${PostgreSQLDriver.escape(
           `${this.prefix}uids`
-        )} (\`name\`, \`cur_uid\`) VALUES (@name, 1) ON DUPLICATE KEY UPDATE \`cur_uid\`=\`cur_uid\`+1;`,
+        )} WHERE "name"=@name FOR UPDATE;`,
         {
           params: {
             name,
           },
         }
       );
-      const result = await this.queryGet(
-        `SELECT \`cur_uid\` FROM ${MySQLDriver.escape(
-          `${this.prefix}uids`
-        )} WHERE \`name\`=@name;`,
-        {
-          params: {
-            name,
-          },
-        }
-      );
-      await this.queryRun(
-        `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
-          `${this.prefix}uids_${name}`
-        )});`
-      );
-      await this.commit('nymph-newuid');
-      curUid = result.cur_uid ?? null;
-      return curUid;
-    } catch (e: any) {
-      if (e?.message !== "Couldn't get lock for UID: " + name) {
+      let curUid: number | undefined =
+        lock?.cur_uid == null ? undefined : Number(lock.cur_uid);
+      if (curUid == null) {
+        curUid = 1;
         await this.queryRun(
-          `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
-            `${this.prefix}uids_${name}`
-          )});`
+          `INSERT INTO ${PostgreSQLDriver.escape(
+            `${this.prefix}uids`
+          )} ("name", "cur_uid") VALUES (@name, @curUid);`,
+          {
+            params: {
+              name,
+              curUid,
+            },
+          }
+        );
+      } else {
+        curUid++;
+        await this.queryRun(
+          `UPDATE ${PostgreSQLDriver.escape(
+            `${this.prefix}uids`
+          )} SET "cur_uid"=@curUid WHERE "name"=@name;`,
+          {
+            params: {
+              name,
+              curUid,
+            },
+          }
         );
       }
+      await this.commit('nymph-newuid');
+      return curUid;
+    } catch (e: any) {
       await this.rollback('nymph-newuid');
       throw e;
     }
@@ -2128,9 +2296,9 @@ export default class MySQLDriver extends NymphDriver {
       throw new InvalidParametersError('Name not given for UID.');
     }
     await this.queryRun(
-      `UPDATE ${MySQLDriver.escape(
+      `UPDATE ${PostgreSQLDriver.escape(
         `${this.prefix}uids`
-      )} SET \`name\`=@newName WHERE \`name\`=@oldName;`,
+      )} SET "name"=@newName WHERE "name"=@oldName;`,
       {
         params: {
           newName,
@@ -2151,13 +2319,13 @@ export default class MySQLDriver extends NymphDriver {
       this.transaction = null;
       return true;
     }
-    if (this.config.transactions) {
-      await this.queryRun(`ROLLBACK TO SAVEPOINT ${MySQLDriver.escape(name)};`);
-    }
+    await this.queryRun(
+      `ROLLBACK TO SAVEPOINT ${PostgreSQLDriver.escape(name)};`
+    );
     this.transaction.count--;
     if (this.transaction.count === 0) {
       await this.queryRun('ROLLBACK;');
-      this.transaction.connection?.release();
+      this.transaction.connection?.done();
       this.transaction.connection = null;
       this.transaction = null;
     }
@@ -2188,9 +2356,9 @@ export default class MySQLDriver extends NymphDriver {
         const promises = [];
         promises.push(
           this.queryRun(
-            `INSERT INTO ${MySQLDriver.escape(
+            `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}data_${etype}`
-            )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
+            )} ("guid", "name", "value") VALUES (decode(@guid, 'hex'), @name, @storageValue);`,
             {
               etypes: [etype],
               params: {
@@ -2203,9 +2371,9 @@ export default class MySQLDriver extends NymphDriver {
         );
         promises.push(
           this.queryRun(
-            `INSERT INTO ${MySQLDriver.escape(
+            `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}comparisons_${etype}`
-            )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
+            )} ("guid", "name", "truthy", "string", "number") VALUES (decode(@guid, 'hex'), @name, @truthy, @string, @number);`,
             {
               etypes: [etype],
               params: {
@@ -2222,9 +2390,9 @@ export default class MySQLDriver extends NymphDriver {
         for (const reference of references) {
           promises.push(
             this.queryRun(
-              `INSERT INTO ${MySQLDriver.escape(
+              `INSERT INTO ${PostgreSQLDriver.escape(
                 `${this.prefix}references_${etype}`
-              )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
+              )} ("guid", "name", "reference") VALUES (decode(@guid, 'hex'), @name, decode(@reference, 'hex'));`,
               {
                 etypes: [etype],
                 params: {
@@ -2250,14 +2418,14 @@ export default class MySQLDriver extends NymphDriver {
         entity,
         async (_entity, guid, tags, data, sdata, cdate, etype) => {
           await this.queryRun(
-            `INSERT INTO ${MySQLDriver.escape(
+            `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
-            )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @cdate);`,
+            )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @cdate);`,
             {
               etypes: [etype],
               params: {
                 guid,
-                tags: ' ' + tags.join(' ') + ' ',
+                tags,
                 cdate,
               },
             }
@@ -2266,83 +2434,68 @@ export default class MySQLDriver extends NymphDriver {
           return true;
         },
         async (entity, guid, tags, data, sdata, mdate, etype) => {
-          if (this.config.rowLocking) {
-            const promises = [];
-            promises.push(
-              this.queryRun(
-                `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}entities_${etype}`
-                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                }
-              )
-            );
-            promises.push(
-              this.queryRun(
-                `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}data_${etype}`
-                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                }
-              )
-            );
-            promises.push(
-              this.queryRun(
-                `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}comparisons_${etype}`
-                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                }
-              )
-            );
-            promises.push(
-              this.queryRun(
-                `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}references_${etype}`
-                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                }
-              )
-            );
-            await Promise.all(promises);
-          }
-          if (this.config.tableLocking) {
-            await this.queryRun(
-              `LOCK TABLES ${MySQLDriver.escape(
+          const promises = [];
+          promises.push(
+            this.queryRun(
+              `SELECT 1 FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`
-              )} WRITE, ${MySQLDriver.escape(
+              )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              }
+            )
+          );
+          promises.push(
+            this.queryRun(
+              `SELECT 1 FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}data_${etype}`
-              )} WRITE, ${MySQLDriver.escape(
+              )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              }
+            )
+          );
+          promises.push(
+            this.queryRun(
+              `SELECT 1 FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
-              )} WRITE, ${MySQLDriver.escape(
+              )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              }
+            )
+          );
+          promises.push(
+            this.queryRun(
+              `SELECT 1 FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}references_${etype}`
-              )} WRITE;`
-            );
-          }
+              )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              }
+            )
+          );
+          await Promise.all(promises);
           const info = await this.queryRun(
-            `UPDATE ${MySQLDriver.escape(
+            `UPDATE ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
-            )} SET \`tags\`=@tags, \`mdate\`=@mdate WHERE \`guid\`=UNHEX(@guid) AND \`mdate\` <= @emdate;`,
+            )} SET "tags"=@tags, "mdate"=@mdate WHERE "guid"=decode(@guid, 'hex') AND "mdate" <= @emdate;`,
             {
               etypes: [etype],
               params: {
-                tags: ' ' + tags.join(' ') + ' ',
+                tags,
                 mdate,
                 guid,
                 emdate: isNaN(Number(entity.mdate)) ? 0 : Number(entity.mdate),
@@ -2350,13 +2503,13 @@ export default class MySQLDriver extends NymphDriver {
             }
           );
           let success = false;
-          if (info.changes === 1) {
+          if (info.rowCount === 1) {
             const promises = [];
             promises.push(
               this.queryRun(
-                `DELETE FROM ${MySQLDriver.escape(
+                `DELETE FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}data_${etype}`
-                )} WHERE \`guid\`=UNHEX(@guid);`,
+                )} WHERE "guid"=decode(@guid, 'hex');`,
                 {
                   etypes: [etype],
                   params: {
@@ -2367,9 +2520,9 @@ export default class MySQLDriver extends NymphDriver {
             );
             promises.push(
               this.queryRun(
-                `DELETE FROM ${MySQLDriver.escape(
+                `DELETE FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}comparisons_${etype}`
-                )} WHERE \`guid\`=UNHEX(@guid);`,
+                )} WHERE "guid"=decode(@guid, 'hex');`,
                 {
                   etypes: [etype],
                   params: {
@@ -2380,9 +2533,9 @@ export default class MySQLDriver extends NymphDriver {
             );
             promises.push(
               this.queryRun(
-                `DELETE FROM ${MySQLDriver.escape(
+                `DELETE FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}references_${etype}`
-                )} WHERE \`guid\`=UNHEX(@guid);`,
+                )} WHERE "guid"=decode(@guid, 'hex');`,
                 {
                   etypes: [etype],
                   params: {
@@ -2394,9 +2547,6 @@ export default class MySQLDriver extends NymphDriver {
             await Promise.all(promises);
             await insertData(guid, data, sdata, etype);
             success = true;
-          }
-          if (this.config.tableLocking) {
-            await this.queryRun('UNLOCK TABLES;');
           }
           return success;
         },
@@ -2424,18 +2574,36 @@ export default class MySQLDriver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
-    await this.queryRun(
-      `INSERT INTO ${MySQLDriver.escape(
-        `${this.prefix}uids`
-      )} (\`name\`, \`cur_uid\`) VALUES (@name, @curUid) ON DUPLICATE KEY UPDATE \`cur_uid\`=@curUid;`,
-      {
-        params: {
-          name,
-          curUid,
-        },
-      }
-    );
-    return true;
+    await this.internalTransaction('nymph-setuid');
+    try {
+      await this.queryRun(
+        `DELETE FROM ${PostgreSQLDriver.escape(
+          `${this.prefix}uids`
+        )} WHERE "name"=@name;`,
+        {
+          params: {
+            name,
+            curUid,
+          },
+        }
+      );
+      await this.queryRun(
+        `INSERT INTO ${PostgreSQLDriver.escape(
+          `${this.prefix}uids`
+        )} ("name", "cur_uid") VALUES (@name, @curUid);`,
+        {
+          params: {
+            name,
+            curUid,
+          },
+        }
+      );
+      await this.commit('nymph-setuid');
+      return true;
+    } catch (e: any) {
+      await this.rollback('nymph-setuid');
+      throw e;
+    }
   }
 
   private async internalTransaction(name: string) {
@@ -2451,15 +2619,11 @@ export default class MySQLDriver extends NymphDriver {
         count: 0,
         connection: await this.getConnection(),
       };
-      if (this.config.transactions) {
-        // We're not in a transaction yet, so start one.
-        await this.queryRun('START TRANSACTION;');
-      }
+      // We're not in a transaction yet, so start one.
+      await this.queryRun('BEGIN;');
     }
 
-    if (this.config.transactions) {
-      await this.queryRun(`SAVEPOINT ${MySQLDriver.escape(name)};`);
-    }
+    await this.queryRun(`SAVEPOINT ${PostgreSQLDriver.escape(name)};`);
 
     this.transaction.count++;
 
@@ -2474,7 +2638,7 @@ export default class MySQLDriver extends NymphDriver {
     }
 
     const nymph = this.nymph.clone();
-    nymph.driver = new MySQLDriver(this.config, this.link, transaction);
+    nymph.driver = new PostgreSQLDriver(this.config, this.link, transaction);
     nymph.driver.init(nymph);
 
     return nymph;

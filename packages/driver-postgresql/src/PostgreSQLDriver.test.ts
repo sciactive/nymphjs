@@ -1,17 +1,17 @@
 import nymph, { QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
-import MySQLDriver from './MySQLDriver';
+import PostgreSQLDriver from './PostgreSQLDriver';
 
-const mysqlConfig = {
+const postgresqlConfig = {
   host: 'localhost',
   database: 'nymph',
   user: 'nymph',
   password: 'nymph',
 };
 
-nymph.init({}, new MySQLDriver(mysqlConfig));
+nymph.init({}, new PostgreSQLDriver(postgresqlConfig));
 
-describe('MySQLDriver', () => {
+describe('PostgreSQLDriver', () => {
   QueriesTest(it);
   UIDTest(it);
   ExportImportTest(it);

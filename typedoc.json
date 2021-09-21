@@ -3,13 +3,15 @@
     "./packages/client/",
     "./packages/client-node/",
     "./packages/driver-mysql/",
+    "./packages/driver-postgresql/",
     "./packages/driver-sqlite3/",
     "./packages/nymph/",
     "./packages/pubsub/",
     "./packages/query-parser/",
     "./packages/server/",
     "./packages/tilmeld/",
-    "./packages/tilmeld-client/"
+    "./packages/tilmeld-client/",
+    "./packages/tilmeld-components/"
   ],
   "out": "docs",
   "name": "Nymph.js",

@@ -1290,6 +1290,7 @@ export default class SQLite3Driver extends NymphDriver {
                 ...FormattedSelector[]
               ];
               const QrefEntityClass = qrefOptions.class as EntityConstructor;
+              etypes.push(QrefEntityClass.ETYPE);
               const qrefQuery = this.makeEntityQuery(
                 { ...qrefOptions, return: 'guid', class: QrefEntityClass },
                 qrefSelectors,

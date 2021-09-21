@@ -1,7 +1,7 @@
 {
-  "name": "@nymphjs/driver-mysql",
+  "name": "@nymphjs/driver-postgresql",
   "version": "1.0.0-alpha.1",
-  "description": "NymphJS - MySQL DB Driver",
+  "description": "NymphJS - PostgreSQL DB Driver",
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,15 +12,15 @@
   ],
   "scripts": {
     "clean": "test -d dist && rm -r dist || true",
-    "build": "tsc;  cp src/runMysqlSync.js dist/runMysqlSync.js",
+    "build": "tsc;  cp src/runPostgresqlSync.js dist/runPostgresqlSync.js",
     "watch": "tsc --watch",
     "prepare": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:db:run": "npm run test:db:start && npm run test:db:clean",
-    "test:db:clean": "docker container rm nymph-mysql",
-    "test:db:start": "docker run --name nymph-mysql -e MYSQL_ROOT_PASSWORD=123nymphroot -e MYSQL_DATABASE=nymph -e MYSQL_USER=nymph -e MYSQL_PASSWORD=nymph -p 3306:3306 mysql",
-    "test:db:stop": "docker kill -s TERM nymph-mysql"
+    "test:db:clean": "docker container rm nymph-postgresql",
+    "test:db:start": "docker run --name nymph-postgresql -e POSTGRES_USER=nymph -e POSTGRES_PASSWORD=nymph -p 5432:5432 postgres",
+    "test:db:stop": "docker kill -s TERM nymph-postgresql"
   },
   "publishConfig": {
     "access": "public"
@@ -36,13 +36,15 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nymphjs/nymph": "^1.0.0-alpha.1",
-    "@vlasky/mysql": "^2.18.5",
-    "nanoid": "^3.1.25"
+    "nanoid": "^3.1.25",
+    "pg": "^8.7.1",
+    "pg-format": "^1.0.4"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
     "@types/jest": "^27.0.1",
-    "@types/mysql": "^2.15.19",
+    "@types/pg": "^8.6.1",
+    "@types/pg-format": "^1.0.2",
     "jest": "^27.0.6",
     "ts-jest": "^27.0.5",
     "typescript": "^4.3.5"

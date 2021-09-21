@@ -12,9 +12,11 @@ npm install --save @nymphjs/nymph
 
 ## Drivers
 
-To use Nymph, you need a database driver. Nymph provides a [MySQL driver](../driver-mysql/README.md) and a [SQLite3 driver](../driver-sqlite3/README.md).
+To use Nymph, you need a database driver. Nymph.js provides a [MySQL driver](../driver-mysql/README.md), a [PostgreSQL driver](../driver-postgresql/README.md), and a [SQLite3 driver](../driver-sqlite3/README.md). They all provide the exact same functionality.
 
 ## Usage
+
+The default export is an instance of the `Nymph` class. It's provided for convenience.
 
 Here's an overview:
 
@@ -32,6 +34,7 @@ const mysqlConfig = {
 };
 
 nymph.init({}, new MySQLDriver(mysqlConfig));
+nymph.setEntityClass(Todo.class, Todo);
 
 // You are set up. Now you can use entity classes like `Todo` to store data,
 // and Nymph's query methods like `getEntities` to retrieve them.
@@ -58,7 +61,7 @@ async function run() {
 
 ```ts
 // Todo.ts
-import { Nymph, Entity } from '@nymphjs/nymph';
+import { Entity } from '@nymphjs/nymph';
 
 export type TodoData = {
   text: string;
@@ -87,9 +90,18 @@ export default class Todo extends Entity<TodoData> {
       this.$data.done = false;
     }
   }
-}
 
-Nymph.setEntityClass(Todo.class, Todo);
+  async $getOtherTodos() {
+    // this.$nymph (or this.nymph in a static function) is the instance of Nymph
+    // this entity was loaded with. Creating transactions will create a new
+    // instance of Nymph, so it could be a transactional instance.
+    const otherTodos = await this.$nymph.getEntities(
+      { class: Todo },
+      { type: '!&', guid: this.guid }
+    );
+    return otherTodos;
+  }
+}
 ```
 
 ## Options

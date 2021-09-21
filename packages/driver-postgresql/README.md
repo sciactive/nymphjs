@@ -1,13 +1,13 @@
-# Nymph MySQL Driver
+# Nymph PostgreSQL Driver
 
 Powerful object data storage and querying.
 
-The MySQL driver lets you configure Nymph to query and save data to a MySQL database.
+The PostgreSQL driver lets you configure Nymph to query and save data to a Postgres database.
 
 ## Installation
 
 ```sh
-npm install --save @nymphjs/driver-mysql
+npm install --save @nymphjs/driver-postgresql
 ```
 
 ## Usage
@@ -16,16 +16,16 @@ Supply an instance of this driver with its configuration to Nymph's init functio
 
 ```ts
 import nymph from '@nymphjs/nymph';
-import MySQLDriver from '@nymphjs/driver-mysql';
+import PostgreSQLDriver from '@nymphjs/driver-postgresql';
 
-const mysqlConfig = {
+const postgresqlConfig = {
   host: 'your_db_host',
   database: 'your_database',
   user: 'your_user',
   password: 'your_password',
 };
 
-nymph.init({}, new MySQLDriver(mysqlConfig));
+nymph.init({}, new PostgreSQLDriver(postgresqlConfig));
 
 // All done. Nymph is ready to use.
 ```
