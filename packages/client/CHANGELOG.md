@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.2](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2021-09-21)
+
+### Features
+
+- support qref queries from the client ([3c8bef0](https://github.com/sciactive/nymphjs/commit/3c8bef0251111983b06eb13ad42a2afef80a1446))
+- support qref queries in the query parser ([71169a2](https://github.com/sciactive/nymphjs/commit/71169a2aa33f11d791e93bb23d377a6c270b42f2))
+
 # 1.0.0-alpha.1 (2021-09-06)
 
 ### Bug Fixes

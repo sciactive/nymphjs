@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.2](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2021-09-21)
+
+### Bug Fixes
+
+- strict type checking in Tilmeld setup app ([43a22e9](https://github.com/sciactive/nymphjs/commit/43a22e940769b4870d712709eb3a62c4e49d57a3))
+
+### Features
+
+- allow multiple instances of Nymph, including transactional instances ([8ff8bcf](https://github.com/sciactive/nymphjs/commit/8ff8bcf4d549998faa2b3d86440394d75bcdc202))
+- split out Tilmeld components into own package ([66eb98f](https://github.com/sciactive/nymphjs/commit/66eb98f81b502236cf7ff8439194759278154a20))
+- support qref queries in the query parser ([71169a2](https://github.com/sciactive/nymphjs/commit/71169a2aa33f11d791e93bb23d377a6c270b42f2))
+
 # 1.0.0-alpha.1 (2021-09-06)
 
 ### Bug Fixes
