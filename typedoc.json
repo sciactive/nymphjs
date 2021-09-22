@@ -10,8 +10,7 @@
     "./packages/query-parser/",
     "./packages/server/",
     "./packages/tilmeld/",
-    "./packages/tilmeld-client/",
-    "./packages/tilmeld-components/"
+    "./packages/tilmeld-client/"
   ],
   "out": "docs",
   "name": "Nymph.js",
