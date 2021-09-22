@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.3](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.2...v1.0.0-alpha.3) (2021-09-22)
+
+### Features
+
+- allow multiple instances of Nymph Client ([81eacd7](https://github.com/sciactive/nymphjs/commit/81eacd7caff6f3c209d7d6dbfdac0414a1857c6d))
+- migrate Tilmeld Client to new instance based Nymph Client ([dffe83b](https://github.com/sciactive/nymphjs/commit/dffe83b3900171a56d703cd491536b5d21360198))
+- move to fully instance based design, no more globals ([c036220](https://github.com/sciactive/nymphjs/commit/c0362209b90a475b8b85269a829b0ec6bed4465f))
+
 # [1.0.0-alpha.2](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.1...v1.0.0-alpha.2) (2021-09-21)
 
 ### Bug Fixes
