@@ -198,7 +198,7 @@ export default function setup(options: NymphOptions, nymph: Nymph) {
 
   app.get('/options.js', async (_request, response) => {
     response.type('text/javascript');
-    response.send(`window.NymphOptions = ${JSON.stringify(options)};`);
+    response.send(`window.nymphOptions = ${JSON.stringify(options)};`);
   });
 
   app.use(

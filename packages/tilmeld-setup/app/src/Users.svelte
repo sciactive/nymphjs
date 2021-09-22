@@ -90,7 +90,6 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { Nymph } from '@nymphjs/client';
   import queryParser from '@nymphjs/query-parser';
   import {
     AdminUserData,
@@ -107,6 +106,8 @@
   import Fab from '@smui/fab';
   import { Icon } from '@smui/common';
   import { Svg } from '@smui/common/elements';
+
+  import nymph from '../nymph';
 
   import UserEdit from './UserEdit.svelte';
 
@@ -145,7 +146,7 @@
           },
         }
       );
-      entities = await Nymph.getEntities(...query);
+      entities = await nymph.getEntities(...query);
     } catch (e: any) {
       failureMessage = e?.message;
     }

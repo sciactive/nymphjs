@@ -1,6 +1,7 @@
-import { Nymph, Entity, Options, Selector } from '@nymphjs/client';
+import { Entity, Options, Selector } from '@nymphjs/client';
 
-import User, { CurrentUserData } from './User';
+import type User from './User';
+import type { CurrentUserData } from './User';
 
 export type GroupData = {
   /**
@@ -119,8 +120,8 @@ export default class Group extends Entity<GroupData> {
     options?: Options,
     selectors?: Selector[]
   ): Promise<(Group & GroupData)[]> {
-    return await Group.serverCallStatic('getPrimaryGroups', [
-      { options, class: Group.class },
+    return await this.serverCallStatic('getPrimaryGroups', [
+      { options, class: this.class },
       selectors,
     ]);
   }
@@ -129,11 +130,9 @@ export default class Group extends Entity<GroupData> {
     options?: Options,
     selectors?: Selector[]
   ): Promise<(Group & GroupData)[]> {
-    return await Group.serverCallStatic('getSecondaryGroups', [
-      { options, class: Group.class },
+    return await this.serverCallStatic('getSecondaryGroups', [
+      { options, class: this.class },
       selectors,
     ]);
   }
 }
-
-Nymph.setEntityClass(Group.class, Group);

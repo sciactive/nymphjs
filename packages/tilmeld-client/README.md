@@ -16,6 +16,12 @@ You can find UMD in `dist`, or TS source in `src`.
 
 The Tilmeld client contains the client versions of the `User` and `Group` entities. It also contains helpers, `getClientConfig`, `login`, `register`, and `checkUsername`.
 
+Once you've initialized Nymph Client, set the User and Group classes on it.
+
+```ts
+
+```
+
 # License
 
 Copyright 2021 SciActive Inc

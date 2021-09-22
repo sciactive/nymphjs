@@ -327,7 +327,6 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
-  import { Nymph } from '@nymphjs/client';
   import {
     AdminGroupData,
     ClientConfig,
@@ -358,6 +357,8 @@
   import Button from '@smui/button';
   import { Icon, Label } from '@smui/common';
   import { Svg } from '@smui/common/elements';
+
+  import nymph from '../nymph';
 
   const dispatch = createEventDispatcher();
 
@@ -448,7 +449,7 @@
           },
         }
       );
-      parents = (await Nymph.getEntities(...query)).filter((group) => {
+      parents = (await nymph.getEntities(...query)).filter((group) => {
         return !group.$is(entity) && !group.$is(entity.parent);
       });
     } catch (e: any) {

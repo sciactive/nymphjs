@@ -38,6 +38,7 @@ export default class PubSub {
 
   public constructor(nymphOptions: NymphOptions, nymph: Nymph) {
     this.nymph = nymph;
+    this.nymph.pubsub = this;
     this.pubsubUrl = nymphOptions.pubsubUrl;
     this.WebSocket = nymphOptions.WebSocket ?? WebSocket;
     this.noConsole = !!nymphOptions.noConsole;
@@ -52,10 +53,6 @@ export default class PubSub {
     if (typeof navigator === 'undefined' || navigator.onLine) {
       this.connect();
     }
-  }
-
-  public isConfigured() {
-    return this.pubsubUrl != null;
   }
 
   public subscribeEntities<T extends EntityConstructor = EntityConstructor>(

@@ -15,11 +15,13 @@ import {
   ResponseCallback,
   Selector,
 } from './Nymph.types';
+import PubSub from './PubSub';
 import { entitiesToReferences, entityConstructorsToClassNames } from './utils';
 
 let requester: HttpRequester;
 
 export default class Nymph {
+  public pubsub: PubSub | undefined = undefined;
   private entityClasses: { [k: string]: EntityConstructor } = {};
   private requestCallbacks: RequestCallback[] = [];
   private responseCallbacks: ResponseCallback[] = [];

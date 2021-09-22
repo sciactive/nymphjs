@@ -1,6 +1,7 @@
-import { Nymph, Entity, PubSub } from '@nymphjs/client';
+import { Nymph, Entity } from '@nymphjs/client';
 
-import Group, { AdminGroupData, CurrentGroupData } from './Group';
+import type Group from './Group';
+import type { AdminGroupData, CurrentGroupData } from './Group';
 
 export type EventType = 'register' | 'login' | 'logout';
 export type RegisterCallback = (user: User & CurrentUserData) => void;
@@ -127,6 +128,24 @@ export type AdminUserData = CurrentUserData & {
 let currentToken: string | null = null;
 
 export default class User extends Entity<UserData> {
+  /**
+   * Adds listeners to Nymph to handle authentication changes.
+   */
+  public static set nymph(value: Nymph) {
+    this.nymphValue = value;
+
+    if (this.removeNymphResponseListener) {
+      this.removeNymphResponseListener();
+    }
+    this.removeNymphResponseListener = this.nymph.on('response', (response) =>
+      this.handleToken(response)
+    );
+    this.handleToken();
+  }
+  public static get nymph() {
+    return this.nymphValue;
+  }
+  private static nymphValue: Nymph;
   // The name of the server class
   public static class = 'User';
   private static registerCallbacks: RegisterCallback[] = [];
@@ -137,20 +156,6 @@ export default class User extends Entity<UserData> {
   private static currentUser?: User & CurrentUserData;
   private static currentUserPromise?: Promise<(User & CurrentUserData) | null>;
   private static removeNymphResponseListener?: () => void;
-
-  /**
-   * No need to call this function yourself. It is called when the class is
-   * loaded. It adds listeners to Nymph to handle authentication changes.
-   */
-  public static init() {
-    if (this.removeNymphResponseListener) {
-      this.removeNymphResponseListener();
-    }
-    this.removeNymphResponseListener = Nymph.on('response', (response) =>
-      User.handleToken(response)
-    );
-    User.handleToken();
-  }
 
   constructor(guid?: string) {
     super(guid);
@@ -170,7 +175,7 @@ export default class User extends Entity<UserData> {
   static async factoryUsername(username?: string): Promise<User & UserData> {
     const entity = new this();
     if (username != null) {
-      const entity = await Nymph.getEntity(
+      const entity = await this.nymph.getEntity(
         {
           class: this,
         },
@@ -218,29 +223,31 @@ export default class User extends Entity<UserData> {
   public async $register(data: {
     password: string;
   }): Promise<{ result: boolean; loggedin: boolean; message: string }> {
+    const UserClass = this.constructor as typeof User;
     const response = await this.$serverCall('$register', [data]);
     if (response.result) {
-      for (let i = 0; i < User.registerCallbacks.length; i++) {
-        User.registerCallbacks[i] && User.registerCallbacks[i](this);
+      for (let i = 0; i < UserClass.registerCallbacks.length; i++) {
+        UserClass.registerCallbacks[i] && UserClass.registerCallbacks[i](this);
       }
     }
     if (response.loggedin) {
-      User.currentUser = this;
-      User.handleToken();
-      for (let i = 0; i < User.loginCallbacks.length; i++) {
-        User.loginCallbacks[i] && User.loginCallbacks[i](this);
+      UserClass.currentUser = this;
+      UserClass.handleToken();
+      for (let i = 0; i < UserClass.loginCallbacks.length; i++) {
+        UserClass.loginCallbacks[i] && UserClass.loginCallbacks[i](this);
       }
     }
     return response;
   }
 
   public async $logout(): Promise<{ result: boolean; message: string }> {
+    const UserClass = this.constructor as typeof User;
     const response = await this.$serverCall('$logout', []);
     if (response.result) {
-      User.currentUser = undefined;
-      User.handleToken();
-      for (let i = 0; i < User.logoutCallbacks.length; i++) {
-        User.logoutCallbacks[i] && User.logoutCallbacks[i](this);
+      UserClass.currentUser = undefined;
+      UserClass.handleToken();
+      for (let i = 0; i < UserClass.logoutCallbacks.length; i++) {
+        UserClass.logoutCallbacks[i] && UserClass.logoutCallbacks[i](this);
       }
     }
     return response;
@@ -266,23 +273,23 @@ export default class User extends Entity<UserData> {
   public static async current(
     returnObjectIfNotExist?: boolean
   ): Promise<(User & CurrentUserData) | null> {
-    if (User.currentUser !== undefined) {
-      return User.currentUser;
+    if (this.currentUser !== undefined) {
+      return this.currentUser;
     }
-    if (!User.currentUserPromise) {
-      User.currentUserPromise = User.serverCallStatic('current', [false]).then(
+    if (!this.currentUserPromise) {
+      this.currentUserPromise = this.serverCallStatic('current', [false]).then(
         (user: (User & CurrentUserData) | null) => {
-          User.currentUser = user ?? undefined;
-          User.currentUserPromise = undefined;
+          this.currentUser = user ?? undefined;
+          this.currentUserPromise = undefined;
           return user;
         }
       );
     }
-    await User.currentUserPromise;
-    if (User.currentUser == null) {
-      return returnObjectIfNotExist ? User.factorySync() : null;
+    await this.currentUserPromise;
+    if (this.currentUser == null) {
+      return returnObjectIfNotExist ? this.factorySync() : null;
     }
-    return User.currentUser;
+    return this.currentUser;
   }
 
   public static async loginUser(data: {
@@ -293,12 +300,12 @@ export default class User extends Entity<UserData> {
     message: string;
     user?: User & CurrentUserData;
   }> {
-    const response = await User.serverCallStatic('loginUser', [data]);
+    const response = await this.serverCallStatic('loginUser', [data]);
     if (response.result) {
-      User.currentUser = response.user;
-      User.handleToken();
-      for (let i = 0; i < User.loginCallbacks.length; i++) {
-        User.loginCallbacks[i] && User.loginCallbacks[i](response.user);
+      this.currentUser = response.user;
+      this.handleToken();
+      for (let i = 0; i < this.loginCallbacks.length; i++) {
+        this.loginCallbacks[i] && this.loginCallbacks[i](response.user);
       }
     }
     return response;
@@ -308,7 +315,7 @@ export default class User extends Entity<UserData> {
     recoveryType: 'username' | 'password';
     account: string;
   }): Promise<{ result: boolean; message: string }> {
-    return await User.serverCallStatic('sendRecovery', [data]);
+    return await this.serverCallStatic('sendRecovery', [data]);
   }
 
   public static async recover(data: {
@@ -316,24 +323,24 @@ export default class User extends Entity<UserData> {
     secret: string;
     password: string;
   }): Promise<{ result: boolean; message: string }> {
-    return await User.serverCallStatic('recover', [data]);
+    return await this.serverCallStatic('recover', [data]);
   }
 
   public static async getClientConfig(): Promise<ClientConfig> {
-    if (User.clientConfig) {
-      return User.clientConfig;
+    if (this.clientConfig) {
+      return this.clientConfig;
     }
-    if (!User.clientConfigPromise) {
-      User.clientConfigPromise = User.serverCallStatic(
+    if (!this.clientConfigPromise) {
+      this.clientConfigPromise = this.serverCallStatic(
         'getClientConfig',
         []
       ).then((config) => {
-        User.clientConfig = config;
-        User.clientConfigPromise = undefined;
+        this.clientConfig = config;
+        this.clientConfigPromise = undefined;
         return config;
       });
     }
-    return await User.clientConfigPromise;
+    return await this.clientConfigPromise;
   }
 
   private static handleToken(response?: Response) {
@@ -353,9 +360,9 @@ export default class User extends Entity<UserData> {
     if (currentToken !== token) {
       if (token == null || token === '') {
         if (currentToken != null) {
-          Nymph.setXsrfToken(null);
-          if (PubSub.isConfigured()) {
-            PubSub.setToken(null);
+          this.nymph.setXsrfToken(null);
+          if (this.nymph.pubsub) {
+            this.nymph.pubsub.setToken(null);
           }
           currentToken = null;
         }
@@ -367,9 +374,9 @@ export default class User extends Entity<UserData> {
             ? Buffer.from(base64, 'base64').toString('binary') // node
             : atob(base64); // browser
         const jwt = JSON.parse(json);
-        Nymph.setXsrfToken(jwt.xsrfToken);
-        if (PubSub.isConfigured()) {
-          PubSub.setToken(token);
+        this.nymph.setXsrfToken(jwt.xsrfToken);
+        if (this.nymph.pubsub) {
+          this.nymph.pubsub.setToken(token);
         }
         currentToken = token;
       }
@@ -430,7 +437,3 @@ export default class User extends Entity<UserData> {
     return true;
   }
 }
-
-Nymph.setEntityClass(User.class, User);
-
-User.init();
