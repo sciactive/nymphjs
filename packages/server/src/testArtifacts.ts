@@ -2,7 +2,6 @@ import nymphServer, {
   Entity as EntityServer,
   EntityInvalidDataError,
 } from '@nymphjs/nymph';
-import { Nymph } from '@nymphjs/client-node';
 import { Entity } from '@nymphjs/client';
 
 export type EmployeeBaseData<T> = {
@@ -188,5 +187,4 @@ export class Employee extends Entity<EmployeeData> {
   }
 }
 
-Nymph.setEntityClass(Employee.class, Employee);
 export default Employee;

@@ -1,8 +1,7 @@
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import nymphServer from '@nymphjs/nymph';
-import { Nymph } from '@nymphjs/client-node';
-import { PubSub } from '@nymphjs/client';
+import { Nymph, PubSub } from '@nymphjs/client-node';
 import createRestServer from '@nymphjs/server';
 import { Employee, EmployeeData } from '@nymphjs/server/dist/testArtifacts.js';
 
@@ -26,13 +25,16 @@ const app = express();
 app.use(createRestServer(nymphServer));
 const server = app.listen(5080);
 
-const pubsub = createServer(5081, pubSubConfig, nymphServer);
+const pubsubServer = createServer(5081, pubSubConfig, nymphServer);
 
-Nymph.init({
+const nymphOptions = {
   restUrl: 'http://localhost:5080/',
   pubsubUrl: 'ws://localhost:5081/',
   noConsole: true,
-});
+};
+const nymph = new Nymph(nymphOptions);
+const pubsub = new PubSub(nymphOptions, nymph);
+nymph.setEntityClass(Employee.class, Employee);
 
 describe('Nymph REST Server and Client', () => {
   async function createJane() {
@@ -57,7 +59,7 @@ describe('Nymph REST Server and Client', () => {
 
     await new Promise((resolve) => {
       let updated = false;
-      const subscription = PubSub.subscribeEntities(
+      const subscription = pubsub.subscribeEntities(
         { class: Employee },
         {
           type: '&',
@@ -89,14 +91,14 @@ describe('Nymph REST Server and Client', () => {
       if (jane.guid == null) {
         throw new Error('Entity is null.');
       }
-      const subscription = PubSub.subscribeEntities(
+      const subscription = pubsub.subscribeEntities(
         { class: Employee },
         {
           type: '&',
           guid: jane.guid,
         }
       )(async (update) => {
-        PubSub.updateArray(entities, update);
+        pubsub.updateArray(entities, update);
 
         if (mdate > 0 && (entities[0]?.mdate ?? -1) === mdate) {
           subscription.unsubscribe();
@@ -128,14 +130,14 @@ describe('Nymph REST Server and Client', () => {
       if (jane.guid == null) {
         throw new Error('Entity is null.');
       }
-      const subscription = PubSub.subscribeEntities(
+      const subscription = pubsub.subscribeEntities(
         { class: Employee },
         {
           type: '&',
           guid: jane.guid,
         }
       )(async (update) => {
-        PubSub.updateArray(entities, update);
+        pubsub.updateArray(entities, update);
 
         if (updated) {
           subscription.unsubscribe();
@@ -167,14 +169,14 @@ describe('Nymph REST Server and Client', () => {
       if (jane.guid == null) {
         throw new Error('Entity is null.');
       }
-      const subscription = PubSub.subscribeEntities(
+      const subscription = pubsub.subscribeEntities(
         { class: Employee },
         {
           type: '&',
           equal: ['name', 'Jane Doe'],
         }
       )(async (update) => {
-        PubSub.updateArray(entities, update);
+        pubsub.updateArray(entities, update);
 
         if (updated) {
           subscription.unsubscribe();
@@ -202,14 +204,14 @@ describe('Nymph REST Server and Client', () => {
     await new Promise((resolve) => {
       let receivedRemove = false;
       let receivedAdd = false;
-      const subscription = PubSub.subscribeEntities(
+      const subscription = pubsub.subscribeEntities(
         { class: Employee, limit: 1, reverse: true },
         {
           type: '&',
           equal: ['name', 'Jane Doe'],
         }
       )(async (update) => {
-        PubSub.updateArray(entities, update);
+        pubsub.updateArray(entities, update);
 
         if (jane) {
           if ('removed' in update) {
@@ -238,7 +240,7 @@ describe('Nymph REST Server and Client', () => {
 
     await new Promise(async (resolve) => {
       let mdate = 0;
-      const subscription = PubSub.subscribeWith(jane, async () => {
+      const subscription = pubsub.subscribeWith(jane, async () => {
         if (mdate > 0 && (jane.mdate ?? -1) === mdate) {
           subscription.unsubscribe();
           resolve(true);
@@ -263,7 +265,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('new uid', async () => {
     await new Promise(async (resolve) => {
-      const subscription = PubSub.subscribeUID('testNewUID')(
+      const subscription = pubsub.subscribeUID('testNewUID')(
         async (value) => {
           expect(value).toEqual(directValue);
           subscription.unsubscribe();
@@ -274,14 +276,14 @@ describe('Nymph REST Server and Client', () => {
         }
       );
 
-      const directValue = await Nymph.newUID('testNewUID');
+      const directValue = await nymph.newUID('testNewUID');
     });
   });
 
   it('increasing uids', async () => {
     await new Promise(async (resolve) => {
       let lastUpdate: number;
-      const subscription = PubSub.subscribeUID('testIncUID')(
+      const subscription = pubsub.subscribeUID('testIncUID')(
         async (value) => {
           if (lastUpdate) {
             expect(value).toEqual(lastUpdate + 1);
@@ -301,14 +303,14 @@ describe('Nymph REST Server and Client', () => {
 
       let directValue: number = -1;
       while (directValue < 100) {
-        directValue = await Nymph.newUID('testIncUID');
+        directValue = await nymph.newUID('testIncUID');
       }
     });
   });
 
   it('set uid', async () => {
     await new Promise(async (resolve) => {
-      const subscription = PubSub.subscribeUID('testSetUID')(
+      const subscription = pubsub.subscribeUID('testSetUID')(
         async (value) => {
           expect(value).toEqual(123);
           subscription.unsubscribe();
@@ -319,14 +321,14 @@ describe('Nymph REST Server and Client', () => {
         }
       );
 
-      await Nymph.setUID('testSetUID', 123);
+      await nymph.setUID('testSetUID', 123);
     });
   });
 
   it('rename uid from old name', async () => {
     await new Promise(async (resolve) => {
       let updated = false;
-      const subscription = PubSub.subscribeUID('testRenameUID')(
+      const subscription = pubsub.subscribeUID('testRenameUID')(
         async (value, event) => {
           if (updated) {
             expect(event).toEqual('renameUID');
@@ -343,14 +345,14 @@ describe('Nymph REST Server and Client', () => {
         }
       );
 
-      await Nymph.setUID('testRenameUID', 456);
+      await nymph.setUID('testRenameUID', 456);
       await nymphServer.renameUID('testRenameUID', 'newRenameUID');
     });
   });
 
   it('rename uid from new name', async () => {
     await new Promise(async (resolve) => {
-      const subscription = PubSub.subscribeUID('newRename2UID')(
+      const subscription = pubsub.subscribeUID('newRename2UID')(
         async (value, event) => {
           expect(event).toEqual('setUID');
           expect(value).toEqual(456);
@@ -362,17 +364,17 @@ describe('Nymph REST Server and Client', () => {
         }
       );
 
-      await Nymph.setUID('testRename2UID', 456);
+      await nymph.setUID('testRename2UID', 456);
       await nymphServer.renameUID('testRename2UID', 'newRename2UID');
     });
   });
 
   it('delete uid', async () => {
-    await Nymph.setUID('testDeleteUID', 789);
+    await nymph.setUID('testDeleteUID', 789);
 
     await new Promise(async (resolve) => {
       let updated = false;
-      const subscription = PubSub.subscribeUID('testDeleteUID')(
+      const subscription = pubsub.subscribeUID('testDeleteUID')(
         async (value, event) => {
           if (updated && event === 'deleteUID') {
             expect(value).toEqual(null);
@@ -388,20 +390,20 @@ describe('Nymph REST Server and Client', () => {
         }
       );
 
-      await Nymph.deleteUID('testDeleteUID');
+      await nymph.deleteUID('testDeleteUID');
     });
   });
 
   afterAll(async () => {
     // avoid jest open handle error
     const closed = new Promise((resolve) => {
-      PubSub.on('disconnect', () => {
+      pubsub.on('disconnect', () => {
         resolve(true);
       });
     });
-    PubSub.close(); // close PubSub client.
+    pubsub.close(); // close PubSub client.
     await closed;
-    pubsub.close(); // close PubSub server.
+    pubsubServer.close(); // close PubSub server.
     server.close(); // close REST server.
   });
 });

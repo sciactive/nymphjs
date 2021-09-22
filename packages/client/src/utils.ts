@@ -1,5 +1,6 @@
 import { EntityReference } from './Entity.types';
 import Nymph from './Nymph';
+import Entity from './Entity';
 
 export function uniqueStrings(array: string[]) {
   const obj: { [k: string]: true } = {};
@@ -10,8 +11,6 @@ export function uniqueStrings(array: string[]) {
 }
 
 export function entityConstructorsToClassNames(item: any): any {
-  const Entity = Nymph.getEntityClass('Entity');
-
   if (
     typeof item === 'function' &&
     item.prototype instanceof Entity &&
@@ -21,7 +20,7 @@ export function entityConstructorsToClassNames(item: any): any {
     return item.class;
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
-    return item.map(entityConstructorsToClassNames);
+    return item.map((entry) => entityConstructorsToClassNames(entry));
   } else if (item instanceof Object) {
     let newObj = Object.create(item);
     for (let [key, value] of Object.entries(item)) {
@@ -34,14 +33,12 @@ export function entityConstructorsToClassNames(item: any): any {
 }
 
 export function entitiesToReferences(item: any): any {
-  const Entity = Nymph.getEntityClass('Entity');
-
   if (item instanceof Entity && typeof item.$toReference === 'function') {
     // Convert entities to references.
     return item.$toReference();
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
-    return item.map(entitiesToReferences);
+    return item.map((entry) => entitiesToReferences(entry));
   } else if (item instanceof Object) {
     let newObj = Object.create(item);
     for (let [key, value] of Object.entries(item)) {
@@ -53,25 +50,23 @@ export function entitiesToReferences(item: any): any {
   return item;
 }
 
-export function referencesToEntities(item: any, useSkipAc = false): any {
-  const Entity = Nymph.getEntityClass('Entity');
-
+export function referencesToEntities(item: any, nymph: Nymph): any {
   if (Array.isArray(item)) {
     // Check if it's a reference.
     if (item[0] === 'nymph_entity_reference') {
       try {
-        const EntityClass = Nymph.getEntityClass(item[2]);
+        const EntityClass = nymph.getEntityClass(item[2]);
         return EntityClass.factoryReference(item as EntityReference);
       } catch (e: any) {
         return item;
       }
     } else {
       // Recurse into lower arrays.
-      return item.map((item) => referencesToEntities(item, useSkipAc));
+      return item.map((item) => referencesToEntities(item, nymph));
     }
   } else if (Entity && item instanceof Object && !(item instanceof Entity)) {
     for (let [key, value] of Object.entries(item)) {
-      item[key] = referencesToEntities(value);
+      item[key] = referencesToEntities(value, nymph);
     }
   }
   // Not an array, just return it.

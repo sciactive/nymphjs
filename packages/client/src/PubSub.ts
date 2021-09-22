@@ -16,11 +16,12 @@ import {
 let authToken: string | null = null;
 
 export default class PubSub {
-  private static connection: WebSocket | undefined;
-  private static waitForConnectionTimeout: NodeJS.Timeout | undefined;
-  private static pubsubUrl: string | undefined;
-  private static WebSocket: typeof WebSocket;
-  private static subscriptions: {
+  private nymph: Nymph;
+  private connection: WebSocket | undefined;
+  private waitForConnectionTimeout: NodeJS.Timeout | undefined;
+  private pubsubUrl: string | undefined;
+  private WebSocket: typeof WebSocket;
+  private subscriptions: {
     queries: {
       [k: string]: PubSubCallbacks<any>[];
     };
@@ -31,14 +32,15 @@ export default class PubSub {
     queries: {},
     uids: {},
   };
-  private static connectCallbacks: PubSubConnectCallback[] = [];
-  private static disconnectCallbacks: PubSubDisconnectCallback[] = [];
-  private static noConsole = false;
+  private connectCallbacks: PubSubConnectCallback[] = [];
+  private disconnectCallbacks: PubSubDisconnectCallback[] = [];
+  private noConsole = false;
 
-  public static init(NymphOptions: NymphOptions) {
-    this.pubsubUrl = NymphOptions.pubsubUrl;
-    this.WebSocket = NymphOptions.WebSocket ?? WebSocket;
-    this.noConsole = !!NymphOptions.noConsole;
+  public constructor(nymphOptions: NymphOptions, nymph: Nymph) {
+    this.nymph = nymph;
+    this.pubsubUrl = nymphOptions.pubsubUrl;
+    this.WebSocket = nymphOptions.WebSocket ?? WebSocket;
+    this.noConsole = !!nymphOptions.noConsole;
 
     if (!this.WebSocket) {
       throw new Error('Nymph-PubSub requires WebSocket!');
@@ -52,31 +54,25 @@ export default class PubSub {
     }
   }
 
-  public static isConfigured() {
+  public isConfigured() {
     return this.pubsubUrl != null;
   }
 
-  public static subscribeEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public subscribeEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): PubSubSubscribable<PubSubUpdate<string[]>>;
-  public static subscribeEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public subscribeEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): PubSubSubscribable<PubSubUpdate<ReturnType<T['factorySync']>[]>>;
-  public static subscribeEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public subscribeEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): PubSubSubscribable<
     PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
   > {
-    const promise = Nymph.getEntities(options, ...selectors);
+    const promise = this.nymph.getEntities(options, ...selectors);
     const query = [{ ...options, class: options.class.class }, ...selectors];
     const jsonQuery = JSON.stringify(query);
     const subscribe = (
@@ -95,36 +91,30 @@ export default class PubSub {
 
       promise.then(resolve, reject);
 
-      PubSub._subscribeQuery(jsonQuery, callbacks);
+      this._subscribeQuery(jsonQuery, callbacks);
       return new PubSubSubscription(jsonQuery, callbacks, () => {
-        PubSub._unsubscribeQuery(jsonQuery, callbacks);
+        this._unsubscribeQuery(jsonQuery, callbacks);
       });
     };
     return subscribe;
   }
 
-  public static subscribeEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public subscribeEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): PubSubSubscribable<PubSubUpdate<string | null>>;
-  public static subscribeEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public subscribeEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): PubSubSubscribable<PubSubUpdate<ReturnType<T['factorySync']> | null>>;
-  public static subscribeEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public subscribeEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): PubSubSubscribable<
     | PubSubUpdate<ReturnType<T['factorySync']> | null>
     | PubSubUpdate<string | null>
   > {
-    const promise = Nymph.getEntity(options, ...selectors);
+    const promise = this.nymph.getEntity(options, ...selectors);
     const query = [
       { ...options, class: options.class.class, limit: 1 },
       ...selectors,
@@ -158,16 +148,16 @@ export default class PubSub {
 
       promise.then(resolve, reject);
 
-      PubSub._subscribeQuery(jsonQuery, callbacks);
+      this._subscribeQuery(jsonQuery, callbacks);
       return new PubSubSubscription(jsonQuery, callbacks, () => {
-        PubSub._unsubscribeQuery(jsonQuery, callbacks);
+        this._unsubscribeQuery(jsonQuery, callbacks);
       });
     };
     return subscribe;
   }
 
-  public static subscribeUID(name: string) {
-    const promise = Nymph.getUID(name);
+  public subscribeUID(name: string) {
+    const promise = this.nymph.getUID(name);
     const subscribe = (
       resolve?: PubSubResolveCallback<number> | undefined,
       reject?: PubSubRejectCallback | undefined,
@@ -177,17 +167,17 @@ export default class PubSub {
 
       promise.then(resolve, reject);
 
-      PubSub._subscribeUID(name, callbacks);
+      this._subscribeUID(name, callbacks);
       return {
         unsubscribe: () => {
-          PubSub._unsubscribeUID(name, callbacks);
+          this._unsubscribeUID(name, callbacks);
         },
       };
     };
     return subscribe;
   }
 
-  public static subscribeWith<T extends EntityInterface>(
+  public subscribeWith<T extends EntityInterface>(
     entity: T,
     resolve?: PubSubResolveCallback<T> | undefined,
     reject?: PubSubRejectCallback | undefined,
@@ -223,13 +213,13 @@ export default class PubSub {
     };
     const callbacks: PubSubCallbacks<T> = [newResolve, reject, count];
 
-    PubSub._subscribeQuery(jsonQuery, callbacks);
+    this._subscribeQuery(jsonQuery, callbacks);
     return new PubSubSubscription(jsonQuery, callbacks, () => {
-      PubSub._unsubscribeQuery(jsonQuery, callbacks);
+      this._unsubscribeQuery(jsonQuery, callbacks);
     });
   }
 
-  public static connect() {
+  public connect() {
     // Are we already connected?
     if (
       this.connection &&
@@ -243,7 +233,7 @@ export default class PubSub {
     this._attemptConnect();
   }
 
-  public static close() {
+  public close() {
     if (this.waitForConnectionTimeout) {
       clearTimeout(this.waitForConnectionTimeout);
     }
@@ -254,7 +244,7 @@ export default class PubSub {
     this.connection.close(4200, 'Closure requested by application.');
   }
 
-  private static _waitForConnection(attempts = 0) {
+  private _waitForConnection(attempts = 0) {
     // Wait 5 seconds, then check and attempt connection again if
     // unsuccessful. Keep repeating until successful.
     this.waitForConnectionTimeout = setTimeout(() => {
@@ -278,7 +268,7 @@ export default class PubSub {
     }, 5000);
   }
 
-  private static _attemptConnect() {
+  private _attemptConnect() {
     // Attempt to connect.
     if (this.pubsubUrl != null) {
       this.connection = new this.WebSocket(this.pubsubUrl, 'nymph');
@@ -287,7 +277,7 @@ export default class PubSub {
     }
   }
 
-  private static _onopen() {
+  private _onopen() {
     if (typeof console !== 'undefined' && !this.noConsole) {
       console.log('Nymph-PubSub connection established!');
     }
@@ -346,7 +336,7 @@ export default class PubSub {
     }
   }
 
-  private static _onmessage(e: WebSocketEventMap['message']) {
+  private _onmessage(e: WebSocketEventMap['message']) {
     let data = JSON.parse(e.data);
     let subs: PubSubCallbacks<any>[] = [];
     let count = 'count' in data;
@@ -387,7 +377,7 @@ export default class PubSub {
     }
   }
 
-  private static _onclose(e: WebSocketEventMap['close']) {
+  private _onclose(e: WebSocketEventMap['close']) {
     if (typeof console !== 'undefined' && !this.noConsole) {
       console.log(`Nymph-PubSub connection closed: ${e.code} ${e.reason}`);
     }
@@ -409,22 +399,19 @@ export default class PubSub {
     }
   }
 
-  private static _send(data: any) {
+  private _send(data: any) {
     if (this.connection) {
       this.connection.send(JSON.stringify(data));
     }
   }
 
-  public static isConnectionOpen() {
+  public isConnectionOpen() {
     return !!(
       this.connection && this.connection.readyState === this.WebSocket.OPEN
     );
   }
 
-  private static _subscribeQuery(
-    query: string,
-    callbacks: PubSubCallbacks<any>
-  ) {
+  private _subscribeQuery(query: string, callbacks: PubSubCallbacks<any>) {
     let isNewSubscription = false;
     if (!this.subscriptions.queries.hasOwnProperty(query)) {
       this.subscriptions.queries[query] = [];
@@ -444,10 +431,7 @@ export default class PubSub {
     }
   }
 
-  private static _subscribeUID(
-    name: string,
-    callbacks: PubSubCallbacks<number>
-  ) {
+  private _subscribeUID(name: string, callbacks: PubSubCallbacks<number>) {
     let isNewSubscription = false;
     if (!this.subscriptions.uids.hasOwnProperty(name)) {
       this.subscriptions.uids[name] = [];
@@ -467,7 +451,7 @@ export default class PubSub {
     }
   }
 
-  private static _sendQuery(query: string, count: boolean) {
+  private _sendQuery(query: string, count: boolean) {
     this._send({
       action: 'subscribe',
       query,
@@ -475,7 +459,7 @@ export default class PubSub {
     });
   }
 
-  private static _sendUID(name: string, count: boolean) {
+  private _sendUID(name: string, count: boolean) {
     this._send({
       action: 'subscribe',
       uid: name,
@@ -483,7 +467,7 @@ export default class PubSub {
     });
   }
 
-  private static _isCountSubscribedQuery(query: string) {
+  private _isCountSubscribedQuery(query: string) {
     if (!this.subscriptions.queries.hasOwnProperty(query)) {
       return false;
     }
@@ -499,7 +483,7 @@ export default class PubSub {
     return false;
   }
 
-  private static _isCountSubscribedUID(name: string) {
+  private _isCountSubscribedUID(name: string) {
     if (!this.subscriptions.uids.hasOwnProperty(name)) {
       return false;
     }
@@ -515,10 +499,7 @@ export default class PubSub {
     return false;
   }
 
-  private static _unsubscribeQuery(
-    query: string,
-    callbacks: PubSubCallbacks<any>
-  ) {
+  private _unsubscribeQuery(query: string, callbacks: PubSubCallbacks<any>) {
     if (!this.subscriptions.queries.hasOwnProperty(query)) {
       return;
     }
@@ -535,10 +516,7 @@ export default class PubSub {
     }
   }
 
-  private static _unsubscribeUID(
-    name: string,
-    callbacks: PubSubCallbacks<number>
-  ) {
+  private _unsubscribeUID(name: string, callbacks: PubSubCallbacks<number>) {
     if (!this.subscriptions.uids.hasOwnProperty(name)) {
       return;
     }
@@ -555,21 +533,21 @@ export default class PubSub {
     }
   }
 
-  private static _sendUnQuery(query: string) {
+  private _sendUnQuery(query: string) {
     this._send({
       action: 'unsubscribe',
       query: query,
     });
   }
 
-  private static _sendUnUID(name: string) {
+  private _sendUnUID(name: string) {
     this._send({
       action: 'unsubscribe',
       uid: name,
     });
   }
 
-  public static updateArray(
+  public updateArray(
     oldArr: EntityInterface[],
     update: PubSubUpdate<EntityInterface[]>
   ) {
@@ -583,7 +561,7 @@ export default class PubSub {
       }
 
       const idMap: { [k: string]: number } = {};
-      const Entity = Nymph.getEntityClass('Entity');
+      const Entity = this.nymph.getEntityClass('Entity');
       for (let i = 0; i < newArr.length; i++) {
         const entity = newArr[i];
         if (entity instanceof Entity && entity.guid != null) {
@@ -651,7 +629,7 @@ export default class PubSub {
         }
         if (entity == null) {
           // A new entity.
-          entity = Nymph.initEntity(update.data);
+          entity = this.nymph.initEntity(update.data);
         }
       }
       if ('updated' in update) {
@@ -694,7 +672,7 @@ export default class PubSub {
     }
   }
 
-  public static on<T extends PubSubEventType>(
+  public on<T extends PubSubEventType>(
     event: T,
     callback: T extends 'connect'
       ? PubSubConnectCallback
@@ -714,7 +692,7 @@ export default class PubSub {
     return () => this.off(event, callback);
   }
 
-  public static off<T extends PubSubEventType>(
+  public off<T extends PubSubEventType>(
     event: T,
     callback: T extends 'connect'
       ? PubSubConnectCallback
@@ -737,7 +715,7 @@ export default class PubSub {
     return true;
   }
 
-  public static setToken(token: string | null) {
+  public setToken(token: string | null) {
     authToken = token;
     if (this.isConnectionOpen()) {
       this._send({
@@ -763,21 +741,3 @@ export class PubSubSubscription<T> {
     this.unsubscribe = unsubscribe;
   }
 }
-
-((global) => {
-  if (
-    typeof global !== 'undefined' &&
-    typeof (global as any as { NymphOptions: NymphOptions }).NymphOptions !==
-      'undefined' &&
-    typeof (global as any as { NymphOptions: NymphOptions }).NymphOptions
-      .pubsubUrl
-  ) {
-    PubSub.init((global as any as { NymphOptions: NymphOptions }).NymphOptions);
-  }
-})(
-  typeof window === 'undefined'
-    ? typeof self === 'undefined'
-      ? undefined
-      : self
-    : window
-);

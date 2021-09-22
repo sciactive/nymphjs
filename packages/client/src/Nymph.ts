@@ -1,3 +1,4 @@
+import Entity from './Entity';
 import {
   EntityConstructor,
   EntityInterface,
@@ -19,29 +20,16 @@ import { entitiesToReferences, entityConstructorsToClassNames } from './utils';
 let requester: HttpRequester;
 
 export default class Nymph {
-  private static entityClasses: { [k: string]: EntityConstructor } = {};
-  private static requestCallbacks: RequestCallback[] = [];
-  private static responseCallbacks: ResponseCallback[] = [];
-  private static restUrl: string;
+  private entityClasses: { [k: string]: EntityConstructor } = {};
+  private requestCallbacks: RequestCallback[] = [];
+  private responseCallbacks: ResponseCallback[] = [];
+  private restUrl: string = '';
 
-  public static setEntityClass(
-    className: string,
-    entityClass: EntityConstructor
-  ) {
-    this.entityClasses[className] = entityClass;
-  }
-
-  public static getEntityClass(className: string) {
-    if (this.entityClasses.hasOwnProperty(className)) {
-      return this.entityClasses[className];
-    }
-    throw new ClassNotAvailableError(
-      "Tried to get class that's not available: " + className
-    );
-  }
-
-  public static init(NymphOptions: NymphOptions) {
+  public constructor(NymphOptions: NymphOptions) {
     this.restUrl = NymphOptions.restUrl;
+
+    class NymphEntity extends Entity {}
+    this.setEntityClass(NymphEntity.class, NymphEntity);
 
     requester = new HttpRequester(
       'fetch' in NymphOptions ? NymphOptions.fetch : undefined
@@ -60,7 +48,21 @@ export default class Nymph {
     });
   }
 
-  public static async newUID(name: string) {
+  public setEntityClass(className: string, entityClass: EntityConstructor) {
+    this.entityClasses[className] = entityClass;
+    entityClass.nymph = this;
+  }
+
+  public getEntityClass(className: string) {
+    if (this.entityClasses.hasOwnProperty(className)) {
+      return this.entityClasses[className];
+    }
+    throw new ClassNotAvailableError(
+      "Tried to get class that's not available: " + className
+    );
+  }
+
+  public async newUID(name: string) {
     const data = await requester.POST({
       url: this.restUrl,
       dataType: 'text',
@@ -69,7 +71,7 @@ export default class Nymph {
     return Number(data);
   }
 
-  public static async setUID(name: string, value: number) {
+  public async setUID(name: string, value: number) {
     return await requester.PUT({
       url: this.restUrl,
       dataType: 'json',
@@ -77,7 +79,7 @@ export default class Nymph {
     });
   }
 
-  public static async getUID(name: string) {
+  public async getUID(name: string) {
     const data = await requester.GET({
       url: this.restUrl,
       dataType: 'text',
@@ -86,7 +88,7 @@ export default class Nymph {
     return Number(data);
   }
 
-  public static async deleteUID(name: string) {
+  public async deleteUID(name: string) {
     return await requester.DELETE({
       url: this.restUrl,
       dataType: 'text',
@@ -94,12 +96,12 @@ export default class Nymph {
     });
   }
 
-  public static async saveEntity(entity: EntityInterface) {
+  public async saveEntity(entity: EntityInterface) {
     let method: 'POST' | 'PUT' = entity.guid == null ? 'POST' : 'PUT';
     return await this.requestWithMethod(entity, method, entity, false);
   }
 
-  public static async saveEntities(entities: EntityInterface[]) {
+  public async saveEntities(entities: EntityInterface[]) {
     if (!entities.length) {
       return Promise.resolve(false);
     }
@@ -119,7 +121,7 @@ export default class Nymph {
     return await this.requestWithMethod(entities, method, entities, true);
   }
 
-  public static async patchEntity(entity: EntityInterface) {
+  public async patchEntity(entity: EntityInterface) {
     if (entity.guid == null) {
       throw new InvalidRequestError(
         "You can't patch an entity that hasn't yet been saved."
@@ -130,7 +132,7 @@ export default class Nymph {
     return await this.requestWithMethod(entity, 'PATCH', patch, false);
   }
 
-  public static async patchEntities(entities: EntityInterface[]) {
+  public async patchEntities(entities: EntityInterface[]) {
     if (!entities.length) {
       return Promise.resolve(false);
     }
@@ -147,19 +149,19 @@ export default class Nymph {
     return await this.requestWithMethod(entities, 'PATCH', patch, true);
   }
 
-  private static async requestWithMethod<T extends EntityInterface>(
+  private async requestWithMethod<T extends EntityInterface>(
     entity: T,
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     data: { [k: string]: any },
     plural: false
   ): Promise<T>;
-  private static async requestWithMethod<T extends EntityInterface>(
+  private async requestWithMethod<T extends EntityInterface>(
     entity: T[],
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     data: { [k: string]: any },
     plural: true
   ): Promise<T[]>;
-  private static async requestWithMethod<T extends EntityInterface>(
+  private async requestWithMethod<T extends EntityInterface>(
     entity: T | T[],
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     data: { [k: string]: any },
@@ -187,33 +189,23 @@ export default class Nymph {
     throw new Error('Server error');
   }
 
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']> | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
   ): Promise<string | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string
   ): Promise<ReturnType<T['factorySync']> | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[] | string[]
   ): Promise<ReturnType<T['factorySync']> | string | null> {
@@ -233,30 +225,23 @@ export default class Nymph {
     return null;
   }
 
-  public static async getEntityData<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string | null>;
-  public static async getEntityData<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityJson<T> | null>;
-  public static async getEntityData<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
   ): Promise<string | null>;
-  public static async getEntityData<
-    T extends EntityConstructor = EntityConstructor
-  >(options: Options<T>, guid: string): Promise<EntityJson<T> | null>;
-  public static async getEntityData<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntityData<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    guid: string
+  ): Promise<EntityJson<T> | null>;
+  public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[] | string[]
   ): Promise<EntityJson<T> | string | null> {
@@ -287,21 +272,15 @@ export default class Nymph {
     return null;
   }
 
-  public static async getEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string[]>;
-  public static async getEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[]>;
-  public static async getEntities<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[]> {
@@ -323,7 +302,7 @@ export default class Nymph {
     return data.map((e: EntityJson<T>) => this.initEntity(e));
   }
 
-  public static initEntity<T extends EntityConstructor = EntityConstructor>(
+  public initEntity<T extends EntityConstructor = EntityConstructor>(
     entityJSON: EntityJson<T>
   ): ReturnType<T['factorySync']> {
     const EntityClass = this.getEntityClass(entityJSON.class);
@@ -336,7 +315,7 @@ export default class Nymph {
     return entity.$init(entityJSON) as ReturnType<T['factorySync']>;
   }
 
-  public static initEntitiesFromData<T extends any>(item: T): T {
+  public initEntitiesFromData<T extends any>(item: T): T {
     if (Array.isArray(item)) {
       // Recurse into lower arrays.
       return item.map((entry) => this.initEntitiesFromData(entry)) as T;
@@ -365,7 +344,7 @@ export default class Nymph {
     return item;
   }
 
-  public static async deleteEntity(
+  public async deleteEntity(
     entity: EntityInterface | EntityInterface[],
     _plural = false
   ) {
@@ -388,11 +367,11 @@ export default class Nymph {
     });
   }
 
-  public static async deleteEntities(entities: EntityInterface[]) {
+  public async deleteEntities(entities: EntityInterface[]) {
     return await this.deleteEntity(entities, true);
   }
 
-  public static async serverCall(
+  public async serverCall(
     entity: EntityInterface,
     method: string,
     params: any[],
@@ -418,7 +397,7 @@ export default class Nymph {
     };
   }
 
-  public static async serverCallStatic(
+  public async serverCallStatic(
     className: string,
     method: string,
     params: any[]
@@ -440,7 +419,7 @@ export default class Nymph {
     return this.initEntitiesFromData(data);
   }
 
-  public static on<T extends EventType>(
+  public on<T extends EventType>(
     event: T,
     callback: T extends 'request'
       ? RequestCallback
@@ -461,7 +440,7 @@ export default class Nymph {
     return () => this.off(event, callback);
   }
 
-  public static off<T extends EventType>(
+  public off<T extends EventType>(
     event: T,
     callback: T extends 'request'
       ? RequestCallback
@@ -486,7 +465,7 @@ export default class Nymph {
     return true;
   }
 
-  public static setXsrfToken(token: string | null) {
+  public setXsrfToken(token: string | null) {
     requester.setXsrfToken(token);
   }
 }
@@ -504,19 +483,3 @@ export class InvalidRequestError extends Error {
     this.name = 'InvalidRequestError';
   }
 }
-
-((global) => {
-  if (
-    typeof global !== 'undefined' &&
-    typeof (global as any as { NymphOptions: NymphOptions }).NymphOptions !==
-      'undefined'
-  ) {
-    Nymph.init((global as any as { NymphOptions: NymphOptions }).NymphOptions);
-  }
-})(
-  typeof window === 'undefined'
-    ? typeof self === 'undefined'
-      ? undefined
-      : self
-    : window
-);

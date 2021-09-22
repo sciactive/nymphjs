@@ -12,23 +12,25 @@ npm install --save @nymphjs/client-node
 
 This package is the Nymph client for Node.js. You can find CJS in `dist`, or TS source in `src`. There is also a **[browser client](https://github.com/sciactive/nymphjs/packages/client)**.
 
-This package provides fetch and WebSocket ponyfills to Nymph, handles Tilmeld auth tokens, and sets up `Nymph.init` to also call `PubSub.init` with your configs if you provide a `pubsubUrl`.
+This package provides fetch and WebSocket ponyfills to Nymph and handles Tilmeld auth tokens.
 
 ## Usage
 
 To use, require it instead of `@nymphjs/client`:
 
 ```js
-const { Nymph } = require('@nymphjs/client-node');
+const { Nymph, PubSub } = require('@nymphjs/client-node');
 ```
 
-Then provide the options to Nymph.init:
+Then set up Nymph and PubSub like normal:
 
 ```js
-Nymph.init({
+const nymphOptions = {
   restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
   pubsubUrl: 'wss://yournymphpubsubserver',
-});
+};
+const nymph = new Nymph(nymphOptions);
+const pubsub = new PubSub(nymphOptions, nymph);
 ```
 
 # License

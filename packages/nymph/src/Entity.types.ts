@@ -1,5 +1,5 @@
-import { Nymph } from './Nymph';
-import { Options } from './Nymph.types';
+import type { Nymph } from './Nymph';
+import type { Options } from './Nymph.types';
 
 export type ACProperties = {
   user: any;

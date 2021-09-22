@@ -12,26 +12,6 @@ npm install --save @nymphjs/client
 
 This package is the Nymph client for browsers. You can find UMD in `dist`, or TS source in `src`. There is also a **[Node.js client](https://github.com/sciactive/nymphjs/packages/client-node)**.
 
-## Setup
-
-```html
-<head>
-  <!-- Nymph setup -->
-  <script>
-    NymphOptions = {
-      restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
-      pubsubUrl: 'wss://yournymphpubsubserver',
-    };
-  </script>
-  <!-- End Nymph setup -->
-
-  <!-- Old school JS -->
-  <script src="node_modules/nymph-client/dist/NymphClient.js"></script>
-  <script src="path/to/your/entity/js/Todo.js"></script>
-  <!-- End Old school JS -->
-</head>
-```
-
 ## Usage
 
 For detailed docs, check out the User Guide on the website:
@@ -47,15 +27,23 @@ Here's an overview:
 import { Nymph, PubSub } from '@nymphjs/client';
 import Todo from 'Todo';
 
+const nymphOptions = {
+  restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
+  pubsubUrl: 'wss://yournymphpubsubserver',
+};
+const nymph = new Nymph(nymphOptions);
+const pubsub = new PubSub(nymphOptions, nymph);
+nymph.setEntityClass(Todo.class, Todo);
+
 // Now you can use Nymph and PubSub.
 const myTodo = new Todo();
 myTodo.name = 'This is a new todo!';
 myTodo.done = false;
 await myTodo.$save();
 
-let allMyTodos = await Nymph.getEntities({ class: Todo });
+let allMyTodos = await nymph.getEntities({ class: Todo });
 
-let subscription = PubSub.subscribeWith(myTodo, () => {
+let subscription = pubsub.subscribeWith(myTodo, () => {
   // When this is called, the entity will already contain new data from the
   // publish event. If the entity is deleted, the GUID will be set to null.
   if (myTodo.guid != null) {
@@ -71,7 +59,7 @@ let subscription = PubSub.subscribeWith(myTodo, () => {
 // Subscribing to a query.
 let todos = [];
 let userCount = 0;
-let subscription = PubSub.subscribeEntities(
+let subscription = pubsub.subscribeEntities(
   {
     class: Todo.class,
   },
@@ -87,7 +75,7 @@ let subscription = PubSub.subscribeEntities(
     // This takes an existing array of entities and either updates it to match
     // another array, or performs actions from a publish event object to update
     // it.
-    PubSub.updateArray(todos, update);
+    pubsub.updateArray(todos, update);
 
     // `todos` is now up to date with the latest publishes from the server.
   },

@@ -1,3 +1,5 @@
+import type Nymph from './Nymph';
+
 export type ServerCallResponse = {
   return: any;
   entity?: EntityJson;
@@ -114,6 +116,10 @@ export interface DataObjectInterface {
  */
 export interface EntityInterface extends DataObjectInterface {
   /**
+   * The instance of Nymph to use for queries.
+   */
+  $nymph: Nymph;
+  /**
    * The entity's Globally Unique ID.
    *
    * This is a 12 byte number represented as a lower case HEX string (24
@@ -203,6 +209,10 @@ export interface EntityInterface extends DataObjectInterface {
 }
 
 export type EntityConstructor = (new () => EntityInterface) & {
+  /**
+   * The instance of Nymph to use for queries.
+   */
+  nymph: Nymph;
   /**
    * The lookup name for this entity.
    *

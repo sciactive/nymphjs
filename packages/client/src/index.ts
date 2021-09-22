@@ -12,7 +12,6 @@ export * from './HttpRequester';
 export * from './Nymph';
 import Nymph from './Nymph';
 export { Nymph };
-export default Nymph;
 
 export * from './Nymph.types';
 

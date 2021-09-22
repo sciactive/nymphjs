@@ -1,5 +1,6 @@
 import { difference, isEqual } from 'lodash';
 
+import type Nymph from './Nymph';
 import {
   EntityConstructor,
   EntityData,
@@ -8,7 +9,6 @@ import {
   EntityPatch,
   EntityReference,
 } from './Entity.types';
-import Nymph from './Nymph';
 import {
   uniqueStrings,
   entitiesToReferences,
@@ -24,6 +24,10 @@ export default class Entity<T extends EntityData = EntityData>
   implements EntityInterface
 {
   /**
+   * The instance of Nymph to use for queries.
+   */
+  public static nymph = {} as Nymph;
+  /**
    * The lookup name for this entity.
    *
    * This is used for reference arrays (and sleeping references) and server
@@ -31,6 +35,10 @@ export default class Entity<T extends EntityData = EntityData>
    */
   public static class = 'Entity';
 
+  /**
+   * The instance of Nymph to use for queries.
+   */
+  public $nymph: Nymph;
   /**
    * The entity's Globally Unique ID.
    */
@@ -85,6 +93,7 @@ export default class Entity<T extends EntityData = EntityData>
    * @param guid The ID of the entity to load, undefined for a new entity.
    */
   public constructor(guid?: string) {
+    this.$nymph = (this.constructor as EntityConstructor).nymph;
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
         if (typeof name !== 'symbol' && this.$isASleepingReference) {
@@ -218,7 +227,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public static async serverCallStatic(method: string, params: Iterable<any>) {
-    const data = await Nymph.serverCallStatic(
+    const data = await this.nymph.serverCallStatic(
       this.class,
       method,
       // Turn the params into a real array, in case an arguments object was
@@ -263,7 +272,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.$dataStore = Object.entries(entityJson.data)
       .map(([key, value]) => {
         this.$dirty[key] = false;
-        return { key, value: referencesToEntities(value) };
+        return { key, value: referencesToEntities(value, this.$nymph) };
       })
       .reduce(
         (obj, { key, value }) => Object.assign(obj, { [key]: value }),
@@ -309,7 +318,7 @@ export default class Entity<T extends EntityData = EntityData>
 
     const guid = this.guid;
 
-    return (await Nymph.deleteEntity(this)) === guid;
+    return (await this.$nymph.deleteEntity(this)) === guid;
   }
 
   public $equals(object: any) {
@@ -429,7 +438,7 @@ export default class Entity<T extends EntityData = EntityData>
 
     const mdate = this.mdate;
 
-    await Nymph.patchEntity(this);
+    await this.$nymph.patchEntity(this);
     return mdate === this.mdate;
   }
 
@@ -444,10 +453,11 @@ export default class Entity<T extends EntityData = EntityData>
       );
     }
     if (!this.$readyPromise) {
-      this.$readyPromise = Nymph.getEntityData(
-        { class: this.constructor as EntityConstructor },
-        { type: '&', guid: this.$sleepingReference[1] }
-      )
+      this.$readyPromise = this.$nymph
+        .getEntityData(
+          { class: this.constructor as EntityConstructor },
+          { type: '&', guid: this.$sleepingReference[1] }
+        )
         .then((data) => {
           if (data == null) {
             const errObj = { data, textStatus: 'No data returned.' };
@@ -525,7 +535,7 @@ export default class Entity<T extends EntityData = EntityData>
     if (this.guid == null) {
       return false;
     }
-    const data = await Nymph.getEntityData(
+    const data = await this.$nymph.getEntityData(
       {
         class: this.constructor as EntityConstructor,
       },
@@ -551,7 +561,7 @@ export default class Entity<T extends EntityData = EntityData>
       throw new EntityIsSleepingReferenceError(sleepErr);
     }
 
-    await Nymph.saveEntity(this);
+    await this.$nymph.saveEntity(this);
     return !!this.guid;
   }
 
@@ -566,7 +576,12 @@ export default class Entity<T extends EntityData = EntityData>
     // Turn the params into a real array, in case an arguments object was
     // passed.
     const paramArray = Array.prototype.slice.call(params);
-    const data = await Nymph.serverCall(this, method, paramArray, stateless);
+    const data: any = await this.$nymph.serverCall(
+      this,
+      method,
+      paramArray,
+      stateless
+    );
     if (!stateless && data.entity) {
       this.$init(data.entity);
     }
@@ -602,5 +617,3 @@ export class InvalidStateError extends Error {
     this.name = 'InvalidStateError';
   }
 }
-
-Nymph.setEntityClass(Entity.class, Entity);

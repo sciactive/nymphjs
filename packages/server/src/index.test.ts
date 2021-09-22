@@ -17,9 +17,10 @@ const app = express();
 app.use('/test', createServer(nymphServer));
 const server = app.listen(5080);
 
-Nymph.init({
+const nymph = new Nymph({
   restUrl: 'http://localhost:5080/test/',
 });
+nymph.setEntityClass(Employee.class, Employee);
 
 describe('Nymph REST Server and Client', () => {
   async function createJane() {
@@ -77,7 +78,7 @@ describe('Nymph REST Server and Client', () => {
     entity2.title = 'Seniorer Person';
 
     const entities = [entity, entity2];
-    await Nymph.saveEntities(entities);
+    await nymph.saveEntities(entities);
 
     if (entity.guid == null || entity2.guid == null) {
       throw new Error('Entity is null.');
@@ -86,10 +87,10 @@ describe('Nymph REST Server and Client', () => {
     entity.building = 'J2';
     entity2.building = 'B4';
 
-    await Nymph.saveEntities(entities);
+    await nymph.saveEntities(entities);
 
-    const jane = await Nymph.getEntity({ class: Employee }, entity.guid);
-    const john = await Nymph.getEntity({ class: Employee }, entity2.guid);
+    const jane = await nymph.getEntity({ class: Employee }, entity.guid);
+    const john = await nymph.getEntity({ class: Employee }, entity2.guid);
 
     expect(jane?.building).toEqual('J2');
     expect(john?.building).toEqual('B4');
@@ -119,7 +120,7 @@ describe('Nymph REST Server and Client', () => {
       throw new Error('Entity is null.');
     }
 
-    const checkSteve = await Nymph.getEntity(
+    const checkSteve = await nymph.getEntity(
       { class: Employee },
       {
         type: '&',
@@ -129,7 +130,7 @@ describe('Nymph REST Server and Client', () => {
 
     expect(checkSteve?.guid).toEqual(steve.guid);
 
-    const checkSteveQref = await Nymph.getEntity(
+    const checkSteveQref = await nymph.getEntity(
       { class: Employee },
       {
         type: '&',
@@ -220,7 +221,7 @@ describe('Nymph REST Server and Client', () => {
   it('get an entity', async () => {
     await createJane();
 
-    const jane = await Nymph.getEntity(
+    const jane = await nymph.getEntity(
       {
         class: Employee,
       },
@@ -239,7 +240,7 @@ describe('Nymph REST Server and Client', () => {
       await createJane();
     }
 
-    const entities = await Nymph.getEntities(
+    const entities = await nymph.getEntities(
       {
         class: Employee,
         limit: 4,
@@ -261,7 +262,7 @@ describe('Nymph REST Server and Client', () => {
       await createJane();
     }
 
-    const entities = await Nymph.getEntities(
+    const entities = await nymph.getEntities(
       {
         class: Employee,
         limit: 4,
@@ -284,7 +285,7 @@ describe('Nymph REST Server and Client', () => {
       await createJane();
     }
 
-    const entities = await Nymph.getEntities(
+    const entities = await nymph.getEntities(
       {
         class: Employee,
         limit: 4,
@@ -310,7 +311,7 @@ describe('Nymph REST Server and Client', () => {
       await createJane();
     }
 
-    const entities = await Nymph.getEntities(
+    const entities = await nymph.getEntities(
       {
         class: Employee,
         limit: 4,
@@ -336,7 +337,7 @@ describe('Nymph REST Server and Client', () => {
       await createJane();
     }
 
-    const entities = await Nymph.getEntities(
+    const entities = await nymph.getEntities(
       {
         class: Employee,
         limit: 4,
@@ -377,7 +378,7 @@ describe('Nymph REST Server and Client', () => {
     const deleted = await jane.$delete();
     expect(deleted).toEqual(true);
 
-    const check = await Nymph.getEntities(
+    const check = await nymph.getEntities(
       { class: Employee },
       {
         type: '&',
@@ -397,10 +398,10 @@ describe('Nymph REST Server and Client', () => {
       return jane.guid;
     });
 
-    const deleted = await Nymph.deleteEntities(janes);
+    const deleted = await nymph.deleteEntities(janes);
     expect(deleted).toEqual(guids);
 
-    const check = await Nymph.getEntities(
+    const check = await nymph.getEntities(
       { class: Employee },
       {
         type: '|',
@@ -413,6 +414,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('try to save Entity class directly', async () => {
     const entity = new Entity() as Entity & { something: string };
+    entity.$nymph = nymph;
     entity.something = 'Anything';
     let error = { message: '' };
     try {
@@ -486,7 +488,7 @@ describe('Nymph REST Server and Client', () => {
       throw new Error('Entity is null.');
     }
 
-    const jane2 = await Nymph.getEntity(
+    const jane2 = await nymph.getEntity(
       {
         class: Employee,
       },
@@ -512,7 +514,7 @@ describe('Nymph REST Server and Client', () => {
       throw new Error('Entity is null.');
     }
 
-    const second = await Nymph.getEntity(
+    const second = await nymph.getEntity(
       {
         class: Employee,
       },
@@ -544,7 +546,7 @@ describe('Nymph REST Server and Client', () => {
       throw new Error('Entity is null.');
     }
 
-    const second = await Nymph.getEntity(
+    const second = await nymph.getEntity(
       {
         class: Employee,
       },
@@ -564,7 +566,7 @@ describe('Nymph REST Server and Client', () => {
 
     await createJane();
 
-    const third = await Nymph.getEntity(
+    const third = await nymph.getEntity(
       {
         class: Employee,
       },
@@ -582,48 +584,48 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('get a new UID', async () => {
-    const uidValue = await Nymph.newUID('employee');
+    const uidValue = await nymph.newUID('employee');
     expect(typeof uidValue).toEqual('number');
     expect(uidValue).toBeGreaterThan(0);
 
-    const uidValue2 = await Nymph.newUID('employee');
+    const uidValue2 = await nymph.newUID('employee');
     expect(typeof uidValue2).toEqual('number');
     expect(uidValue2).toBeGreaterThan(uidValue);
   });
 
   it('get UID value', async () => {
-    const uidValue = await Nymph.getUID('employee');
+    const uidValue = await nymph.getUID('employee');
     expect(typeof uidValue).toEqual('number');
     expect(uidValue).toBeGreaterThan(0);
 
-    const uidValue2 = await Nymph.getUID('employee');
+    const uidValue2 = await nymph.getUID('employee');
     expect(typeof uidValue2).toEqual('number');
     expect(uidValue2).toEqual(uidValue);
   });
 
   it('set UID value', async () => {
-    const uidValue = await Nymph.newUID('employee');
+    const uidValue = await nymph.newUID('employee');
     expect(typeof uidValue).toEqual('number');
     expect(uidValue).toBeGreaterThan(0);
 
-    const success = await Nymph.setUID('employee', uidValue - 1);
+    const success = await nymph.setUID('employee', uidValue - 1);
     expect(success).toEqual(true);
 
-    const uidValue2 = await Nymph.getUID('employee');
+    const uidValue2 = await nymph.getUID('employee');
     expect(typeof uidValue2).toEqual('number');
     expect(uidValue2).toEqual(uidValue - 1);
   });
 
   it('delete UID', async () => {
-    const uidValue = await Nymph.newUID('temp');
+    const uidValue = await nymph.newUID('temp');
     expect(typeof uidValue).toEqual('number');
     expect(uidValue).toEqual(1);
 
-    await Nymph.deleteUID('temp');
+    await nymph.deleteUID('temp');
 
     let error = { status: 200 };
     try {
-      await Nymph.getUID('temp');
+      await nymph.getUID('temp');
     } catch (e: any) {
       error = e;
     }

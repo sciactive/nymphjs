@@ -1,41 +1,45 @@
 // Nymph expects fetch and WebSocket.
 import { w3cwebsocket } from 'websocket';
 import fetch from 'node-fetch';
-import * as NymphClient from '@nymphjs/client';
-import { NymphOptions } from '@nymphjs/client';
-
-const { Nymph, PubSub } = NymphClient;
+import { Nymph, PubSub, NymphOptions } from '@nymphjs/client';
 
 // Make a shortcut for PubSub init.
-const _init = Nymph.init;
-Nymph.init = (nymphOptions: NymphOptions) => {
-  _init.call(Nymph, {
-    fetch: fetch as any as WindowOrWorkerGlobalScope['fetch'],
-    ...nymphOptions,
-  });
-  if (nymphOptions.pubsubUrl) {
-    PubSub.init({
-      WebSocket: w3cwebsocket as any as typeof WebSocket,
+class NodeNymph extends Nymph {
+  constructor(nymphOptions: NymphOptions) {
+    super({
+      fetch: fetch as any as WindowOrWorkerGlobalScope['fetch'],
       ...nymphOptions,
     });
-  }
-};
 
-// Save the Tilmeld auth token and send it in the header.
-let authToken: string | null = null;
-Nymph.on('request', (_url: string, options: RequestInit) => {
-  if (authToken) {
-    (options.headers as Record<string, string>)['X-TILMELDAUTH'] = authToken;
+    // Save the Tilmeld auth token and send it in the header.
+    let authToken: string | null = null;
+    this.on('request', (_url: string, options: RequestInit) => {
+      if (authToken) {
+        (options.headers as Record<string, string>)['X-TILMELDAUTH'] =
+          authToken;
+      }
+    });
+    this.on('response', (response: Response) => {
+      if (response.headers.has('X-TILMELDAUTH')) {
+        authToken = response.headers.get('X-TILMELDAUTH');
+        if (authToken === '') {
+          authToken = null;
+        }
+      }
+    });
   }
-});
-Nymph.on('response', (response: Response) => {
-  if (response.headers.has('X-TILMELDAUTH')) {
-    authToken = response.headers.get('X-TILMELDAUTH');
-    if (authToken === '') {
-      authToken = null;
-    }
-  }
-});
+}
 
-export { Nymph };
-export default Nymph;
+class NodePubSub extends PubSub {
+  constructor(nymphOptions: NymphOptions, nymph: Nymph) {
+    super(
+      {
+        WebSocket: w3cwebsocket as any as typeof WebSocket,
+        ...nymphOptions,
+      },
+      nymph
+    );
+  }
+}
+
+export { NodeNymph as Nymph, NodePubSub as PubSub };
