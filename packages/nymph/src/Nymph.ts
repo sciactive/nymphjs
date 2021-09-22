@@ -1,6 +1,6 @@
 import { Config, ConfigDefaults as defaults } from './conf';
 import { NymphDriver } from './driver';
-import PreInitializedDriver from './driver/PreInitializedDriver';
+import Entity from './Entity';
 import { EntityConstructor, EntityInterface } from './Entity.types';
 import { ClassNotAvailableError } from './errors';
 import type {
@@ -39,7 +39,7 @@ import type {
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export class Nymph {
+export default class Nymph {
   /**
    * The PubSub config.
    */
@@ -84,6 +84,7 @@ export class Nymph {
 
   public setEntityClass(className: string, entityClass: EntityConstructor) {
     this.entityClasses[className] = entityClass;
+    entityClass.nymph = this;
   }
 
   public getEntityClass(className: string): EntityConstructor {
@@ -95,19 +96,42 @@ export class Nymph {
     throw new ClassNotAvailableError('Tried to use class: ' + className);
   }
 
-  public constructor() {
-    this.config = { ...defaults };
-    this.driver = new PreInitializedDriver();
+  /**
+   * Initialize Nymph.
+   *
+   * @param config The Nymph configuration.
+   * @param driver The Nymph database driver.
+   * @param tilmeld The Tilmeld user/group manager instance, if you want to use it.
+   */
+  public constructor(
+    config: Partial<Config>,
+    driver: NymphDriver,
+    tilmeld?: TilmeldInterface
+  ) {
+    this.config = { ...defaults, ...config };
+    this.driver = driver;
+    if (typeof tilmeld !== 'undefined') {
+      this.tilmeld = tilmeld;
+    }
+
+    class NymphEntity extends Entity {}
+    this.setEntityClass(NymphEntity.class, NymphEntity);
+
+    this.driver.init(this);
+    if (this.tilmeld) {
+      this.tilmeld.init(this);
+    }
   }
 
+  /**
+   * This is used internally by Nymph. Don't call it yourself.
+   * @returns A clone of this instance.
+   */
   public clone() {
-    const nymph = new Nymph();
-    nymph.config = this.config;
-    nymph.driver = this.driver;
-    nymph.tilmeld = this.tilmeld;
+    const nymph = new Nymph(this.config, this.driver, this.tilmeld?.clone());
     nymph.entityClasses = this.entityClasses;
     if (nymph.tilmeld) {
-      nymph.tilmeld.nymph = nymph;
+      nymph.tilmeld.init(nymph);
     }
 
     const events = [
@@ -137,34 +161,14 @@ export class Nymph {
       // @ts-ignore: The callback should be the right type here.
       const callbacks = this[prop];
       for (let callback of callbacks) {
+        if (callback.tilmeld) {
+          continue;
+        }
         nymph.on(event as NymphEventType, callback);
       }
     }
 
     return nymph;
-  }
-
-  /**
-   * Initialize Nymph.
-   *
-   * @param config The Nymph configuration.
-   * @param driver The Nymph database driver.
-   * @param tilmeld The Tilmeld user/group manager instance, if you want to use it.
-   */
-  public init(
-    config: Partial<Config>,
-    driver: NymphDriver,
-    tilmeld?: TilmeldInterface
-  ) {
-    this.config = { ...defaults, ...config };
-    this.driver = driver;
-    if (typeof tilmeld !== 'undefined') {
-      this.tilmeld = tilmeld;
-    }
-    this.driver.init(this);
-    if (this.tilmeld) {
-      this.tilmeld.init(this);
-    }
   }
 
   /**
@@ -909,5 +913,3 @@ export class Nymph {
     return true;
   }
 }
-
-export default new Nymph();

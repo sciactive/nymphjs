@@ -1,5 +1,6 @@
 import { difference, intersection, isEqual } from 'lodash';
 
+import type Nymph from './Nymph';
 import {
   ACProperties,
   EntityConstructor,
@@ -11,7 +12,6 @@ import {
   SerializedEntityData,
 } from './Entity.types';
 import { EntityConflictError, InvalidParametersError } from './errors';
-import nymph, { Nymph } from './Nymph';
 import {
   entitiesToReferences,
   referencesToEntities,
@@ -94,7 +94,7 @@ export default class Entity<T extends EntityData = EntityData>
   /**
    * The instance of Nymph to use for queries.
    */
-  public static nymph = nymph;
+  public static nymph = {} as Nymph;
   /**
    * A unique name for this type of entity used to separate its data from other
    * types of entities in the database.
@@ -108,7 +108,7 @@ export default class Entity<T extends EntityData = EntityData>
    */
   public static class = 'Entity';
 
-  public $nymph: Nymph = Entity.nymph;
+  public $nymph: Nymph;
   public guid: string | null = null;
   public cdate: number | null = null;
   public mdate: number | null = null;
@@ -203,6 +203,7 @@ export default class Entity<T extends EntityData = EntityData>
    * @param guid The ID of the entity to load, undefined for a new entity.
    */
   public constructor(guid?: string) {
+    this.$nymph = (this.constructor as EntityConstructor).nymph;
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
         this.$referenceWake();
@@ -375,7 +376,7 @@ export default class Entity<T extends EntityData = EntityData>
     const data = this.$getData(true);
     for (const key in data) {
       if (this.$privateData.indexOf(key) === -1) {
-        obj.data[key] = entitiesToReferences(data[key], this.$nymph);
+        obj.data[key] = entitiesToReferences(data[key]);
       }
     }
     return obj;
@@ -455,7 +456,7 @@ export default class Entity<T extends EntityData = EntityData>
         const unused: any = (this as any)[key];
       }
     }
-    return entitiesToReferences({ ...this.$dataStore }, this.$nymph);
+    return entitiesToReferences({ ...this.$dataStore });
   }
 
   public $getSData() {
@@ -825,5 +826,3 @@ export default class Entity<T extends EntityData = EntityData>
     this.$skipAc = !!skipAc;
   }
 }
-
-Entity.nymph.setEntityClass(Entity.class, Entity);

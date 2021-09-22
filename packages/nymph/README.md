@@ -16,13 +16,11 @@ To use Nymph, you need a database driver. Nymph.js provides a [MySQL driver](../
 
 ## Usage
 
-The default export is an instance of the `Nymph` class. It's provided for convenience.
-
 Here's an overview:
 
 ```ts
 // main.ts
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 import MySQLDriver from '@nymphjs/driver-mysql';
 import Todo from './Todo';
 
@@ -33,7 +31,7 @@ const mysqlConfig = {
   password: 'your_password',
 };
 
-nymph.init({}, new MySQLDriver(mysqlConfig));
+const nymph = new Nymph({}, new MySQLDriver(mysqlConfig));
 nymph.setEntityClass(Todo.class, Todo);
 
 // You are set up. Now you can use entity classes like `Todo` to store data,

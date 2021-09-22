@@ -1,7 +1,4 @@
-import nymphServer, {
-  Entity as EntityServer,
-  EntityInvalidDataError,
-} from '@nymphjs/nymph';
+import { Entity as EntityServer, EntityInvalidDataError } from '@nymphjs/nymph';
 import { Entity } from '@nymphjs/client';
 
 export type EmployeeBaseData<T> = {
@@ -97,7 +94,7 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     }
     // Generate employee ID.
     if (this.$data.id == null) {
-      this.$data.id = (await nymphServer.newUID('employee')) ?? undefined;
+      this.$data.id = (await this.$nymph.newUID('employee')) ?? undefined;
     }
     return await super.$save();
   }
@@ -128,8 +125,6 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     return true;
   }
 }
-
-nymphServer.setEntityClass(EmployeeModel.class, EmployeeModel);
 
 export class BadFunctionCallError extends Error {
   constructor(message: string) {

@@ -1,13 +1,16 @@
 import { MockNymph } from './testMocks';
-import Nymph from './Nymph';
+import { TestBModel, TestModel, TestModelData } from './testArtifacts';
+import { cloneDeep } from 'lodash';
+
+const nymph = new MockNymph();
 
 jest.mock('./Nymph', () => ({
   __esModule: true,
-  default: MockNymph,
+  default: nymph,
 }));
 
-import { TestModel, TestModelData } from './testArtifacts';
-import { cloneDeep } from 'lodash';
+nymph.setEntityClass(TestModel.class, TestModel);
+nymph.setEntityClass(TestBModel.class, TestBModel);
 
 let testEntity = TestModel.factorySync();
 let entityReferenceTest: TestModel & TestModelData;

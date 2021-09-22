@@ -1,5 +1,5 @@
 import { EntityConstructor, EntityInterface } from './Entity.types';
-import { Nymph } from './Nymph';
+import Nymph from './Nymph';
 
 export type NymphEventType =
   | 'connect'
@@ -243,6 +243,7 @@ export interface TilmeldInterface {
   request: any;
   response: any;
   init(nymph: Nymph): void;
+  clone(): TilmeldInterface;
   gatekeeper(ability?: string): boolean;
   authenticate(): void;
   clearSession(): void;

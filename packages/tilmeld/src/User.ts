@@ -14,9 +14,9 @@ import sha256 from 'crypto-js/sha256';
 import md5 from 'crypto-js/md5';
 import { difference } from 'lodash';
 
+import type Tilmeld from './Tilmeld';
 import AbleObject from './AbleObject';
 import Group, { GroupData } from './Group';
-import Tilmeld from './Tilmeld';
 import {
   BadDataError,
   BadEmailError,

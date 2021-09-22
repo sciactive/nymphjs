@@ -1,4 +1,4 @@
-import type { Nymph } from './Nymph';
+import type Nymph from './Nymph';
 import type { Options } from './Nymph.types';
 
 export type ACProperties = {

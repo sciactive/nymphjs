@@ -15,7 +15,7 @@ npm install --save @nymphjs/driver-postgresql
 Supply an instance of this driver with its configuration to Nymph's init function.
 
 ```ts
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 import PostgreSQLDriver from '@nymphjs/driver-postgresql';
 
 const postgresqlConfig = {
@@ -25,7 +25,7 @@ const postgresqlConfig = {
   password: 'your_password',
 };
 
-nymph.init({}, new PostgreSQLDriver(postgresqlConfig));
+const nymph = new Nymph({}, new PostgreSQLDriver(postgresqlConfig));
 
 // All done. Nymph is ready to use.
 ```

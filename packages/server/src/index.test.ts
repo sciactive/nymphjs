@@ -1,17 +1,18 @@
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import nymphServer from '@nymphjs/nymph';
+import { Nymph as NymphServer } from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
 import { Entity } from '@nymphjs/client';
 
 import createServer from './index';
-import { Employee } from './testArtifacts';
+import { EmployeeModel, Employee } from './testArtifacts';
 
 const sqliteConfig = {
   filename: ':memory:',
 };
 
-nymphServer.init({}, new SQLite3Driver(sqliteConfig));
+const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
+nymphServer.setEntityClass(EmployeeModel.class, EmployeeModel);
 
 const app = express();
 app.use('/test', createServer(nymphServer));

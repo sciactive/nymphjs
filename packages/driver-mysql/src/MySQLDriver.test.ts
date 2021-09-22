@@ -1,4 +1,4 @@
-import nymph, { QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { Nymph, QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
 import MySQLDriver from './MySQLDriver';
 
@@ -9,12 +9,12 @@ const mysqlConfig = {
   password: 'nymph',
 };
 
-nymph.init({}, new MySQLDriver(mysqlConfig));
+const nymph = new Nymph({}, new MySQLDriver(mysqlConfig));
 
 describe('MySQLDriver', () => {
-  QueriesTest(it);
-  UIDTest(it);
-  ExportImportTest(it);
+  QueriesTest(nymph, it);
+  UIDTest(nymph, it);
+  ExportImportTest(nymph, it);
 
   afterAll(async () => {
     await nymph.driver.disconnect(); // avoid jest open handle error

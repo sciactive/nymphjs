@@ -16,14 +16,14 @@ A Nymph installation will not publish changes unless you initialize PubSub publi
 
 ```ts
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 import { PubSub } from '@nymphjs/pubsub';
 
 const pubSubConfig = {
   entries: ['ws://yourpubsubserver.tld:8080/'], // This should be set to your PubSub server URL(s).
 };
 
-nymph.init(
+const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
@@ -36,7 +36,7 @@ Now, on your PubSub server, you can use the createServer function to create a ne
 
 ```ts
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 import createServer, { PubSub } from '@nymphjs/pubsub';
 
 const pubSubConfig = {
@@ -47,7 +47,7 @@ const pubSubConfig = {
   entries: ['ws://yourpubsubserver.tld:8080/'],
 };
 
-nymph.init(
+const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
@@ -65,7 +65,7 @@ If you need to provide custom handling in your server (like TLS), you can use th
 import http from 'http';
 import { server as WebSocketServer } from 'websocket';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 import { PubSub } from '@nymphjs/pubsub';
 
 const pubSubConfig = {
@@ -77,8 +77,7 @@ const pubSubConfig = {
 };
 
 // Set up Nymph.
-
-nymph.init(
+const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
@@ -88,21 +87,17 @@ nymph.init(
 PubSub.initPublisher(pubSubConfig, nymph);
 
 // Set up the PubSub server.
-
 const port = 8080;
-
 const server = http.createServer((_request, response) => {
   response.writeHead(404);
   response.end();
 });
-
 const listener = server.listen(port, () => {
   console.log(
     new Date().toISOString(),
     `Nymph-PubSub server started listening on port ${port}.`
   );
 });
-
 const wsServer = new WebSocketServer({
   httpServer: listener,
   // You should not use autoAcceptConnections for production

@@ -57,7 +57,9 @@ export default class Nymph {
 
   public getEntityClass(className: string) {
     if (this.entityClasses.hasOwnProperty(className)) {
-      return this.entityClasses[className];
+      const EntityClass = this.entityClasses[className];
+      EntityClass.nymph = this;
+      return EntityClass;
     }
     throw new ClassNotAvailableError(
       "Tried to get class that's not available: " + className

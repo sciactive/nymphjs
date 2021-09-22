@@ -21,8 +21,8 @@ For this example, I'll use the SQLite3 driver with an in-memory database.
 ```ts
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import nymph from '@nymphjs/nymph';
-import Tilmeld from '@nymphjs/tilmeld';
+import { Nymph } from '@nymphjs/nymph';
+import { Tilmeld } from '@nymphjs/tilmeld';
 import createServer from '@nymphjs/server';
 import setup from '@nymphjs/tilmeld-setup';
 
@@ -30,7 +30,7 @@ import setup from '@nymphjs/tilmeld-setup';
 import './entities/MyEntity';
 
 // Configure Nymph.
-nymph.init(
+const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:',

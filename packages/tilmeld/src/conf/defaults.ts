@@ -1,12 +1,11 @@
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
-import Email, { EmailOptions } from 'email-templates';
+import Email from 'email-templates';
 import Joi from 'joi';
 
-import Tilmeld from '../Tilmeld';
 import { Config } from './d';
-import User, { UserData } from '../User';
+import User from '../User';
 import Group from '../Group';
 
 export default {

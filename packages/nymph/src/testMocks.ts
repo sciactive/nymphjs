@@ -1,11 +1,19 @@
+import type Nymph from './Nymph';
 import { EntityConstructor, EntityInterface, EntityJson } from './Entity.types';
 import { Options, Selector } from './Nymph.types';
 import newGUID from './newGUID';
 import { ClassNotAvailableError } from './errors';
+import Entity from './Entity';
 
 const entities: { [k: string]: EntityJson } = {};
 
 export class MockNymphDriver {
+  private nymph: MockNymph;
+
+  public constructor(nymph: MockNymph) {
+    this.nymph = nymph;
+  }
+
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -33,7 +41,7 @@ export class MockNymphDriver {
     }
 
     const entity: EntityInterface = (
-      (options.class as T) ?? MockNymph.getEntityClass('Entity')
+      (options.class as T) ?? this.nymph.getEntityClass('Entity')
     ).factorySync();
     const entityJson = entities[guid];
     entity.guid = guid;
@@ -47,51 +55,48 @@ export class MockNymphDriver {
 }
 
 export class MockNymph {
-  public static entityClasses: { [k: string]: EntityConstructor } = {};
-  public static driver = new MockNymphDriver();
-  public static Tilmeld: any = undefined;
+  public entityClasses: { [k: string]: EntityConstructor } = {};
+  public driver: MockNymphDriver;
+  public Tilmeld: any = undefined;
 
-  public static setEntityClass(
-    className: string,
-    entityClass: EntityConstructor
-  ) {
-    this.entityClasses[className] = entityClass;
+  public constructor() {
+    this.driver = new MockNymphDriver(this);
+
+    // class NymphEntity extends Entity {}
+    this.setEntityClass(Entity.class, Entity);
   }
 
-  public static getEntityClass(className: string): EntityConstructor {
+  public setEntityClass(className: string, entityClass: EntityConstructor) {
+    this.entityClasses[className] = entityClass;
+    entityClass.nymph = this as unknown as Nymph;
+  }
+
+  public getEntityClass(className: string): EntityConstructor {
     if (className in this.entityClasses) {
-      return this.entityClasses[className];
+      const EntityClass = this.entityClasses[className];
+      EntityClass.nymph = this as unknown as Nymph;
+      return EntityClass;
     }
     throw new ClassNotAvailableError('Tried to use class: ' + className);
   }
 
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']> | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
   ): Promise<string | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string
   ): Promise<ReturnType<T['factorySync']> | null>;
-  public static async getEntity<
-    T extends EntityConstructor = EntityConstructor
-  >(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
   ): Promise<ReturnType<T['factorySync']> | string | null> {
@@ -99,7 +104,7 @@ export class MockNymph {
     return this.driver.getEntitySync(options, ...selectors);
   }
 
-  public static async saveEntity(entity: EntityInterface): Promise<boolean> {
+  public async saveEntity(entity: EntityInterface): Promise<boolean> {
     const className = (entity.constructor as any).class as string;
 
     if (entity.guid == null) {
@@ -127,7 +132,7 @@ export class MockNymph {
     return true;
   }
 
-  public static async deleteEntity(entity: EntityInterface): Promise<boolean> {
+  public async deleteEntity(entity: EntityInterface): Promise<boolean> {
     if (entity.guid != null && entity.guid in entities) {
       delete entities[entity.guid];
       return true;

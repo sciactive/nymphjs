@@ -1,4 +1,4 @@
-import nymph, { QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { Nymph, QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
 import PostgreSQLDriver from './PostgreSQLDriver';
 
@@ -9,12 +9,12 @@ const postgresqlConfig = {
   password: 'nymph',
 };
 
-nymph.init({}, new PostgreSQLDriver(postgresqlConfig));
+const nymph = new Nymph({}, new PostgreSQLDriver(postgresqlConfig));
 
 describe('PostgreSQLDriver', () => {
-  QueriesTest(it);
-  UIDTest(it);
-  ExportImportTest(it);
+  QueriesTest(nymph, it);
+  UIDTest(nymph, it);
+  ExportImportTest(nymph, it);
 
   afterAll(async () => {
     await nymph.driver.disconnect(); // avoid jest open handle error

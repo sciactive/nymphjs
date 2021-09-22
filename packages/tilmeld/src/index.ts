@@ -11,7 +11,6 @@ export { Group };
 
 import Tilmeld from './Tilmeld';
 export { Tilmeld };
-export default Tilmeld;
 
 export * from './Tilmeld.types';
 

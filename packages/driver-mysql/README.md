@@ -15,7 +15,7 @@ npm install --save @nymphjs/driver-mysql
 Supply an instance of this driver with its configuration to Nymph's init function.
 
 ```ts
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 import MySQLDriver from '@nymphjs/driver-mysql';
 
 const mysqlConfig = {
@@ -25,7 +25,7 @@ const mysqlConfig = {
   password: 'your_password',
 };
 
-nymph.init({}, new MySQLDriver(mysqlConfig));
+const nymph = new Nymph({}, new MySQLDriver(mysqlConfig));
 
 // All done. Nymph is ready to use.
 ```

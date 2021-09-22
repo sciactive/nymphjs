@@ -1,11 +1,17 @@
 import fs from 'fs';
 import strtotime from 'locutus/php/datetime/strtotime';
 
+import type Nymph from '../Nymph';
 import newGUID from '../newGUID';
-import nymph from '../Nymph';
 import { TestBModel, TestModel, TestModelData } from '../testArtifacts';
 
-export function QueriesTest(it: (name: string, fn: () => void) => void) {
+export function QueriesTest(
+  nymph: Nymph,
+  it: (name: string, fn: () => void) => void
+) {
+  nymph.setEntityClass(TestModel.class, TestModel);
+  nymph.setEntityClass(TestBModel.class, TestBModel);
+
   let testEntity: TestModel & TestModelData;
   let testGuid: string;
   let refGuid: string;
@@ -1669,7 +1675,13 @@ This one's zip code is 92064.`;
   });
 }
 
-export function UIDTest(it: (name: string, fn: () => void) => void) {
+export function UIDTest(
+  nymph: Nymph,
+  it: (name: string, fn: () => void) => void
+) {
+  nymph.setEntityClass(TestModel.class, TestModel);
+  nymph.setEntityClass(TestBModel.class, TestBModel);
+
   it('delete old test data', async () => {
     expect(await nymph.deleteUID('TestUID')).toEqual(true);
     expect(await nymph.deleteUID('NewUID')).toEqual(true);
@@ -1707,7 +1719,13 @@ export function UIDTest(it: (name: string, fn: () => void) => void) {
   });
 }
 
-export function ExportImportTest(it: (name: string, fn: () => void) => void) {
+export function ExportImportTest(
+  nymph: Nymph,
+  it: (name: string, fn: () => void) => void
+) {
+  nymph.setEntityClass(TestModel.class, TestModel);
+  nymph.setEntityClass(TestBModel.class, TestBModel);
+
   async function deleteTestData() {
     let all = await nymph.getEntities({ class: TestModel });
     expect(Array.isArray(all)).toEqual(true);

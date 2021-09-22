@@ -1,5 +1,5 @@
 import { SQLite3Driver } from '@nymphjs/driver-sqlite3';
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 
 import Tilmeld from './Tilmeld';
 import defaults from './conf/defaults';
@@ -16,7 +16,7 @@ const tilmeld = new Tilmeld({
   cancelChangeRedirect: 'http://localhost:8080',
   jwtSecret: 'shhhhh',
 });
-nymph.init(
+const _nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:',

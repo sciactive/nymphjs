@@ -15,14 +15,14 @@ npm install --save @nymphjs/driver-sqlite3
 Supply an instance of this driver with its configuration to Nymph's init function.
 
 ```ts
-import nymph from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
 
 const sqliteConfig = {
   filename: __dirname + '/mydatabase.db',
 };
 
-nymph.init({}, new SQLite3Driver(sqliteConfig));
+const nymph = new Nymph({}, new SQLite3Driver(sqliteConfig));
 
 // All done. Nymph is ready to use.
 ```

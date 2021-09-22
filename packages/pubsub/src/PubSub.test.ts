@@ -1,9 +1,13 @@
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import nymphServer from '@nymphjs/nymph';
+import { Nymph as NymphServer } from '@nymphjs/nymph';
 import { Nymph, PubSub } from '@nymphjs/client-node';
 import createRestServer from '@nymphjs/server';
-import { Employee, EmployeeData } from '@nymphjs/server/dist/testArtifacts.js';
+import {
+  EmployeeModel,
+  Employee,
+  EmployeeData,
+} from '@nymphjs/server/dist/testArtifacts.js';
 
 import createServer from './index';
 import PubSubServer from './PubSub';
@@ -18,7 +22,8 @@ const pubSubConfig = {
   logger: () => {},
 };
 
-nymphServer.init({}, new SQLite3Driver(sqliteConfig));
+const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
+nymphServer.setEntityClass(EmployeeModel.class, EmployeeModel);
 PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
 const app = express();

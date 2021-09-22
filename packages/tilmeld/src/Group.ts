@@ -10,6 +10,7 @@ import {
 import md5 from 'crypto-js/md5';
 import { difference } from 'lodash';
 
+import type Tilmeld from './Tilmeld';
 import AbleObject from './AbleObject';
 import {
   BadDataError,
@@ -17,7 +18,6 @@ import {
   BadUsernameError,
   CouldNotChangeDefaultPrimaryGroupError,
 } from './errors';
-import Tilmeld from './Tilmeld';
 import User, { UserData } from './User';
 
 export type GroupData = {

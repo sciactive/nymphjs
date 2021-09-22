@@ -12,32 +12,37 @@ npm install --save @nymphjs/tilmeld
 
 ## Usage
 
-When you initialize Nymph, provide it with the Tilmeld class from this package. Then you can initialize Tilmeld itself with its own configuration.
+When you initialize Nymph, provide it with an instance of the Tilmeld class from this package. You now have access to the User and Group classes that are specific to that instance of Nymph/Tilmeld.
 
 Here's an overview.
 
 ```ts
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
-import Tilmeld from '@nymphjs/tilmeld';
-import nymph from '@nymphjs/nymph';
+import { Tilmeld } from '@nymphjs/tilmeld';
+import { Nymph } from '@nymphjs/nymph';
 
-nymph.init(
+const tilmeld = new Tilmeld({
+  appName: 'My App',
+  appUrl: 'http://localhost',
+  cookieDomain: 'localhost',
+  cookiePath: '/',
+  setupPath: '/user',
+  verifyRedirect: 'http://localhost',
+  verifyChangeRedirect: 'http://localhost',
+  cancelChangeRedirect: 'http://localhost',
+  jwtSecret: 'shhhhh',
+});
+
+const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:',
   }),
-  new Tilmeld({
-    appName: 'My App',
-    appUrl: 'http://localhost',
-    cookieDomain: 'localhost',
-    cookiePath: '/',
-    setupPath: '/user',
-    verifyRedirect: 'http://localhost',
-    verifyChangeRedirect: 'http://localhost',
-    cancelChangeRedirect: 'http://localhost',
-    jwtSecret: 'shhhhh',
-  })
+  tilmeld
 );
+
+// These are the classes specific to this instance of Tilmeld.
+const { User, Group } = tilmeld;
 ```
 
 ## Options

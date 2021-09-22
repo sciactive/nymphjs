@@ -31,7 +31,7 @@ export default class Tilmeld implements TilmeldInterface {
   /**
    * The Nymph instance.
    */
-  public nymph: Nymph;
+  public nymph: Nymph = {} as Nymph;
 
   /**
    * The Tilmeld config.
@@ -71,29 +71,31 @@ export default class Tilmeld implements TilmeldInterface {
   public response: Response | null = null;
 
   /**
+   * Skip the authenticate step of initialization.
+   */
+  private skipAuthenticate = false;
+
+  /**
    * Create a new instance of Tilmeld.
    *
    * @param config The Tilmeld configuration.
    */
   public constructor(config: Partial<Config> & { jwtSecret: string }) {
-    this.nymph = new Nymph();
     this.config = { ...defaults, ...config };
   }
 
   /**
-   * Check to see if the current user has an ability.
-   *
-   * If `ability` is undefined, it will check to see if a user is currently
-   * logged in.
-   *
-   * @param ability The ability.
-   * @returns Whether the user has the given ability.
+   * This is used internally by Nymph. Don't call it yourself.
+   * @returns A clone of this instance.
    */
-  public gatekeeper(ability?: string): boolean {
-    if (this.currentUser == null) {
-      return false;
-    }
-    return this.currentUser.$gatekeeper(ability);
+  public clone() {
+    const tilmeld = new Tilmeld(this.config);
+    tilmeld.request = this.request;
+    tilmeld.response = this.response;
+    tilmeld.currentUser = this.currentUser;
+    tilmeld.skipAuthenticate = true;
+
+    return tilmeld;
   }
 
   /**
@@ -124,9 +126,26 @@ export default class Tilmeld implements TilmeldInterface {
     this.nymph.setEntityClass(NymphGroup.class, NymphGroup);
 
     this.initAccessControl();
-    if (this.request != null) {
+    if (this.request != null && !this.skipAuthenticate) {
       this.authenticate();
     }
+    this.skipAuthenticate = false;
+  }
+
+  /**
+   * Check to see if the current user has an ability.
+   *
+   * If `ability` is undefined, it will check to see if a user is currently
+   * logged in.
+   *
+   * @param ability The ability.
+   * @returns Whether the user has the given ability.
+   */
+  public gatekeeper(ability?: string): boolean {
+    if (this.currentUser == null) {
+      return false;
+    }
+    return this.currentUser.$gatekeeper(ability);
   }
 
   private initAccessControl() {
@@ -169,6 +188,7 @@ export default class Tilmeld implements TilmeldInterface {
         tilmeld.addAccessControlSelectors(options, selectors);
       }
     };
+    handleQuery.tilmeld = true;
 
     // Filter entities being deleted for user permissions.
     const checkPermissionsDelete = function (entity: EntityInterface) {
@@ -183,6 +203,7 @@ export default class Tilmeld implements TilmeldInterface {
         throw new AccessControlError('No permission to delete.');
       }
     };
+    checkPermissionsDelete.tilmeld = true;
 
     // Filter entities being deleted for user permissions.
     const checkPermissionsDeleteByID = function (
@@ -197,6 +218,7 @@ export default class Tilmeld implements TilmeldInterface {
         checkPermissionsDelete(entity);
       }
     };
+    checkPermissionsDeleteByID.tilmeld = true;
 
     // Filter entities being saved for user permissions, and filter any
     // disallowed changes to AC properties.
@@ -255,6 +277,7 @@ export default class Tilmeld implements TilmeldInterface {
         throw new AccessControlError('No permission to write.');
       }
     };
+    checkPermissionsSaveAndFilterAcChanges.tilmeld = true;
 
     /*
      * Add the current user's "user", "group", and access control to new entity.
@@ -310,6 +333,7 @@ export default class Tilmeld implements TilmeldInterface {
         }
       }
     };
+    addAccess.tilmeld = true;
 
     const validate = function (entity: EntityInterface & AccessControlData) {
       if (!(entity instanceof User) && !(entity instanceof Group)) {
@@ -366,6 +390,7 @@ export default class Tilmeld implements TilmeldInterface {
         }
       }
     };
+    validate.tilmeld = true;
 
     this.nymph.on('query', handleQuery);
 

@@ -1,5 +1,6 @@
+import Entity from './Entity';
 import { EntityReference } from './Entity.types';
-import { Nymph } from './Nymph';
+import Nymph from './Nymph';
 
 export function xor(a: any, b: any): boolean {
   return !!(a && !b) || (!a && b);
@@ -13,19 +14,17 @@ export function uniqueStrings(array: string[]) {
   return Object.keys(obj);
 }
 
-export function entitiesToReferences(item: any, nymph: Nymph): any {
-  const EntityClass = nymph.getEntityClass('Entity');
-
-  if (item instanceof EntityClass && typeof item.$toReference === 'function') {
+export function entitiesToReferences(item: any): any {
+  if (item instanceof Entity && typeof item.$toReference === 'function') {
     // Convert entities to references.
     return item.$toReference();
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
-    return item.map((entry) => entitiesToReferences(entry, nymph));
+    return item.map((entry) => entitiesToReferences(entry));
   } else if (item instanceof Object) {
     let newObj = Object.create(item);
     for (let [key, value] of Object.entries(item)) {
-      newObj[key] = entitiesToReferences(value, nymph);
+      newObj[key] = entitiesToReferences(value);
     }
     return newObj;
   }
@@ -38,8 +37,6 @@ export function referencesToEntities(
   nymph: Nymph,
   useSkipAc = false
 ): any {
-  const Entity = nymph.getEntityClass('Entity');
-
   if (Array.isArray(item)) {
     // Check if it's a reference.
     if (item[0] === 'nymph_entity_reference') {

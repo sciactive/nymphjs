@@ -19,7 +19,14 @@ The Tilmeld client contains the client versions of the `User` and `Group` entiti
 Once you've initialized Nymph Client, set the User and Group classes on it.
 
 ```ts
+import { Nymph } from '@nymphjs/client';
+import { User, Group } from '@nymphjs/tilmeld-client';
 
+const nymph = new Nymph({
+  restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
+});
+nymph.setEntityClass(User.class, User);
+nymph.setEntityClass(Group.class, Group);
 ```
 
 # License

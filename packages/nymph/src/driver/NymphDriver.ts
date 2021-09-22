@@ -3,7 +3,7 @@ import { difference } from 'lodash';
 import ReadLines from 'n-readlines';
 import strtotime from 'locutus/php/datetime/strtotime';
 
-import type { Nymph } from '../Nymph';
+import type Nymph from '../Nymph';
 import newGUID from '../newGUID';
 import {
   EntityConstructor,

@@ -1,5 +1,4 @@
 import Entity from './Entity';
-import nymph from './Nymph';
 
 export type TestModelData = {
   name?: string;
@@ -72,8 +71,6 @@ export class TestModel extends Entity<TestModelData> {
   }
 }
 
-nymph.setEntityClass(TestModel.class, TestModel);
-
 /**
  * This class is a test class that extends the Entity class.
  */
@@ -89,5 +86,3 @@ export class TestBModel extends TestModel {
     return super.factorySync(guid) as TestBModel & TestModelData;
   }
 }
-
-nymph.setEntityClass(TestBModel.class, TestBModel);
