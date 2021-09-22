@@ -14,16 +14,9 @@ This package is the Nymph client for browsers. You can find UMD in `dist`, or TS
 
 ## Usage
 
-For detailed docs, check out the User Guide on the website:
-
-- [Entity Class](https://nymph.io/user-guide/entity-class)
-- [Entity Querying](https://nymph.io/user-guide/entity-querying)
-- [Extending the Entity Class](https://nymph.io/user-guide/extending-the-entity-class)
-- [Subscribing to Queries](https://nymph.io/user-guide/subscribing-to-queries)
-
 Here's an overview:
 
-```js
+```ts
 import { Nymph, PubSub } from '@nymphjs/client';
 import Todo from 'Todo';
 

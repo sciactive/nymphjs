@@ -12,7 +12,7 @@ npm install --save @nymphjs/pubsub
 
 ## Usage
 
-A Nymph installation will not publish changes unless you initialize PubSub publisher before Nymph is used! This step is absolutely reuquired to have a working PubSub system.
+Any Nymph instance will only publish changes if you initialize PubSub publisher before Nymph is used! This step is **absolutely required** to have a working PubSub system.
 
 ```ts
 import SQLite3Driver from '@nymphjs/driver-sqlite3';

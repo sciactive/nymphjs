@@ -16,7 +16,6 @@ The query parser will turn a string into an Options and Selectors array for the 
 
 ```ts
 import queryParser from '@nymphjs/query-parser';
-import { Nymph } from '@nymphjs/client';
 
 import BlogPost from './BlogPost';
 import Category from './Category';
@@ -77,7 +76,7 @@ async function doQuery() {
       }
     ]
   */
-  const entities = await Nymph.getEntities(options, ...selectors);
+  const entities = await nymph.getEntities(options, ...selectors);
 }
 ```
 
@@ -109,7 +108,7 @@ Check for string or JSON representation equality.
 
 Check for entity GUID.
 
-- `{guid}` and `{!guid}`
+- `{guid}` or `{!guid}`
 
 ### truthy and !truthy
 

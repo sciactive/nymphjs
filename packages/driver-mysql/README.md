@@ -12,7 +12,7 @@ npm install --save @nymphjs/driver-mysql
 
 ## Usage
 
-Supply an instance of this driver with its configuration to Nymph's init function.
+Supply an instance of this driver with its configuration to Nymph's constructor.
 
 ```ts
 import { Nymph } from '@nymphjs/nymph';

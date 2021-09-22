@@ -18,13 +18,13 @@ This package provides fetch and WebSocket ponyfills to Nymph and handles Tilmeld
 
 To use, require it instead of `@nymphjs/client`:
 
-```js
+```ts
 const { Nymph, PubSub } = require('@nymphjs/client-node');
 ```
 
 Then set up Nymph and PubSub like normal:
 
-```js
+```ts
 const nymphOptions = {
   restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
   pubsubUrl: 'wss://yournymphpubsubserver',
