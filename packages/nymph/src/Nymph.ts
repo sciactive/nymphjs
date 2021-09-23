@@ -477,10 +477,10 @@ export default class Nymph {
    * entities that were created in the last day:
    *
    * ```
-   * [
-   *   '&',
-   *   'gte' => ['cdate', null, '-1 day']
-   * ]
+   * {
+   *   type: '&',
+   *   gte: ['cdate', null, '-1 day']
+   * }
    * ```
    *
    * Locutus' implementation: https://locutus.io/php/datetime/strtotime/
