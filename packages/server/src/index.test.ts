@@ -12,7 +12,7 @@ const sqliteConfig = {
 };
 
 const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
-nymphServer.setEntityClass(EmployeeModel.class, EmployeeModel);
+nymphServer.addEntityClass(EmployeeModel);
 
 const app = express();
 app.use('/test', createServer(nymphServer));
@@ -21,7 +21,7 @@ const server = app.listen(5080);
 const nymph = new Nymph({
   restUrl: 'http://localhost:5080/test/',
 });
-nymph.setEntityClass(Employee.class, Employee);
+nymph.addEntityClass(Employee);
 
 describe('Nymph REST Server and Client', () => {
   async function createJane() {

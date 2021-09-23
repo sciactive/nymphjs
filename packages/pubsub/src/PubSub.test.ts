@@ -23,7 +23,7 @@ const pubSubConfig = {
 };
 
 const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
-nymphServer.setEntityClass(EmployeeModel.class, EmployeeModel);
+nymphServer.addEntityClass(EmployeeModel);
 PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
 const app = express();
@@ -39,7 +39,7 @@ const nymphOptions = {
 };
 const nymph = new Nymph(nymphOptions);
 const pubsub = new PubSub(nymphOptions, nymph);
-nymph.setEntityClass(Employee.class, Employee);
+nymph.addEntityClass(Employee);
 
 describe('Nymph REST Server and Client', () => {
   async function createJane() {

@@ -126,6 +126,15 @@ export type UserData = {
   passwordTemp?: string;
 };
 
+/**
+ * A user data model.
+ *
+ * Written by Hunter Perrin for SciActive.
+ *
+ * @author Hunter Perrin <hperrin@gmail.com>
+ * @copyright SciActive Inc
+ * @see http://nymph.io/
+ */
 export default class User extends AbleObject<UserData> {
   /**
    * The instance of Tilmeld to use for queries.

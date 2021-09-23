@@ -118,12 +118,12 @@ export default class Tilmeld implements TilmeldInterface {
     NymphUser.nymph = this.nymph;
     NymphUser.tilmeld = this;
     this.User = NymphUser;
-    this.nymph.setEntityClass(NymphUser.class, NymphUser);
+    this.nymph.addEntityClass(NymphUser);
     class NymphGroup extends Group {}
     NymphGroup.nymph = this.nymph;
     NymphGroup.tilmeld = this;
     this.Group = NymphGroup;
-    this.nymph.setEntityClass(NymphGroup.class, NymphGroup);
+    this.nymph.addEntityClass(NymphGroup);
 
     this.initAccessControl();
     if (this.request != null && !this.skipAuthenticate) {
@@ -153,6 +153,7 @@ export default class Tilmeld implements TilmeldInterface {
 
     // Check for the skip access control option and add AC selectors.
     const handleQuery = function (
+      _nymph: Nymph,
       options: Options,
       selectors: FormattedSelector[]
     ) {
@@ -191,7 +192,10 @@ export default class Tilmeld implements TilmeldInterface {
     handleQuery.tilmeld = true;
 
     // Filter entities being deleted for user permissions.
-    const checkPermissionsDelete = function (entity: EntityInterface) {
+    const checkPermissionsDelete = function (
+      _nymph: Nymph,
+      entity: EntityInterface
+    ) {
       if (
         typeof entity.$tilmeldDeleteSkipAC === 'function' &&
         entity.$tilmeldDeleteSkipAC()
@@ -207,6 +211,7 @@ export default class Tilmeld implements TilmeldInterface {
 
     // Filter entities being deleted for user permissions.
     const checkPermissionsDeleteByID = function (
+      nymph: Nymph,
       guid: string,
       className?: string
     ) {
@@ -215,7 +220,7 @@ export default class Tilmeld implements TilmeldInterface {
         { type: '&', guid: guid }
       );
       if (entity != null) {
-        checkPermissionsDelete(entity);
+        checkPermissionsDelete(nymph, entity);
       }
     };
     checkPermissionsDeleteByID.tilmeld = true;
@@ -223,6 +228,7 @@ export default class Tilmeld implements TilmeldInterface {
     // Filter entities being saved for user permissions, and filter any
     // disallowed changes to AC properties.
     const checkPermissionsSaveAndFilterAcChanges = function (
+      _nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
       if (!entity) {
@@ -295,7 +301,10 @@ export default class Tilmeld implements TilmeldInterface {
      * - acGroup = Tilmeld::READ_ACCESS
      * - acOther = Tilmeld::NO_ACCESS
      */
-    const addAccess = function (entity: EntityInterface & AccessControlData) {
+    const addAccess = function (
+      _nymph: Nymph,
+      entity: EntityInterface & AccessControlData
+    ) {
       const user = tilmeld.currentUser;
       if (
         user != null &&
@@ -335,7 +344,10 @@ export default class Tilmeld implements TilmeldInterface {
     };
     addAccess.tilmeld = true;
 
-    const validate = function (entity: EntityInterface & AccessControlData) {
+    const validate = function (
+      _nymph: Nymph,
+      entity: EntityInterface & AccessControlData
+    ) {
       if (!(entity instanceof User) && !(entity instanceof Group)) {
         const ownershipAcPropertyValidator = (prop: any) => {
           if (

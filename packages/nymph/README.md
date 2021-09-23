@@ -32,7 +32,7 @@ const mysqlConfig = {
 };
 
 const nymph = new Nymph({}, new MySQLDriver(mysqlConfig));
-nymph.setEntityClass(Todo.class, Todo);
+nymph.addEntityClass(Todo);
 
 // You are set up. Now you can use entity classes like `Todo` to store data,
 // and Nymph's query methods like `getEntities` to retrieve them.

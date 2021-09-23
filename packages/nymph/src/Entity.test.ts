@@ -9,8 +9,8 @@ jest.mock('./Nymph', () => ({
   default: nymph,
 }));
 
-nymph.setEntityClass(TestModel.class, TestModel);
-nymph.setEntityClass(TestBModel.class, TestBModel);
+nymph.addEntityClass(TestModel);
+nymph.addEntityClass(TestBModel);
 
 let testEntity = TestModel.factorySync();
 let entityReferenceTest: TestModel & TestModelData;

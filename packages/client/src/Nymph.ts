@@ -1,6 +1,7 @@
 import Entity from './Entity';
 import {
   EntityConstructor,
+  EntityData,
   EntityInterface,
   EntityJson,
   ServerCallResponse,
@@ -21,8 +22,21 @@ import { entitiesToReferences, entityConstructorsToClassNames } from './utils';
 let requester: HttpRequester;
 
 export default class Nymph {
+  /**
+   * And optional PubSub client instance.
+   */
   public pubsub: PubSub | undefined = undefined;
+
+  /**
+   * A simple map of names to Entity classes.
+   */
   private entityClasses: { [k: string]: EntityConstructor } = {};
+
+  /**
+   * The entity class for this instance of Nymph.
+   */
+  public Entity: typeof Entity = Entity;
+
   private requestCallbacks: RequestCallback[] = [];
   private responseCallbacks: ResponseCallback[] = [];
   private restUrl: string = '';
@@ -30,8 +44,10 @@ export default class Nymph {
   public constructor(NymphOptions: NymphOptions) {
     this.restUrl = NymphOptions.restUrl;
 
-    class NymphEntity extends Entity {}
-    this.setEntityClass(NymphEntity.class, NymphEntity);
+    class NymphEntity<T extends EntityData = EntityData> extends Entity<T> {}
+    NymphEntity.nymph = this;
+    this.Entity = NymphEntity;
+    this.addEntityClass(NymphEntity);
 
     requester = new HttpRequester(
       'fetch' in NymphOptions ? NymphOptions.fetch : undefined
@@ -50,8 +66,8 @@ export default class Nymph {
     });
   }
 
-  public setEntityClass(className: string, entityClass: EntityConstructor) {
-    this.entityClasses[className] = entityClass;
+  public addEntityClass(entityClass: EntityConstructor) {
+    this.entityClasses[entityClass.class] = entityClass;
     entityClass.nymph = this;
   }
 

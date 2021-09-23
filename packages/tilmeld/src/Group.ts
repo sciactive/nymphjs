@@ -72,6 +72,15 @@ export type GroupData = {
   unverifiedSecondary?: boolean;
 };
 
+/**
+ * A user group data model.
+ *
+ * Written by Hunter Perrin for SciActive.
+ *
+ * @author Hunter Perrin <hperrin@gmail.com>
+ * @copyright SciActive Inc
+ * @see http://nymph.io/
+ */
 export default class Group extends AbleObject<GroupData> {
   /**
    * The instance of Tilmeld to use for queries.

@@ -21,43 +21,83 @@ export type NymphEventType =
   | 'afterRenameUID'
   | 'beforeDeleteUID'
   | 'afterDeleteUID';
-export type NymphConnectCallback = (result: Promise<boolean>) => void;
-export type NymphDisconnectCallback = (result: Promise<boolean>) => void;
+export type NymphConnectCallback = (
+  nymph: Nymph,
+  result: Promise<boolean>
+) => void;
+export type NymphDisconnectCallback = (
+  nymph: Nymph,
+  result: Promise<boolean>
+) => void;
 /** The NymphQueryCallback will be called on both top level and qref queries. */
 export type NymphQueryCallback = (
+  nymph: Nymph,
   options: Options,
   selectors: FormattedSelector[]
 ) => void;
 export type NymphBeforeGetEntityCallback = (
+  nymph: Nymph,
   options: Options,
   selectors: Selector[]
 ) => void;
 export type NymphBeforeGetEntitiesCallback = (
+  nymph: Nymph,
   options: Options,
   selectors: Selector[]
 ) => void;
-export type NymphBeforeSaveEntityCallback = (entity: EntityInterface) => void;
-export type NymphAfterSaveEntityCallback = (result: Promise<boolean>) => void;
-export type NymphBeforeDeleteEntityCallback = (entity: EntityInterface) => void;
-export type NymphAfterDeleteEntityCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeSaveEntityCallback = (
+  nymph: Nymph,
+  entity: EntityInterface
+) => void;
+export type NymphAfterSaveEntityCallback = (
+  nymph: Nymph,
+  result: Promise<boolean>
+) => void;
+export type NymphBeforeDeleteEntityCallback = (
+  nymph: Nymph,
+  entity: EntityInterface
+) => void;
+export type NymphAfterDeleteEntityCallback = (
+  nymph: Nymph,
+  result: Promise<boolean>
+) => void;
 export type NymphBeforeDeleteEntityByIDCallback = (
+  nymph: Nymph,
   guid: string,
   className?: string
 ) => void;
 export type NymphAfterDeleteEntityByIDCallback = (
+  nymph: Nymph,
   result: Promise<boolean>
 ) => void;
-export type NymphBeforeNewUIDCallback = (name: string) => void;
-export type NymphAfterNewUIDCallback = (result: Promise<number | null>) => void;
-export type NymphBeforeSetUIDCallback = (name: string, value: number) => void;
-export type NymphAfterSetUIDCallback = (result: Promise<boolean>) => void;
+export type NymphBeforeNewUIDCallback = (nymph: Nymph, name: string) => void;
+export type NymphAfterNewUIDCallback = (
+  nymph: Nymph,
+  result: Promise<number | null>
+) => void;
+export type NymphBeforeSetUIDCallback = (
+  nymph: Nymph,
+  name: string,
+  value: number
+) => void;
+export type NymphAfterSetUIDCallback = (
+  nymph: Nymph,
+  result: Promise<boolean>
+) => void;
 export type NymphBeforeRenameUIDCallback = (
+  nymph: Nymph,
   oldName: string,
   newName: string
 ) => void;
-export type NymphAfterRenameUIDCallback = (result: Promise<boolean>) => void;
-export type NymphBeforeDeleteUIDCallback = (name: string) => void;
-export type NymphAfterDeleteUIDCallback = (result: Promise<boolean>) => void;
+export type NymphAfterRenameUIDCallback = (
+  nymph: Nymph,
+  result: Promise<boolean>
+) => void;
+export type NymphBeforeDeleteUIDCallback = (nymph: Nymph, name: string) => void;
+export type NymphAfterDeleteUIDCallback = (
+  nymph: Nymph,
+  result: Promise<boolean>
+) => void;
 
 export type Options<T extends EntityConstructor = EntityConstructor> = {
   class?: T;

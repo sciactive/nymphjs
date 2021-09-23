@@ -8,8 +8,7 @@ import PubSub from './PubSub';
 export default function createServer(
   port = 8080,
   config: Partial<Config> = {},
-  nymph: Nymph,
-  tilmeld?: TilmeldInterface
+  nymph: Nymph
 ) {
   const server = http.createServer((_request, response) => {
     response.writeHead(404);
@@ -34,7 +33,7 @@ export default function createServer(
     autoAcceptConnections: false,
   });
 
-  const pubsub = new PubSub(config, nymph, wsServer, tilmeld);
+  const pubsub = new PubSub(config, nymph, wsServer);
 
   const _close = pubsub.close;
   pubsub.close = () => {

@@ -30,7 +30,7 @@ const nymph = new Nymph(
     filename: ':memory:',
   })
 );
-nymph.setEntityClass(MyEntity.class, MyEntity);
+nymph.addEntityClass(MyEntity);
 
 // Create your Express app.
 const app = express();
@@ -58,7 +58,7 @@ const nymph = new Nymph({
   // use HTTPS, but you don't have to.
   restUrl: 'https://mydomain.tld/rest',
 });
-nymph.setEntityClass(MyEntity.class, MyEntity);
+nymph.addEntityClass(MyEntity);
 ```
 
 # License

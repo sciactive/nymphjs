@@ -4,8 +4,8 @@ import { User, Group } from '@nymphjs/tilmeld-client';
 const nymph = new Nymph(
   (window as unknown as { nymphOptions: NymphOptions }).nymphOptions
 );
-nymph.setEntityClass(User.class, User);
-nymph.setEntityClass(Group.class, Group);
+nymph.addEntityClass(User);
+nymph.addEntityClass(Group);
 
 export default nymph;
 

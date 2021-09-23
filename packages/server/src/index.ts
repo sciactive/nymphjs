@@ -13,21 +13,41 @@ import {
 } from '@nymphjs/nymph';
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
+type NymphResponse = Response<any, { nymph: Nymph }>;
+
+/**
+ * A REST server middleware creator for Nymph.
+ *
+ * Written by Hunter Perrin for SciActive.
+ *
+ * @author Hunter Perrin <hperrin@gmail.com>
+ * @copyright SciActive Inc
+ * @see http://nymph.io/
+ */
 export default function createServer(nymph: Nymph) {
   const rest = express();
   rest.use(cookieParser());
   rest.use(express.json());
 
-  function authenticateTilmeld(
-    request: Request,
-    response: Response,
+  function instantiateNymph(
+    _request: Request,
+    response: NymphResponse,
     next: NextFunction
   ) {
-    if (nymph.tilmeld) {
-      nymph.tilmeld.request = request;
-      nymph.tilmeld.response = response;
+    response.locals.nymph = nymph.clone();
+    next();
+  }
+
+  function authenticateTilmeld(
+    request: Request,
+    response: NymphResponse,
+    next: NextFunction
+  ) {
+    if (response.locals.nymph.tilmeld) {
+      response.locals.nymph.tilmeld.request = request;
+      response.locals.nymph.tilmeld.response = response;
       try {
-        nymph.tilmeld.authenticate();
+        response.locals.nymph.tilmeld.authenticate();
       } catch (e: any) {
         httpError(response, 500, 'Internal Server Error', e);
         return;
@@ -38,14 +58,14 @@ export default function createServer(nymph: Nymph) {
 
   function unauthenticateTilmeld(
     _request: Request,
-    response: Response,
+    response: NymphResponse,
     next: NextFunction
   ) {
-    if (nymph.tilmeld) {
-      nymph.tilmeld.request = null;
-      nymph.tilmeld.response = null;
+    if (response.locals.nymph.tilmeld) {
+      response.locals.nymph.tilmeld.request = null;
+      response.locals.nymph.tilmeld.response = null;
       try {
-        nymph.tilmeld.clearSession();
+        response.locals.nymph.tilmeld.clearSession();
       } catch (e: any) {
         httpError(response, 500, 'Internal Server Error', e);
         return;
@@ -77,10 +97,13 @@ export default function createServer(nymph: Nymph) {
     }
   }
 
+  // Create a new instance of Nymph for the request/response.
+  rest.use(instantiateNymph);
+
   // Authenticate before the request.
   rest.use(authenticateTilmeld);
 
-  rest.get('/', async (request, response) => {
+  rest.get('/', async (request, response: NymphResponse) => {
     try {
       const { action, data } = getActionData(request);
       if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
@@ -103,7 +126,7 @@ export default function createServer(nymph: Nymph) {
         }
         let EntityClass;
         try {
-          EntityClass = nymph.getEntityClass(data[0].class);
+          EntityClass = response.locals.nymph.getEntityClass(data[0].class);
         } catch (e: any) {
           httpError(response, 400, 'Bad Request', e);
           return;
@@ -119,16 +142,22 @@ export default function createServer(nymph: Nymph) {
           | null;
         try {
           if (action === 'entity') {
-            result = await nymph.getEntity(data[0], ...data.slice(1));
+            result = await response.locals.nymph.getEntity(
+              data[0],
+              ...data.slice(1)
+            );
           } else {
-            result = await nymph.getEntities(...data);
+            result = await response.locals.nymph.getEntities(...data);
           }
         } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
         }
         if (result === [] || result == null) {
-          if (action === 'entity' || nymph.config.emptyListError) {
+          if (
+            action === 'entity' ||
+            response.locals.nymph.config.emptyListError
+          ) {
             httpError(response, 404, 'Not Found');
             return;
           }
@@ -138,7 +167,7 @@ export default function createServer(nymph: Nymph) {
       } else {
         let result: number | null;
         try {
-          result = await nymph.getUID(`${data}`);
+          result = await response.locals.nymph.getUID(`${data}`);
         } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
@@ -159,7 +188,7 @@ export default function createServer(nymph: Nymph) {
     }
   });
 
-  rest.post('/', async (request, response) => {
+  rest.post('/', async (request, response: NymphResponse) => {
     try {
       const { action, data: dataConst } = getActionData(request);
       let data = dataConst;
@@ -184,7 +213,7 @@ export default function createServer(nymph: Nymph) {
           }
           let entity: EntityInterface;
           try {
-            entity = await loadEntity(entData);
+            entity = await loadEntity(entData, response.locals.nymph);
           } catch (e: any) {
             if (e instanceof EntityConflictError) {
               conflict = true;
@@ -242,11 +271,14 @@ export default function createServer(nymph: Nymph) {
           httpError(response, 400, 'Bad Request');
           return;
         }
-        const params = referencesToEntities([...data.params]);
+        const params = referencesToEntities(
+          [...data.params],
+          response.locals.nymph
+        );
         if (data.static) {
           let EntityClass: EntityConstructor;
           try {
-            EntityClass = nymph.getEntityClass(data.class);
+            EntityClass = response.locals.nymph.getEntityClass(data.class);
           } catch (e: any) {
             httpError(response, 400, 'Bad Request');
             return;
@@ -283,7 +315,7 @@ export default function createServer(nymph: Nymph) {
         } else {
           let entity: EntityInterface;
           try {
-            entity = await loadEntity(data.entity);
+            entity = await loadEntity(data.entity, response.locals.nymph);
           } catch (e: any) {
             if (e instanceof EntityConflictError) {
               httpError(response, 409, 'Conflict');
@@ -330,7 +362,7 @@ export default function createServer(nymph: Nymph) {
       } else {
         let result: number | null;
         try {
-          result = await nymph.newUID(`${data}`);
+          result = await response.locals.nymph.newUID(`${data}`);
         } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
@@ -349,7 +381,7 @@ export default function createServer(nymph: Nymph) {
     }
   });
 
-  rest.put('/', async (request, response) => {
+  rest.put('/', async (request, response: NymphResponse) => {
     try {
       const { action, data } = getActionData(request);
       if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
@@ -363,7 +395,7 @@ export default function createServer(nymph: Nymph) {
     }
   });
 
-  rest.patch('/', async (request, response) => {
+  rest.patch('/', async (request, response: NymphResponse) => {
     try {
       const { action, data } = getActionData(request);
       if (['entity', 'entities'].indexOf(action) === -1) {
@@ -378,7 +410,7 @@ export default function createServer(nymph: Nymph) {
   });
 
   async function doPutOrPatch(
-    response: Response,
+    response: NymphResponse,
     action: string,
     data: any,
     patch: boolean
@@ -390,7 +422,7 @@ export default function createServer(nymph: Nymph) {
       }
       let result: boolean;
       try {
-        result = await nymph.setUID(data.name, data.value);
+        result = await response.locals.nymph.setUID(data.name, data.value);
       } catch (e: any) {
         httpError(response, 500, 'Internal Server Error', e);
         return;
@@ -420,7 +452,7 @@ export default function createServer(nymph: Nymph) {
         }
         let entity: EntityInterface;
         try {
-          entity = await loadEntity(entData, patch);
+          entity = await loadEntity(entData, response.locals.nymph, patch);
         } catch (e: any) {
           if (e instanceof EntityConflictError) {
             conflict = true;
@@ -475,7 +507,7 @@ export default function createServer(nymph: Nymph) {
     }
   }
 
-  rest.delete('/', async (request, response) => {
+  rest.delete('/', async (request, response: NymphResponse) => {
     try {
       const { action, data: dataConst } = getActionData(request);
       let data = dataConst;
@@ -498,7 +530,9 @@ export default function createServer(nymph: Nymph) {
               invalidRequest = true;
               continue;
             }
-            if (await nymph.deleteEntityByID(guid, delEnt.class)) {
+            if (
+              await response.locals.nymph.deleteEntityByID(guid, delEnt.class)
+            ) {
               deleted.push(guid);
             } else {
               failures = true;
@@ -530,7 +564,7 @@ export default function createServer(nymph: Nymph) {
         }
         let result: boolean;
         try {
-          result = await nymph.deleteUID(data);
+          result = await response.locals.nymph.deleteUID(data);
         } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
@@ -554,6 +588,7 @@ export default function createServer(nymph: Nymph) {
 
   async function loadEntity(
     entityData: EntityJson | EntityPatch,
+    nymph: Nymph,
     patch = false,
     allowConflict = false
   ): Promise<EntityInterface> {
@@ -595,7 +630,7 @@ export default function createServer(nymph: Nymph) {
    * @param item The item to check.
    * @returns The item, converted.
    */
-  function referencesToEntities(item: any): any {
+  function referencesToEntities(item: any, nymph: Nymph): any {
     if (Array.isArray(item)) {
       if (item.length === 3 && item[0] === 'nymph_entity_reference') {
         try {
@@ -605,12 +640,12 @@ export default function createServer(nymph: Nymph) {
           return item;
         }
       }
-      return item.map((entry) => referencesToEntities(entry));
+      return item.map((entry) => referencesToEntities(entry, nymph));
     } else if (typeof item === 'object' && !(item instanceof Entity)) {
       // Only do this for non-entity objects.
       const newItem: { [k: string]: any } = {};
       for (let curProperty in item) {
-        newItem[curProperty] = referencesToEntities(item[curProperty]);
+        newItem[curProperty] = referencesToEntities(item[curProperty], nymph);
       }
       return newItem;
     }
@@ -625,7 +660,7 @@ export default function createServer(nymph: Nymph) {
    * @param error An optional exception object to report.
    */
   function httpError(
-    res: Response,
+    res: NymphResponse,
     errorCode: number,
     message: string,
     error?: Error

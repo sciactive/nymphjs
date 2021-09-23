@@ -5,7 +5,6 @@ import {
   Options,
   Selector,
   SerializedEntityData,
-  TilmeldInterface,
 } from '@nymphjs/nymph';
 import {
   request,
@@ -54,11 +53,6 @@ export default class PubSub {
    */
   public server: WebSocketServer;
 
-  /**
-   * An optional Tilmeld user/group manager instance.
-   */
-  public tilmeld?: TilmeldInterface;
-
   private sessions = new Map<connection, string>();
   protected querySubs: {
     [etype: string]: {
@@ -79,13 +73,13 @@ export default class PubSub {
   public static initPublisher(config: Partial<Config>, nymph: Nymph) {
     const configWithDefaults: Config = { ...defaults, ...config };
 
-    nymph.on('beforeSaveEntity', (entity: EntityInterface) => {
+    nymph.on('beforeSaveEntity', (nymph: Nymph, entity: EntityInterface) => {
       const guid = entity.guid;
       const etype = (entity.constructor as EntityConstructor).ETYPE;
 
       const off = nymph.on(
         'afterSaveEntity',
-        async (result: Promise<boolean>) => {
+        async (_nymph: Nymph, result: Promise<boolean>) => {
           off();
           if (!(await result)) {
             return;
@@ -104,13 +98,13 @@ export default class PubSub {
       );
     });
 
-    nymph.on('beforeDeleteEntity', (entity: EntityInterface) => {
+    nymph.on('beforeDeleteEntity', (nymph: Nymph, entity: EntityInterface) => {
       const guid = entity.guid;
       const etype = (entity.constructor as EntityConstructor).ETYPE;
 
       const off = nymph.on(
         'afterDeleteEntity',
-        async (result: Promise<boolean>) => {
+        async (_nymph: Nymph, result: Promise<boolean>) => {
           off();
           if (!(await result)) {
             return;
@@ -128,37 +122,40 @@ export default class PubSub {
       );
     });
 
-    nymph.on('beforeDeleteEntityByID', (guid: string, className?: string) => {
-      try {
-        const etype = nymph.getEntityClass(className ?? 'Entity').ETYPE;
+    nymph.on(
+      'beforeDeleteEntityByID',
+      (nymph: Nymph, guid: string, className?: string) => {
+        try {
+          const etype = nymph.getEntityClass(className ?? 'Entity').ETYPE;
 
-        const off = nymph.on(
-          'afterDeleteEntityByID',
-          async (result: Promise<boolean>) => {
-            off();
-            if (!(await result)) {
-              return;
+          const off = nymph.on(
+            'afterDeleteEntityByID',
+            async (_nymph: Nymph, result: Promise<boolean>) => {
+              off();
+              if (!(await result)) {
+                return;
+              }
+              this.publish(
+                JSON.stringify({
+                  action: 'publish',
+                  event: 'delete',
+                  guid: guid,
+                  etype: etype,
+                }),
+                configWithDefaults
+              );
             }
-            this.publish(
-              JSON.stringify({
-                action: 'publish',
-                event: 'delete',
-                guid: guid,
-                etype: etype,
-              }),
-              configWithDefaults
-            );
-          }
-        );
-      } catch (e: any) {
-        return;
+          );
+        } catch (e: any) {
+          return;
+        }
       }
-    });
+    );
 
-    nymph.on('beforeNewUID', (name: string) => {
+    nymph.on('beforeNewUID', (nymph: Nymph, name: string) => {
       const off = nymph.on(
         'afterNewUID',
-        async (result: Promise<number | null>) => {
+        async (_nymph: Nymph, result: Promise<number | null>) => {
           off();
           const value = await result;
           if (value == null) {
@@ -177,28 +174,10 @@ export default class PubSub {
       );
     });
 
-    nymph.on('beforeSetUID', (name: string, value: number) => {
-      const off = nymph.on('afterSetUID', async (result: Promise<boolean>) => {
-        off();
-        if (!(await result)) {
-          return;
-        }
-        this.publish(
-          JSON.stringify({
-            action: 'publish',
-            event: 'setUID',
-            name: name,
-            value: value,
-          }),
-          configWithDefaults
-        );
-      });
-    });
-
-    nymph.on('beforeRenameUID', (oldName: string, newName: string) => {
+    nymph.on('beforeSetUID', (nymph: Nymph, name: string, value: number) => {
       const off = nymph.on(
-        'afterRenameUID',
-        async (result: Promise<boolean>) => {
+        'afterSetUID',
+        async (_nymph: Nymph, result: Promise<boolean>) => {
           off();
           if (!(await result)) {
             return;
@@ -206,9 +185,9 @@ export default class PubSub {
           this.publish(
             JSON.stringify({
               action: 'publish',
-              event: 'renameUID',
-              oldName: oldName,
-              newName: newName,
+              event: 'setUID',
+              name: name,
+              value: value,
             }),
             configWithDefaults
           );
@@ -216,10 +195,34 @@ export default class PubSub {
       );
     });
 
-    nymph.on('beforeDeleteUID', (name: string) => {
+    nymph.on(
+      'beforeRenameUID',
+      (nymph: Nymph, oldName: string, newName: string) => {
+        const off = nymph.on(
+          'afterRenameUID',
+          async (_nymph: Nymph, result: Promise<boolean>) => {
+            off();
+            if (!(await result)) {
+              return;
+            }
+            this.publish(
+              JSON.stringify({
+                action: 'publish',
+                event: 'renameUID',
+                oldName: oldName,
+                newName: newName,
+              }),
+              configWithDefaults
+            );
+          }
+        );
+      }
+    );
+
+    nymph.on('beforeDeleteUID', (nymph: Nymph, name: string) => {
       const off = nymph.on(
         'afterDeleteUID',
-        async (result: Promise<boolean>) => {
+        async (_nymph: Nymph, result: Promise<boolean>) => {
           off();
           if (!(await result)) {
             return;
@@ -281,13 +284,11 @@ export default class PubSub {
   public constructor(
     config: Partial<Config>,
     nymph: Nymph,
-    server: WebSocketServer,
-    tilmeld?: TilmeldInterface
+    server: WebSocketServer
   ) {
     this.nymph = nymph;
     this.config = { ...defaults, ...config };
     this.server = server;
-    this.tilmeld = tilmeld;
 
     this.server.on('request', this.handleRequest.bind(this));
   }
@@ -530,21 +531,22 @@ export default class PubSub {
       if (this.sessions.has(from)) {
         token = this.sessions.get(from);
       }
-      if (this.tilmeld != null && token != null) {
-        const user = this.tilmeld.extractToken(token);
+      const nymph = this.nymph.clone();
+      if (nymph.tilmeld != null && token != null) {
+        const user = nymph.tilmeld.extractToken(token);
         if (user) {
           // Log in the user for access controls.
-          this.tilmeld.fillSession(user);
+          nymph.tilmeld.fillSession(user);
         }
       }
       this.querySubs[etype][serialArgs].set(from, {
-        current: await this.nymph.getEntities(options, ...selectors),
+        current: await nymph.getEntities(options, ...selectors),
         query: data.query,
         count: !!data.count,
       });
-      if (this.tilmeld != null && token != null) {
+      if (nymph.tilmeld != null && token != null) {
         // Clear the user that was temporarily logged in.
-        this.tilmeld.clearSession();
+        nymph.tilmeld.clearSession();
       }
       this.config.logger(
         'log',
@@ -769,25 +771,26 @@ export default class PubSub {
         // Update currents list.
         let current: EntityInterface[];
         let token: string | undefined;
+        const nymph = this.nymph.clone();
         try {
           const [clientOptions, ...selectors] = JSON.parse(curQuery);
           const options: Options = {
             ...clientOptions,
-            class: this.nymph.getEntityClass(clientOptions.class),
+            class: nymph.getEntityClass(clientOptions.class),
             return: 'entity',
             source: 'client',
           };
           if (this.sessions.has(curClient)) {
             token = this.sessions.get(curClient);
           }
-          if (this.tilmeld != null && token != null) {
-            const user = this.tilmeld.extractToken(token);
+          if (nymph.tilmeld != null && token != null) {
+            const user = nymph.tilmeld.extractToken(token);
             if (user) {
               // Log in the user for access controls.
-              this.tilmeld.fillSession(user);
+              nymph.tilmeld.fillSession(user);
             }
           }
-          current = await this.nymph.getEntities(options, ...selectors);
+          current = await nymph.getEntities(options, ...selectors);
         } catch (e: any) {
           this.config.logger(
             'error',
@@ -862,23 +865,31 @@ export default class PubSub {
         // Update curData.
         curData.current = currentGuids;
 
-        if (this.tilmeld != null && token != null) {
+        if (nymph.tilmeld != null && token != null) {
           // Clear the user that was temporarily logged in.
-          this.tilmeld.clearSession();
+          nymph.tilmeld.clearSession();
         }
       };
 
       if (data.event === 'delete' || data.event === 'update') {
         // Check if it is in any client's currents.
-        for (const curClient of curClients.keys()) {
-          const curData = curClients.get(curClient);
-          if (!curData) {
-            continue;
+        try {
+          for (const curClient of curClients.keys()) {
+            const curData = curClients.get(curClient);
+            if (!curData) {
+              continue;
+            }
+            if (curData.current.indexOf(data.guid) !== -1) {
+              await updateClient(curClient, curData);
+              updatedClients.add(curClient);
+            }
           }
-          if (curData.current.indexOf(data.guid) !== -1) {
-            await updateClient(curClient, curData);
-            updatedClients.add(curClient);
-          }
+        } catch (e: any) {
+          this.config.logger(
+            'error',
+            new Date().toISOString(),
+            `Error checking for client updates! (${e?.message})`
+          );
         }
       }
 

@@ -25,8 +25,8 @@ import { User, Group } from '@nymphjs/tilmeld-client';
 const nymph = new Nymph({
   restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
 });
-nymph.setEntityClass(User.class, User);
-nymph.setEntityClass(Group.class, Group);
+nymph.addEntityClass(User);
+nymph.addEntityClass(Group);
 ```
 
 # License

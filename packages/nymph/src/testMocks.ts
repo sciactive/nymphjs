@@ -55,7 +55,7 @@ export class MockNymphDriver {
 }
 
 export class MockNymph {
-  public entityClasses: { [k: string]: EntityConstructor } = {};
+  private entityClasses: { [k: string]: EntityConstructor } = {};
   public driver: MockNymphDriver;
   public Tilmeld: any = undefined;
 
@@ -63,11 +63,11 @@ export class MockNymph {
     this.driver = new MockNymphDriver(this);
 
     // class NymphEntity extends Entity {}
-    this.setEntityClass(Entity.class, Entity);
+    this.addEntityClass(Entity);
   }
 
-  public setEntityClass(className: string, entityClass: EntityConstructor) {
-    this.entityClasses[className] = entityClass;
+  public addEntityClass(entityClass: EntityConstructor) {
+    this.entityClasses[entityClass.class] = entityClass;
     entityClass.nymph = this as unknown as Nymph;
   }
 

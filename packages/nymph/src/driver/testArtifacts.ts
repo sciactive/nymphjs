@@ -9,8 +9,8 @@ export function QueriesTest(
   nymph: Nymph,
   it: (name: string, fn: () => void) => void
 ) {
-  nymph.setEntityClass(TestModel.class, TestModel);
-  nymph.setEntityClass(TestBModel.class, TestBModel);
+  nymph.addEntityClass(TestModel);
+  nymph.addEntityClass(TestBModel);
 
   let testEntity: TestModel & TestModelData;
   let testGuid: string;
@@ -1679,8 +1679,8 @@ export function UIDTest(
   nymph: Nymph,
   it: (name: string, fn: () => void) => void
 ) {
-  nymph.setEntityClass(TestModel.class, TestModel);
-  nymph.setEntityClass(TestBModel.class, TestBModel);
+  nymph.addEntityClass(TestModel);
+  nymph.addEntityClass(TestBModel);
 
   it('delete old test data', async () => {
     expect(await nymph.deleteUID('TestUID')).toEqual(true);
@@ -1723,8 +1723,8 @@ export function ExportImportTest(
   nymph: Nymph,
   it: (name: string, fn: () => void) => void
 ) {
-  nymph.setEntityClass(TestModel.class, TestModel);
-  nymph.setEntityClass(TestBModel.class, TestBModel);
+  nymph.addEntityClass(TestModel);
+  nymph.addEntityClass(TestBModel);
 
   async function deleteTestData() {
     let all = await nymph.getEntities({ class: TestModel });

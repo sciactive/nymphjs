@@ -26,7 +26,7 @@ const nymphOptions = {
 };
 const nymph = new Nymph(nymphOptions);
 const pubsub = new PubSub(nymphOptions, nymph);
-nymph.setEntityClass(Todo.class, Todo);
+nymph.addEntityClass(Todo);
 
 // Now you can use Nymph and PubSub.
 const myTodo = new Todo();
