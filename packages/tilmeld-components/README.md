@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-The Tilmeld Components are front end registration/login, account recovery, account details, and password change components build with (Svelte)[https://svelte.dev/] and (SMUI)[https://sveltematerialui.com/].
+The Tilmeld Components are front end registration/login, account recovery, account details, and password change components build with [Svelte](https://svelte.dev/) and [SMUI](https://sveltematerialui.com/).
 
 ## Installation
 

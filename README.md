@@ -54,7 +54,7 @@ The Tilmeld Client lets you register, login, and perform user account related fu
 
 ## [Tilmeld Components](packages/tilmeld-components)
 
-The Tilmeld Components are front end registration/login, account recovery, account details, and password change components build with (Svelte)[https://svelte.dev/] and (SMUI)[https://sveltematerialui.com/].
+The Tilmeld Components are front end registration/login, account recovery, account details, and password change components build with [Svelte](https://svelte.dev/) and [SMUI](https://sveltematerialui.com/).
 
 ## [Tilmeld Setup](packages/tilmeld-setup)
 
