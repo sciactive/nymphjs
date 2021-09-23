@@ -10,6 +10,7 @@ import {
   EntityPatch,
   EntityReference,
   InvalidParametersError,
+  TilmeldAccessLevels,
 } from '@nymphjs/nymph';
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
@@ -165,9 +166,24 @@ export default function createServer(nymph: Nymph) {
         response.setHeader('Content-Type', 'application/json');
         response.send(JSON.stringify(result));
       } else {
+        if (typeof data !== 'string') {
+          httpError(response, 400, 'Bad Request');
+          return;
+        }
+        if (response.locals.nymph.tilmeld) {
+          if (
+            !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+              data,
+              TilmeldAccessLevels.READ_ACCESS
+            )
+          ) {
+            httpError(response, 403, 'Forbidden');
+            return;
+          }
+        }
         let result: number | null;
         try {
-          result = await response.locals.nymph.getUID(`${data}`);
+          result = await response.locals.nymph.getUID(data);
         } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
@@ -360,9 +376,24 @@ export default function createServer(nymph: Nymph) {
           }
         }
       } else {
+        if (typeof data !== 'string') {
+          httpError(response, 400, 'Bad Request');
+          return;
+        }
+        if (response.locals.nymph.tilmeld) {
+          if (
+            !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+              data,
+              TilmeldAccessLevels.WRITE_ACCESS
+            )
+          ) {
+            httpError(response, 403, 'Forbidden');
+            return;
+          }
+        }
         let result: number | null;
         try {
-          result = await response.locals.nymph.newUID(`${data}`);
+          result = await response.locals.nymph.newUID(data);
         } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);
           return;
@@ -419,6 +450,17 @@ export default function createServer(nymph: Nymph) {
       if (typeof data.name !== 'string' || typeof data.value !== 'number') {
         httpError(response, 400, 'Bad Request');
         return;
+      }
+      if (response.locals.nymph.tilmeld) {
+        if (
+          !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+            data.name,
+            TilmeldAccessLevels.FULL_ACCESS
+          )
+        ) {
+          httpError(response, 403, 'Forbidden');
+          return;
+        }
       }
       let result: boolean;
       try {
@@ -561,6 +603,17 @@ export default function createServer(nymph: Nymph) {
         if (typeof data !== 'string') {
           httpError(response, 400, 'Bad Request');
           return;
+        }
+        if (response.locals.nymph.tilmeld) {
+          if (
+            !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+              data,
+              TilmeldAccessLevels.FULL_ACCESS
+            )
+          ) {
+            httpError(response, 403, 'Forbidden');
+            return;
+          }
         }
         let result: boolean;
         try {

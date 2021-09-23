@@ -85,7 +85,7 @@ export default class Group extends AbleObject<GroupData> {
   /**
    * The instance of Tilmeld to use for queries.
    */
-  public static tilmeld: Tilmeld;
+  static tilmeld: Tilmeld;
   static ETYPE = 'tilmeld_group';
   static class = 'Group';
 

@@ -138,7 +138,7 @@ export default class Nymph {
   public clone() {
     const nymph = new Nymph(this.config, this.driver, this.tilmeld?.clone());
     for (const name in this.entityClasses) {
-      if (name === 'Entity') {
+      if (name === 'Entity' || (this.entityClasses[name] as any).skipOnClone) {
         continue;
       }
       nymph.addEntityClass(this.entityClasses[name]);
@@ -171,15 +171,11 @@ export default class Nymph {
       // @ts-ignore: The callback should be the right type here.
       const callbacks = this[prop];
       for (let callback of callbacks) {
-        if (callback.tilmeld) {
+        if (callback.skipOnClone) {
           continue;
         }
         nymph.on(event as NymphEventType, callback);
       }
-    }
-
-    if (nymph.tilmeld) {
-      nymph.tilmeld.init(nymph);
     }
 
     return nymph;

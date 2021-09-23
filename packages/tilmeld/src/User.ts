@@ -139,7 +139,7 @@ export default class User extends AbleObject<UserData> {
   /**
    * The instance of Tilmeld to use for queries.
    */
-  public static tilmeld: Tilmeld;
+  static tilmeld: Tilmeld;
   static ETYPE = 'tilmeld_user';
   static class = 'User';
 

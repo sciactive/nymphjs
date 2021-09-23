@@ -65,6 +65,35 @@ export interface Config {
    */
   enableGroupSearch: boolean;
   /**
+   * A list of UIDs that can be read from the client by anyone. (getUID)
+   *
+   * Note: If you'd like to limit the access to logged in users, give them an
+   *       ability like "uid/get/nameofuid".
+   */
+  clientReadableUIDs: string[];
+  /**
+   * A list of UIDs that can be created from the client by anyone. (newUID)
+   *
+   * Inclusion in this list implies inclusion in clientReadableUIDs.
+   *
+   * Note: If you'd like to limit the access to logged in users, give them an
+   *       ability like "uid/new/nameofuid".
+   */
+  clientEnabledUIDs: string[];
+  /**
+   * A list of UIDs that can be set from the client by anyone. (setUID,
+   * renameUID)
+   *
+   * Inclusion in this list implies inclusion in clientReadableUIDs and
+   * clientEnabledUIDs.
+   *
+   * Note: There is no way to run renameUID from the client.
+   *
+   * Note: If you'd like to limit the access to logged in users, give them an
+   *       ability like "uid/set/nameofuid".
+   */
+  clientSetabledUIDs: string[];
+  /**
    * These will be the available fields for users. (Some fields, like username,
    * can't be excluded.)
    */

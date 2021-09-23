@@ -4,6 +4,7 @@ import {
   FormattedSelector,
   Options,
   TilmeldInterface,
+  TilmeldAccessLevels,
 } from '@nymphjs/nymph';
 import { Request, Response } from 'express';
 
@@ -23,11 +24,6 @@ import { AccessControlData } from './Tilmeld.types';
  * @see http://nymph.io/
  */
 export default class Tilmeld implements TilmeldInterface {
-  public static NO_ACCESS = 0;
-  public static READ_ACCESS = 1;
-  public static WRITE_ACCESS = 2;
-  public static FULL_ACCESS = 4;
-
   /**
    * The Nymph instance.
    */
@@ -117,11 +113,13 @@ export default class Tilmeld implements TilmeldInterface {
     class NymphUser extends User {}
     NymphUser.nymph = this.nymph;
     NymphUser.tilmeld = this;
+    (NymphUser as any).skipOnClone = true;
     this.User = NymphUser;
     this.nymph.addEntityClass(NymphUser);
     class NymphGroup extends Group {}
     NymphGroup.nymph = this.nymph;
     NymphGroup.tilmeld = this;
+    (NymphUser as any).skipOnClone = true;
     this.Group = NymphGroup;
     this.nymph.addEntityClass(NymphGroup);
 
@@ -165,20 +163,20 @@ export default class Tilmeld implements TilmeldInterface {
       ) {
         if (options?.source === 'client') {
           if (
-            !tilmeld.gatekeeper('tilmeld/admin') &&
+            !tilmeld.gatekeeper('tilmeld/admin') && // The user is not an admin.
             ((!tilmeld.config.enableUserSearch &&
-              options.class?.factorySync() instanceof User) ||
+              options.class?.factorySync() instanceof User) || // The use is searching for a user and searching is disabled.
               (!tilmeld.config.enableGroupSearch &&
-                options.class?.factorySync() instanceof Group)) &&
-            (selectors[0] == null ||
-              selectors[0].type !== '&' ||
-              (!('guid' in selectors[0]) && !('equal' in selectors[0])) ||
+                options.class?.factorySync() instanceof Group)) && // Or the same, but for a group.
+            (selectors[0] == null || // No selector specified.
+              selectors[0].type !== '&' || // Or the type is not and.
+              (!('guid' in selectors[0]) && !('equal' in selectors[0])) || // Or they're searching for something other than guid or equal.
               ('guid' in selectors[0] &&
-                selectors[0].guid?.length === 1 &&
-                typeof selectors[0].guid?.[0] !== 'string') ||
+                (!selectors[0].guid?.length ||
+                  !selectors[0].guid?.[0]?.length)) || // Or they're not searching for a specific guid.
               ('equal' in selectors[0] &&
-                selectors[0].equal?.length === 1 &&
-                selectors[0].equal?.[0]?.[0] !== 'username'))
+                selectors[0].equal?.[0]?.[0] !== 'username' &&
+                selectors[0].equal?.[0]?.[0] !== 'groupname')) // Or they're not searching for a specific username/groupname.
           ) {
             // If the user is not specifically searching for a GUID or username,
             // and they're not allowed to search, it should fail.
@@ -189,7 +187,7 @@ export default class Tilmeld implements TilmeldInterface {
         tilmeld.addAccessControlSelectors(options, selectors);
       }
     };
-    handleQuery.tilmeld = true;
+    handleQuery.skipOnClone = true;
 
     // Filter entities being deleted for user permissions.
     const checkPermissionsDelete = function (
@@ -203,11 +201,11 @@ export default class Tilmeld implements TilmeldInterface {
         return;
       }
       // Test for permissions.
-      if (tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
+      if (tilmeld.checkPermissions(entity, TilmeldAccessLevels.FULL_ACCESS)) {
         throw new AccessControlError('No permission to delete.');
       }
     };
-    checkPermissionsDelete.tilmeld = true;
+    checkPermissionsDelete.skipOnClone = true;
 
     // Filter entities being deleted for user permissions.
     const checkPermissionsDeleteByID = function (
@@ -223,7 +221,7 @@ export default class Tilmeld implements TilmeldInterface {
         checkPermissionsDelete(nymph, entity);
       }
     };
-    checkPermissionsDeleteByID.tilmeld = true;
+    checkPermissionsDeleteByID.skipOnClone = true;
 
     // Filter entities being saved for user permissions, and filter any
     // disallowed changes to AC properties.
@@ -270,7 +268,7 @@ export default class Tilmeld implements TilmeldInterface {
 
         // Restore original AC properties and check permissions.
         setAcProperties(originalAc);
-        if (tilmeld.checkPermissions(entity, Tilmeld.FULL_ACCESS)) {
+        if (tilmeld.checkPermissions(entity, TilmeldAccessLevels.FULL_ACCESS)) {
           // Only allow changes to AC properties if the user has full access.
           // TODO: only allow changes to `user` and `group` if tilmeld admin or
           //       group is user's group.
@@ -279,11 +277,11 @@ export default class Tilmeld implements TilmeldInterface {
       }
 
       // Test for permissions.
-      if (!tilmeld.checkPermissions(entity, Tilmeld.WRITE_ACCESS)) {
+      if (!tilmeld.checkPermissions(entity, TilmeldAccessLevels.WRITE_ACCESS)) {
         throw new AccessControlError('No permission to write.');
       }
     };
-    checkPermissionsSaveAndFilterAcChanges.tilmeld = true;
+    checkPermissionsSaveAndFilterAcChanges.skipOnClone = true;
 
     /*
      * Add the current user's "user", "group", and access control to new entity.
@@ -297,9 +295,9 @@ export default class Tilmeld implements TilmeldInterface {
      *
      * Default access control is
      *
-     * - acUser = Tilmeld::FULL_ACCESS
-     * - acGroup = Tilmeld::READ_ACCESS
-     * - acOther = Tilmeld::NO_ACCESS
+     * - acUser = TilmeldAccessLevels.FULL_ACCESS
+     * - acGroup = TilmeldAccessLevels.READ_ACCESS
+     * - acOther = TilmeldAccessLevels.NO_ACCESS
      */
     const addAccess = function (
       _nymph: Nymph,
@@ -323,13 +321,13 @@ export default class Tilmeld implements TilmeldInterface {
           entity.group = user.group;
         }
         if (entity.acUser == null) {
-          entity.acUser = Tilmeld.FULL_ACCESS;
+          entity.acUser = TilmeldAccessLevels.FULL_ACCESS;
         }
         if (entity.acGroup == null) {
-          entity.acGroup = Tilmeld.READ_ACCESS;
+          entity.acGroup = TilmeldAccessLevels.READ_ACCESS;
         }
         if (entity.acOther == null) {
-          entity.acOther = Tilmeld.NO_ACCESS;
+          entity.acOther = TilmeldAccessLevels.NO_ACCESS;
         }
         if (entity.acRead == null) {
           entity.acRead = [];
@@ -342,7 +340,7 @@ export default class Tilmeld implements TilmeldInterface {
         }
       }
     };
-    addAccess.tilmeld = true;
+    addAccess.skipOnClone = true;
 
     const validate = function (
       _nymph: Nymph,
@@ -352,8 +350,8 @@ export default class Tilmeld implements TilmeldInterface {
         const ownershipAcPropertyValidator = (prop: any) => {
           if (
             typeof prop != 'number' ||
-            prop < Tilmeld.NO_ACCESS ||
-            prop > Tilmeld.FULL_ACCESS
+            prop < TilmeldAccessLevels.NO_ACCESS ||
+            prop > TilmeldAccessLevels.FULL_ACCESS
           ) {
             throw new AccessControlError('Invalid access control property.');
           }
@@ -402,7 +400,7 @@ export default class Tilmeld implements TilmeldInterface {
         }
       }
     };
-    validate.tilmeld = true;
+    validate.skipOnClone = true;
 
     this.nymph.on('query', handleQuery);
 
@@ -449,7 +447,7 @@ export default class Tilmeld implements TilmeldInterface {
       selectors.push({
         type: '|',
         // Other access control is sufficient.
-        gte: [['acOther', Tilmeld.READ_ACCESS]],
+        gte: [['acOther', TilmeldAccessLevels.READ_ACCESS]],
         // The user and group are not set.
         selector: [
           {
@@ -468,13 +466,13 @@ export default class Tilmeld implements TilmeldInterface {
         {
           type: '&',
           ref: [['user', user]],
-          gte: [['acUser', Tilmeld.READ_ACCESS]],
+          gte: [['acUser', TilmeldAccessLevels.READ_ACCESS]],
         },
       ];
       const selector: FormattedSelector = {
         type: '|',
         // Other access control is sufficient.
-        gte: [['acOther', Tilmeld.READ_ACCESS]],
+        gte: [['acOther', TilmeldAccessLevels.READ_ACCESS]],
         // The user and group are not set.
         selector: subSelectors,
         // The user is listed in acRead, acWrite, or acFull.
@@ -518,7 +516,7 @@ export default class Tilmeld implements TilmeldInterface {
       if (groupRefs.length) {
         subSelectors.push({
           type: '&',
-          gte: [['acGroup', Tilmeld.READ_ACCESS]],
+          gte: [['acGroup', TilmeldAccessLevels.READ_ACCESS]],
           selector: [
             {
               type: '|',
@@ -567,9 +565,9 @@ export default class Tilmeld implements TilmeldInterface {
    *
    * These properties defaults to:
    *
-   * - acUser = Tilmeld.FULL_ACCESS
-   * - acGroup = Tilmeld.READ_ACCESS
-   * - acOther = Tilmeld.NO_ACCESS
+   * - acUser = TilmeldAccessLevels.FULL_ACCESS
+   * - acGroup = TilmeldAccessLevels.READ_ACCESS
+   * - acOther = TilmeldAccessLevels.NO_ACCESS
    *
    * "acRead", "acWrite", and "acFull" are arrays of users and/or groups that
    * also have those permissions.
@@ -598,13 +596,13 @@ export default class Tilmeld implements TilmeldInterface {
    * - None of the above. (Check other AC.)
    *
    * @param entity The entity to check.
-   * @param type The lowest level of permission to consider a pass. One of Tilmeld.READ_ACCESS, Tilmeld.WRITE_ACCESS, or Tilmeld.FULL_ACCESS.
+   * @param type The lowest level of permission to consider a pass.
    * @param user The user to check permissions for. If null, uses the current user. If false, checks for public access.
    * @returns Whether the current user has at least `type` permission for the entity.
    */
   public checkPermissions(
     entity: EntityInterface & AccessControlData,
-    type = Tilmeld.READ_ACCESS,
+    type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
     user?: (User & UserData) | false
   ) {
     // Only works for entities.
@@ -630,7 +628,8 @@ export default class Tilmeld implements TilmeldInterface {
     // Users and groups are always readable. Editable by Tilmeld admins.
     if (
       (entity instanceof User || entity instanceof Group) &&
-      (type === Tilmeld.READ_ACCESS || userOrEmpty.$gatekeeper('tilmeld/admin'))
+      (type === TilmeldAccessLevels.READ_ACCESS ||
+        userOrEmpty.$gatekeeper('tilmeld/admin'))
     ) {
       return true;
     }
@@ -641,9 +640,9 @@ export default class Tilmeld implements TilmeldInterface {
     }
 
     // Load access control, since we need it now...
-    const acUser = entity.acUser ?? Tilmeld.FULL_ACCESS;
-    const acGroup = entity.acGroup ?? Tilmeld.READ_ACCESS;
-    const acOther = entity.acOther ?? Tilmeld.NO_ACCESS;
+    const acUser = entity.acUser ?? TilmeldAccessLevels.FULL_ACCESS;
+    const acGroup = entity.acGroup ?? TilmeldAccessLevels.READ_ACCESS;
+    const acOther = entity.acOther ?? TilmeldAccessLevels.NO_ACCESS;
 
     if (userOrNull === null) {
       return acOther >= type;
@@ -659,7 +658,7 @@ export default class Tilmeld implements TilmeldInterface {
       userOrEmpty.group != null &&
       typeof userOrEmpty.group.$is === 'function' &&
       userOrEmpty.group.$is(entity) &&
-      type === Tilmeld.READ_ACCESS
+      type === TilmeldAccessLevels.READ_ACCESS
     ) {
       return true;
     }
@@ -671,9 +670,18 @@ export default class Tilmeld implements TilmeldInterface {
 
     // Check access ac properties.
     const checks = [
-      { type: Tilmeld.FULL_ACCESS, array: [...(entity.acFull ?? [])] },
-      { type: Tilmeld.WRITE_ACCESS, array: [...(entity.acWrite ?? [])] },
-      { type: Tilmeld.READ_ACCESS, array: [...(entity.acRead ?? [])] },
+      {
+        type: TilmeldAccessLevels.FULL_ACCESS,
+        array: [...(entity.acFull ?? [])],
+      },
+      {
+        type: TilmeldAccessLevels.WRITE_ACCESS,
+        array: [...(entity.acWrite ?? [])],
+      },
+      {
+        type: TilmeldAccessLevels.READ_ACCESS,
+        array: [...(entity.acRead ?? [])],
+      },
     ];
     for (let curCheck of checks) {
       if (type <= curCheck.type) {
@@ -707,6 +715,73 @@ export default class Tilmeld implements TilmeldInterface {
       return acGroup >= type;
     }
     return acOther >= type;
+  }
+
+  /**
+   * Check a UID's permissions for a user.
+   *
+   * ## THIS ONLY CHECKS AUTOMATICALLY FOR CLIENT REQUESTS.
+   *
+   * UID functions on the Node.js side are not checked automatically. This
+   * function is only run automatically for UID functions run from the client.
+   * You should call this function manually if you're running a UID function on
+   * the Node.js side and you want it gated.
+   *
+   * This will check the Tilmeld config and the user's abilities.
+   *
+   * - READ_ACCESS, the UID is listed in clientReadableUIDs or the user has the
+   *   "uid/get/nameofuid" ability.
+   * - WRITE_ACCESS, the UID is listed in clientEnabledUIDs or the user has the
+   *   "uid/new/nameofuid" ability.
+   * - FULL_ACCESS, the UID is listed in clientSetabledUIDs or the user has the
+   *   "uid/set/nameofuid" ability.
+   *
+   * @param name The UID to check.
+   * @param type The lowest level of permission to consider a pass.
+   * @param user The user to check permissions for. If null, uses the current user. If false, checks for public access.
+   * @returns Whether the current user has at least `type` permission for the UID.
+   */
+  public checkClientUIDPermissions(
+    name: string,
+    type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
+    user?: (User & UserData) | false
+  ) {
+    let userOrEmpty: User & UserData = this.User.factorySync();
+    // Calculate the user.
+    if (user == null) {
+      userOrEmpty = this.User.current(true);
+    } else if (user !== false) {
+      userOrEmpty = user;
+    }
+
+    if (userOrEmpty.$gatekeeper('system/admin')) {
+      return true;
+    }
+
+    if (type === TilmeldAccessLevels.FULL_ACCESS) {
+      return (
+        this.config.clientSetabledUIDs.indexOf(name) !== -1 ||
+        userOrEmpty.$gatekeeper(`uid/set/${name}`)
+      );
+    } else if (type === TilmeldAccessLevels.WRITE_ACCESS) {
+      return (
+        this.config.clientEnabledUIDs.indexOf(name) !== -1 ||
+        this.config.clientSetabledUIDs.indexOf(name) !== -1 ||
+        userOrEmpty.$gatekeeper(`uid/new/${name}`) ||
+        userOrEmpty.$gatekeeper(`uid/set/${name}`)
+      );
+    } else if (type === TilmeldAccessLevels.READ_ACCESS) {
+      return (
+        this.config.clientReadableUIDs.indexOf(name) !== -1 ||
+        this.config.clientEnabledUIDs.indexOf(name) !== -1 ||
+        this.config.clientSetabledUIDs.indexOf(name) !== -1 ||
+        userOrEmpty.$gatekeeper(`uid/get/${name}`) ||
+        userOrEmpty.$gatekeeper(`uid/new/${name}`) ||
+        userOrEmpty.$gatekeeper(`uid/set/${name}`)
+      );
+    }
+
+    return false;
   }
 
   /**
@@ -791,9 +866,9 @@ export default class Tilmeld implements TilmeldInterface {
     // to provide the auth token.
     let fromAuthHeader = false;
     let authToken: string;
-    if (this.request.header('HTTP_X_TILMELDAUTH') != null) {
+    if (this.request.header('x-tilmeldauth') != null) {
       fromAuthHeader = true;
-      authToken = this.request.header('HTTP_X_TILMELDAUTH') as string;
+      authToken = this.request.header('x-tilmeldauth') as string;
     } else if ('TILMELDAUTH' in cookies) {
       fromAuthHeader = false;
       authToken = cookies.TILMELDAUTH;
@@ -812,7 +887,7 @@ export default class Tilmeld implements TilmeldInterface {
     } else {
       // The request is for something else, so check for a valid XSRF token,
       // unless the auth token is provided by a header (instead of a cookie).
-      const xsrfToken = this.request.header('HTTP_X_XSRF_TOKEN');
+      const xsrfToken = this.request.header('x-xsrf-token');
       if (xsrfToken == null && !fromAuthHeader) {
         return false;
       }

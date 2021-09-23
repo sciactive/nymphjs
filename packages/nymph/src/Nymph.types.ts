@@ -278,6 +278,14 @@ export type FormattedSelector = {
   '!selector'?: FormattedSelector['selector'];
 };
 
+export enum TilmeldAccessLevels {
+  NO_ACCESS = 0,
+  READ_ACCESS = 1,
+  WRITE_ACCESS = 2,
+  // Keeping 3 open in case we ever need one between write and full.
+  FULL_ACCESS = 4,
+}
+
 export interface TilmeldInterface {
   nymph: Nymph;
   request: any;
@@ -289,4 +297,5 @@ export interface TilmeldInterface {
   clearSession(): void;
   extractToken(token: string): any;
   fillSession(user: any): void;
+  checkClientUIDPermissions(name: string, type?: TilmeldAccessLevels): boolean;
 }
