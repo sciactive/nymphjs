@@ -1,4 +1,5 @@
 import { EmailOptions } from 'email-templates';
+
 import type Tilmeld from '../Tilmeld';
 import Group, { GroupData } from '../Group';
 import User, { UserData } from '../User';

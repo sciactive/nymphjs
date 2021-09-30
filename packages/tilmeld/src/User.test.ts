@@ -40,6 +40,14 @@ describe('User', () => {
     return newUser;
   }
 
+  it('new user passes validation', async () => {
+    const validUser = await makeNewUser();
+
+    expect(() => {
+      defaults.validatorUser(validUser);
+    }).not.toThrow();
+  });
+
   it("doesn't allow unknown keys", async () => {
     const invalidUser = await makeNewUser();
 

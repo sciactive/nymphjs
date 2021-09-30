@@ -5,6 +5,7 @@
   "scripts": {
     "lint:format": "npx prettier --write .",
     "lint:check": "npx prettier --check .",
+    "clean": "lerna run clean",
     "docs": "typedoc",
     "prepare": "husky install && npm run bootstrap && npm run lint:check",
     "bootstrap": "lerna bootstrap",

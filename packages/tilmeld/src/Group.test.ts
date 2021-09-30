@@ -37,6 +37,14 @@ describe('Group', () => {
     return newGroup;
   }
 
+  it('new group passes validation', async () => {
+    const validGroup = await makeNewGroup();
+
+    expect(() => {
+      defaults.validatorGroup(validGroup);
+    }).not.toThrow();
+  });
+
   it("doesn't allow unknown keys", async () => {
     const invalidGroup = await makeNewGroup();
 

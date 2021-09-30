@@ -1,3 +1,4 @@
+import { nymphJoiProps } from '@nymphjs/nymph';
 import path from 'path';
 import jwt from 'jsonwebtoken';
 import { nanoid } from 'nanoid';
@@ -157,28 +158,7 @@ export default {
     Joi.attempt(
       group.$getValidatable(),
       Joi.object().keys({
-        guid: Joi.alternatives()
-          .try(
-            Joi.any().only().allow(null),
-            Joi.string().trim(false).length(24).hex()
-          )
-          .required(),
-        cdate: Joi.alternatives()
-          .try(Joi.any().only().allow(null), Joi.number())
-          .required(),
-        mdate: Joi.alternatives()
-          .try(Joi.any().only().allow(null), Joi.number())
-          .required(),
-        tags: Joi.array()
-          .items(
-            Joi.string()
-              .pattern(/[\x01-\x1F\x7F]/, {
-                name: 'control characters',
-                invert: true,
-              })
-              .min(1)
-          )
-          .required(),
+        ...nymphJoiProps,
         groupname: Joi.string().trim(false).min(1).required(),
         enabled: Joi.boolean().required(),
         email: Joi.string()
@@ -228,28 +208,7 @@ export default {
     Joi.attempt(
       user.$getValidatable(),
       Joi.object().keys({
-        guid: Joi.alternatives()
-          .try(
-            Joi.any().only().allow(null),
-            Joi.string().trim(false).length(24).hex()
-          )
-          .required(),
-        cdate: Joi.alternatives()
-          .try(Joi.any().only().allow(null), Joi.number())
-          .required(),
-        mdate: Joi.alternatives()
-          .try(Joi.any().only().allow(null), Joi.number())
-          .required(),
-        tags: Joi.array()
-          .items(
-            Joi.string()
-              .pattern(/[\x01-\x1F\x7F]/, {
-                name: 'control characters',
-                invert: true,
-              })
-              .min(1)
-          )
-          .required(),
+        ...nymphJoiProps,
         username: Joi.string().trim(false).min(1).required(),
         enabled: Joi.boolean().required(),
         email: Joi.string()

@@ -17,4 +17,7 @@ export * from './Nymph';
 import Nymph from './Nymph';
 export { Nymph };
 
+import nymphJoiProps from './nymphJoiProps';
+export { nymphJoiProps };
+
 export * from './utils';

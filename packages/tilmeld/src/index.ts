@@ -14,6 +14,9 @@ export { Tilmeld };
 
 export * from './Tilmeld.types';
 
+import tilmeldJoiProps from './tilmeldJoiProps';
+export { tilmeldJoiProps };
+
 export * from './User';
 import User from './User';
 export { User };
