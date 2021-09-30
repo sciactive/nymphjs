@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.5](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2021-09-30)
+
+### Features
+
+- provide Joi prop checks for Nymph and Tilmeld as exports ([8180861](https://github.com/sciactive/nymphjs/commit/8180861c6631f7fd25a2d2a3c57924b8f4147cf3))
+
 # [1.0.0-alpha.4](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.3...v1.0.0-alpha.4) (2021-09-27)
 
 ### Features

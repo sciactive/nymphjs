@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/nymph",
-  "version": "1.0.0-alpha.4",
+  "version": "1.0.0-alpha.5",
   "description": "NymphJS - Nymph ORM",
   "type": "commonjs",
   "main": "dist/index.js",
