@@ -147,14 +147,13 @@ export default class Tilmeld implements TilmeldInterface {
   }
 
   private initAccessControl() {
-    const tilmeld = this;
-
     // Check for the skip access control option and add AC selectors.
     const handleQuery = function (
-      _nymph: Nymph,
+      nymph: Nymph,
       options: Options,
       selectors: FormattedSelector[]
     ) {
+      const tilmeld = nymph.tilmeld as Tilmeld;
       if (
         !options ||
         !('skipAc' in options) ||
@@ -191,9 +190,10 @@ export default class Tilmeld implements TilmeldInterface {
 
     // Filter entities being deleted for user permissions.
     const checkPermissionsDelete = function (
-      _nymph: Nymph,
+      nymph: Nymph,
       entity: EntityInterface
     ) {
+      const tilmeld = nymph.tilmeld as Tilmeld;
       if (
         typeof entity.$tilmeldDeleteSkipAC === 'function' &&
         entity.$tilmeldDeleteSkipAC()
@@ -213,8 +213,8 @@ export default class Tilmeld implements TilmeldInterface {
       guid: string,
       className?: string
     ) {
-      const entity = tilmeld.nymph.driver.getEntitySync(
-        { class: tilmeld.nymph.getEntityClass(className ?? 'Entity') },
+      const entity = nymph.driver.getEntitySync(
+        { class: nymph.getEntityClass(className ?? 'Entity') },
         { type: '&', guid: guid }
       );
       if (entity != null) {
@@ -226,9 +226,10 @@ export default class Tilmeld implements TilmeldInterface {
     // Filter entities being saved for user permissions, and filter any
     // disallowed changes to AC properties.
     const checkPermissionsSaveAndFilterAcChanges = function (
-      _nymph: Nymph,
+      nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
+      const tilmeld = nymph.tilmeld as Tilmeld;
       if (!entity) {
         return;
       }
@@ -300,9 +301,10 @@ export default class Tilmeld implements TilmeldInterface {
      * - acOther = TilmeldAccessLevels.NO_ACCESS
      */
     const addAccess = function (
-      _nymph: Nymph,
+      nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
+      const tilmeld = nymph.tilmeld as Tilmeld;
       const user = tilmeld.currentUser;
       if (
         user != null &&
@@ -353,30 +355,40 @@ export default class Tilmeld implements TilmeldInterface {
             prop < TilmeldAccessLevels.NO_ACCESS ||
             prop > TilmeldAccessLevels.FULL_ACCESS
           ) {
-            throw new AccessControlError('Invalid access control property.');
+            throw new AccessControlError(
+              'Invalid access control property: ' + prop
+            );
           }
         };
 
         const accessAcPropertyValidator = (prop: any) => {
           if (!Array.isArray(prop)) {
-            throw new AccessControlError('Invalid access control property.');
+            throw new AccessControlError(
+              'Invalid access control property: ' + prop
+            );
           }
           prop.forEach((value) => {
             if (!(value instanceof User || value instanceof Group)) {
-              throw new AccessControlError('Invalid access control property.');
+              throw new AccessControlError(
+                'Invalid access control property: ' + prop
+              );
             }
           });
         };
 
         if ('user' in entity) {
           if (!(entity.user instanceof User)) {
-            throw new AccessControlError('Invalid access control property.');
+            throw new AccessControlError(
+              'Invalid access control property: user'
+            );
           }
         }
 
         if ('group' in entity) {
           if (!(entity.Group instanceof Group)) {
-            throw new AccessControlError('Invalid access control property.');
+            throw new AccessControlError(
+              'Invalid access control property: group'
+            );
           }
         }
 
