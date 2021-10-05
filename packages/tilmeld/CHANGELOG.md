@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.6](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2021-10-05)
+
+### Bug Fixes
+
+- tilmeld instance in access control functions ([7965df8](https://github.com/sciactive/nymphjs/commit/7965df8ea8cbbad7efa77ce8fe8b0f3061ac3c44))
+
 # [1.0.0-alpha.5](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.4...v1.0.0-alpha.5) (2021-09-30)
 
 ### Features
