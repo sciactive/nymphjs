@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.7](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.6...v1.0.0-alpha.7) (2021-10-05)
+
+### Bug Fixes
+
+- tilmeld group check on entities ([d55c43b](https://github.com/sciactive/nymphjs/commit/d55c43b16dde9a7a88c347db542987f0df9553d6))
+
 # [1.0.0-alpha.6](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.5...v1.0.0-alpha.6) (2021-10-05)
 
 ### Bug Fixes
