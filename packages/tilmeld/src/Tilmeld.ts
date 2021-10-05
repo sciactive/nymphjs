@@ -385,7 +385,7 @@ export default class Tilmeld implements TilmeldInterface {
         }
 
         if ('group' in entity) {
-          if (!(entity.Group instanceof Group)) {
+          if (!(entity.group instanceof Group)) {
             throw new AccessControlError(
               'Invalid access control property: group'
             );
