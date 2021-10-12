@@ -7,6 +7,7 @@ import {
   TilmeldAccessLevels,
 } from '@nymphjs/nymph';
 import { Request, Response } from 'express';
+import { xor } from 'lodash';
 
 import { Config, ConfigDefaults as defaults } from './conf';
 import { AccessControlError } from './errors';
@@ -201,7 +202,7 @@ export default class Tilmeld implements TilmeldInterface {
         return;
       }
       // Test for permissions.
-      if (tilmeld.checkPermissions(entity, TilmeldAccessLevels.FULL_ACCESS)) {
+      if (!tilmeld.checkPermissions(entity, TilmeldAccessLevels.FULL_ACCESS)) {
         throw new AccessControlError('No permission to delete.');
       }
     };
@@ -245,15 +246,15 @@ export default class Tilmeld implements TilmeldInterface {
         // allowing a change to ac properties.
 
         const originalAc = entity.$getOriginalAcValues();
-        const newAc = {
-          user: entity.user ?? null,
-          group: entity.group ?? null,
-          acUser: entity.acUser ?? null,
-          acGroup: entity.acGroup ?? null,
-          acOther: entity.acOther ?? null,
-          acRead: entity.acRead ?? null,
-          acWrite: entity.acWrite ?? null,
-          acFull: entity.acFull ?? null,
+        const newAc: AccessControlData = {
+          user: entity.user ?? undefined,
+          group: entity.group ?? undefined,
+          acUser: entity.acUser ?? undefined,
+          acGroup: entity.acGroup ?? undefined,
+          acOther: entity.acOther ?? undefined,
+          acRead: entity.acRead ?? undefined,
+          acWrite: entity.acWrite ?? undefined,
+          acFull: entity.acFull ?? undefined,
         };
 
         const setAcProperties = (acValues: { [k: string]: any }) => {
@@ -269,10 +270,102 @@ export default class Tilmeld implements TilmeldInterface {
 
         // Restore original AC properties and check permissions.
         setAcProperties(originalAc);
-        if (tilmeld.checkPermissions(entity, TilmeldAccessLevels.FULL_ACCESS)) {
-          // Only allow changes to AC properties if the user has full access.
-          // TODO: only allow changes to `user` and `group` if tilmeld admin or
-          //       group is user's group.
+
+        function areAcPropertiesChanged(
+          a: AccessControlData,
+          b: AccessControlData
+        ) {
+          for (const name of ['user', 'group'] as ('user' | 'group')[]) {
+            const aVal = a[name];
+            const bVal = b[name];
+            if (aVal == null && bVal == null) {
+              continue;
+            } else if (aVal == null || bVal == null) {
+              return true;
+            }
+            if (!aVal.$is(bVal)) {
+              return true;
+            }
+          }
+          for (const name of ['acUser', 'acGroup', 'acOther'] as (
+            | 'acUser'
+            | 'acGroup'
+            | 'acOther'
+          )[]) {
+            const aVal = a[name];
+            const bVal = b[name];
+            if (aVal == null && bVal == null) {
+              continue;
+            } else if (aVal == null || bVal == null) {
+              return true;
+            }
+            if (aVal !== bVal) {
+              return true;
+            }
+          }
+          for (const name of ['acRead', 'acWrite', 'acFull'] as (
+            | 'acRead'
+            | 'acWrite'
+            | 'acFull'
+          )[]) {
+            const aVal = a[name];
+            const bVal = b[name];
+            if (aVal == null && bVal == null) {
+              continue;
+            } else if (aVal == null || bVal == null) {
+              return true;
+            }
+            if (aVal.length !== bVal.length) {
+              return true;
+            }
+            if (
+              xor(
+                aVal.map((entity) => entity.guid),
+                bVal.map((entity) => entity.guid)
+              ).length
+            ) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        if (areAcPropertiesChanged(originalAc, newAc)) {
+          if (
+            !tilmeld.checkPermissions(entity, TilmeldAccessLevels.FULL_ACCESS)
+          ) {
+            // Only allow changes to AC properties if the user has full access.
+            throw new AccessControlError(
+              'No permission to change access control properties.'
+            );
+          }
+
+          if (
+            ((originalAc.user && !originalAc.user.$is(newAc.user)) ||
+              (!originalAc.user &&
+                newAc.user &&
+                !newAc.user.$is(tilmeld.currentUser))) &&
+            !tilmeld.gatekeeper('tilmeld/admin')
+          ) {
+            throw new AccessControlError(
+              'No permission to assign to another user.'
+            );
+          }
+
+          if (
+            newAc.group &&
+            !newAc.group.$is(originalAc.group) &&
+            !(
+              newAc.group.$is(tilmeld.currentUser?.group) ||
+              newAc.group.$inArray(tilmeld.currentUser?.groups ?? [])
+            ) &&
+            !tilmeld.gatekeeper('tilmeld/admin')
+          ) {
+            throw new AccessControlError(
+              'No permission to assign to another group.'
+            );
+          }
+
           setAcProperties(newAc);
         }
       }
