@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.9](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2021-10-12)
+
+### Bug Fixes
+
+- data protection was using the same array instances ([d456e61](https://github.com/sciactive/nymphjs/commit/d456e61be316b9abe7fb391b232412222e7d748f))
+
 # [1.0.0-alpha.8](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.7...v1.0.0-alpha.8) (2021-10-12)
 
 ### Bug Fixes
