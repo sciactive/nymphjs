@@ -752,7 +752,9 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     const transaction = 'tilmeld-delete-' + this.guid;
-    const tnymph = await this.$nymph.startTransaction(transaction);
+    const nymph = this.$nymph;
+    const tnymph = await nymph.startTransaction(transaction);
+    this.$nymph = tnymph;
 
     // Delete descendants.
     const descendants = await this.$getDescendants();
@@ -760,6 +762,7 @@ export default class Group extends AbleObject<GroupData> {
       for (let curGroup of descendants) {
         if (!(await curGroup.$delete())) {
           await tnymph.rollback(transaction);
+          this.$nymph = nymph;
           return false;
         }
       }
@@ -780,6 +783,7 @@ export default class Group extends AbleObject<GroupData> {
       delete user.group;
       if (!(await user.$save())) {
         await tnymph.rollback(transaction);
+        this.$nymph = nymph;
         return false;
       }
     }
@@ -810,6 +814,7 @@ export default class Group extends AbleObject<GroupData> {
     } else {
       await tnymph.rollback(transaction);
     }
+    this.$nymph = nymph;
     return success;
   }
 }

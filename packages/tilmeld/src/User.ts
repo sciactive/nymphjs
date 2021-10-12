@@ -1167,7 +1167,9 @@ export default class User extends AbleObject<UserData> {
 
     // Start transaction.
     const transaction = 'tilmeld-register-' + nanoid();
+    const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
+    this.$nymph = tnymph;
 
     try {
       // Add primary group.
@@ -1191,6 +1193,7 @@ export default class User extends AbleObject<UserData> {
         }
         if (!(await generatedPrimaryGroup.$saveSkipAC())) {
           await tnymph.rollback(transaction);
+          this.$nymph = nymph;
           return {
             result: false,
             loggedin: false,
@@ -1291,6 +1294,7 @@ export default class User extends AbleObject<UserData> {
           generatedPrimaryGroup.user = this;
           if (!(await generatedPrimaryGroup.$saveSkipAC())) {
             await tnymph.rollback(transaction);
+            this.$nymph = nymph;
             return {
               result: false,
               loggedin: false,
@@ -1326,6 +1330,7 @@ export default class User extends AbleObject<UserData> {
           loggedin = true;
         }
         await tnymph.commit(transaction);
+        this.$nymph = nymph;
         return {
           result: true,
           loggedin,
@@ -1333,6 +1338,7 @@ export default class User extends AbleObject<UserData> {
         };
       } else {
         await tnymph.rollback(transaction);
+        this.$nymph = nymph;
         return {
           result: false,
           loggedin: false,
@@ -1341,6 +1347,7 @@ export default class User extends AbleObject<UserData> {
       }
     } catch (e: any) {
       await tnymph.rollback(transaction);
+      this.$nymph = nymph;
       throw e;
     }
   }
@@ -1541,7 +1548,9 @@ export default class User extends AbleObject<UserData> {
 
     // Start transaction.
     const transaction = 'tilmeld-save-' + nanoid();
+    const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
+    this.$nymph = tnymph;
 
     if (
       this.$data.group != null &&
@@ -1558,6 +1567,7 @@ export default class User extends AbleObject<UserData> {
         await this.$data.group.$saveSkipAC();
       } catch (e: any) {
         await tnymph.rollback(transaction);
+        this.$nymph = nymph;
         throw e;
       }
     }
@@ -1571,6 +1581,7 @@ export default class User extends AbleObject<UserData> {
       ret = await super.$save();
     } catch (e: any) {
       await tnymph.rollback(transaction);
+      this.$nymph = nymph;
       throw e;
     }
     if (ret) {
@@ -1581,6 +1592,7 @@ export default class User extends AbleObject<UserData> {
           this.guid = preGuid;
           this.cdate = preCdate;
           this.mdate = preMdate;
+          this.$nymph = nymph;
           throw new Error("Couldn't send verification email.");
         }
       }
@@ -1596,6 +1608,7 @@ export default class User extends AbleObject<UserData> {
     } else {
       await tnymph.rollback(transaction);
     }
+    this.$nymph = nymph;
     return ret;
   }
 

@@ -9,7 +9,9 @@
     "docs": "typedoc",
     "prepare": "husky install && npm run bootstrap && npm run lint:check",
     "bootstrap": "lerna bootstrap",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "lerna run test --no-bail -- -- --passWithNoTests",
+    "test:db:run": "lerna run test:db:run --stream --parallel",
+    "test:db:stop": "lerna run test:db:stop"
   },
   "repository": {
     "type": "git",

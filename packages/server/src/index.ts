@@ -16,6 +16,8 @@ import { EntityInvalidDataError } from '@nymphjs/nymph';
 
 type NymphResponse = Response<any, { nymph: Nymph }>;
 
+const NOT_FOUND_ERROR = 'Entity is not found.';
+
 /**
  * A REST server middleware creator for Nymph.
  *
@@ -220,6 +222,7 @@ export default function createServer(nymph: Nymph) {
         let hadSuccess = false;
         let invalidRequest = false;
         let conflict = false;
+        let notfound = false;
         let lastException = null;
         for (let entData of data) {
           if (entData.guid) {
@@ -233,6 +236,8 @@ export default function createServer(nymph: Nymph) {
           } catch (e: any) {
             if (e instanceof EntityConflictError) {
               conflict = true;
+            } else if (e.message === NOT_FOUND_ERROR) {
+              notfound = true;
             } else if (e instanceof InvalidParametersError) {
               invalidRequest = true;
               lastException = e;
@@ -269,6 +274,9 @@ export default function createServer(nymph: Nymph) {
             return;
           } else if (conflict) {
             httpError(response, 409, 'Conflict');
+            return;
+          } else if (notfound) {
+            httpError(response, 404, 'Not Found');
             return;
           } else {
             httpError(response, 500, 'Internal Server Error', lastException);
@@ -335,6 +343,8 @@ export default function createServer(nymph: Nymph) {
           } catch (e: any) {
             if (e instanceof EntityConflictError) {
               httpError(response, 409, 'Conflict');
+            } else if (e.message === NOT_FOUND_ERROR) {
+              httpError(response, 404, 'Not Found', e);
             } else if (e instanceof InvalidParametersError) {
               httpError(response, 400, 'Bad Request', e);
             } else {
@@ -498,9 +508,12 @@ export default function createServer(nymph: Nymph) {
         } catch (e: any) {
           if (e instanceof EntityConflictError) {
             conflict = true;
-          }
-          if (e instanceof InvalidParametersError) {
+          } else if (e.message === NOT_FOUND_ERROR) {
+            notfound = true;
+          } else if (e instanceof InvalidParametersError) {
             invalidRequest = true;
+            lastException = e;
+          } else {
             lastException = e;
           }
           saved.push(null);
@@ -563,30 +576,56 @@ export default function createServer(nymph: Nymph) {
         }
         const deleted = [];
         let failures = false;
+        let hadSuccess = false;
         let invalidRequest = false;
+        let notfound = false;
         let lastException = null;
-        for (let delEnt of data) {
+        for (let entData of data) {
+          if (entData.guid && entData.guid.length != 24) {
+            invalidRequest = true;
+            continue;
+          }
+          let EntityClass: EntityConstructor;
           try {
-            const guid = delEnt.guid;
-            if (!delEnt.guid) {
-              invalidRequest = true;
-              continue;
-            }
-            if (
-              await response.locals.nymph.deleteEntityByID(guid, delEnt.class)
-            ) {
-              deleted.push(guid);
+            EntityClass = response.locals.nymph.getEntityClass(entData.class);
+          } catch (e: any) {
+            invalidRequest = true;
+            failures = true;
+            continue;
+          }
+          let entity: EntityInterface | null;
+          try {
+            entity = await response.locals.nymph.getEntity(
+              { class: EntityClass },
+              { type: '&', guid: entData.guid }
+            );
+          } catch (e: any) {
+            lastException = e;
+            failures = true;
+            continue;
+          }
+          if (!entity) {
+            notfound = true;
+            failures = true;
+            continue;
+          }
+          try {
+            if (await entity.$delete()) {
+              deleted.push(entData.guid);
+              hadSuccess = true;
             } else {
               failures = true;
             }
           } catch (e: any) {
-            failures = true;
             lastException = e;
+            failures = true;
           }
         }
         if (deleted.length === 0) {
           if (invalidRequest || !failures) {
-            httpError(response, 400, 'Bad Request');
+            httpError(response, 400, 'Bad Request', lastException);
+          } else if (notfound) {
+            httpError(response, 404, 'Not Found');
           } else {
             httpError(response, 500, 'Internal Server Error', lastException);
           }
@@ -662,7 +701,7 @@ export default function createServer(nymph: Nymph) {
         }
       );
       if (entity === null) {
-        throw new Error('Entity is not found.');
+        throw new Error(NOT_FOUND_ERROR);
       }
     } else {
       entity = await EntityClass.factory();
