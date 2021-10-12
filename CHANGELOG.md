@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.10](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.9...v1.0.0-alpha.10) (2021-10-12)
+
+### Bug Fixes
+
+- tilmeld permission checks ([ec8c585](https://github.com/sciactive/nymphjs/commit/ec8c5858c8d3d380cfdb76f606c63475d22d7842))
+
 # [1.0.0-alpha.9](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.8...v1.0.0-alpha.9) (2021-10-12)
 
 ### Bug Fixes
