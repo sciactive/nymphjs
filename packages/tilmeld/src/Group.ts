@@ -106,9 +106,9 @@ export default class Group extends AbleObject<GroupData> {
     'getPrimaryGroups',
     'getSecondaryGroups',
   ];
-  protected $privateData = Group.DEFAULT_PRIVATE_DATA;
-  public static searchRestrictedData = Group.DEFAULT_PRIVATE_DATA;
-  protected $allowlistData? = Group.DEFAULT_ALLOWLIST_DATA;
+  protected $privateData = [...Group.DEFAULT_PRIVATE_DATA];
+  public static searchRestrictedData = [...Group.DEFAULT_PRIVATE_DATA];
+  protected $allowlistData? = [...Group.DEFAULT_ALLOWLIST_DATA];
   protected $allowlistTags?: string[] = [];
 
   /**
@@ -294,8 +294,8 @@ export default class Group extends AbleObject<GroupData> {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let user = givenUser ?? tilmeld.User.current();
 
-    this.$privateData = Group.DEFAULT_PRIVATE_DATA;
-    this.$allowlistData = Group.DEFAULT_ALLOWLIST_DATA;
+    this.$privateData = [...Group.DEFAULT_PRIVATE_DATA];
+    this.$allowlistData = [...Group.DEFAULT_ALLOWLIST_DATA];
 
     if (tilmeld.config.emailUsernames) {
       this.$privateData.push('groupname');

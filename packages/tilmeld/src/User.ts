@@ -171,7 +171,7 @@ export default class User extends AbleObject<UserData> {
   ];
   private static DEFAULT_ALLOWLIST_DATA: string[] = [];
 
-  protected $clientEnabledMethods = User.DEFAULT_CLIENT_ENABLED_METHODS;
+  protected $clientEnabledMethods = [...User.DEFAULT_CLIENT_ENABLED_METHODS];
   public static clientEnabledStaticMethods = [
     'current',
     'loginUser',
@@ -179,9 +179,9 @@ export default class User extends AbleObject<UserData> {
     'recover',
     'getClientConfig',
   ];
-  protected $privateData = User.DEFAULT_PRIVATE_DATA;
-  public static searchRestrictedData = User.DEFAULT_PRIVATE_DATA;
-  protected $allowlistData? = User.DEFAULT_ALLOWLIST_DATA;
+  protected $privateData = [...User.DEFAULT_PRIVATE_DATA];
+  public static searchRestrictedData = [...User.DEFAULT_PRIVATE_DATA];
+  protected $allowlistData? = [...User.DEFAULT_ALLOWLIST_DATA];
   protected $allowlistTags?: string[] = [];
 
   /**
@@ -579,9 +579,9 @@ export default class User extends AbleObject<UserData> {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let user = givenUser ?? tilmeld.User.current();
 
-    this.$clientEnabledMethods = User.DEFAULT_CLIENT_ENABLED_METHODS;
-    this.$privateData = User.DEFAULT_PRIVATE_DATA;
-    this.$allowlistData = User.DEFAULT_ALLOWLIST_DATA;
+    this.$clientEnabledMethods = [...User.DEFAULT_CLIENT_ENABLED_METHODS];
+    this.$privateData = [...User.DEFAULT_PRIVATE_DATA];
+    this.$allowlistData = [...User.DEFAULT_ALLOWLIST_DATA];
 
     if (tilmeld.config.emailUsernames) {
       this.$privateData.push('username');
