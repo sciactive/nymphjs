@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.12](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.11...v1.0.0-alpha.12) (2021-10-13)
+
+### Features
+
+- add tag syntax to query parser ([6898200](https://github.com/sciactive/nymphjs/commit/689820055ec218d0998a0a2bb9496cebc1395247))
+
 # [1.0.0-alpha.11](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.10...v1.0.0-alpha.11) (2021-10-13)
 
 **Note:** Version bump only for package @nymphjs/query-parser
