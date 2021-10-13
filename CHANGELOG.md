@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.11](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.10...v1.0.0-alpha.11) (2021-10-13)
+
+### Bug Fixes
+
+- pubsub token extraction didn't wait for promise ([abdc57e](https://github.com/sciactive/nymphjs/commit/abdc57ecef3776c4944fab41195b2ce187a97790))
+
 # [1.0.0-alpha.10](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.9...v1.0.0-alpha.10) (2021-10-12)
 
 ### Bug Fixes
