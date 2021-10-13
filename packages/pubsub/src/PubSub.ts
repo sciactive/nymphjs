@@ -551,7 +551,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        `Client subscribed to a query! ($serialArgs, ${from.remoteAddress})`
+        `Client subscribed to a query! (${serialArgs}, ${from.remoteAddress})`
       );
 
       if (this.config.broadcastCounts) {
@@ -586,7 +586,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        `Client unsubscribed from a query! ($serialArgs, ${from.remoteAddress})`
+        `Client unsubscribed from a query! (${serialArgs}, ${from.remoteAddress})`
       );
 
       const count = this.querySubs[etype][serialArgs].size;

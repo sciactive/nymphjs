@@ -455,6 +455,33 @@ function selectorParser(
   }
   curQuery = curQuery.replace(truthyRegex, '');
 
+  // eg. <archived> or <!archived>
+  const tagRegex = /(?: |^)<(!?\w+)>(?= |$)/g;
+  const tagMatch = curQuery.match(tagRegex);
+  if (tagMatch) {
+    selector.tag = [];
+    selector['!tag'] = [];
+    for (let match of tagMatch) {
+      try {
+        let name = match.trim().replace(/^<|>$/g, '');
+        if (name.startsWith('!')) {
+          selector['!tag'].push(name.slice(1));
+        } else {
+          selector.tag.push(name);
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.tag.length) {
+      delete selector.tag;
+    }
+    if (!selector['!tag'].length) {
+      delete selector['!tag'];
+    }
+  }
+  curQuery = curQuery.replace(tagRegex, '');
+
   // eg. cdate>15
   const gtRegex = /(?: |^)(\w+)>(-?\d+(?:\.\d+)?)(?= |$)/g;
   const gtMatch = curQuery.match(gtRegex);

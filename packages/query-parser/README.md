@@ -110,6 +110,12 @@ Check for entity GUID.
 
 - `{guid}` or `{!guid}`
 
+### tag and !tag
+
+Check for a tag.
+
+- `<name>` or `<!name>`
+
 ### truthy and !truthy
 
 Check for truthiness.
