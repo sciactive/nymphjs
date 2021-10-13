@@ -295,7 +295,7 @@ export interface TilmeldInterface {
   gatekeeper(ability?: string): boolean;
   authenticate(): void;
   clearSession(): void;
-  extractToken(token: string): any;
+  extractToken(token: string): Promise<any>;
   fillSession(user: any): void;
   checkClientUIDPermissions(name: string, type?: TilmeldAccessLevels): boolean;
 }

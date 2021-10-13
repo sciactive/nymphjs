@@ -533,7 +533,7 @@ export default class PubSub {
       }
       const nymph = this.nymph.clone();
       if (nymph.tilmeld != null && token != null) {
-        const user = nymph.tilmeld.extractToken(token);
+        const user = await nymph.tilmeld.extractToken(token);
         if (user) {
           // Log in the user for access controls.
           nymph.tilmeld.fillSession(user);
@@ -784,7 +784,7 @@ export default class PubSub {
             token = this.sessions.get(curClient);
           }
           if (nymph.tilmeld != null && token != null) {
-            const user = nymph.tilmeld.extractToken(token);
+            const user = await nymph.tilmeld.extractToken(token);
             if (user) {
               // Log in the user for access controls.
               nymph.tilmeld.fillSession(user);
