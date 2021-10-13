@@ -159,7 +159,7 @@ export default {
       group.$getValidatable(),
       Joi.object().keys({
         ...nymphJoiProps,
-        groupname: Joi.string().trim(false).min(1).required(),
+        groupname: Joi.string().trim(false).required(),
         enabled: Joi.boolean().required(),
         email: Joi.string()
           .trim(false)
@@ -171,7 +171,6 @@ export default {
             name: 'control characters',
             invert: true,
           })
-          .min(1)
           .max(512)
           .required(),
         avatar: Joi.string()
@@ -181,7 +180,6 @@ export default {
             name: 'control characters',
             invert: true,
           })
-          .min(1)
           .max(1024),
         phone: Joi.string()
           .trim(false)
@@ -194,7 +192,6 @@ export default {
               name: 'control characters',
               invert: true,
             })
-            .min(1)
             .max(256)
         ),
         defaultPrimary: Joi.boolean(),
@@ -209,7 +206,7 @@ export default {
       user.$getValidatable(),
       Joi.object().keys({
         ...nymphJoiProps,
-        username: Joi.string().trim(false).min(1).required(),
+        username: Joi.string().trim(false).required(),
         enabled: Joi.boolean().required(),
         email: Joi.string()
           .trim(false)
@@ -221,7 +218,6 @@ export default {
             name: 'control characters',
             invert: true,
           })
-          .min(1)
           .max(512)
           .required(),
         nameMiddle: Joi.string()
@@ -230,7 +226,6 @@ export default {
             name: 'control characters',
             invert: true,
           })
-          .min(1)
           .max(512),
         nameLast: Joi.string()
           .trim(false)
@@ -238,7 +233,6 @@ export default {
             name: 'control characters',
             invert: true,
           })
-          .min(1)
           .max(512),
         name: Joi.string()
           .trim(false)
@@ -246,7 +240,6 @@ export default {
             name: 'control characters',
             invert: true,
           })
-          .min(1)
           .max(512)
           .required(),
         avatar: Joi.string()
@@ -256,7 +249,6 @@ export default {
             name: 'control characters',
             invert: true,
           })
-          .min(1)
           .max(1024),
         phone: Joi.string()
           .trim(false)
@@ -269,7 +261,6 @@ export default {
               name: 'control characters',
               invert: true,
             })
-            .min(1)
             .max(256)
         ),
         inheritAbilities: Joi.boolean(),
@@ -309,8 +300,8 @@ export default {
           })
           .length(10),
         recoverSecretDate: Joi.number(),
-        salt: Joi.string().trim(false).min(1),
-        password: Joi.string().trim(false).min(1).required(),
+        salt: Joi.string().trim(false),
+        password: Joi.string().trim(false).required(),
       }),
       'Invalid User: '
     );

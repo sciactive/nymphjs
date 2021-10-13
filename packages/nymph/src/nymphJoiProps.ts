@@ -15,12 +15,10 @@ export default {
     .required(),
   tags: Joi.array()
     .items(
-      Joi.string()
-        .pattern(/[[\x01-\x1F\x7F]]/, {
-          name: 'control characters',
-          invert: true,
-        })
-        .min(1)
+      Joi.string().pattern(/[[\x01-\x1F\x7F]]/, {
+        name: 'control characters',
+        invert: true,
+      })
     )
     .required(),
 };
