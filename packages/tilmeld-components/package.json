@@ -5,7 +5,6 @@
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "src/index.d.ts",
-  "svelte": "src/index.ts",
   "keywords": [
     "nymph",
     "ORM",
