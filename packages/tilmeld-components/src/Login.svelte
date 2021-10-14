@@ -30,7 +30,7 @@
           >
             <HelperText persistent slot="helper">
               {#if !existingUser}
-                {usernameVerifiedMessage ?? ''}
+                {usernameVerifiedMessage || ''}
               {/if}
             </HelperText>
           </Textfield>

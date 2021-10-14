@@ -22,7 +22,7 @@
             input$spellcheck="false"
           >
             <HelperText persistent slot="helper">
-              {usernameVerifiedMessage ?? ''}
+              {usernameVerifiedMessage || ''}
             </HelperText>
           </Textfield>
         </div>
@@ -42,7 +42,7 @@
             input$spellcheck="false"
           >
             <HelperText persistent slot="helper">
-              {emailVerifiedMessage ?? ''}
+              {emailVerifiedMessage || ''}
             </HelperText>
           </Textfield>
         </div>
