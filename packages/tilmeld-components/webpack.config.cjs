@@ -9,7 +9,7 @@ module.exports = {
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
-    filename: 'index.js',
+    filename: 'index.cjs',
   },
   resolve: {
     extensions: ['.mjs', '.js', '.ts', '.svelte'],

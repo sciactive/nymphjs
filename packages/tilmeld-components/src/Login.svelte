@@ -159,7 +159,7 @@
   import CircularProgress from '@smui/circular-progress';
   import Button, { Label } from '@smui/button';
   import Textfield, { TextfieldComponentDev } from '@smui/textfield';
-  import HelperText from '@smui/textfield/helper-text/index';
+  import HelperText from '@smui/textfield/helper-text/index.js';
   import {
     getClientConfig,
     login as loginAction,
