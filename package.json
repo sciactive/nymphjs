@@ -1,6 +1,6 @@
 {
   "name": "nymphjs",
-  "version": "1.0.0-alpha.13",
+  "version": "1.0.0",
   "description": "An ORM for Node.js.",
   "scripts": {
     "lint:format": "npx prettier --write .",
