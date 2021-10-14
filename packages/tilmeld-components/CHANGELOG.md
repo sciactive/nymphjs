@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.14](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.13...v1.0.0-alpha.14) (2021-10-14)
+
+### Bug Fixes
+
+- don't set ts file as default svelte import for tilmeld components ([74d74a0](https://github.com/sciactive/nymphjs/commit/74d74a010f3cb18bbf5ae1fed716965ff3acbf7b))
+
 # [1.0.0-alpha.13](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.12...v1.0.0-alpha.13) (2021-10-14)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-components
