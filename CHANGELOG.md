@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.17](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2021-10-14)
+
+### Bug Fixes
+
+- remove unsupported syntax in svelte markup ([8bf4da0](https://github.com/sciactive/nymphjs/commit/8bf4da02a03eeb1e7d3647ee54a280c0a971a52d))
+
 # [1.0.0-alpha.16](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.15...v1.0.0-alpha.16) (2021-10-14)
 
 ### Bug Fixes
