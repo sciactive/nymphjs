@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.15](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.14...v1.0.0-alpha.15) (2021-10-14)
+
+### Bug Fixes
+
+- export untyped svelte files in tilmeld-components ([b15a4ca](https://github.com/sciactive/nymphjs/commit/b15a4ca48abeef02ecfbcde25fd686391e6d0f1f))
+
 # [1.0.0-alpha.14](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.13...v1.0.0-alpha.14) (2021-10-14)
 
 ### Bug Fixes
