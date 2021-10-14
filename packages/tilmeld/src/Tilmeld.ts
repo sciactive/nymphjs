@@ -548,7 +548,7 @@ export default class Tilmeld implements TilmeldInterface {
       return;
     }
 
-    if (user === null) {
+    if (user == null || user.guid == null) {
       selectors.push({
         type: '|',
         // Other access control is sufficient.
@@ -557,7 +557,7 @@ export default class Tilmeld implements TilmeldInterface {
         selector: [
           {
             type: '&',
-            '!defined': ['user', 'group'],
+            '!defined': [['user', 'group']],
           },
         ],
       });
@@ -565,56 +565,43 @@ export default class Tilmeld implements TilmeldInterface {
       const subSelectors: FormattedSelector[] = [
         {
           type: '&',
-          '!defined': ['user', 'group'],
+          '!defined': [['user', 'group']],
         },
         // It is owned by the user.
         {
           type: '&',
-          ref: [['user', user]],
+          ref: [['user', user.guid]],
           gte: [['acUser', TilmeldAccessLevels.READ_ACCESS]],
         },
       ];
-      const selector: FormattedSelector = {
-        type: '|',
-        // Other access control is sufficient.
-        gte: [['acOther', TilmeldAccessLevels.READ_ACCESS]],
-        // The user and group are not set.
-        selector: subSelectors,
-        // The user is listed in acRead, acWrite, or acFull.
-        ref: [
-          ['acRead', user],
-          ['acWrite', user],
-          ['acFull', user],
-        ],
-      };
       const groupRefs: FormattedSelector['ref'] = [];
       const acRefs: FormattedSelector['ref'] = [];
       if (user.group != null && user.group.guid != null) {
         // It belongs to the user's primary group.
-        groupRefs.push(['group', user.group]);
+        groupRefs.push(['group', user.group.guid]);
         // User's primary group is listed in acRead, acWrite, or acFull.
-        acRefs.push(['acRead', user.group]);
-        acRefs.push(['acWrite', user.group]);
-        acRefs.push(['acFull', user.group]);
+        acRefs.push(['acRead', user.group.guid]);
+        acRefs.push(['acWrite', user.group.guid]);
+        acRefs.push(['acFull', user.group.guid]);
       }
       for (let curSecondaryGroup of user.groups ?? []) {
         if (curSecondaryGroup != null && curSecondaryGroup.guid != null) {
           // It belongs to the user's secondary group.
-          groupRefs.push(['group', curSecondaryGroup]);
+          groupRefs.push(['group', curSecondaryGroup.guid]);
           // User's secondary group is listed in acRead, acWrite, or acFull.
-          acRefs.push(['acRead', curSecondaryGroup]);
-          acRefs.push(['acWrite', curSecondaryGroup]);
-          acRefs.push(['acFull', curSecondaryGroup]);
+          acRefs.push(['acRead', curSecondaryGroup.guid]);
+          acRefs.push(['acWrite', curSecondaryGroup.guid]);
+          acRefs.push(['acFull', curSecondaryGroup.guid]);
         }
       }
       for (let curDescendantGroup of user.$getDescendantGroupsSync()) {
         if (curDescendantGroup != null && curDescendantGroup.guid != null) {
           // It belongs to the user's secondary group.
-          groupRefs.push(['group', curDescendantGroup]);
+          groupRefs.push(['group', curDescendantGroup.guid]);
           // User's secondary group is listed in acRead, acWrite, or acFull.
-          acRefs.push(['acRead', curDescendantGroup]);
-          acRefs.push(['acWrite', curDescendantGroup]);
-          acRefs.push(['acFull', curDescendantGroup]);
+          acRefs.push(['acRead', curDescendantGroup.guid]);
+          acRefs.push(['acWrite', curDescendantGroup.guid]);
+          acRefs.push(['acFull', curDescendantGroup.guid]);
         }
       }
       // All the group refs.
@@ -637,6 +624,19 @@ export default class Tilmeld implements TilmeldInterface {
           ref: acRefs,
         });
       }
+      const selector: FormattedSelector = {
+        type: '|',
+        // Other access control is sufficient.
+        gte: [['acOther', TilmeldAccessLevels.READ_ACCESS]],
+        // The user and group are not set.
+        selector: subSelectors,
+        // The user is listed in acRead, acWrite, or acFull.
+        ref: [
+          ['acRead', user.guid],
+          ['acWrite', user.guid],
+          ['acFull', user.guid],
+        ],
+      };
       selectors.push(selector);
     }
   }

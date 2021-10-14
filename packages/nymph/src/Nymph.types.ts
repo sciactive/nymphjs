@@ -226,17 +226,17 @@ export type Selector = {
 export type FormattedSelector = {
   type: '&' | '|' | '!&' | '!|';
 
-  guid?: PrimitiveSelector['guid'][];
-  '!guid'?: PrimitiveSelector['guid'][];
+  guid?: PrimitiveSelector['guid'][][];
+  '!guid'?: PrimitiveSelector['guid'][][];
 
-  tag?: PrimitiveSelector['tag'][];
-  '!tag'?: PrimitiveSelector['tag'][];
+  tag?: PrimitiveSelector['tag'][][];
+  '!tag'?: PrimitiveSelector['tag'][][];
 
-  defined?: PrimitiveSelector['defined'][];
-  '!defined'?: PrimitiveSelector['defined'][];
+  defined?: PrimitiveSelector['defined'][][];
+  '!defined'?: PrimitiveSelector['defined'][][];
 
-  truthy?: PrimitiveSelector['truthy'][];
-  '!truthy'?: PrimitiveSelector['truthy'][];
+  truthy?: PrimitiveSelector['truthy'][][];
+  '!truthy'?: PrimitiveSelector['truthy'][][];
 
   equal?: PrimitiveSelector['equal'][];
   '!equal'?: PrimitiveSelector['equal'][];
