@@ -898,12 +898,6 @@ export default class PubSub {
         try {
           let [clientOptions, ...selectors] = JSON.parse(curQuery);
           const EntityClass = this.nymph.getEntityClass(clientOptions.class);
-          const options: Options = {
-            ...clientOptions,
-            class: EntityClass,
-            return: 'entity',
-            source: 'client',
-          };
           const entityData = data.entity.data;
           entityData.cdate = data.entity.cdate;
           entityData.mdate = data.entity.mdate;
