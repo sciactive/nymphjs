@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.18](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.17...v1.0.0-alpha.18) (2021-11-09)
+
+### Features
+
+- move entity sorter to its own package and add more features ([ef57460](https://github.com/sciactive/nymphjs/commit/ef57460d88c927a0e3a44b0071f553f1c92708bc))
+
 # [1.0.0-alpha.17](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.16...v1.0.0-alpha.17) (2021-10-14)
 
 ### Bug Fixes
