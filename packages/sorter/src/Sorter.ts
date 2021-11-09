@@ -1,32 +1,41 @@
-export default class EntitySorter<
-  Entity extends new () => Object,
-  Nymph extends {
-    getEntityClass(className: string): Entity;
-  }
-> {
-  private array: (Entity & { [k: string]: any })[];
+export type SortOptions = {
+  /** Sort case sensitively. */
+  caseSensitive?: boolean;
+  /** Reverse the sort order. */
+  reverse?: boolean;
+  /** Options to pass to Intl.Collator for string comparisons. This overrides the caseSensitive options. */
+  collatorOptions?: Intl.CollatorOptions;
+  /** A custom comparator to use. This overrides all other options except reverse. */
+  comparator?: (a: any, b: any) => number;
+};
+
+/**
+ * Entity Array Sorter
+ *
+ * Sorting functions sort the array in place and also return the sorted array.
+ */
+export default class Sorter<Entity extends Object> {
+  public array: (Entity & { [k: string]: any })[];
   private sortProperty: string | null = null;
   private sortParent: string | null = null;
-  private sortCaseSensitive: boolean | null = null;
+  private collator: Intl.Collator = new Intl.Collator();
+  private comparator: ((a: any, b: any) => number) | undefined = undefined;
 
-  private nymph: Nymph;
-
-  constructor(array: Entity[], nymph: Nymph) {
+  constructor(array: Entity[]) {
     this.array = array as (Entity & { [k: string]: any })[];
-    this.nymph = nymph;
   }
 
   private _arraySortProperty(
     a: Entity & { [k: string]: any },
     b: Entity & { [k: string]: any }
   ) {
-    let prop = this.sortProperty as string;
-    let parent = this.sortParent as string;
-    const Entity = this.nymph.getEntityClass('Entity');
+    const prop = this.sortProperty as string;
+    const parent = this.sortParent as string;
+
     if (
       parent != null &&
-      a[parent] instanceof Entity &&
-      b[parent] instanceof Entity
+      a[parent] instanceof Object &&
+      b[parent] instanceof Object
     ) {
       const aParentProp = a[parent][prop];
       const bParentProp = b[parent][prop];
@@ -34,56 +43,59 @@ export default class EntitySorter<
         typeof aParentProp !== 'undefined' ||
         typeof bParentProp !== 'undefined'
       ) {
-        if (
-          !this.sortCaseSensitive &&
+        if (this.comparator != null) {
+          const result = this.comparator(aParentProp, bParentProp);
+          if (result !== 0) {
+            return result;
+          }
+        } else if (
           typeof aParentProp === 'string' &&
           typeof bParentProp === 'string'
         ) {
-          const asort = aParentProp.toUpperCase();
-          const bsort = bParentProp.toUpperCase();
-          if (asort !== bsort) {
-            return asort.localeCompare(bsort);
+          const result = this.collator.compare(aParentProp, bParentProp);
+          if (result !== 0) {
+            return result;
           }
-        } else {
-          if (aParentProp > bParentProp) {
-            return 1;
-          }
-          if (aParentProp < bParentProp) {
-            return -1;
-          }
+        } else if (aParentProp > bParentProp) {
+          return 1;
+        } else if (aParentProp < bParentProp) {
+          return -1;
         }
       }
     }
+
     // If they have the same parent, order them by their own prop.
     const aProp = a[prop];
     const bProp = b[prop];
-    if (
-      !this.sortCaseSensitive &&
-      typeof aProp === 'string' &&
-      typeof bProp === 'string'
-    ) {
-      const asort = aProp.toUpperCase();
-      const bsort = bProp.toUpperCase();
-      return asort.localeCompare(bsort);
-    } else {
-      if (aProp > bProp) {
-        return 1;
-      }
-      if (aProp < bProp) {
-        return -1;
-      }
+    if (this.comparator != null) {
+      return this.comparator(aProp, bProp);
+    } else if (typeof aProp === 'string' && typeof bProp === 'string') {
+      return this.collator.compare(aProp, bProp);
+    } else if (aProp > bProp) {
+      return 1;
+    } else if (aProp < bProp) {
+      return -1;
     }
     return 0;
   }
 
+  /**
+   * Sort an array of entities hierarchically by a specified property's value.
+   *
+   * Entities will be placed immediately after their parents. The
+   * `parentProperty` property, if present, should hold either null, undefined,
+   * or the entity's parent.
+   *
+   * @param property The name of the property to sort entities by.
+   * @param parentProperty The name of the property which holds the parent of the entity.
+   */
   public hsort(
     property: string,
     parentProperty: string,
-    caseSensitive = false,
-    reverse = false
-  ) {
+    sortOptions?: SortOptions
+  ): Entity[] {
     // First sort by the requested property.
-    this.sort(property, caseSensitive, reverse);
+    this.sort(property, sortOptions);
     if (typeof parentProperty === 'undefined' || parentProperty === null) {
       return this.array;
     }
@@ -98,9 +110,13 @@ export default class EntitySorter<
         // Must break after adding one, so any following children don't go in
         // the wrong order.
         if (
+          !(parentProperty in this.array[key]) ||
           this.array[key][parentProperty] == null ||
           typeof this.array[key][parentProperty].$inArray !== 'function' ||
-          !this.array[key][parentProperty].$inArray(newArray.concat(this.array))
+          !this.array[key][parentProperty].$inArray([
+            ...newArray,
+            ...this.array,
+          ])
         ) {
           // If they have no parent (or their parent isn't in the array), they
           // go on the end.
@@ -117,9 +133,10 @@ export default class EntitySorter<
             // And insert after the parent.
             // This makes entities go to the end of the child list.
             const ancestry = [this.array[key][parentProperty].guid];
-            let newKey = Number(pkey);
+            let newKey = pkey;
             while (
-              typeof newArray[newKey + 1] !== 'undefined' &&
+              newKey + 1 < newArray.length &&
+              parentProperty in newArray[newKey + 1] &&
               newArray[newKey + 1][parentProperty] != null &&
               ancestry.indexOf(newArray[newKey + 1][parentProperty].guid) !== -1
             ) {
@@ -128,7 +145,7 @@ export default class EntitySorter<
             }
             // Where to place the entity.
             newKey += 1;
-            if (typeof newArray[newKey] !== 'undefined') {
+            if (newKey < newArray.length) {
               // If it already exists, we have to splice it in.
               newArray.splice(newKey, 0, this.array[key]);
             } else {
@@ -155,16 +172,36 @@ export default class EntitySorter<
     return this.array as Entity[];
   }
 
+  /**
+   * Sort an array of entities by parent and a specified property's value.
+   *
+   * Entities' will be sorted by their parents' properties, then the entities'
+   * properties.
+   *
+   * @param property The name of the property to sort entities by.
+   * @param parentProperty The name of the property which holds the parent of the entity.
+   */
   public psort(
     property: string,
     parentProperty: string,
-    caseSensitive = false,
-    reverse = false
-  ) {
+    {
+      caseSensitive = false,
+      reverse = false,
+      collatorOptions = undefined,
+      comparator = undefined,
+    }: SortOptions = {}
+  ): Entity[] {
     // Sort by the requested property.
     this.sortProperty = property;
     this.sortParent = parentProperty;
-    this.sortCaseSensitive = !!caseSensitive;
+    this.collator = new Intl.Collator(
+      undefined,
+      collatorOptions || {
+        sensitivity: caseSensitive ? 'case' : 'base',
+        caseFirst: 'false',
+      }
+    );
+    this.comparator = comparator;
     this.array.sort(this._arraySortProperty.bind(this));
     if (reverse) {
       this.array.reverse();
@@ -172,11 +209,30 @@ export default class EntitySorter<
     return this.array as Entity[];
   }
 
-  public sort(property: string, caseSensitive = false, reverse = false) {
+  /**
+   * Sort an array of entities by a specified property's value.
+   *
+   * @param property The name of the property to sort entities by.
+   */
+  public sort(
+    property: string,
+    {
+      caseSensitive = false,
+      reverse = false,
+      collatorOptions = undefined,
+      comparator = undefined,
+    }: SortOptions = {}
+  ): Entity[] {
     // Sort by the requested property.
     this.sortProperty = property;
     this.sortParent = null;
-    this.sortCaseSensitive = !!caseSensitive;
+    this.collator = new Intl.Collator(
+      undefined,
+      collatorOptions || {
+        sensitivity: caseSensitive ? 'case' : 'base',
+      }
+    );
+    this.comparator = comparator;
     this.array.sort(this._arraySortProperty.bind(this));
     if (reverse) {
       this.array.reverse();

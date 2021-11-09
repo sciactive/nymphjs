@@ -1,0 +1,50 @@
+{
+  "name": "@nymphjs/sorter",
+  "version": "1.0.0-alpha.17",
+  "description": "NymphJS - Sorter",
+  "browser": "dist/index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "keywords": [
+    "nymph",
+    "ORM",
+    "object relational mapper"
+  ],
+  "scripts": {
+    "clean": "npm run clean:ts && npm run clean:js",
+    "clean:ts": "test -d lib && rm -r lib || true",
+    "clean:js": "test -d dist && rm -r dist || true",
+    "build": "npm run build:ts && npm run build:js",
+    "build:ts": "tsc",
+    "build:js": "webpack",
+    "watch:ts": "tsc --watch",
+    "watch:js": "webpack --watch",
+    "prepare": "npm run clean && npm run build",
+    "test": "jest --detectOpenHandles",
+    "test:watch": "jest --watch"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sciactive/nymphjs.git"
+  },
+  "author": "Hunter Perrin <hperrin@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/sciactive/nymphjs/issues"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.1",
+    "@types/jest": "^27.0.1",
+    "@types/lodash": "^4.14.172",
+    "jest": "^27.0.6",
+    "lodash": "^4.17.21",
+    "ts-jest": "^27.0.5",
+    "ts-loader": "^9.2.5",
+    "typescript": "^4.3.5",
+    "webpack": "^5.51.1",
+    "webpack-cli": "^4.8.0"
+  }
+}

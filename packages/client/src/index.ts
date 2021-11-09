@@ -4,9 +4,6 @@ export { Entity };
 
 export * from './Entity.types';
 
-import EntitySorter from './EntitySorter';
-export { EntitySorter };
-
 export * from './HttpRequester';
 
 export * from './Nymph';

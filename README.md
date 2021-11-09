@@ -60,6 +60,10 @@ The Tilmeld Components are front end registration/login, account recovery, accou
 
 The Tilmeld Setup App allows administrators to create, modify, and delete users and groups and configure how Tilmeld works. It also acts as the endpoint for email address verification.
 
+## [Entity Sorter](packages/sorter)
+
+The Nymph Entity Sorter lets you sort entities by their properties, including hierarchically.
+
 ## [Query Parser](packages/query-parser)
 
 The Query Parser is a utility for creating complex Nymph entity queries from a simple text input. Essentially, it turns a string into a Nymph query.

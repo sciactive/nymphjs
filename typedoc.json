@@ -9,6 +9,7 @@
     "./packages/pubsub/",
     "./packages/query-parser/",
     "./packages/server/",
+    "./packages/sorter/",
     "./packages/tilmeld/",
     "./packages/tilmeld-client/"
   ],
