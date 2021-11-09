@@ -37,17 +37,21 @@ const sorter = new Sorter(pages);
 //
 
 sorter.sort('name');
-console.log(pages); // Pages are now sorted by name, with locale aware sorting.
+// Pages are now sorted by name, with locale aware sorting.
+console.log(pages);
 
 sorter.sort('cdate');
-console.log(pages); // Pages are now sorted by creation date.
+// Pages are now sorted by creation date.
+console.log(pages);
 
 sorter.sort('cdate', { reverse: true });
-console.log(pages); // Pages are now sorted by creation date, newest first.
+// Pages are now sorted by creation date, newest first.
+console.log(pages);
 
 // Specifying your own comparator.
 sorter.sort('name', { comparator: (a, b) => (a < b ? -1 : a > b ? 1 : 0) });
-console.log(pages); // Pages are now sorted by name, based on UTF-16 code points.
+// Pages are now sorted by name, based on UTF-16 code points.
+console.log(pages);
 
 // Specifying options to the collator.
 sorter.sort('name', {
@@ -57,14 +61,18 @@ sorter.sort('name', {
     numeric: true,
   },
 });
-console.log(pages); // Pages are now sorted by name, with uppercase coming first in case of otherwise identical entries, and numbers being sorted logically (2 < 10).
+// Pages are now sorted by name, with uppercase coming first in case of
+// otherwise identical entries, and numbers being sorted logically (2 < 10).
+console.log(pages);
 
 //
 // ## Hierarchical sorting.
 //
 
 sorter.hsort('name', 'parent');
-console.log(pages); // Pages are now sorted by name, hierarchically. (All child pages come immediately after their parent.)
+// Pages are now sorted by name, hierarchically. (All child pages come
+// immediately after their parent.)
+console.log(pages);
 
 // You can specify the same options as before.
 sorter.hsort('name', 'parent', {
@@ -74,7 +82,10 @@ sorter.hsort('name', 'parent', {
     numeric: true,
   },
 });
-console.log(pages); // Pages are now sorted by name, hierarchically, with uppercase coming first in case of otherwise identical entries, and numbers being sorted logically (2 < 10).
+// Pages are now sorted by name, hierarchically, with uppercase coming first
+// in case of otherwise identical entries, and numbers being sorted
+// logically (2 < 10).
+console.log(pages);
 ```
 
 # License
