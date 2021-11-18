@@ -36,17 +36,17 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nymphjs/nymph": "^1.0.0-alpha.18",
-    "nanoid": "^3.1.25",
+    "nanoid": "^3.1.30",
     "pg": "^8.7.1",
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
-    "@types/jest": "^27.0.1",
+    "@types/jest": "^27.0.2",
     "@types/pg": "^8.6.1",
     "@types/pg-format": "^1.0.2",
-    "jest": "^27.0.6",
-    "ts-jest": "^27.0.5",
-    "typescript": "^4.3.5"
+    "jest": "^27.3.1",
+    "ts-jest": "^27.0.7",
+    "typescript": "^4.5.2"
   }
 }

@@ -352,7 +352,7 @@
   import Paper from '@smui/paper';
   import DataTable, { Head, Body, Row, Cell } from '@smui/data-table';
   import Textfield, { Input } from '@smui/textfield';
-  import HelperText from '@smui/textfield/helper-text/index';
+  import HelperText from '@smui/textfield/helper-text';
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
   import { Icon, Label } from '@smui/common';
