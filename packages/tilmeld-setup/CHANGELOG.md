@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.20](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.19...v1.0.0-alpha.20) (2021-11-24)
+
+### Features
+
+- update smui to latest versions ([73ab4e8](https://github.com/sciactive/nymphjs/commit/73ab4e843623c25dc2efeb3c4b2cdd91237018b8))
+
 # [1.0.0-alpha.19](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.18...v1.0.0-alpha.19) (2021-11-18)
 
 ### Features
