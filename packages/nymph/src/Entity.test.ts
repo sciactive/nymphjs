@@ -128,6 +128,8 @@ describe('Entity', () => {
     const testEntityCopy = await TestModel.factory(testEntity.guid as string);
     expect(await testEntityCopy.$save()).toEqual(true);
 
+    await new Promise((resolve) => setTimeout(resolve, 5));
+
     expect(await testEntity.$save()).toEqual(false);
 
     await testEntity.$refresh();

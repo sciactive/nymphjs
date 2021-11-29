@@ -132,11 +132,11 @@ export default class Entity<T extends EntityData = EntityData>
   /**
    * Whether this instance is a sleeping reference.
    */
-  private $isASleepingReference = false;
+  protected $isASleepingReference = false;
   /**
    * The reference to use to wake.
    */
-  private $sleepingReference: EntityReference | null = null;
+  protected $sleepingReference: EntityReference | null = null;
   /**
    * Properties that will not be serialized into JSON with toJSON(). This
    * can be considered a denylist, because these properties will not be set
@@ -208,7 +208,7 @@ export default class Entity<T extends EntityData = EntityData>
       has: (data: EntityData, name: string) => {
         this.$referenceWake();
 
-        return data.hasOwnProperty(name) || this.$sdata.hasOwnProperty(name);
+        return name in data || name in this.$sdata;
       },
 
       get: (data: EntityData, name: string) => {
@@ -248,6 +248,42 @@ export default class Entity<T extends EntityData = EntityData>
           return delete data[name];
         }
         return true;
+      },
+
+      defineProperty: (
+        data: EntityData,
+        name: string,
+        descriptor: PropertyDescriptor
+      ) => {
+        this.$referenceWake();
+
+        if (this.$sdata.hasOwnProperty(name)) {
+          delete this.$sdata[name];
+        }
+        Object.defineProperty(data, name, descriptor);
+        return true;
+      },
+
+      getOwnPropertyDescriptor: (data: EntityData, name: string) => {
+        this.$referenceWake();
+
+        if (this.$sdata.hasOwnProperty(name)) {
+          data[name] = referencesToEntities(
+            JSON.parse(this.$sdata[name]),
+            this.$nymph,
+            this.$skipAc
+          );
+          delete this.$sdata[name];
+        }
+        return Object.getOwnPropertyDescriptor(data, name);
+      },
+
+      ownKeys: (data: EntityData) => {
+        this.$referenceWake();
+
+        return Object.getOwnPropertyNames(data).concat(
+          Object.getOwnPropertyNames(this.$sdata)
+        );
       },
     };
     this.$dataStore = {} as T;
@@ -331,6 +367,50 @@ export default class Entity<T extends EntityData = EntityData>
 
       getPrototypeOf: (entity: Entity) => {
         return entity.constructor.prototype;
+      },
+
+      defineProperty: (
+        entity: Entity,
+        name: string,
+        descriptor: PropertyDescriptor
+      ) => {
+        if (
+          typeof name !== 'string' ||
+          name in entity ||
+          name.substring(0, 1) === '$'
+        ) {
+          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+            this.$referenceWake();
+          }
+          Object.defineProperty(entity, name, descriptor);
+        } else {
+          this.$referenceWake();
+          Object.defineProperty(entity.$data, name, descriptor);
+        }
+        return true;
+      },
+
+      getOwnPropertyDescriptor: (entity: Entity, name: string) => {
+        if (
+          typeof name !== 'string' ||
+          name in entity ||
+          name.substring(0, 1) === '$'
+        ) {
+          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+            this.$referenceWake();
+          }
+          return Object.getOwnPropertyDescriptor(entity, name);
+        } else {
+          this.$referenceWake();
+          return Object.getOwnPropertyDescriptor(entity.$data, name);
+        }
+      },
+
+      ownKeys: (entity: Entity) => {
+        this.$referenceWake();
+        return Object.getOwnPropertyNames(entity).concat(
+          Object.getOwnPropertyNames(entity.$data)
+        );
       },
     }) as Entity<T>;
   }
@@ -453,7 +533,7 @@ export default class Entity<T extends EntityData = EntityData>
     if (includeSData) {
       // Access all the serialized properties to initialize them.
       for (const key in this.$sdata) {
-        const unused: any = (this as any)[key];
+        const _unused: any = (this as any)[key];
       }
     }
     return entitiesToReferences({ ...this.$dataStore });
@@ -487,7 +567,7 @@ export default class Entity<T extends EntityData = EntityData>
 
     // Access all the serialized properties to initialize them.
     for (const key in this.$sdata) {
-      const unused: any = (this as any)[key];
+      const _unused: any = (this as any)[key];
     }
     return {
       guid: this.guid,

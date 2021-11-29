@@ -78,15 +78,15 @@ export default class Entity<T extends EntityData = EntityData>
   /**
    * Whether this instance is a sleeping reference.
    */
-  private $isASleepingReference = false;
+  protected $isASleepingReference = false;
   /**
    * The reference to use to wake.
    */
-  private $sleepingReference: EntityReference | null = null;
+  protected $sleepingReference: EntityReference | null = null;
   /**
    * A promise that resolved when the entity's data is ready.
    */
-  private $readyPromise: Promise<Entity<T>> | null = null;
+  protected $readyPromise: Promise<Entity<T>> | null = null;
 
   /**
    * Load an entity.
@@ -100,7 +100,7 @@ export default class Entity<T extends EntityData = EntityData>
           console.error(`Tried to check data on a sleeping reference: ${name}`);
           return false;
         }
-        return data.hasOwnProperty(name);
+        return name in data;
       },
 
       get: (data: EntityData, name: string) => {
@@ -138,6 +138,42 @@ export default class Entity<T extends EntityData = EntityData>
           return delete data[name];
         }
         return true;
+      },
+
+      defineProperty: (
+        data: EntityData,
+        name: string,
+        descriptor: PropertyDescriptor
+      ) => {
+        if (typeof name !== 'symbol' && this.$isASleepingReference) {
+          console.error(
+            `Tried to define data on a sleeping reference: ${name}`
+          );
+          return false;
+        }
+        if (typeof name !== 'symbol') {
+          this.$dirty[name] = true;
+        }
+        Object.defineProperty(data, name, descriptor);
+        return true;
+      },
+
+      getOwnPropertyDescriptor: (data: EntityData, name: string) => {
+        if (typeof name !== 'symbol' && this.$isASleepingReference) {
+          console.error(
+            `Tried to get property descriptor on a sleeping reference: ${name}`
+          );
+          return undefined;
+        }
+        return Object.getOwnPropertyDescriptor(data, name);
+      },
+
+      ownKeys: (data: EntityData) => {
+        if (this.$isASleepingReference) {
+          console.error(`Tried to enumerate data on a sleeping reference.`);
+          return undefined;
+        }
+        return Object.getOwnPropertyNames(data);
       },
     };
     this.$dataStore = {} as T;
@@ -204,6 +240,41 @@ export default class Entity<T extends EntityData = EntityData>
 
       getPrototypeOf(entity: Entity) {
         return entity.constructor.prototype;
+      },
+
+      defineProperty(
+        entity: Entity,
+        name: string,
+        descriptor: PropertyDescriptor
+      ) {
+        if (
+          typeof name !== 'string' ||
+          name in entity ||
+          name.substring(0, 1) === '$'
+        ) {
+          Object.defineProperty(entity, name, descriptor);
+        } else {
+          Object.defineProperty(entity.$data, name, descriptor);
+        }
+        return true;
+      },
+
+      getOwnPropertyDescriptor(entity: Entity, name: string) {
+        if (
+          typeof name !== 'string' ||
+          name in entity ||
+          name.substring(0, 1) === '$'
+        ) {
+          return Object.getOwnPropertyDescriptor(entity, name);
+        } else {
+          return Object.getOwnPropertyDescriptor(entity.$data, name);
+        }
+      },
+
+      ownKeys(entity: Entity) {
+        return Object.getOwnPropertyNames(entity).concat(
+          Object.getOwnPropertyNames(entity.$data)
+        );
       },
     }) as Entity<T>;
   }
