@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.21](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.20...v1.0.0-alpha.21) (2021-11-29)
+
+### Features
+
+- open sleeping reference props to protected, allow custom property definitions in data proxies ([79779c3](https://github.com/sciactive/nymphjs/commit/79779c35123f8b829f3eb847088e68a58865c76d))
+
 # [1.0.0-alpha.20](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.19...v1.0.0-alpha.20) (2021-11-24)
 
 **Note:** Version bump only for package @nymphjs/nymph
