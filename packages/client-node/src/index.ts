@@ -7,7 +7,7 @@ import { Nymph, PubSub, NymphOptions } from '@nymphjs/client';
 class NodeNymph extends Nymph {
   constructor(nymphOptions: NymphOptions) {
     super({
-      fetch: fetch as any as WindowOrWorkerGlobalScope['fetch'],
+      fetch: fetch as unknown as WindowOrWorkerGlobalScope['fetch'],
       ...nymphOptions,
     });
 
@@ -34,7 +34,7 @@ class NodePubSub extends PubSub {
   constructor(nymphOptions: NymphOptions, nymph: Nymph) {
     super(
       {
-        WebSocket: w3cwebsocket as any as typeof WebSocket,
+        WebSocket: w3cwebsocket as unknown as typeof WebSocket,
         ...nymphOptions,
       },
       nymph
