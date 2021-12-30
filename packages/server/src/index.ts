@@ -1,3 +1,4 @@
+import type { OptionsJson } from 'body-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import {
@@ -27,10 +28,13 @@ const NOT_FOUND_ERROR = 'Entity is not found.';
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export default function createServer(nymph: Nymph) {
+export default function createServer(
+  nymph: Nymph,
+  { jsonOptions = {} }: { jsonOptions?: OptionsJson } = {}
+) {
   const rest = express();
   rest.use(cookieParser());
-  rest.use(express.json());
+  rest.use(express.json(jsonOptions || {}));
 
   function instantiateNymph(
     _request: Request,
