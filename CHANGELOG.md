@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.26](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2021-12-30)
+
+### Features
+
+- add json options rest server option ([35cbff4](https://github.com/sciactive/nymphjs/commit/35cbff4b8dbc3e112604119efe05b813f5948dff))
+
 # [1.0.0-alpha.25](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2021-12-30)
 
 ### Bug Fixes
