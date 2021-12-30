@@ -183,7 +183,8 @@
   import Button, { Label } from '@smui/button';
   import FormField from '@smui/form-field';
   import Radio from '@smui/radio';
-  import { ClientConfig, User } from '@nymphjs/tilmeld-client';
+  import type { ClientConfig } from '@nymphjs/tilmeld-client';
+  import { User } from '@nymphjs/tilmeld-client';
 
   export let open = false;
   // Give focus to the account box when the form is ready.

@@ -70,7 +70,8 @@
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
   import Button, { Label } from '@smui/button';
-  import { ClientConfig, CurrentUserData, User } from '@nymphjs/tilmeld-client';
+  import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
+  import { User } from '@nymphjs/tilmeld-client';
 
   export let open = false;
 
