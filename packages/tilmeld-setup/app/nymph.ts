@@ -1,4 +1,5 @@
-import { Entity, Nymph, NymphOptions } from '@nymphjs/client';
+import type { NymphOptions } from '@nymphjs/client';
+import { Entity, Nymph } from '@nymphjs/client';
 import { User, Group } from '@nymphjs/tilmeld-client';
 
 const nymph = new Nymph(
