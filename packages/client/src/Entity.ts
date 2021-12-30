@@ -280,7 +280,10 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public static async factory(guid?: string) {
-    const entity = new this(guid);
+    const cacheEntity = (
+      guid ? this.nymph.getEntityFromCache(this, guid) : null
+    ) as Entity | null;
+    const entity = cacheEntity || new this(guid);
     if (guid != null) {
       await entity.$ready();
     }
@@ -288,12 +291,21 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public static factorySync(guid?: string) {
-    return new this(guid);
+    const cacheEntity = (
+      guid ? this.nymph.getEntityFromCache(this, guid) : null
+    ) as Entity | null;
+    return cacheEntity || new this(guid);
   }
 
   public static factoryReference(reference: EntityReference) {
-    const entity = new this();
-    entity.$referenceSleep(reference);
+    const cacheEntity = (
+      reference[1] ? this.nymph.getEntityFromCache(this, reference[1]) : null
+    ) as Entity | null;
+
+    const entity = cacheEntity || new this();
+    if (!cacheEntity) {
+      entity.$referenceSleep(reference);
+    }
     return entity;
   }
 
@@ -350,6 +362,8 @@ export default class Entity<T extends EntityData = EntityData>
         {}
       ) as T;
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
+
+    this.$nymph.setEntityToCache(this.constructor as EntityConstructor, this);
 
     return this as Entity<T>;
   }

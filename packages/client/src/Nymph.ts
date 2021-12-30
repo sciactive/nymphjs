@@ -7,6 +7,7 @@ import {
   ServerCallResponse,
   ServerCallStaticResponse,
 } from './Entity.types';
+import EntityWeakCache from './EntityWeakCache';
 import HttpRequester from './HttpRequester';
 import {
   EventType,
@@ -40,9 +41,13 @@ export default class Nymph {
   private requestCallbacks: RequestCallback[] = [];
   private responseCallbacks: ResponseCallback[] = [];
   private restUrl: string = '';
+  private weakCache = false;
+  public cache = new EntityWeakCache();
 
   public constructor(NymphOptions: NymphOptions) {
     this.restUrl = NymphOptions.restUrl;
+    // @ts-ignore TS doesn't know about WeakRef.
+    this.weakCache = !!NymphOptions.weakCache && typeof WeakRef !== 'undefined';
 
     class NymphEntity<T extends EntityData = EntityData> extends Entity<T> {}
     NymphEntity.nymph = this;
@@ -331,8 +336,40 @@ export default class Nymph {
         entityJSON.class + ' class cannot be found.'
       );
     }
-    const entity = EntityClass.factorySync();
+    let entity = EntityClass.factorySync();
+    if (this.weakCache) {
+      // Try to get it from cache.
+      const entityFromCache = this.cache.get(
+        EntityClass,
+        entityJSON.guid || ''
+      );
+      if (entityFromCache != null) {
+        entity = entityFromCache;
+      }
+    }
     return entity.$init(entityJSON) as ReturnType<T['factorySync']>;
+  }
+
+  public getEntityFromCache<T extends EntityConstructor = EntityConstructor>(
+    EntityClass: EntityConstructor,
+    guid: string
+  ): ReturnType<T['factorySync']> | null {
+    if (!this.weakCache) {
+      return null;
+    }
+    return this.cache.get(EntityClass, guid) as ReturnType<
+      T['factorySync']
+    > | null;
+  }
+
+  public setEntityToCache(
+    EntityClass: EntityConstructor,
+    entity: EntityInterface
+  ) {
+    if (!this.weakCache) {
+      return;
+    }
+    return this.cache.set(EntityClass, entity);
   }
 
   public initEntitiesFromData<T extends any>(item: T): T {

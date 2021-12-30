@@ -21,6 +21,25 @@ export type NymphOptions = {
    * Whether to not output status messages to the console.
    */
   noConsole?: boolean;
+  /**
+   * Use a WeakRef based cache of entities.
+   *
+   * This ensures all entities returned are the same instance if they have the
+   * same class and GUID. This also means that whenever an entity is returned
+   * from the server, the single instance in memory will be refreshed. This
+   * could have annoying results, like destroying dirty data (the dreaded
+   * triple-D).
+   *
+   * This could also be a potential source of memory leaks. Although the
+   * entities themselves are referenced weakly so they get garbage collected,
+   * the GUID used as a key and the WeakRef object itself are not weak
+   * references, so not destroyed when the instance is garbage collected.
+   *
+   * However, even with these caveats, this might help you if you have a big app
+   * with the same entities stored in several different places in memory. This
+   * can help to synchronize them correctly and avoid data conflicts.
+   */
+  weakCache?: boolean;
 };
 
 export type EventType = 'request' | 'response';
