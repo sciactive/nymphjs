@@ -179,7 +179,8 @@
   import { onMount } from 'svelte';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
-  import Textfield, { TextfieldComponentDev } from '@smui/textfield';
+  import type { TextfieldComponentDev } from '@smui/textfield';
+  import Textfield from '@smui/textfield';
   import Button, { Label } from '@smui/button';
   import FormField from '@smui/form-field';
   import Radio from '@smui/radio';
