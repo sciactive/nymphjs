@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.25](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.24...v1.0.0-alpha.25) (2021-12-30)
+
+### Bug Fixes
+
+- import types correctly in Tilmeld components (again) ([4961a4e](https://github.com/sciactive/nymphjs/commit/4961a4e8feb5133864a43a0031b18d784cdca088))
+
 # [1.0.0-alpha.24](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.23...v1.0.0-alpha.24) (2021-12-30)
 
 ### Bug Fixes

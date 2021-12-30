@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/sorter",
-  "version": "1.0.0-alpha.24",
+  "version": "1.0.0-alpha.25",
   "description": "NymphJS - Sorter",
   "browser": "dist/index.js",
   "main": "lib/index.js",
