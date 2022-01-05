@@ -32,15 +32,15 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nymphjs/nymph": "^1.0.0-alpha.26",
-    "better-sqlite3": "^7.4.5",
+    "better-sqlite3": "^7.4.6",
     "nanoid": "^3.1.30"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
-    "@types/better-sqlite3": "^7.4.1",
-    "@types/jest": "^27.0.3",
-    "jest": "^27.4.5",
-    "ts-jest": "^27.1.1",
+    "@types/better-sqlite3": "^7.4.2",
+    "@types/jest": "^27.4.0",
+    "jest": "^27.4.7",
+    "ts-jest": "^27.1.2",
     "typescript": "^4.5.4"
   }
 }
