@@ -123,7 +123,8 @@
 
 <script lang="ts">
   import { onMount, SvelteComponent } from 'svelte';
-  import { ClientConfig, CurrentUserData, User } from '@nymphjs/tilmeld-client';
+  import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
+  import { User } from '@nymphjs/tilmeld-client';
   import { Login, Account } from '@nymphjs/tilmeld-components';
   import { mdiGithub, mdiTwitter } from '@mdi/js';
   import TopAppBar, { Row, Section, Title } from '@smui/top-app-bar';

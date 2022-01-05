@@ -562,14 +562,13 @@
 
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte';
-  import {
+  import type {
     AdminGroupData,
     AdminUserData,
     ClientConfig,
     CurrentUserData,
-    Group,
-    User,
   } from '@nymphjs/tilmeld-client';
+  import { Group, User } from '@nymphjs/tilmeld-client';
   import queryParser from '@nymphjs/query-parser';
   import {
     mdiArrowLeft,

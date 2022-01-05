@@ -1,12 +1,21 @@
 {#if user != null}
   <Dialog
+    use={usePass}
     bind:open
     aria-labelledby="tilmeld-password-title"
     aria-describedby="tilmeld-password-content"
     surface$class="tilmeld-password-dialog-surface"
+    {...exclude($$restProps, [
+      'password$',
+      'newPassword$',
+      'newPassword2$',
+      'closeButton$',
+      'saveButton$',
+      'progress$',
+    ])}
   >
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
-    <Title id="tilmeld-password-title">Change Your Password</Title>
+    <Title id="tilmeld-password-title">{title}</Title>
     <Content id="tilmeld-password-content">
       <div>
         <Textfield
@@ -15,6 +24,7 @@
           type="password"
           style="width: 100%;"
           input$autocomplete="current-password"
+          {...prefixFilter($$restProps, 'password$')}
         />
       </div>
 
@@ -25,6 +35,7 @@
           type="password"
           style="width: 100%;"
           input$autocomplete="new-password"
+          {...prefixFilter($$restProps, 'newPassword$')}
         />
       </div>
 
@@ -35,8 +46,11 @@
           type="password"
           style="width: 100%;"
           input$autocomplete="new-password"
+          {...prefixFilter($$restProps, 'newPassword2$')}
         />
       </div>
+
+      <slot name="additional" />
 
       {#if failureMessage}
         <div class="tilmeld-password-failure">
@@ -46,17 +60,25 @@
 
       {#if changing}
         <div class="tilmeld-password-loading">
-          <CircularProgress style="height: 24px; width: 24px;" indeterminate />
+          <CircularProgress
+            style="height: 24px; width: 24px;"
+            indeterminate
+            {...prefixFilter($$restProps, 'progress$')}
+          />
         </div>
       {/if}
     </Content>
     <Actions>
-      <Button disabled={changing}>
+      <Button
+        disabled={changing}
+        {...prefixFilter($$restProps, 'closeButton$')}
+      >
         <Label>Close</Label>
       </Button>
       <Button
         on:click$preventDefault$stopPropagation={changePassword}
         disabled={changing}
+        {...prefixFilter($$restProps, 'saveButton$')}
       >
         <Label>Change Password</Label>
       </Button>
@@ -66,17 +88,28 @@
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { get_current_component } from 'svelte/internal';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
   import Button, { Label } from '@smui/button';
-  import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
+  import type { ActionArray } from '@smui/common/internal';
+  import {
+    forwardEventsBuilder,
+    exclude,
+    prefixFilter,
+  } from '@smui/common/internal';
+  import type { CurrentUserData } from '@nymphjs/tilmeld-client';
   import { User } from '@nymphjs/tilmeld-client';
 
-  export let open = false;
+  const forwardEvents = forwardEventsBuilder(get_current_component());
 
-  let clientConfig: ClientConfig | undefined = undefined;
-  let user: (User & CurrentUserData) | undefined = undefined;
+  export let use: ActionArray = [];
+  $: usePass = [forwardEvents, ...use] as ActionArray;
+  export let open = false;
+  export let title = 'Change Your Password';
+  export let user: (User & CurrentUserData) | undefined = undefined;
+
   let changing = false;
   let failureMessage: string | undefined = undefined;
 
@@ -107,7 +140,9 @@
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    user = (await User.current()) ?? undefined;
+    if (user === undefined) {
+      user = (await User.current()) ?? undefined;
+    }
   });
 
   onDestroy(() => {

@@ -1,12 +1,26 @@
 {#if clientConfig != null && user != null}
   <Dialog
+    use={usePass}
     bind:open
     aria-labelledby="tilmeld-account-title"
     aria-describedby="tilmeld-account-content"
     surface$class="tilmeld-account-dialog-surface"
+    {...exclude($$restProps, [
+      'username$',
+      'email$',
+      'nameFirst$',
+      'nameMiddle$',
+      'nameLast$',
+      'phone$',
+      'changePasswordLink$',
+      'closeButton$',
+      'saveButton$',
+      'changePassword$',
+      'progress$',
+    ])}
   >
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
-    <Title id="tilmeld-account-title">Your Account</Title>
+    <Title id="tilmeld-account-title">{title}</Title>
     <Content id="tilmeld-account-content">
       {#if !clientConfig.emailUsernames && clientConfig.allowUsernameChange}
         <div>
@@ -20,6 +34,8 @@
             input$autocomplete="username"
             input$autocapitalize="off"
             input$spellcheck="false"
+            input$emptyValueUndefined
+            {...prefixFilter($$restProps, 'username$')}
           >
             <HelperText persistent slot="helper">
               {usernameVerifiedMessage || ''}
@@ -40,6 +56,8 @@
             input$autocomplete="email"
             input$autocapitalize="off"
             input$spellcheck="false"
+            input$emptyValueUndefined
+            {...prefixFilter($$restProps, 'email$')}
           >
             <HelperText persistent slot="helper">
               {emailVerifiedMessage || ''}
@@ -56,6 +74,8 @@
             type="text"
             style="width: 100%;"
             input$autocomplete="given-name"
+            input$emptyValueUndefined
+            {...prefixFilter($$restProps, 'nameFirst$')}
           />
         </div>
 
@@ -66,6 +86,8 @@
             type="text"
             style="width: 100%;"
             input$autocomplete="additional-name"
+            input$emptyValueUndefined
+            {...prefixFilter($$restProps, 'nameMiddle$')}
           />
         </div>
 
@@ -76,6 +98,8 @@
             type="text"
             style="width: 100%;"
             input$autocomplete="family-name"
+            input$emptyValueUndefined
+            {...prefixFilter($$restProps, 'nameLast$')}
           />
         </div>
       {/if}
@@ -89,9 +113,13 @@
             style="width: 100%;"
             input$autocomplete="tel"
             input$name="phone"
+            input$emptyValueUndefined
+            {...prefixFilter($$restProps, 'phone$')}
           />
         </div>
       {/if}
+
+      <slot name="additional" />
 
       <div class="tilmeld-account-action">
         <a
@@ -100,6 +128,7 @@
             open = false;
             changePasswordOpen = true;
           }}
+          {...prefixFilter($$restProps, 'changePasswordLink$')}
         >
           Change your password.
         </a>
@@ -113,37 +142,61 @@
 
       {#if saving}
         <div class="tilmeld-account-loading">
-          <CircularProgress style="height: 24px; width: 24px;" indeterminate />
+          <CircularProgress
+            style="height: 24px; width: 24px;"
+            indeterminate
+            {...prefixFilter($$restProps, 'progress$')}
+          />
         </div>
       {/if}
     </Content>
     <Actions>
-      <Button disabled={saving}>
+      <Button disabled={saving} {...prefixFilter($$restProps, 'closeButton$')}>
         <Label>Close</Label>
       </Button>
-      <Button on:click$preventDefault$stopPropagation={save} disabled={saving}>
+      <Button
+        on:click$preventDefault$stopPropagation={save}
+        disabled={saving}
+        {...prefixFilter($$restProps, 'saveButton$')}
+      >
         <Label>Save Changes</Label>
       </Button>
     </Actions>
   </Dialog>
-  <ChangePassword bind:open={changePasswordOpen} />
+  <ChangePassword
+    bind:open={changePasswordOpen}
+    bind:user
+    {...prefixFilter($$restProps, 'changePassword$')}
+  />
 {/if}
 
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { get_current_component } from 'svelte/internal';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
   import HelperText from '@smui/textfield/helper-text';
   import Button, { Label } from '@smui/button';
+  import type { ActionArray } from '@smui/common/internal';
+  import {
+    forwardEventsBuilder,
+    exclude,
+    prefixFilter,
+  } from '@smui/common/internal';
   import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
   import { User } from '@nymphjs/tilmeld-client';
   import ChangePassword from './ChangePassword.svelte';
 
-  export let open = false;
+  const forwardEvents = forwardEventsBuilder(get_current_component());
 
-  let clientConfig: ClientConfig | undefined = undefined;
-  let user: (User & CurrentUserData) | undefined = undefined;
+  export let use: ActionArray = [];
+  $: usePass = [forwardEvents, ...use] as ActionArray;
+  export let open = false;
+  export let title = 'Your Account';
+  export let clientConfig: ClientConfig | undefined = undefined;
+  export let user: (User & CurrentUserData) | undefined = undefined;
+
   let saving = false;
   let originalUsername: string | undefined = undefined;
   let originalEmail: string | undefined = undefined;
@@ -158,7 +211,6 @@
 
   const onLogin = (currentUser: User & CurrentUserData) => {
     user = currentUser;
-    readyEntity();
     originalUsername = user?.username;
     originalEmail = user?.email;
   };
@@ -191,44 +243,22 @@
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    user = (await User.current()) ?? undefined;
-    readyEntity();
+    if (user === undefined) {
+      user = (await User.current()) ?? undefined;
+    }
     originalUsername = user?.username;
     originalEmail = user?.email;
   });
   onMount(async () => {
-    clientConfig = await User.getClientConfig();
+    if (clientConfig === undefined) {
+      clientConfig = await User.getClientConfig();
+    }
   });
 
   onDestroy(() => {
     User.off('login', onLogin);
     User.off('logout', onLogout);
   });
-
-  function readyEntity() {
-    // Make sure all fields are defined.
-    if (user != null && user.username == null) {
-      user.username = '';
-    }
-    if (user != null && user.email == null) {
-      user.email = '';
-    }
-    if (user != null && user.nameFirst == null) {
-      user.nameFirst = '';
-    }
-    if (user != null && user.nameMiddle == null) {
-      user.nameMiddle = '';
-    }
-    if (user != null && user.nameLast == null) {
-      user.nameLast = '';
-    }
-    if (user != null && user.avatar == null) {
-      user.avatar = '';
-    }
-    if (user != null && user.phone == null) {
-      user.phone = '';
-    }
-  }
 
   async function save() {
     if (user == null) {
@@ -244,7 +274,6 @@
 
     try {
       if (await user.$save()) {
-        readyEntity();
         originalEmail = user.email;
         open = false;
         usernameVerifiedMessage = undefined;

@@ -91,13 +91,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import queryParser from '@nymphjs/query-parser';
-  import {
+  import type {
     AdminGroupData,
     ClientConfig,
     CurrentUserData,
-    Group,
-    User,
   } from '@nymphjs/tilmeld-client';
+  import { Group, User } from '@nymphjs/tilmeld-client';
   import { mdiMagnify, mdiArrowRight, mdiPlus } from '@mdi/js';
   import CircularProgress from '@smui/circular-progress';
   import Paper from '@smui/paper';

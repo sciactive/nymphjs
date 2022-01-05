@@ -1,166 +1,228 @@
-{#if clientConfig == null || registering || loggingIn}
-  <CircularProgress style="height: 32px; width: 32px;" indeterminate />
-{:else}
-  <div style="width: {width};">
-    {#if successRegisteredMessage}
+<div
+  style="width: {width}; {style}"
+  use:useActions={use}
+  use:forwardEvents
+  {...exclude($$restProps, [
+    'successRegisteredMessage$',
+    'successLoginMessage$',
+    'username$',
+    'password$',
+    'password2$',
+    'name$',
+    'email$',
+    'phone$',
+    'loginButton$',
+    'registerButton$',
+    'registerLink$',
+    'loginLink$',
+    'recoverLink$',
+    'recover$',
+    'progress$',
+  ])}
+>
+  {#if clientConfig == null || registering || loggingIn}
+    <div style="display: flex; justify-content: center; align-items: center;">
+      <CircularProgress
+        style="height: 32px; width: 32px;"
+        indeterminate
+        {...prefixFilter($$restProps, 'progress$')}
+      />
+    </div>
+  {:else if successRegisteredMessage}
+    <div {...prefixFilter($$restProps, 'successRegisteredMessage$')}>
+      {successRegisteredMessage}
+    </div>
+  {:else if successLoginMessage}
+    <div {...prefixFilter($$restProps, 'successLoginMessage$')}>
+      {successLoginMessage}
+    </div>
+  {:else}
+    <form on:submit|preventDefault>
       <div>
-        {successRegisteredMessage}
+        <Textfield
+          bind:value={username}
+          bind:this={usernameElem}
+          label={clientConfig.emailUsernames ? 'Email' : 'Username'}
+          type={clientConfig.emailUsernames ? 'email' : 'text'}
+          style="width: 100%;"
+          helperLine$style="width: 100%;"
+          invalid={usernameVerified === false}
+          input$autocomplete={clientConfig.emailUsernames
+            ? 'email'
+            : 'username'}
+          input$name={clientConfig.emailUsernames ? 'email' : 'username'}
+          input$autocapitalize="off"
+          input$spellcheck="false"
+          {...prefixFilter($$restProps, 'username$')}
+        >
+          <HelperText persistent slot="helper">
+            {#if mode !== 'login'}
+              {usernameVerifiedMessage || ''}
+            {/if}
+          </HelperText>
+        </Textfield>
       </div>
-    {:else if successLoginMessage}
-      <div>
-        {successLoginMessage}
-      </div>
-    {:else}
-      <form on:submit|preventDefault>
-        <div>
-          <Textfield
-            bind:value={username}
-            bind:this={usernameElem}
-            label={clientConfig.emailUsernames ? 'Email' : 'Username'}
-            type={clientConfig.emailUsernames ? 'email' : 'text'}
-            style="width: 100%;"
-            helperLine$style="width: 100%;"
-            invalid={usernameVerified === false}
-            input$autocomplete={clientConfig.emailUsernames
-              ? 'email'
-              : 'username'}
-            input$name={clientConfig.emailUsernames ? 'email' : 'username'}
-            input$autocapitalize="off"
-            input$spellcheck="false"
-          >
-            <HelperText persistent slot="helper">
-              {#if !existingUser}
-                {usernameVerifiedMessage || ''}
-              {/if}
-            </HelperText>
-          </Textfield>
-        </div>
 
+      <div>
+        <Textfield
+          bind:value={password}
+          label="Password"
+          type="password"
+          style="width: 100%;"
+          input$autocomplete="{clientConfig.allowRegistration &&
+          mode !== 'login'
+            ? 'new'
+            : 'current'}-password"
+          input$name="password"
+          {...prefixFilter($$restProps, 'password$')}
+        />
+      </div>
+
+      {#if clientConfig.allowRegistration && mode !== 'login'}
         <div>
           <Textfield
-            bind:value={password}
-            label="Password"
+            bind:value={password2}
+            label="Re-enter Password"
             type="password"
             style="width: 100%;"
-            input$autocomplete="{clientConfig.allowRegistration && !existingUser
-              ? 'new'
-              : 'current'}-password"
-            input$name="password"
+            input$autocomplete="new-password"
+            input$name="password2"
+            {...prefixFilter($$restProps, 'password2$')}
           />
         </div>
 
-        {#if clientConfig.allowRegistration && !existingUser}
+        {#if clientConfig.regFields.indexOf('name') !== -1}
           <div>
             <Textfield
-              bind:value={password2}
-              label="Re-enter Password"
-              type="password"
+              bind:value={name}
+              label="Name"
+              type="text"
               style="width: 100%;"
-              input$autocomplete="new-password"
-              input$name="password2"
+              input$autocomplete="name"
+              input$name="name"
+              {...prefixFilter($$restProps, 'name$')}
             />
           </div>
-
-          {#if clientConfig.regFields.indexOf('name') !== -1}
-            <div>
-              <Textfield
-                bind:value={name}
-                label="Name"
-                type="text"
-                style="width: 100%;"
-                input$autocomplete="name"
-                input$name="name"
-              />
-            </div>
-          {/if}
-
-          {#if !clientConfig.emailUsernames && clientConfig.regFields.indexOf('email') !== -1}
-            <div>
-              <Textfield
-                bind:value={email}
-                label="Email"
-                type="email"
-                style="width: 100%;"
-                input$autocomplete="email"
-                input$name="email"
-                input$autocapitalize="off"
-                input$spellcheck="false"
-              />
-            </div>
-          {/if}
-
-          {#if clientConfig.regFields.indexOf('phone') !== -1}
-            <div>
-              <Textfield
-                bind:value={phone}
-                label="Phone Number"
-                type="tel"
-                style="width: 100%;"
-                input$autocomplete="tel"
-                input$name="phone"
-              />
-            </div>
-          {/if}
         {/if}
 
-        {#if failureMessage}
-          <div class="tilmeld-login-failure">
-            {failureMessage}
+        {#if !clientConfig.emailUsernames && clientConfig.regFields.indexOf('email') !== -1}
+          <div>
+            <Textfield
+              bind:value={email}
+              label="Email"
+              type="email"
+              style="width: 100%;"
+              input$autocomplete="email"
+              input$name="email"
+              input$autocapitalize="off"
+              input$spellcheck="false"
+              {...prefixFilter($$restProps, 'email$')}
+            />
           </div>
         {/if}
 
-        <div class="tilmeld-login-buttons">
-          {#if existingUser}
-            <Button variant="raised" type="submit" on:click={login}>
-              <Label>Log In</Label>
-            </Button>
+        {#if clientConfig.regFields.indexOf('phone') !== -1}
+          <div>
+            <Textfield
+              bind:value={phone}
+              label="Phone Number"
+              type="tel"
+              style="width: 100%;"
+              input$autocomplete="tel"
+              input$name="phone"
+              {...prefixFilter($$restProps, 'phone$')}
+            />
+          </div>
+        {/if}
+      {/if}
+
+      <slot name="additional" />
+
+      {#if failureMessage}
+        <div class="tilmeld-login-failure">
+          {failureMessage}
+        </div>
+      {/if}
+
+      <div class="tilmeld-login-buttons">
+        {#if mode === 'login'}
+          <Button
+            variant="raised"
+            type="submit"
+            on:click={login}
+            {...prefixFilter($$restProps, 'loginButton$')}
+          >
+            <Label>Log In</Label>
+          </Button>
+        {:else}
+          <Button
+            variant="raised"
+            type="submit"
+            on:click={register}
+            {...prefixFilter($$restProps, 'registerButton$')}
+          >
+            <Label>Create Account</Label>
+          </Button>
+        {/if}
+      </div>
+
+      {#if clientConfig.allowRegistration && showExistingUserToggle}
+        <div class="tilmeld-login-action">
+          {#if mode === 'login'}
+            <a
+              href="javascript:void(0);"
+              on:click={() => (mode = 'register')}
+              {...prefixFilter($$restProps, 'registerLink$')}
+            >
+              Create an account.
+            </a>
           {:else}
-            <Button variant="raised" type="submit" on:click={register}>
-              <Label>Create Account</Label>
-            </Button>
+            <a
+              href="javascript:void(0);"
+              on:click={() => (mode = 'login')}
+              {...prefixFilter($$restProps, 'loginLink$')}
+            >
+              Log in to your account.
+            </a>
           {/if}
         </div>
+      {/if}
 
-        {#if clientConfig.allowRegistration && showExistingUserToggle}
-          <div class="tilmeld-login-action">
-            {#if existingUser}
-              <a
-                href="javascript:void(0);"
-                on:click={() => (existingUser = false)}
-              >
-                Create an account.
-              </a>
-            {:else}
-              <a
-                href="javascript:void(0);"
-                on:click={() => (existingUser = true)}
-              >
-                Log in to your account.
-              </a>
-            {/if}
-          </div>
-        {/if}
-
-        {#if !hideRecovery && clientConfig.pwRecovery && existingUser}
-          <div class="tilmeld-login-action">
-            <a href="javascript:void(0);" on:click={() => (recoverOpen = true)}>
-              I can't access my account.
-            </a>
-          </div>
-          <Recover bind:open={recoverOpen} />
-        {/if}
-      </form>
-    {/if}
-  </div>
-{/if}
+      {#if !hideRecovery && clientConfig.pwRecovery && mode === 'login'}
+        <div class="tilmeld-login-action">
+          <a
+            href="javascript:void(0);"
+            on:click={() => (recoverOpen = true)}
+            {...prefixFilter($$restProps, 'recoverLink$')}
+          >
+            I can't access my account.
+          </a>
+        </div>
+        <Recover
+          bind:open={recoverOpen}
+          bind:clientConfig
+          {...prefixFilter($$restProps, 'recover$')}
+        />
+      {/if}
+    </form>
+  {/if}
+</div>
 
 <script lang="ts">
   import { onMount, createEventDispatcher } from 'svelte';
+  import { get_current_component } from 'svelte/internal';
   import CircularProgress from '@smui/circular-progress';
   import Button, { Label } from '@smui/button';
   import type { TextfieldComponentDev } from '@smui/textfield';
   import Textfield from '@smui/textfield';
   import HelperText from '@smui/textfield/helper-text';
+  import type { ActionArray } from '@smui/common/internal';
+  import {
+    forwardEventsBuilder,
+    exclude,
+    prefixFilter,
+    useActions,
+  } from '@smui/common/internal';
   import type { ClientConfig } from '@nymphjs/tilmeld-client';
   import {
     getClientConfig,
@@ -170,14 +232,19 @@
   } from '@nymphjs/tilmeld-client';
   import Recover from './Recover.svelte';
 
+  const forwardEvents = forwardEventsBuilder(get_current_component());
   const dispatch = createEventDispatcher();
+
+  export let use: ActionArray = [];
+  export let style = '';
+  export let clientConfig: ClientConfig | undefined = undefined;
 
   /** Hide the recovery link that only appears if password recovery is on. */
   export let hideRecovery = false;
   /** Give focus to the username box (or email box) when the form is ready. */
   export let autofocus = true;
   /** This determines whether the 'Log In' or 'Sign Up' button is activated and which corresponding form is shown. */
-  export let existingUser = true;
+  export let mode: 'login' | 'register' = 'login';
   /** Whether to show the 'Log In'/'Sign Up' switcher buttons. */
   export let showExistingUserToggle = true;
   /** The width of the form. */
@@ -196,7 +263,6 @@
   /** User provided. You can bind to it if you need to. */
   export let phone = '';
 
-  let clientConfig: ClientConfig | undefined = undefined;
   let usernameElem: TextfieldComponentDev;
   let successLoginMessage: string | undefined = undefined;
   let successRegisteredMessage: string | undefined = undefined;
@@ -211,11 +277,11 @@
   $: nameFirst = name?.match(/^(.*?)(?: ([^ ]+))?$/)?.[1] ?? '';
   $: nameLast = name?.match(/^(.*?)(?: ([^ ]+))?$/)?.[2] ?? '';
 
-  let _previousExistingUser = existingUser;
-  $: if (existingUser !== _previousExistingUser) {
+  let _previousMode = mode;
+  $: if (mode !== _previousMode) {
     failureMessage = '';
     checkUsername(username);
-    _previousExistingUser = existingUser;
+    _previousMode = mode;
   }
 
   $: {
@@ -223,9 +289,11 @@
   }
 
   onMount(async () => {
-    clientConfig = await getClientConfig();
+    if (clientConfig === undefined) {
+      clientConfig = await getClientConfig();
+    }
     if (!clientConfig.allowRegistration) {
-      existingUser = true;
+      mode = 'login';
     }
     if (autofocus && usernameElem) {
       usernameElem.focus();
@@ -281,7 +349,7 @@
       clearTimeout(usernameTimer);
       usernameTimer = undefined;
     }
-    if (newValue === '' || existingUser) {
+    if (newValue === '' || mode === 'login') {
       return;
     }
     usernameTimer = setTimeout(async () => {
