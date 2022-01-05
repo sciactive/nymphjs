@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.27](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.26...v1.0.0-alpha.27) (2022-01-05)
+
+### Features
+
+- add prop forwarding for svelte components within tilmeld components ([42b60e2](https://github.com/sciactive/nymphjs/commit/42b60e29638f04036eff3f7e4876e96a1c66c0bf))
+- update smui to latest versions ([7ed7bd3](https://github.com/sciactive/nymphjs/commit/7ed7bd34d01a155c7001a2671de25ef2f3363682))
+
 # [1.0.0-alpha.26](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.25...v1.0.0-alpha.26) (2021-12-30)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-components
