@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.30](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.29...v1.0.0-alpha.30) (2022-01-07)
+
+### Features
+
+- await for callbacks on registration ([d1e2f03](https://github.com/sciactive/nymphjs/commit/d1e2f03f3c8e03e6fd7cef892eda61e9d222e1fc))
+
 # [1.0.0-alpha.29](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2022-01-07)
 
 ### Features
