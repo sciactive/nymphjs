@@ -38,11 +38,11 @@ export type EventType =
 export type TilmeldBeforeRegisterCallback = (
   user: User & UserData,
   data: { password: string; additionalData?: { [k: string]: any } }
-) => void;
+) => Promise<void> | void;
 export type TilmeldAfterRegisterCallback = (
   user: User & UserData,
   result: { loggedin: boolean; message: string }
-) => void;
+) => Promise<void> | void;
 /**
  * These are run after the authentication checks, but before the login action.
  */
@@ -1241,7 +1241,7 @@ export default class User extends AbleObject<UserData> {
       for (let callback of (this.constructor as typeof User)
         .beforeRegisterCallbacks) {
         if (callback) {
-          callback(this, data);
+          await callback(this, data);
         }
       }
     } catch (e: any) {
@@ -1446,7 +1446,7 @@ export default class User extends AbleObject<UserData> {
         for (let callback of (this.constructor as typeof User)
           .afterRegisterCallbacks) {
           if (callback) {
-            callback(this, {
+            await callback(this, {
               loggedin,
               message,
             });
