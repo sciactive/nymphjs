@@ -24,6 +24,36 @@ import {
   EmailChangeRateLimitExceededError,
 } from './errors';
 
+export type EventType =
+  | 'beforeRegister'
+  | 'afterRegister'
+  | 'beforeLogin'
+  | 'afterLogin'
+  | 'beforeLogout'
+  | 'afterLogout';
+/**
+ * Theses are run before the user data checks, so the only checks before are
+ * whether registration is allowed and whether the user is already registered.
+ */
+export type TilmeldBeforeRegisterCallback = (
+  user: User & UserData,
+  data: { password: string }
+) => void;
+export type TilmeldAfterRegisterCallback = (
+  user: User & UserData,
+  result: { loggedin: boolean; message: string }
+) => void;
+/**
+ * These are run after the authentication checks, but before the login action.
+ */
+export type TilmeldBeforeLoginCallback = (
+  user: User & UserData,
+  data: { username: string; password: string }
+) => void;
+export type TilmeldAfterLoginCallback = (user: User & UserData) => void;
+export type TilmeldBeforeLogoutCallback = (user: User & UserData) => void;
+export type TilmeldAfterLogoutCallback = (user: User & UserData) => void;
+
 export type UserData = {
   /**
    * The abilities granted to the user.
@@ -142,6 +172,12 @@ export default class User extends AbleObject<UserData> {
   static tilmeld: Tilmeld;
   static ETYPE = 'tilmeld_user';
   static class = 'User';
+  private static beforeRegisterCallbacks: TilmeldBeforeRegisterCallback[] = [];
+  private static afterRegisterCallbacks: TilmeldAfterRegisterCallback[] = [];
+  private static beforeLoginCallbacks: TilmeldBeforeLoginCallback[] = [];
+  private static afterLoginCallbacks: TilmeldAfterLoginCallback[] = [];
+  private static beforeLogoutCallbacks: TilmeldBeforeLogoutCallback[] = [];
+  private static afterLogoutCallbacks: TilmeldAfterLogoutCallback[] = [];
 
   private static DEFAULT_CLIENT_ENABLED_METHODS = [
     '$checkUsername',
@@ -458,9 +494,30 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: 'Incorrect login/password.' };
     }
 
+    try {
+      for (let callback of (this.constructor as typeof User)
+        .beforeLoginCallbacks) {
+        if (callback) {
+          callback(this, data);
+        }
+      }
+    } catch (e: any) {
+      return {
+        result: false,
+        message: e.message,
+      };
+    }
+
     // Authentication was successful, attempt to login.
     if (!tilmeld.login(this, true)) {
       return { result: false, message: 'Incorrect login/password.' };
+    }
+
+    for (let callback of (this.constructor as typeof User)
+      .afterLoginCallbacks) {
+      if (callback) {
+        callback(this);
+      }
     }
 
     // Login was successful.
@@ -473,7 +530,30 @@ export default class User extends AbleObject<UserData> {
    */
   public $logout() {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
+
+    try {
+      for (let callback of (this.constructor as typeof User)
+        .beforeLogoutCallbacks) {
+        if (callback) {
+          callback(this);
+        }
+      }
+    } catch (e: any) {
+      return {
+        result: false,
+        message: e.message,
+      };
+    }
+
     tilmeld.logout();
+
+    for (let callback of (this.constructor as typeof User)
+      .afterLogoutCallbacks) {
+      if (callback) {
+        callback(this);
+      }
+    }
+
     return { result: true, message: 'You have been logged out.' };
   }
 
@@ -1139,6 +1219,22 @@ export default class User extends AbleObject<UserData> {
         message: 'This is already a registered user.',
       };
     }
+
+    try {
+      for (let callback of (this.constructor as typeof User)
+        .beforeRegisterCallbacks) {
+        if (callback) {
+          callback(this, data);
+        }
+      }
+    } catch (e: any) {
+      return {
+        result: false,
+        loggedin: false,
+        message: e.message,
+      };
+    }
+
     if (!('password' in data) || !data.password.length) {
       return {
         result: false,
@@ -1331,6 +1427,17 @@ export default class User extends AbleObject<UserData> {
         }
         await tnymph.commit(transaction);
         this.$nymph = nymph;
+
+        for (let callback of (this.constructor as typeof User)
+          .afterRegisterCallbacks) {
+          if (callback) {
+            callback(this, {
+              loggedin,
+              message,
+            });
+          }
+        }
+
         return {
           result: true,
           loggedin,
@@ -1645,5 +1752,83 @@ export default class User extends AbleObject<UserData> {
       this.$logout();
     }
     return await super.$delete();
+  }
+
+  public static on<T extends EventType>(
+    event: T,
+    callback: T extends 'beforeRegister'
+      ? TilmeldBeforeRegisterCallback
+      : T extends 'afterRegister'
+      ? TilmeldAfterRegisterCallback
+      : T extends 'beforeLogin'
+      ? TilmeldBeforeLoginCallback
+      : T extends 'afterLogin'
+      ? TilmeldAfterLoginCallback
+      : T extends 'beforeLogout'
+      ? TilmeldBeforeLogoutCallback
+      : T extends 'afterLogout'
+      ? TilmeldAfterLogoutCallback
+      : never
+  ) {
+    const prop = (event + 'Callbacks') as T extends 'beforeRegister'
+      ? 'beforeRegisterCallbacks'
+      : T extends 'afterRegister'
+      ? 'afterRegisterCallbacks'
+      : T extends 'beforeLogin'
+      ? 'beforeLoginCallbacks'
+      : T extends 'afterLogin'
+      ? 'afterLoginCallbacks'
+      : T extends 'beforeLogout'
+      ? 'beforeLogoutCallbacks'
+      : T extends 'afterLogout'
+      ? 'afterLogoutCallbacks'
+      : never;
+    if (!this.hasOwnProperty(prop)) {
+      throw new Error('Invalid event type.');
+    }
+    // @ts-ignore: The callback should always be the right type here.
+    this[prop].push(callback);
+    return () => this.off(event, callback);
+  }
+
+  public static off<T extends EventType>(
+    event: T,
+    callback: T extends 'beforeRegister'
+      ? TilmeldBeforeRegisterCallback
+      : T extends 'afterRegister'
+      ? TilmeldAfterRegisterCallback
+      : T extends 'beforeLogin'
+      ? TilmeldBeforeLoginCallback
+      : T extends 'afterLogin'
+      ? TilmeldAfterLoginCallback
+      : T extends 'beforeLogout'
+      ? TilmeldBeforeLogoutCallback
+      : T extends 'afterLogout'
+      ? TilmeldAfterLogoutCallback
+      : never
+  ) {
+    const prop = (event + 'Callbacks') as T extends 'beforeRegister'
+      ? 'beforeRegisterCallbacks'
+      : T extends 'afterRegister'
+      ? 'afterRegisterCallbacks'
+      : T extends 'beforeLogin'
+      ? 'beforeLoginCallbacks'
+      : T extends 'afterLogin'
+      ? 'afterLoginCallbacks'
+      : T extends 'beforeLogout'
+      ? 'beforeLogoutCallbacks'
+      : T extends 'afterLogout'
+      ? 'afterLogoutCallbacks'
+      : never;
+    if (!this.hasOwnProperty(prop)) {
+      return false;
+    }
+    // @ts-ignore: The callback should always be the right type here.
+    const i = this[prop].indexOf(callback);
+    if (i > -1) {
+      // @ts-ignore: The callback should always be the right type here.
+      this[prop].splice(i, 1);
+    }
+    return true;
   }
 }
