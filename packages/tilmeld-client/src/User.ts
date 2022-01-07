@@ -222,6 +222,7 @@ export default class User extends Entity<UserData> {
 
   public async $register(data: {
     password: string;
+    additionalData?: { [k: string]: any };
   }): Promise<{ result: boolean; loggedin: boolean; message: string }> {
     const UserClass = this.constructor as typeof User;
     const response = await this.$serverCall('$register', [data]);
@@ -295,6 +296,7 @@ export default class User extends Entity<UserData> {
   public static async loginUser(data: {
     username: string;
     password: string;
+    additionalData?: { [k: string]: any };
   }): Promise<{
     result: boolean;
     message: string;
@@ -400,7 +402,7 @@ export default class User extends Entity<UserData> {
       : T extends 'logout'
       ? 'logoutCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
     // @ts-ignore: The callback should always be the right type here.
@@ -425,7 +427,7 @@ export default class User extends Entity<UserData> {
       : T extends 'logout'
       ? 'logoutCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       return false;
     }
     // @ts-ignore: The callback should always be the right type here.

@@ -37,7 +37,7 @@ export type EventType =
  */
 export type TilmeldBeforeRegisterCallback = (
   user: User & UserData,
-  data: { password: string }
+  data: { password: string; additionalData?: { [k: string]: any } }
 ) => void;
 export type TilmeldAfterRegisterCallback = (
   user: User & UserData,
@@ -48,8 +48,16 @@ export type TilmeldAfterRegisterCallback = (
  */
 export type TilmeldBeforeLoginCallback = (
   user: User & UserData,
-  data: { username: string; password: string }
+  data: {
+    username: string;
+    password: string;
+    additionalData?: { [k: string]: any };
+  }
 ) => void;
+/**
+ * This is run before the transaction is committed, and you can perform
+ * additional functions on the transaction, which is available in `user.$nymph`.
+ */
 export type TilmeldAfterLoginCallback = (user: User & UserData) => void;
 export type TilmeldBeforeLogoutCallback = (user: User & UserData) => void;
 export type TilmeldAfterLogoutCallback = (user: User & UserData) => void;
@@ -465,7 +473,11 @@ export default class User extends AbleObject<UserData> {
     };
   }
 
-  public static async loginUser(data: { username: string; password: string }) {
+  public static async loginUser(data: {
+    username: string;
+    password: string;
+    additionalData?: { [k: string]: any };
+  }) {
     if (!('username' in data) || !data.username.length) {
       return { result: false, message: 'Incorrect login/password.' };
     }
@@ -479,7 +491,11 @@ export default class User extends AbleObject<UserData> {
     return result;
   }
 
-  public $login(data: { username: string; password: string }) {
+  public $login(data: {
+    username: string;
+    password: string;
+    additionalData?: { [k: string]: any };
+  }) {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
     if (this.guid == null) {
       return { result: false, message: 'Incorrect login/password.' };
@@ -1203,6 +1219,7 @@ export default class User extends AbleObject<UserData> {
 
   public async $register(data: {
     password: string;
+    additionalData?: { [k: string]: any };
   }): Promise<{ result: boolean; loggedin: boolean; message: string }> {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
     if (!tilmeld.config.allowRegistration) {
@@ -1425,8 +1442,6 @@ export default class User extends AbleObject<UserData> {
           message += "You're now registered and logged in!";
           loggedin = true;
         }
-        await tnymph.commit(transaction);
-        this.$nymph = nymph;
 
         for (let callback of (this.constructor as typeof User)
           .afterRegisterCallbacks) {
@@ -1437,6 +1452,9 @@ export default class User extends AbleObject<UserData> {
             });
           }
         }
+
+        await tnymph.commit(transaction);
+        this.$nymph = nymph;
 
         return {
           result: true,
@@ -1783,7 +1801,7 @@ export default class User extends AbleObject<UserData> {
       : T extends 'afterLogout'
       ? 'afterLogoutCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
     // @ts-ignore: The callback should always be the right type here.
@@ -1820,7 +1838,7 @@ export default class User extends AbleObject<UserData> {
       : T extends 'afterLogout'
       ? 'afterLogoutCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       return false;
     }
     // @ts-ignore: The callback should always be the right type here.

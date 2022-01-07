@@ -489,7 +489,7 @@ export default class Nymph {
       : T extends 'request'
       ? 'responseCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
     // @ts-ignore: The callback should always be the right type here.
@@ -510,7 +510,7 @@ export default class Nymph {
       : T extends 'request'
       ? 'responseCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       return false;
     }
     // @ts-ignore: The callback should always be the right type here.

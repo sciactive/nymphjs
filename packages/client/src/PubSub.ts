@@ -682,7 +682,7 @@ export default class PubSub {
       : T extends 'disconnect'
       ? 'disconnectCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
     this[prop].push(callback);
@@ -702,7 +702,7 @@ export default class PubSub {
       : T extends 'disconnect'
       ? 'disconnectCallbacks'
       : never;
-    if (!this.hasOwnProperty(prop)) {
+    if (!(prop in this)) {
       return false;
     }
     const i = this[prop].indexOf(callback);

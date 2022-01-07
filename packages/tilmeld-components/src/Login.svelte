@@ -263,6 +263,9 @@
   /** User provided. You can bind to it if you need to. */
   export let phone = '';
 
+  /** Provide this for anything else that should go up to the server. You can look for it in the User events. */
+  export let additionalData: { [k: string]: any } | undefined = undefined;
+
   let usernameElem: TextfieldComponentDev;
   let successLoginMessage: string | undefined = undefined;
   let successRegisteredMessage: string | undefined = undefined;
@@ -305,7 +308,7 @@
     failureMessage = undefined;
     loggingIn = true;
     try {
-      const data = await loginAction(username, password);
+      const data = await loginAction(username, password, additionalData);
       successLoginMessage = data.message;
       dispatch('login', { user: data.user });
     } catch (e: any) {
@@ -329,6 +332,7 @@
         nameFirst,
         nameLast,
         phone,
+        ...(additionalData ? { additionalData } : {}),
       });
       successRegisteredMessage = data.message;
       dispatch('register', { user: data.user });

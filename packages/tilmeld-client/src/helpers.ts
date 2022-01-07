@@ -33,6 +33,10 @@ export type RegistrationDetails = {
    * The new user's phone number.
    */
   phone?: string;
+  /**
+   * Additional data to be included in the request.
+   */
+  additionalData?: { [k: string]: any };
 };
 
 let clientConfig: ClientConfig | null = null;
@@ -50,7 +54,11 @@ export async function getClientConfig() {
   return await clientConfigPromise;
 }
 
-export async function login(username: string, password: string) {
+export async function login(
+  username: string,
+  password: string,
+  additionalData?: { [k: string]: any }
+) {
   if (username === '') {
     throw new Error('You need to enter a username.');
   }
@@ -62,6 +70,7 @@ export async function login(username: string, password: string) {
     const { result, ...response } = await User.loginUser({
       username,
       password,
+      ...(additionalData ? { additionalData } : {}),
     });
     if (!result) {
       throw new Error(response.message);
@@ -111,6 +120,9 @@ export async function register(userDetails: RegistrationDetails): Promise<{
   try {
     const { result, ...response } = await user.$register({
       password: userDetails.password,
+      ...(userDetails.additionalData
+        ? { additionalData: userDetails.additionalData }
+        : {}),
     });
     if (!result) {
       throw new Error(response.message);
