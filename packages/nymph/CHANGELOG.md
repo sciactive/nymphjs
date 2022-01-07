@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.29](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.28...v1.0.0-alpha.29) (2022-01-07)
+
+### Features
+
+- add additionalData in register and login data ([b906cd6](https://github.com/sciactive/nymphjs/commit/b906cd66715098019ca55c3562de72cbf7669ca7))
+
 # [1.0.0-alpha.28](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.27...v1.0.0-alpha.28) (2022-01-07)
 
 **Note:** Version bump only for package @nymphjs/nymph
