@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/client-node",
-  "version": "1.0.0-alpha.30",
+  "version": "1.0.0-alpha.31",
   "description": "NymphJS - Node Client",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -30,7 +30,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/client": "^1.0.0-alpha.30",
+    "@nymphjs/client": "^1.0.0-alpha.31",
     "node-fetch": "^2.6.6",
     "websocket": "^1.0.34"
   },

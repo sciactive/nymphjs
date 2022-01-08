@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.31](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.30...v1.0.0-alpha.31) (2022-01-08)
+
+### Features
+
+- tilmeld client user can now be cloned ([c360fd3](https://github.com/sciactive/nymphjs/commit/c360fd312839aef221c2562dc45797cd270fa936))
+
 # [1.0.0-alpha.30](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.29...v1.0.0-alpha.30) (2022-01-07)
 
 ### Features
