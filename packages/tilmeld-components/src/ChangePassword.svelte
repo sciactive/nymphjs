@@ -100,7 +100,7 @@
     prefixFilter,
   } from '@smui/common/internal';
   import type { CurrentUserData } from '@nymphjs/tilmeld-client';
-  import { User } from '@nymphjs/tilmeld-client';
+  import type { User as UserClass } from '@nymphjs/tilmeld-client';
 
   const forwardEvents = forwardEventsBuilder(get_current_component());
 
@@ -108,7 +108,8 @@
   $: usePass = [forwardEvents, ...use] as ActionArray;
   export let open = false;
   export let title = 'Change Your Password';
-  export let user: (User & CurrentUserData) | undefined = undefined;
+  export let User: typeof UserClass;
+  export let user: (UserClass & CurrentUserData) | undefined = undefined;
 
   let changing = false;
   let failureMessage: string | undefined = undefined;
@@ -130,7 +131,7 @@
     }
   }
 
-  const onLogin = (currentUser: User & CurrentUserData) => {
+  const onLogin = (currentUser: UserClass & CurrentUserData) => {
     user = currentUser;
   };
   const onLogout = () => {

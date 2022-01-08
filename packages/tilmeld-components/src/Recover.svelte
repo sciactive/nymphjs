@@ -224,8 +224,10 @@
     exclude,
     prefixFilter,
   } from '@smui/common/internal';
-  import type { ClientConfig } from '@nymphjs/tilmeld-client';
-  import { User } from '@nymphjs/tilmeld-client';
+  import type {
+    User as UserClass,
+    ClientConfig,
+  } from '@nymphjs/tilmeld-client';
 
   const forwardEvents = forwardEventsBuilder(get_current_component());
 
@@ -234,6 +236,7 @@
   export let open = false;
   export let title = 'Recover Your Account';
   export let clientConfig: ClientConfig | undefined = undefined;
+  export let User: typeof UserClass;
 
   // Give focus to the account box when the form is ready.
   export let autofocus = true;

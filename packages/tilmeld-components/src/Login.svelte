@@ -199,6 +199,7 @@
           </a>
         </div>
         <Recover
+          {User}
           bind:open={recoverOpen}
           bind:clientConfig
           {...prefixFilter($$restProps, 'recover$')}
@@ -223,7 +224,10 @@
     prefixFilter,
     useActions,
   } from '@smui/common/internal';
-  import type { ClientConfig } from '@nymphjs/tilmeld-client';
+  import type {
+    User as UserClass,
+    ClientConfig,
+  } from '@nymphjs/tilmeld-client';
   import {
     getClientConfig,
     login as loginAction,
@@ -238,6 +242,7 @@
   export let use: ActionArray = [];
   export let style = '';
   export let clientConfig: ClientConfig | undefined = undefined;
+  export let User: typeof UserClass;
 
   /** Hide the recovery link that only appears if password recovery is on. */
   export let hideRecovery = false;
@@ -293,7 +298,7 @@
 
   onMount(async () => {
     if (clientConfig === undefined) {
-      clientConfig = await getClientConfig();
+      clientConfig = await getClientConfig(User);
     }
     if (!clientConfig.allowRegistration) {
       mode = 'login';
@@ -308,7 +313,7 @@
     failureMessage = undefined;
     loggingIn = true;
     try {
-      const data = await loginAction(username, password, additionalData);
+      const data = await loginAction(User, username, password, additionalData);
       successLoginMessage = data.message;
       dispatch('login', { user: data.user });
     } catch (e: any) {
@@ -323,7 +328,7 @@
     failureMessage = undefined;
     registering = true;
     try {
-      const data = await registerAction({
+      const data = await registerAction(User, {
         username,
         usernameVerified: !!usernameVerified,
         password,
@@ -358,7 +363,7 @@
     }
     usernameTimer = setTimeout(async () => {
       try {
-        const data = await checkUsernameAction(newValue);
+        const data = await checkUsernameAction(User, newValue);
         usernameVerified = true;
         usernameVerifiedMessage = data.message;
       } catch (e: any) {

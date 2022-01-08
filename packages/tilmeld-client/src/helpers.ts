@@ -1,4 +1,5 @@
-import User, { ClientConfig, CurrentUserData } from './User';
+import type UserClass from './User';
+import type { ClientConfig, CurrentUserData } from './User';
 
 export type RegistrationDetails = {
   /**
@@ -42,7 +43,7 @@ export type RegistrationDetails = {
 let clientConfig: ClientConfig | null = null;
 let clientConfigPromise: Promise<ClientConfig> | null = null;
 
-export async function getClientConfig() {
+export async function getClientConfig(User: typeof UserClass) {
   if (clientConfig) {
     return clientConfig;
   }
@@ -55,6 +56,7 @@ export async function getClientConfig() {
 }
 
 export async function login(
+  User: typeof UserClass,
   username: string,
   password: string,
   additionalData?: { [k: string]: any }
@@ -81,10 +83,13 @@ export async function login(
   }
 }
 
-export async function register(userDetails: RegistrationDetails): Promise<{
+export async function register(
+  User: typeof UserClass,
+  userDetails: RegistrationDetails
+): Promise<{
   loggedin: boolean;
   message: string;
-  user?: User & CurrentUserData;
+  user?: UserClass & CurrentUserData;
 }> {
   if (userDetails.username === '') {
     throw new Error('You need to enter a username.');
@@ -100,9 +105,9 @@ export async function register(userDetails: RegistrationDetails): Promise<{
   }
 
   // Create a new user.
-  let user = User.factorySync() as User & CurrentUserData;
+  let user = User.factorySync() as UserClass & CurrentUserData;
   user.username = userDetails.username;
-  const config = await getClientConfig();
+  const config = await getClientConfig(User);
 
   if (config.emailUsernames) {
     user.email = userDetails.username;
@@ -133,11 +138,11 @@ export async function register(userDetails: RegistrationDetails): Promise<{
   }
 }
 
-export async function checkUsername(username: string) {
-  let user = User.factorySync() as User & CurrentUserData;
+export async function checkUsername(User: typeof UserClass, username: string) {
+  let user = User.factorySync() as UserClass & CurrentUserData;
   user.username = username;
 
-  const config = await getClientConfig();
+  const config = await getClientConfig(User);
   if (config.emailUsernames) {
     user.email = username;
   }

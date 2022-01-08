@@ -164,6 +164,7 @@
     </Actions>
   </Dialog>
   <ChangePassword
+    {User}
     bind:open={changePasswordOpen}
     bind:user
     {...prefixFilter($$restProps, 'changePassword$')}
@@ -185,7 +186,7 @@
     prefixFilter,
   } from '@smui/common/internal';
   import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
-  import { User } from '@nymphjs/tilmeld-client';
+  import type { User as UserClass } from '@nymphjs/tilmeld-client';
   import ChangePassword from './ChangePassword.svelte';
 
   const forwardEvents = forwardEventsBuilder(get_current_component());
@@ -195,7 +196,8 @@
   export let open = false;
   export let title = 'Your Account';
   export let clientConfig: ClientConfig | undefined = undefined;
-  export let user: (User & CurrentUserData) | undefined = undefined;
+  export let User: typeof UserClass;
+  export let user: (UserClass & CurrentUserData) | undefined = undefined;
 
   let saving = false;
   let originalUsername: string | undefined = undefined;
@@ -209,7 +211,7 @@
   let emailVerifiedMessage: string | undefined = undefined;
   let changePasswordOpen = false;
 
-  const onLogin = (currentUser: User & CurrentUserData) => {
+  const onLogin = (currentUser: UserClass & CurrentUserData) => {
     user = currentUser;
     originalUsername = user?.username;
     originalEmail = user?.email;
