@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.32](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.31...v1.0.0-alpha.32) (2022-01-08)
+
+### Bug Fixes
+
+- add nymph getter and setter to user clone ([aa72399](https://github.com/sciactive/nymphjs/commit/aa723998d75c72f3d9cd00b3a735607e99390cde))
+
 # [1.0.0-alpha.31](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.30...v1.0.0-alpha.31) (2022-01-08)
 
 ### Features
