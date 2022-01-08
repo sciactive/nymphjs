@@ -157,6 +157,21 @@ export default class User extends Entity<UserData> {
 
   public static clone(): typeof User {
     class UserClone extends User {
+      public static set nymph(value: Nymph) {
+        this.nymphValue = value;
+
+        if (this.removeNymphResponseListener) {
+          this.removeNymphResponseListener();
+        }
+        this.removeNymphResponseListener = this.nymph.on(
+          'response',
+          (response) => this.handleToken(response)
+        );
+        this.handleToken();
+      }
+      public static get nymph() {
+        return this.nymphValue;
+      }
       protected static nymphValue: Nymph;
       protected static registerCallbacks: RegisterCallback[] = [];
       protected static loginCallbacks: LoginCallback[] = [];
