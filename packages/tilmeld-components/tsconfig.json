@@ -9,7 +9,7 @@
     "sourceMap": true,
     "outDir": "lib",
     "resolveJsonModule": true,
-    "rootDir": "./",
+    "rootDir": "src/",
     "declaration": true
   },
   "include": ["src/**/*"],
