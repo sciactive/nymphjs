@@ -29,6 +29,21 @@ nymph.addEntityClass(User);
 nymph.addEntityClass(Group);
 ```
 
+If you're running more than one instance of Nymph client, you can clone the classes and add those instead. This will keep event listeners and Tilmeld client config separated.
+
+```ts
+import { Nymph } from '@nymphjs/client';
+import { User, Group } from '@nymphjs/tilmeld-client';
+
+const nymph = new Nymph({
+  restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
+});
+const UserClone = User.clone();
+nymph.addEntityClass(UserClone);
+const GroupClone = Group.clone();
+nymph.addEntityClass(GroupClone);
+```
+
 # License
 
 Copyright 2021 SciActive Inc

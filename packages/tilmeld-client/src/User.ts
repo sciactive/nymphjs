@@ -145,17 +145,29 @@ export default class User extends Entity<UserData> {
   public static get nymph() {
     return this.nymphValue;
   }
-  private static nymphValue: Nymph;
+  protected static nymphValue: Nymph;
   // The name of the server class
   public static class = 'User';
-  private static registerCallbacks: RegisterCallback[] = [];
-  private static loginCallbacks: LoginCallback[] = [];
-  private static logoutCallbacks: LogoutCallback[] = [];
-  private static clientConfig?: ClientConfig;
-  private static clientConfigPromise?: Promise<ClientConfig>;
-  private static currentUser?: User & CurrentUserData;
-  private static currentUserPromise?: Promise<(User & CurrentUserData) | null>;
-  private static removeNymphResponseListener?: () => void;
+  protected static registerCallbacks: RegisterCallback[] = [];
+  protected static loginCallbacks: LoginCallback[] = [];
+  protected static logoutCallbacks: LogoutCallback[] = [];
+  protected static clientConfig?: ClientConfig;
+  protected static clientConfigPromise?: Promise<ClientConfig>;
+  protected static removeNymphResponseListener?: () => void;
+
+  public static clone(): typeof User {
+    class UserClone extends User {
+      protected static nymphValue: Nymph;
+      protected static registerCallbacks: RegisterCallback[] = [];
+      protected static loginCallbacks: LoginCallback[] = [];
+      protected static logoutCallbacks: LogoutCallback[] = [];
+      protected static clientConfig?: ClientConfig;
+      protected static clientConfigPromise?: Promise<ClientConfig>;
+      protected static removeNymphResponseListener?: () => void;
+    }
+
+    return UserClone;
+  }
 
   constructor(guid?: string) {
     super(guid);
@@ -232,7 +244,6 @@ export default class User extends Entity<UserData> {
       }
     }
     if (response.loggedin) {
-      UserClass.currentUser = this;
       UserClass.handleToken();
       for (let i = 0; i < UserClass.loginCallbacks.length; i++) {
         UserClass.loginCallbacks[i] && UserClass.loginCallbacks[i](this);
@@ -245,7 +256,6 @@ export default class User extends Entity<UserData> {
     const UserClass = this.constructor as typeof User;
     const response = await this.$serverCall('$logout', []);
     if (response.result) {
-      UserClass.currentUser = undefined;
       UserClass.handleToken();
       for (let i = 0; i < UserClass.logoutCallbacks.length; i++) {
         UserClass.logoutCallbacks[i] && UserClass.logoutCallbacks[i](this);
@@ -274,23 +284,11 @@ export default class User extends Entity<UserData> {
   public static async current(
     returnObjectIfNotExist?: boolean
   ): Promise<(User & CurrentUserData) | null> {
-    if (this.currentUser !== undefined) {
-      return this.currentUser;
-    }
-    if (!this.currentUserPromise) {
-      this.currentUserPromise = this.serverCallStatic('current', [false]).then(
-        (user: (User & CurrentUserData) | null) => {
-          this.currentUser = user ?? undefined;
-          this.currentUserPromise = undefined;
-          return user;
-        }
-      );
-    }
-    await this.currentUserPromise;
-    if (this.currentUser == null) {
+    const currentUser = await this.serverCallStatic('current', [false]);
+    if (currentUser == null) {
       return returnObjectIfNotExist ? this.factorySync() : null;
     }
-    return this.currentUser;
+    return currentUser;
   }
 
   public static async loginUser(data: {
@@ -304,7 +302,6 @@ export default class User extends Entity<UserData> {
   }> {
     const response = await this.serverCallStatic('loginUser', [data]);
     if (response.result) {
-      this.currentUser = response.user;
       this.handleToken();
       for (let i = 0; i < this.loginCallbacks.length; i++) {
         this.loginCallbacks[i] && this.loginCallbacks[i](response.user);

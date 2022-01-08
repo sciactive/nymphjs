@@ -64,6 +64,12 @@ export default class Group extends Entity<GroupData> {
   // The name of the server class
   public static class = 'Group';
 
+  public static clone(): typeof Group {
+    class GroupClone extends Group {}
+
+    return GroupClone;
+  }
+
   constructor(guid?: string) {
     super(guid);
 
