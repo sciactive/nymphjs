@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.33](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.32...v1.0.0-alpha.33) (2022-01-08)
+
+### Bug Fixes
+
+- require passing the user class to tilmeld components ([5b8d07e](https://github.com/sciactive/nymphjs/commit/5b8d07eba15318bf6046a5cb4a64fb550a3a4545))
+
 # [1.0.0-alpha.32](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.31...v1.0.0-alpha.32) (2022-01-08)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-components
