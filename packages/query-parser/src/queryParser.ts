@@ -1,4 +1,5 @@
 import type { EntityConstructor, Options, Selector } from '@nymphjs/client';
+import splitn from '@sciactive/splitn';
 
 export default function queryParser<
   T extends EntityConstructor = EntityConstructor
@@ -172,7 +173,7 @@ function selectorParser(
     selector['!qref'] = [];
     for (let match of qrefMatch) {
       try {
-        let [name, value] = match.trim().slice(0, -1).split('<', 2);
+        let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
         value = unQuoteCurlies(value.slice(1, -1));
         let [className, qrefQuery] = value.split(' ', 2);
         const EntityClass = qrefMap[className].class;
