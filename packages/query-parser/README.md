@@ -21,10 +21,9 @@ import BlogPost from './BlogPost';
 import Category from './Category';
 
 async function doQuery() {
-  const query =
-    'limit:4 foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>';
   const [options, ...selectors] = queryParser({
-    query,
+    query:
+      'limit:4 foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>',
     entityClass: BlogPost,
     defaultFields: ['title', 'body'],
     qrefMap: {
@@ -230,7 +229,11 @@ Published is not truthy and cdate is not greater than 6 months ago.
 
 ## Default Fields
 
-Anything contained in the query (including in selector parentheses) that doesn't match any of the options or clause syntaxes listed above will be added (at the appropriate nesting level) to a selector with an `"|"` type in an `ilike` clause surrounded by "%" characters for each field passed in to the `defaultFields` argument.
+Anything contained in the query (including in selector parentheses) that doesn't match any of the options or clause syntaxes listed above (bare query parts) will be added (at the appropriate nesting level) to a selector with an `"|"` type in an `ilike` clause surrounded by "%" characters for each field passed in to the `defaultFields` argument.
+
+## Bare Query Handler
+
+You can also supply a function in the option `bareHandler` that will handle bare query parts instead of the "Default Fields" behavior described above. It will receive three arguments, the query parts, the entity class, and the default fields entry for that class. It should return a partial selector that will replace or extend the `"|"` selector.
 
 # License
 
