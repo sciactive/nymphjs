@@ -23,17 +23,17 @@ import Category from './Category';
 async function doQuery() {
   const query =
     'limit:4 foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>';
-  const [options, ...selectors] = queryParser(
+  const [options, ...selectors] = queryParser({
     query,
-    BlogPost,
-    ['title', 'body'],
-    {
+    entityClass: BlogPost,
+    defaultFields: ['title', 'body'],
+    qrefMap: {
       cat: {
         class: Category,
         defaultFields: ['name'],
       },
-    }
-  );
+    },
+  });
   /*
   Options will be
     {
@@ -41,7 +41,7 @@ async function doQuery() {
       limit: 4
     }
 
-  And selectors will be
+  And selectors will be (equivalent to)
     [
       {
         type: "|",

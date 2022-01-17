@@ -1,32 +1,77 @@
 import type { EntityConstructor, Options, Selector } from '@nymphjs/client';
 import splitn from '@sciactive/splitn';
 
+export type BareQueryHandler = (
+  input: string,
+  entityClass?: EntityConstructor,
+  defaultFields?: string[]
+) => Partial<Selector>;
+
+export type QRefMap = {
+  [k: string]: { class: EntityConstructor; defaultFields?: string[] };
+};
+
 export default function queryParser<
   T extends EntityConstructor = EntityConstructor
->(
-  query: string,
-  entityClass: T,
-  defaultFields: string[] = ['name'],
-  qrefMap: {
-    [k: string]: { class: EntityConstructor; defaultFields?: string[] };
-  } = {}
-): [Options<T>, ...Selector[]] {
+>({
+  query,
+  entityClass,
+  defaultFields = ['name'],
+  qrefMap = {},
+  bareHandler = (input, _class, defaultFields = ['name']) => {
+    if (!input.match(/[_%]/)) {
+      input = `%${input}%`;
+    }
+    if (defaultFields.length) {
+      return {
+        type: '|',
+        ilike: defaultFields.map((field) => [field, input]) as [
+          string,
+          string
+        ][],
+      };
+    }
+    return {};
+  },
+}: {
+  query: string;
+  entityClass: T;
+  defaultFields?: string[];
+  qrefMap?: QRefMap;
+  bareHandler?: BareQueryHandler;
+}): [Options<T>, ...Selector[]] {
   const options: Options<T> = { class: entityClass };
   return [
     options,
-    ...selectorsParser(query, '&', defaultFields, qrefMap, options),
+    ...selectorsParser({
+      query,
+      entityClass,
+      type: '&',
+      defaultFields,
+      qrefMap,
+      options,
+      bareHandler,
+    }),
   ];
 }
 
-function selectorsParser(
-  query: string,
-  type: '&' | '|' | '!&' | '!|' = '&',
-  defaultFields: string[],
-  qrefMap: {
-    [k: string]: { class: EntityConstructor; defaultFields?: string[] };
-  },
-  options?: Options
-): Selector[] {
+function selectorsParser({
+  query,
+  entityClass,
+  type,
+  defaultFields,
+  qrefMap,
+  options,
+  bareHandler,
+}: {
+  query: string;
+  entityClass: EntityConstructor;
+  type: '&' | '|' | '!&' | '!|';
+  defaultFields: string[];
+  qrefMap: QRefMap;
+  options?: Options;
+  bareHandler: BareQueryHandler;
+}): Selector[] {
   const selector: Selector = { type };
   let curQuery = query;
 
@@ -92,12 +137,24 @@ function selectorsParser(
         selectorQuery = selectorQuery.slice(1);
       }
       selector.selector.push(
-        ...selectorsParser(selectorQuery, type, defaultFields, qrefMap)
+        ...selectorsParser({
+          query: selectorQuery,
+          entityClass,
+          type,
+          defaultFields,
+          qrefMap,
+          bareHandler,
+        })
       );
     }
   }
 
-  curQuery = selectorParser(curQuery, selector, qrefMap);
+  curQuery = selectorParser({
+    query: curQuery,
+    selector,
+    qrefMap,
+    bareHandler,
+  });
 
   if (options) {
     const limitRegex = /(?: |^)limit:(\d+)(?= |$)/;
@@ -125,18 +182,14 @@ function selectorsParser(
   curQuery = curQuery.trim();
 
   if (curQuery.length) {
-    if (!curQuery.match(/[_%]/)) {
-      curQuery = `%${curQuery}%`;
-    }
-    if (defaultFields.length) {
+    const bareSelector = bareHandler(curQuery, entityClass, defaultFields);
+
+    if (Object.keys(bareSelector).length) {
       return [
         ...(Object.keys(selector).length > 1 ? [selector] : []),
         {
           type: '|',
-          ilike: defaultFields.map((field) => [field, curQuery]) as [
-            string,
-            string
-          ][],
+          ...bareSelector,
         },
       ];
     }
@@ -156,13 +209,17 @@ function selectorsParser(
   return [selector];
 }
 
-function selectorParser(
-  query: string,
-  selector: Selector,
-  qrefMap: {
-    [k: string]: { class: EntityConstructor; defaultFields?: string[] };
-  }
-): string {
+function selectorParser({
+  query,
+  selector,
+  qrefMap,
+  bareHandler,
+}: {
+  query: string;
+  selector: Selector;
+  qrefMap: QRefMap;
+  bareHandler: BareQueryHandler;
+}): string {
   let curQuery = query;
 
   // eg. user<{User name="Hunter"}> or user!<{User name="Hunter"}>
@@ -180,12 +237,13 @@ function selectorParser(
         if (EntityClass == null) {
           continue;
         }
-        const qref = queryParser(
-          qrefQuery,
-          EntityClass,
-          qrefMap[className].defaultFields,
-          qrefMap
-        );
+        const qref = queryParser({
+          query: qrefQuery,
+          entityClass: EntityClass,
+          defaultFields: qrefMap[className].defaultFields,
+          qrefMap,
+          bareHandler,
+        });
         if (name.endsWith('!')) {
           selector['!qref'].push([name.slice(0, -1), qref]);
         } else {
