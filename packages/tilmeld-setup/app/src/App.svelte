@@ -111,12 +111,12 @@
         {/if}
       {:else if user == null}
         <section style="display: flex; justify-content: center;">
-          <Login />
+          <Login {User} {clientConfig} />
         </section>
       {:else}
         <section>You don't have permission to access this app.</section>
       {/if}
-      <Account bind:open={accountOpen} />
+      <Account bind:open={accountOpen} {User} {clientConfig} />
     </main>
   </AppContent>
 </div>
