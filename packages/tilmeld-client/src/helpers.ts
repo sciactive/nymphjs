@@ -40,21 +40,6 @@ export type RegistrationDetails = {
   additionalData?: { [k: string]: any };
 };
 
-let clientConfig: ClientConfig | null = null;
-let clientConfigPromise: Promise<ClientConfig> | null = null;
-
-export async function getClientConfig(User: typeof UserClass) {
-  if (clientConfig) {
-    return clientConfig;
-  }
-  if (!clientConfigPromise) {
-    clientConfigPromise = User.getClientConfig().then(
-      (config) => (clientConfig = config)
-    );
-  }
-  return await clientConfigPromise;
-}
-
 export async function login(
   User: typeof UserClass,
   username: string,
@@ -85,7 +70,8 @@ export async function login(
 
 export async function register(
   User: typeof UserClass,
-  userDetails: RegistrationDetails
+  userDetails: RegistrationDetails,
+  clientConfig?: ClientConfig
 ): Promise<{
   loggedin: boolean;
   message: string;
@@ -107,7 +93,7 @@ export async function register(
   // Create a new user.
   let user = User.factorySync() as UserClass & CurrentUserData;
   user.username = userDetails.username;
-  const config = await getClientConfig(User);
+  const config = clientConfig || (await User.getClientConfig());
 
   if (config.emailUsernames) {
     user.email = userDetails.username;
@@ -138,11 +124,15 @@ export async function register(
   }
 }
 
-export async function checkUsername(User: typeof UserClass, username: string) {
+export async function checkUsername(
+  User: typeof UserClass,
+  username: string,
+  clientConfig?: ClientConfig
+) {
   let user = User.factorySync() as UserClass & CurrentUserData;
   user.username = username;
 
-  const config = await getClientConfig(User);
+  const config = clientConfig || (await User.getClientConfig());
   if (config.emailUsernames) {
     user.email = username;
   }

@@ -229,7 +229,6 @@
     ClientConfig,
   } from '@nymphjs/tilmeld-client';
   import {
-    getClientConfig,
     login as loginAction,
     register as registerAction,
     checkUsername as checkUsernameAction,
@@ -298,7 +297,7 @@
 
   onMount(async () => {
     if (clientConfig === undefined) {
-      clientConfig = await getClientConfig(User);
+      clientConfig = await User.getClientConfig();
     }
     if (!clientConfig.allowRegistration) {
       mode = 'login';
