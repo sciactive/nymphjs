@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.35](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.34...v1.0.0-alpha.35) (2022-01-19)
+
+### Bug Fixes
+
+- split limit issue in query parser ([df2d610](https://github.com/sciactive/nymphjs/commit/df2d610c2c999400412c2023efc9204fa9df338e))
+
+### Features
+
+- add bareHandler option to query parser ([de06691](https://github.com/sciactive/nymphjs/commit/de066910403242af8c44668b310d2594abc5b817))
+
 # [1.0.0-alpha.34](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.33...v1.0.0-alpha.34) (2022-01-08)
 
 **Note:** Version bump only for package @nymphjs/query-parser

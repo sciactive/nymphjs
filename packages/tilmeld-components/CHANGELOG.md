@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.35](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.34...v1.0.0-alpha.35) (2022-01-19)
+
+### Bug Fixes
+
+- remove getClientConfig helper, which didn't support multiple nymph instances ([5a4b898](https://github.com/sciactive/nymphjs/commit/5a4b898ac2bf37dbd2a2dd4d32f2f1f805704739))
+
 # [1.0.0-alpha.34](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.33...v1.0.0-alpha.34) (2022-01-08)
 
 ### Bug Fixes
