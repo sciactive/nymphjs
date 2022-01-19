@@ -1351,7 +1351,23 @@ export default class SQLite3Driver extends NymphDriver {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
         const whereClause = queryParts.join(') AND (');
-        if (options.return === 'guid') {
+        if (options.return === 'count') {
+          if (limit || offset) {
+            query = `SELECT COUNT("guid") AS "count" FROM (
+                SELECT "guid"
+                FROM ${SQLite3Driver.escape(
+                  this.prefix + 'entities_' + etype
+                )} ${ieTable}
+                WHERE (${whereClause})${limit}${offset}
+              )`;
+          } else {
+            query = `SELECT COUNT("guid") AS "count"
+              FROM ${SQLite3Driver.escape(
+                this.prefix + 'entities_' + etype
+              )} ${ieTable}
+              WHERE (${whereClause})`;
+          }
+        } else if (options.return === 'guid') {
           query = `SELECT "guid"
             FROM ${SQLite3Driver.escape(
               this.prefix + 'entities_' + etype
@@ -1400,7 +1416,21 @@ export default class SQLite3Driver extends NymphDriver {
         if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
-        if (options.return === 'guid') {
+        if (options.return === 'count') {
+          if (limit || offset) {
+            query = `SELECT COUNT("guid") AS "count" FROM (
+                SELECT "guid"
+                FROM ${SQLite3Driver.escape(
+                  this.prefix + 'entities_' + etype
+                )} ${ieTable}${limit}${offset}
+              )`;
+          } else {
+            query = `SELECT COUNT("guid") AS "count"
+              FROM ${SQLite3Driver.escape(
+                this.prefix + 'entities_' + etype
+              )} ${ieTable}`;
+          }
+        } else if (options.return === 'guid') {
           query = `SELECT "guid"
             FROM ${SQLite3Driver.escape(
               this.prefix + 'entities_' + etype
@@ -1489,6 +1519,10 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string[]>;
@@ -1499,10 +1533,14 @@ export default class SQLite3Driver extends NymphDriver {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[]> {
+  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
     return this.getEntitiesSync(options, ...selectors);
   }
 
+  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): number;
   protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -1514,7 +1552,7 @@ export default class SQLite3Driver extends NymphDriver {
   protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[] | string[] {
+  ): ReturnType<T['factorySync']>[] | string[] | number {
     const { result, process } = this.getEntitesRowLike<T>(
       options,
       selectors,
@@ -1525,6 +1563,7 @@ export default class SQLite3Driver extends NymphDriver {
         return next.done ? null : next.value;
       },
       () => undefined,
+      (row) => Number(row.count),
       (row) => row.guid,
       (row) => ({
         tags: row.tags.length > 2 ? row.tags.slice(1, -1).split(',') : [],

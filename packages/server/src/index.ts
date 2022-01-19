@@ -146,6 +146,7 @@ export default function createServer(
           | EntityInterface[]
           | string
           | string[]
+          | number
           | null;
         try {
           if (action === 'entity') {

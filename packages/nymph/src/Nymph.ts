@@ -416,7 +416,8 @@ export default class Nymph {
    *   Therefore, offset will be from the newest entity.
    * - sort - How to sort the entities. Accepts "cdate" or "mdate". Defaults to
    *   "cdate".
-   * - return - What to return. "entity" or "guid". Defaults to "entity".
+   * - return - What to return. "entity", "guid", or "count". Defaults to
+   *   "entity".
    * - source - Will be 'client' if the query came from a REST call.
    * - skipCache - If true, Nymph will skip the cache and retrieve the entity
    *   from the DB.
@@ -559,10 +560,13 @@ export default class Nymph {
    *
    * @param options The options.
    * @param selectors Unlimited optional selectors to search for. If none are given, all entities are retrieved for the given options.
-   * @returns An array of entities.
-   * @todo An option to place a total count in a var.
+   * @returns An array of entities or guids, or a count.
    * @todo Use an asterisk to specify any variable.
    */
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -574,7 +578,7 @@ export default class Nymph {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[]> {
+  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
     for (let callback of this.beforeGetEntitiesCallbacks) {
       if (callback) {
         callback(this, options, selectors);
@@ -594,8 +598,12 @@ export default class Nymph {
    *
    * @param options The options.
    * @param selectors Unlimited optional selectors to search for, or a single GUID. If none are given, all entities are searched for the given options.
-   * @returns An entity, or null on failure or nothing found.
+   * @returns An entity or guid, or null on failure or nothing found, or a number.
    */
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -615,7 +623,7 @@ export default class Nymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<ReturnType<T['factorySync']> | string | null> {
+  ): Promise<ReturnType<T['factorySync']> | string | number | null> {
     // Set up options and selectors.
     if (typeof selectors[0] === 'string') {
       selectors = [{ type: '&', guid: selectors[0] }];
@@ -630,6 +638,9 @@ export default class Nymph {
       options,
       ...(selectors as Selector[])
     );
+    if (options.return === 'count') {
+      return entities as unknown as number;
+    }
     if (!entities || !entities.length) {
       return null;
     }

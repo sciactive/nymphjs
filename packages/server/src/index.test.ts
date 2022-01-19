@@ -258,6 +258,57 @@ describe('Nymph REST Server and Client', () => {
     });
   });
 
+  it('get entity counts', async () => {
+    for (let i = 0; i < 20; i++) {
+      await createJane();
+    }
+
+    const result = await nymph.getEntities({ class: Employee });
+
+    // Testing count return...
+    const resultCount = await nymph.getEntities({
+      class: Employee,
+      return: 'count',
+    });
+    expect(resultCount).toBeGreaterThanOrEqual(1);
+    expect(resultCount).toEqual(result.length);
+
+    const resultSelectors = await nymph.getEntities(
+      { class: Employee },
+      { type: '&', equal: ['name', 'Jane Doe'] }
+    );
+
+    // Testing count return with selectors...
+    const resultSelectorsCount = await nymph.getEntities(
+      { class: Employee, return: 'count' },
+      { type: '&', equal: ['name', 'Jane Doe'] }
+    );
+    expect(resultSelectorsCount).toBeGreaterThanOrEqual(1);
+    expect(resultSelectorsCount).toEqual(resultSelectors.length);
+
+    // Testing count return with limit...
+    const resultSelectorsLimit = await nymph.getEntities({
+      class: Employee,
+      limit: 1,
+      return: 'count',
+    });
+    expect(resultSelectorsLimit).toEqual(1);
+
+    // Testing count return with limit...
+    const resultSelectorsSingle = await nymph.getEntity({
+      class: Employee,
+      return: 'count',
+    });
+    expect(resultSelectorsSingle).toEqual(1);
+
+    // Testing empty count...
+    const resultSelectorsEmpty = await nymph.getEntities(
+      { class: Employee, return: 'count' },
+      { type: '&', tag: 'pickle' }
+    );
+    expect(resultSelectorsEmpty).toEqual(0);
+  });
+
   it('get entity GUIDs', async () => {
     for (let i = 0; i < 4; i++) {
       await createJane();
@@ -271,7 +322,7 @@ describe('Nymph REST Server and Client', () => {
       },
       {
         type: '&',
-        tag: ['employee'],
+        tag: 'employee',
       }
     );
 

@@ -886,7 +886,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       // Export entities.
       const dataIterator = (
         await this.queryIter(
-          `SELECT encode(e."guid", 'hex') as "guid", e."tags", e."cdate", e."mdate", d."name" AS "dname", d."value" AS "dvalue", c."string", c."number"
+          `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name" AS "dname", d."value" AS "dvalue", c."string", c."number"
           FROM ${PostgreSQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}data_${etype}`
@@ -957,6 +957,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     const cTable = `c${tableSuffix}`;
     const fTable = `f${tableSuffix}`;
     const ieTable = `ie${tableSuffix}`;
+    const countTable = `count${tableSuffix}`;
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -1783,12 +1784,28 @@ export default class PostgreSQLDriver extends NymphDriver {
           )}`;
         }
         const whereClause = queryParts.join(') AND (');
-        if (options.return === 'guid') {
+        if (options.return === 'count') {
+          if (limit || offset) {
+            query = `SELECT COUNT(${countTable}."guid") AS "count" FROM (
+                SELECT COUNT(${ieTable}."guid") AS "guid"
+                FROM ${PostgreSQLDriver.escape(
+                  `${this.prefix}entities_${etype}`
+                )} ${ieTable}
+                WHERE (${whereClause})${limit}${offset}
+              ) ${countTable}`;
+          } else {
+            query = `SELECT COUNT(${ieTable}."guid") AS "count"
+              FROM ${PostgreSQLDriver.escape(
+                `${this.prefix}entities_${etype}`
+              )} ${ieTable}
+              WHERE (${whereClause})`;
+          }
+        } else if (options.return === 'guid') {
           const guidColumn =
             tableSuffix === ''
               ? `encode(${ieTable}."guid", 'hex')`
               : `${ieTable}."guid"`;
-          query = `SELECT ${guidColumn} as "guid"
+          query = `SELECT ${guidColumn} AS "guid"
             FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
             )} ${ieTable}
@@ -1796,7 +1813,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
         } else {
           query = `SELECT
-              encode(${eTable}."guid", 'hex') as "guid",
+              encode(${eTable}."guid", 'hex') AS "guid",
               ${eTable}."tags",
               ${eTable}."cdate",
               ${eTable}."mdate",
@@ -1840,12 +1857,26 @@ export default class PostgreSQLDriver extends NymphDriver {
             isNaN(Number(options.offset)) ? 0 : Number(options.offset)
           )}`;
         }
-        if (options.return === 'guid') {
+        if (options.return === 'count') {
+          if (limit || offset) {
+            query = `SELECT COUNT(${countTable}."guid") AS "count" FROM (
+                SELECT COUNT(${ieTable}."guid") AS "guid"
+                FROM ${PostgreSQLDriver.escape(
+                  `${this.prefix}entities_${etype}`
+                )} ${ieTable}${limit}${offset}
+              ) ${countTable}`;
+          } else {
+            query = `SELECT COUNT(${ieTable}."guid") AS "count"
+              FROM ${PostgreSQLDriver.escape(
+                `${this.prefix}entities_${etype}`
+              )} ${ieTable}`;
+          }
+        } else if (options.return === 'guid') {
           const guidColumn =
             tableSuffix === ''
               ? `encode(${ieTable}."guid", 'hex')`
               : `${ieTable}."guid"`;
-          query = `SELECT ${guidColumn} as "guid"
+          query = `SELECT ${guidColumn} AS "guid"
             FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
             )} ${ieTable}
@@ -1853,7 +1884,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         } else {
           if (limit || offset) {
             query = `SELECT
-                encode(${eTable}."guid", 'hex') as "guid",
+                encode(${eTable}."guid", 'hex') AS "guid",
                 ${eTable}."tags",
                 ${eTable}."cdate",
                 ${eTable}."mdate",
@@ -1880,7 +1911,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               ORDER BY ${eTable}.${sortBy}`;
           } else {
             query = `SELECT
-                encode(${eTable}."guid", 'hex') as "guid",
+                encode(${eTable}."guid", 'hex') AS "guid",
                 ${eTable}."tags",
                 ${eTable}."cdate",
                 ${eTable}."mdate",
@@ -1955,6 +1986,10 @@ export default class PostgreSQLDriver extends NymphDriver {
   }
 
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string[]>;
@@ -1965,7 +2000,7 @@ export default class PostgreSQLDriver extends NymphDriver {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[]> {
+  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
     const { result: resultPromise, process } = this.getEntitesRowLike<T>(
       // @ts-ignore: options is correct here.
       options,
@@ -1977,6 +2012,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         return next.done ? null : next.value;
       },
       () => undefined,
+      (row) => Number(row.count),
       (row) => row.guid,
       (row) => ({
         tags: row.tags,
@@ -1999,6 +2035,10 @@ export default class PostgreSQLDriver extends NymphDriver {
   }
 
   protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): number;
+  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): string[];
@@ -2009,7 +2049,7 @@ export default class PostgreSQLDriver extends NymphDriver {
   protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[] | string[] {
+  ): ReturnType<T['factorySync']>[] | string[] | number {
     const { result, process } = this.getEntitesRowLike<T>(
       // @ts-ignore: options is correct here.
       options,
@@ -2021,6 +2061,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         return next.done ? null : next.value;
       },
       () => undefined,
+      (row) => Number(row.count),
       (row) => row.guid,
       (row) => ({
         tags: row.tags,

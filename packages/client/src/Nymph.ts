@@ -215,6 +215,10 @@ export default class Nymph {
   }
 
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string | null>;
@@ -222,6 +226,10 @@ export default class Nymph {
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    guid: string
+  ): Promise<number>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
@@ -233,12 +241,17 @@ export default class Nymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[] | string[]
-  ): Promise<ReturnType<T['factorySync']> | string | null> {
+  ): Promise<ReturnType<T['factorySync']> | string | number | null> {
     // @ts-ignore: Implementation signatures of overloads are not externally visible.
     const data = (await this.getEntityData(options, ...selectors)) as
       | EntityJson<T>
       | string
+      | number
       | null;
+
+    if (options.return && options.return === 'count') {
+      return Number(data ?? 0) as number;
+    }
     if (data != null) {
       if (options.return && options.return === 'guid') {
         return data as string;
@@ -251,6 +264,10 @@ export default class Nymph {
   }
 
   public async getEntityData<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
+  public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string | null>;
@@ -258,6 +275,10 @@ export default class Nymph {
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityJson<T> | null>;
+  public async getEntityData<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    guid: string
+  ): Promise<number>;
   public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
@@ -269,7 +290,7 @@ export default class Nymph {
   public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[] | string[]
-  ): Promise<EntityJson<T> | string | null> {
+  ): Promise<EntityJson<T> | string | number | null> {
     if (options.class === this.getEntityClass('Entity')) {
       throw new InvalidRequestError(
         "You can't make REST requests with the base Entity class."
@@ -291,12 +312,16 @@ export default class Nymph {
       },
     });
 
-    if (typeof data.guid !== 'undefined') {
+    if (options.return === 'count' || typeof data.guid !== 'undefined') {
       return data;
     }
     return null;
   }
 
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -308,7 +333,7 @@ export default class Nymph {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[]> {
+  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
     const data = await requester.GET({
       url: this.restUrl,
       dataType: 'json',
@@ -321,6 +346,9 @@ export default class Nymph {
       },
     });
 
+    if (options.return && options.return === 'count') {
+      return Number(data);
+    }
     if (options.return && options.return === 'guid') {
       return data;
     }

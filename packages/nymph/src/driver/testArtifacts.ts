@@ -1319,6 +1319,55 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
 
+  it('count return', async () => {
+    await createTestEntities();
+
+    const result = await nymph.getEntities({ class: TestModel });
+
+    // Testing count return...
+    const resultCount = await nymph.getEntities({
+      class: TestModel,
+      return: 'count',
+    });
+    expect(resultCount).toBeGreaterThanOrEqual(1);
+    expect(resultCount).toEqual(result.length);
+
+    const resultSelectors = await nymph.getEntities(
+      { class: TestModel },
+      { type: '&', ref: ['reference', refGuid] }
+    );
+
+    // Testing count return with selectors...
+    const resultSelectorsCount = await nymph.getEntities(
+      { class: TestModel, return: 'count' },
+      { type: '&', ref: ['reference', refGuid] }
+    );
+    expect(resultSelectorsCount).toBeGreaterThanOrEqual(1);
+    expect(resultSelectorsCount).toEqual(resultSelectors.length);
+
+    // Testing count return with limit...
+    const resultSelectorsLimit = await nymph.getEntities({
+      class: TestModel,
+      limit: 1,
+      return: 'count',
+    });
+    expect(resultSelectorsLimit).toEqual(1);
+
+    // Testing count return with limit...
+    const resultSelectorsSingle = await nymph.getEntity({
+      class: TestModel,
+      return: 'count',
+    });
+    expect(resultSelectorsSingle).toEqual(1);
+
+    // Testing empty count...
+    const resultSelectorsEmpty = await nymph.getEntities(
+      { class: TestModel, return: 'count' },
+      { type: '&', ref: ['reference', newGUID()] }
+    );
+    expect(resultSelectorsEmpty).toEqual(0);
+  });
+
   it('guid return', async () => {
     await createTestEntities();
 

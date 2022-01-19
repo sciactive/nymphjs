@@ -105,7 +105,7 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
   offset?: number;
   reverse?: boolean;
   sort?: 'cdate' | 'mdate';
-  return?: 'entity' | 'guid';
+  return?: 'entity' | 'guid' | 'count';
   source?: string;
   skipCache?: boolean;
   skipAc?: boolean;

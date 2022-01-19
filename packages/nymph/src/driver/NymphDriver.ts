@@ -70,6 +70,10 @@ export default abstract class NymphDriver {
     writeLine: (line: string) => void
   ): Promise<void>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): Promise<number>;
+  abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): Promise<string[]>;
@@ -80,7 +84,13 @@ export default abstract class NymphDriver {
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[]>;
+  ): Promise<ReturnType<T['factorySync']>[] | string[] | number>;
+  protected abstract getEntitiesSync<
+    T extends EntityConstructor = EntityConstructor
+  >(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): number;
   protected abstract getEntitiesSync<
     T extends EntityConstructor = EntityConstructor
   >(
@@ -98,7 +108,7 @@ export default abstract class NymphDriver {
   >(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[] | string[];
+  ): ReturnType<T['factorySync']>[] | string[] | number;
   abstract getUID(name: string): Promise<number | null>;
   abstract import(filename: string): Promise<boolean>;
   abstract newUID(name: string): Promise<number | null>;
@@ -685,6 +695,10 @@ export default abstract class NymphDriver {
    * @returns An entity, or null on failure or nothing found.
    */
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    ...selectors: Selector[]
+  ): number;
+  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
   ): string | null;
@@ -692,6 +706,10 @@ export default abstract class NymphDriver {
     options: Options<T>,
     ...selectors: Selector[]
   ): ReturnType<T['factorySync']> | null;
+  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    guid: string
+  ): number;
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
@@ -703,7 +721,7 @@ export default abstract class NymphDriver {
   public getEntitySync<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): ReturnType<T['factorySync']> | string | null {
+  ): ReturnType<T['factorySync']> | string | number | null {
     // Set up options and selectors.
     if (typeof selectors[0] === 'string') {
       selectors = [{ type: '&', guid: selectors[0] }];
@@ -713,12 +731,39 @@ export default abstract class NymphDriver {
       options,
       ...(selectors as Selector[])
     );
+    if (options.return === 'count') {
+      return entities as unknown as number;
+    }
     if (!entities || !entities.length) {
       return null;
     }
     return entities[0];
   }
 
+  protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'count' },
+    selectors: Selector[],
+    performQueryCallback: (
+      options: Options<T>,
+      formattedSelectors: FormattedSelector[],
+      etype: string
+    ) => {
+      result: any;
+    },
+    rowFetchCallback: () => any,
+    freeResultCallback: () => void,
+    getCountCallback: (row: any) => number,
+    getGUIDCallback: (row: any) => string,
+    getTagsAndDatesCallback: (row: any) => {
+      tags: string[];
+      cdate: number;
+      mdate: number;
+    },
+    getDataNameAndSValueCallback: (row: any) => {
+      name: string;
+      svalue: string;
+    }
+  ): { result: any; process: () => number };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     selectors: Selector[],
@@ -731,6 +776,7 @@ export default abstract class NymphDriver {
     },
     rowFetchCallback: () => any,
     freeResultCallback: () => void,
+    getCountCallback: (row: any) => number,
     getGUIDCallback: (row: any) => string,
     getTagsAndDatesCallback: (row: any) => {
       tags: string[];
@@ -754,6 +800,7 @@ export default abstract class NymphDriver {
     },
     rowFetchCallback: () => any,
     freeResultCallback: () => void,
+    getCountCallback: (row: any) => number,
     getGUIDCallback: (row: any) => string,
     getTagsAndDatesCallback: (row: any) => {
       tags: string[];
@@ -777,6 +824,7 @@ export default abstract class NymphDriver {
     },
     rowFetchCallback: () => any,
     freeResultCallback: () => void,
+    getCountCallback: (row: any) => number,
     getGUIDCallback: (row: any) => string,
     getTagsAndDatesCallback: (row: any) => {
       tags: string[];
@@ -787,7 +835,10 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): { result: any; process: () => ReturnType<T['factorySync']>[] | string[] } {
+  ): {
+    result: any;
+    process: () => ReturnType<T['factorySync']>[] | string[] | number;
+  } {
     if (!this.isConnected()) {
       throw new UnableToConnectError('not connected to DB');
     }
@@ -805,6 +856,7 @@ export default abstract class NymphDriver {
     }
 
     let entities: ReturnType<T['factorySync']>[] | string[] = [];
+    let count = 0;
     const EntityClass =
       options.class ?? (this.nymph.getEntityClass('Entity') as T);
     const etype = EntityClass.ETYPE;
@@ -842,7 +894,14 @@ export default abstract class NymphDriver {
           const guid = entity.guid;
           return {
             result: Promise.resolve(null),
-            process: () => (options.return === 'guid' ? [guid] : [entity]),
+            process: () =>
+              options.return === 'count'
+                ? guid
+                  ? 1
+                  : 0
+                : options.return === 'guid'
+                ? [guid]
+                : [entity],
           };
         }
       }
@@ -856,7 +915,12 @@ export default abstract class NymphDriver {
       result,
       process: () => {
         let row = rowFetchCallback();
-        if (options.return === 'guid') {
+        if (options.return === 'count') {
+          while (row != null) {
+            count += getCountCallback(row);
+            row = rowFetchCallback();
+          }
+        } else if (options.return === 'guid') {
           while (row != null) {
             (entities as string[]).push(getGUIDCallback(row));
             row = rowFetchCallback();
@@ -912,7 +976,7 @@ export default abstract class NymphDriver {
 
         freeResultCallback();
 
-        return entities;
+        return options.return === 'count' ? count : entities;
       },
     };
   }
