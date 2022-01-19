@@ -1,5 +1,5 @@
 {
-  "packages": [
+  "entryPoints": [
     "./packages/client/",
     "./packages/client-node/",
     "./packages/driver-mysql/",
@@ -11,9 +11,13 @@
     "./packages/server/",
     "./packages/sorter/",
     "./packages/tilmeld/",
-    "./packages/tilmeld-client/"
+    "./packages/tilmeld-client/",
+    "./packages/tilmeld-components/src/index.ts",
+    "./packages/tilmeld-setup/src/index.ts"
   ],
+  "entryPointStrategy": "packages",
   "out": "docs",
   "name": "Nymph.js",
-  "includeVersion": true
+  "includeVersion": true,
+  "readme": "none"
 }
