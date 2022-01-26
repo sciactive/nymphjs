@@ -9,6 +9,7 @@ import {
   EntityConstructor,
   EntityData,
   EntityInterface,
+  EntityReference,
   SerializedEntityData,
 } from '../Entity.types';
 import { InvalidParametersError, UnableToConnectError } from '../errors';
@@ -526,16 +527,26 @@ export default abstract class NymphDriver {
    */
   protected entityReferenceSearch(
     value: any,
-    entity: EntityInterface | string | (EntityInterface | string)[]
+    entity:
+      | EntityInterface
+      | EntityReference
+      | string
+      | (EntityInterface | EntityReference | string)[]
   ) {
     // Get the GUID, if the passed $entity is an object.
     const guids: string[] = [];
     if (Array.isArray(entity)) {
-      for (const curEntity of entity) {
-        if (typeof curEntity === 'string') {
-          guids.push(curEntity);
-        } else if (typeof curEntity.guid === 'string') {
-          guids.push(curEntity.guid);
+      if (entity[0] === 'nymph_entity_reference') {
+        guids.push(value[1]);
+      } else {
+        for (const curEntity of entity) {
+          if (typeof curEntity === 'string') {
+            guids.push(curEntity);
+          } else if (Array.isArray(curEntity)) {
+            guids.push(curEntity[1]);
+          } else if (typeof curEntity.guid === 'string') {
+            guids.push(curEntity.guid);
+          }
         }
       }
     } else if (typeof entity === 'string') {

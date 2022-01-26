@@ -5,6 +5,7 @@ import {
   Options,
   Selector,
   SerializedEntityData,
+  classNamesToEntityConstructors,
 } from '@nymphjs/nymph';
 import {
   request,
@@ -16,7 +17,8 @@ import {
 import { difference } from 'lodash';
 
 import { Config, ConfigDefaults as defaults } from './conf';
-import {
+import type {
+  QuerySubscriptionData,
   AuthenticateMessageData,
   QuerySubscribeMessageData,
   UidSubscribeMessageData,
@@ -56,14 +58,7 @@ export default class PubSub {
   private sessions = new Map<connection, string>();
   protected querySubs: {
     [etype: string]: {
-      [query: string]: Map<
-        connection,
-        {
-          current: string[];
-          query: string;
-          count: boolean;
-        }
-      >;
+      [query: string]: Map<connection, QuerySubscriptionData>;
     };
   } = {};
   protected uidSubs: {
@@ -499,7 +494,11 @@ export default class PubSub {
    */
   private async handleSubscriptionQuery(
     from: connection,
-    data: QuerySubscribeMessageData
+    data: QuerySubscribeMessageData,
+    qrefParent?: {
+      etype: string;
+      query: string;
+    }
   ) {
     let args: [MessageOptions, ...Selector[]];
     let EntityClass: EntityConstructor;
@@ -518,9 +517,28 @@ export default class PubSub {
       return: 'guid',
       source: 'client',
     };
+    // Find qref queries.
+    const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
 
     if (data.action === 'subscribe') {
       // Client is subscribing to a query.
+
+      // First subscribe to qrefQueries, giving this one as a reference.
+      for (const qrefQuery of qrefQueries) {
+        await this.handleSubscriptionQuery(
+          from,
+          {
+            action: 'subscribe',
+            query: JSON.stringify(qrefQuery),
+          },
+          {
+            etype,
+            query: serialArgs,
+          }
+        );
+      }
+
+      // Now subscribe to this query.
       if (!(etype in this.querySubs)) {
         this.querySubs[etype] = {};
       }
@@ -539,11 +557,26 @@ export default class PubSub {
           nymph.tilmeld.fillSession(user);
         }
       }
-      this.querySubs[etype][serialArgs].set(from, {
-        current: await nymph.getEntities(options, ...selectors),
-        query: data.query,
-        count: !!data.count,
-      });
+      const existingSub = this.querySubs[etype][serialArgs].get(from);
+      if (existingSub) {
+        if (qrefParent) {
+          existingSub.qrefParents.push(qrefParent);
+        }
+        if (!qrefParent && !existingSub.direct) {
+          existingSub.direct = true;
+        }
+        if (data.count && !existingSub.count) {
+          existingSub.count = true;
+        }
+      } else {
+        this.querySubs[etype][serialArgs].set(from, {
+          current: await nymph.getEntities(options, ...selectors),
+          query: data.query,
+          qrefParents: qrefParent ? [qrefParent] : [],
+          direct: !qrefParent,
+          count: !!data.count,
+        });
+      }
       if (nymph.tilmeld != null && token != null) {
         // Clear the user that was temporarily logged in.
         nymph.tilmeld.clearSession();
@@ -573,6 +606,23 @@ export default class PubSub {
 
     if (data.action === 'unsubscribe') {
       // Client is unsubscribing from a query.
+
+      // First unsubscribe from qrefQueries.
+      for (const qrefQuery of qrefQueries) {
+        await this.handleSubscriptionQuery(
+          from,
+          {
+            action: 'unsubscribe',
+            query: JSON.stringify(qrefQuery),
+          },
+          {
+            etype,
+            query: serialArgs,
+          }
+        );
+      }
+
+      // Now unsubscribe from this query.
       if (!(etype in this.querySubs)) {
         return;
       }
@@ -582,7 +632,24 @@ export default class PubSub {
       if (!this.querySubs[etype][serialArgs].has(from)) {
         return;
       }
-      this.querySubs[etype][serialArgs].delete(from);
+      const existingSub = this.querySubs[etype][serialArgs].get(from);
+      if (existingSub) {
+        if (qrefParent) {
+          existingSub.qrefParents = existingSub.qrefParents.filter(
+            (parent) =>
+              !(
+                qrefParent.etype === parent.etype &&
+                qrefParent.query === parent.query
+              )
+          );
+        }
+        if (!qrefParent) {
+          existingSub.direct = false;
+        }
+        if (!existingSub.direct && !existingSub.qrefParents.length) {
+          this.querySubs[etype][serialArgs].delete(from);
+        }
+      }
       this.config.logger(
         'log',
         new Date().toISOString(),
@@ -760,117 +827,6 @@ export default class PubSub {
       const curClients = this.querySubs[etype][curQuery];
       const updatedClients = new Set<connection>();
 
-      const updateClient = async (
-        curClient: connection,
-        curData: {
-          current: string[];
-          query: string;
-          count: boolean;
-        }
-      ) => {
-        // Update currents list.
-        let current: EntityInterface[];
-        let token: string | undefined;
-        const nymph = this.nymph.clone();
-        try {
-          const [clientOptions, ...selectors] = JSON.parse(curQuery);
-          const options: Options = {
-            ...clientOptions,
-            class: nymph.getEntityClass(clientOptions.class),
-            return: 'entity',
-            source: 'client',
-          };
-          if (this.sessions.has(curClient)) {
-            token = this.sessions.get(curClient);
-          }
-          if (nymph.tilmeld != null && token != null) {
-            const user = await nymph.tilmeld.extractToken(token);
-            if (user) {
-              // Log in the user for access controls.
-              nymph.tilmeld.fillSession(user);
-            }
-          }
-          current = await nymph.getEntities(options, ...selectors);
-        } catch (e: any) {
-          this.config.logger(
-            'error',
-            new Date().toISOString(),
-            `Error updating client! (${e?.message}, ${curClient.remoteAddress})`
-          );
-          return;
-        }
-
-        const entityMap = Object.fromEntries(
-          current.map((entity) => [entity.guid, entity])
-        );
-        const currentGuids = current.map((entity) => entity.guid ?? '');
-        const removed = difference(curData.current, currentGuids);
-        const added = difference(currentGuids, curData.current);
-
-        for (let guid of removed) {
-          // Notify subscriber.
-          this.config.logger(
-            'log',
-            new Date().toISOString(),
-            `Notifying client of removal! (${curClient.remoteAddress})`
-          );
-          curClient.sendUTF(
-            JSON.stringify({
-              query: curData.query,
-              removed: guid,
-            })
-          );
-        }
-
-        for (let guid of added) {
-          const entity = entityMap[guid];
-          // Notify client.
-          this.config.logger(
-            'log',
-            new Date().toISOString(),
-            `Notifying client of new match! (${curClient.remoteAddress})`
-          );
-          if (typeof entity.updateDataProtection === 'function') {
-            entity.updateDataProtection();
-          }
-          curClient.sendUTF(
-            JSON.stringify({
-              query: curData.query,
-              added: guid,
-              data: entity,
-            })
-          );
-        }
-
-        if (data.event === 'update' && data.guid in entityMap) {
-          const entity = entityMap[data.guid];
-          // Notify subscriber.
-          this.config.logger(
-            'log',
-            new Date().toISOString(),
-            `Notifying client of update! (${curClient.remoteAddress})`
-          );
-          if (typeof entity.updateDataProtection === 'function') {
-            entity.updateDataProtection();
-          }
-          curClient.sendUTF(
-            JSON.stringify({
-              query: curData.query,
-              updated: data.guid,
-              data: entity,
-            })
-          );
-        }
-
-        // Update curData.
-        curData.current = currentGuids;
-
-        if (nymph.tilmeld != null && token != null) {
-          // Clear the user that was temporarily logged in.
-          nymph.tilmeld.clearSession();
-        }
-      };
-
       if (data.event === 'delete' || data.event === 'update') {
         // Check if it is in any client's currents.
         try {
@@ -880,7 +836,7 @@ export default class PubSub {
               continue;
             }
             if (curData.current.indexOf(data.guid) !== -1) {
-              await updateClient(curClient, curData);
+              await this.updateClient(curClient, curData, data);
               updatedClients.add(curClient);
             }
           }
@@ -896,7 +852,8 @@ export default class PubSub {
       if ((data.event === 'create' || data.event === 'update') && data.entity) {
         // Check if it matches the query.
         try {
-          let [clientOptions, ...selectors] = JSON.parse(curQuery);
+          const [clientOptions, ...selectors] = JSON.parse(curQuery);
+          const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
           const EntityClass = this.nymph.getEntityClass(clientOptions.class);
           const entityData = data.entity.data;
           entityData.cdate = data.entity.cdate;
@@ -911,15 +868,16 @@ export default class PubSub {
 
           if (
             EntityClass.ETYPE === DataEntityClass.ETYPE &&
-            this.nymph.driver.checkData(
-              entityData,
-              entitySData,
-              selectors,
-              data.guid,
-              data.entity?.tags ?? []
-            )
+            (qrefQueries.length ||
+              this.nymph.driver.checkData(
+                entityData,
+                entitySData,
+                selectors,
+                data.guid,
+                data.entity?.tags ?? []
+              ))
           ) {
-            // It does match the query.
+            // It either matches the query, or there are qref queries.
             for (let curClient of curClients.keys()) {
               if (updatedClients.has(curClient)) {
                 // The user was already notified. (Of an update.)
@@ -930,7 +888,29 @@ export default class PubSub {
               if (!curData) {
                 continue;
               }
-              await updateClient(curClient, curData);
+
+              // If there are qref queries, we need to dive into the user's
+              // current data and translate them before running checkData.
+              if (qrefQueries.length) {
+                const translatedSelectors = this.translateQRefSelectors(
+                  curClient,
+                  selectors
+                );
+                if (
+                  !this.nymph.driver.checkData(
+                    entityData,
+                    entitySData,
+                    translatedSelectors,
+                    data.guid,
+                    data.entity?.tags ?? []
+                  )
+                ) {
+                  // The query doesn't match when the qref queries are filled.
+                  continue;
+                }
+              }
+
+              await this.updateClient(curClient, curData, data);
             }
           }
         } catch (e: any) {
@@ -939,6 +919,128 @@ export default class PubSub {
             new Date().toISOString(),
             `Error checking for client updates! (${e?.message})`
           );
+        }
+      }
+    }
+  }
+
+  private async updateClient(
+    curClient: connection,
+    curData: QuerySubscriptionData,
+    data: PublishEntityMessageData
+  ) {
+    // Update currents list.
+    let current: EntityInterface[];
+    let token: string | undefined;
+    const nymph = this.nymph.clone();
+    try {
+      const [clientOptions, ...clientSelectors] = JSON.parse(curData.query);
+      const options: Options = {
+        ...clientOptions,
+        class: nymph.getEntityClass(clientOptions.class),
+        return: 'entity',
+        source: 'client',
+      };
+      const selectors = classNamesToEntityConstructors(nymph, clientSelectors);
+      if (this.sessions.has(curClient)) {
+        token = this.sessions.get(curClient);
+      }
+      if (nymph.tilmeld != null && token != null) {
+        const user = await nymph.tilmeld.extractToken(token);
+        if (user) {
+          // Log in the user for access controls.
+          nymph.tilmeld.fillSession(user);
+        }
+      }
+      current = await nymph.getEntities(options, ...selectors);
+    } catch (e: any) {
+      this.config.logger(
+        'error',
+        new Date().toISOString(),
+        `Error updating client! (${e?.message}, ${curClient.remoteAddress})`
+      );
+      return;
+    }
+
+    const entityMap = Object.fromEntries(
+      current.map((entity) => [entity.guid, entity])
+    );
+    const currentGuids = current.map((entity) => entity.guid ?? '');
+    const removed = difference(curData.current, currentGuids);
+    const added = difference(currentGuids, curData.current);
+
+    if (curData.direct) {
+      for (let guid of removed) {
+        // Notify subscriber.
+        this.config.logger(
+          'log',
+          new Date().toISOString(),
+          `Notifying client of removal! (${curClient.remoteAddress})`
+        );
+        curClient.sendUTF(
+          JSON.stringify({
+            query: curData.query,
+            removed: guid,
+          })
+        );
+      }
+
+      for (let guid of added) {
+        const entity = entityMap[guid];
+        // Notify client.
+        this.config.logger(
+          'log',
+          new Date().toISOString(),
+          `Notifying client of new match! (${curClient.remoteAddress})`
+        );
+        if (typeof entity.updateDataProtection === 'function') {
+          entity.updateDataProtection();
+        }
+        curClient.sendUTF(
+          JSON.stringify({
+            query: curData.query,
+            added: guid,
+            data: entity,
+          })
+        );
+      }
+
+      if (data.event === 'update' && data.guid in entityMap) {
+        const entity = entityMap[data.guid];
+        // Notify subscriber.
+        this.config.logger(
+          'log',
+          new Date().toISOString(),
+          `Notifying client of update! (${curClient.remoteAddress})`
+        );
+        if (typeof entity.updateDataProtection === 'function') {
+          entity.updateDataProtection();
+        }
+        curClient.sendUTF(
+          JSON.stringify({
+            query: curData.query,
+            updated: data.guid,
+            data: entity,
+          })
+        );
+      }
+    }
+
+    // Update curData.
+    curData.current = currentGuids;
+
+    if (nymph.tilmeld != null && token != null) {
+      // Clear the user that was temporarily logged in.
+      nymph.tilmeld.clearSession();
+    }
+
+    if ((removed.length || added.length) && curData.qrefParents.length) {
+      // All qref parents need to be rerun.
+      for (const qrefParent of curData.qrefParents) {
+        const subData =
+          this.querySubs[qrefParent.etype][qrefParent.query].get(curClient);
+        if (subData) {
+          this.updateClient(curClient, subData, data);
         }
       }
     }
@@ -1056,5 +1158,134 @@ export default class PubSub {
 
       client.connect(host, 'nymph');
     }
+  }
+
+  private findQRefQueries(options: Options, ...selectors: Selector[]) {
+    const qrefQueries: [Options, ...Selector[]][] = [];
+
+    for (const curSelector of selectors) {
+      for (const k in curSelector) {
+        const key = k as keyof Selector;
+        const value = curSelector[key];
+
+        if (key === 'type') {
+          continue;
+        }
+
+        if (value === undefined) {
+          continue;
+        }
+
+        if (key === 'qref' || key === '!qref') {
+          const tmpArr = (
+            Array.isArray(((value as Selector['qref']) ?? [])[0])
+              ? value
+              : [value]
+          ) as [string, [Options, ...Selector[]]][];
+          for (let i = 0; i < tmpArr.length; i++) {
+            qrefQueries.push(tmpArr[i][1]);
+          }
+        } else if (key === 'selector' || key === '!selector') {
+          const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
+          qrefQueries.push(...this.findQRefQueries(options, ...tmpArr));
+        }
+      }
+    }
+
+    return qrefQueries;
+  }
+
+  /**
+   * This translates qref selectors into ref selectors using the "current" GUID
+   * list in the existing subscriptions.
+   */
+  private translateQRefSelectors(client: connection, selectors: Selector[]) {
+    const newSelectors: Selector[] = [];
+
+    for (const curSelector of selectors) {
+      const newSelector: Selector = { type: curSelector.type };
+
+      for (const k in curSelector) {
+        const key = k as keyof Selector;
+        const value = curSelector[key];
+
+        if (key === 'type') {
+          continue;
+        }
+
+        if (value === undefined) {
+          continue;
+        }
+
+        if (key === 'qref' || key === '!qref') {
+          const newKey: 'ref' | '!ref' = key === 'qref' ? 'ref' : '!ref';
+          const tmpArr = (
+            Array.isArray(((value as Selector['qref']) ?? [])[0])
+              ? value
+              : [value]
+          ) as [string, [Options, ...Selector[]]][];
+          for (let i = 0; i < tmpArr.length; i++) {
+            const name = tmpArr[i][0];
+            const [qrefOptions, ...qrefSelectors] = tmpArr[i][1];
+            const query = JSON.stringify(tmpArr[i][1]);
+            const QrefEntityClass =
+              typeof qrefOptions.class === 'string'
+                ? this.nymph.getEntityClass(qrefOptions.class)
+                : qrefOptions.class ?? this.nymph.getEntityClass('Entity');
+            const data =
+              this.querySubs[QrefEntityClass.ETYPE][query].get(client);
+            if (data) {
+              const guids = data.current;
+              let newValue: [string, string | EntityInterface][];
+              const oldValue = newSelector[newKey];
+              if (!oldValue) {
+                newValue = [];
+              } else if (oldValue.length && !Array.isArray(oldValue[0])) {
+                newValue = [oldValue] as [string, string | EntityInterface][];
+              } else {
+                newValue = oldValue as [string, string | EntityInterface][];
+              }
+              newValue.push(
+                ...(guids.map((guid) => [name, guid]) as [string, string][])
+              );
+              // Insert the qref results as a ref clause.
+              newSelector[newKey] = newValue;
+            } else {
+              // Can't translate, so put the original back in.
+              if (!newSelector[key]) {
+                newSelector[key] = [];
+              }
+              (newSelector[key] as [string, [Options, ...Selector[]]][]).push([
+                name,
+                [qrefOptions, ...qrefSelectors],
+              ]);
+            }
+          }
+        } else if (key === 'selector' || key === '!selector') {
+          const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
+          newSelector[key] = this.translateQRefSelectors(client, tmpArr);
+        } else if (key === 'ref' || key === '!ref') {
+          const tmpArr = (
+            Array.isArray(((value as Selector['ref']) ?? [])[0])
+              ? value
+              : [value]
+          ) as [string, string | EntityInterface][];
+
+          if (!newSelector[key]) {
+            newSelector[key] = [];
+          }
+          (newSelector[key] as [string, string | EntityInterface][]).push(
+            ...tmpArr
+          );
+        } else {
+          // @ts-ignore: ts doesn't know what value is here.
+          newSelector[key] = value;
+        }
+      }
+
+      newSelectors.push(newSelector);
+    }
+
+    return newSelectors;
   }
 }

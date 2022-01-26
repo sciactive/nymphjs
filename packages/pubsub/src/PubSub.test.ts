@@ -59,6 +59,37 @@ describe('Nymph REST Server and Client', () => {
     return jane;
   }
 
+  async function createBossJane() {
+    const john = await Employee.factory();
+    john.name = 'John Der';
+    john.current = true;
+    john.salary = 8000000;
+    john.startDate = Date.now();
+    john.subordinates = [];
+    john.title = 'Junior Person';
+    try {
+      await john.$save();
+    } catch (e: any) {
+      console.error('Error creating entity: ', e);
+      throw e;
+    }
+
+    const jane = await Employee.factory();
+    jane.name = 'Jane Doe';
+    jane.current = true;
+    jane.salary = 8000000;
+    jane.startDate = Date.now();
+    jane.subordinates = [john];
+    jane.title = 'Seniorer Person';
+    try {
+      await jane.$save();
+    } catch (e: any) {
+      console.error('Error creating entity: ', e);
+      throw e;
+    }
+    return [jane, john];
+  }
+
   it('notified of new match', async () => {
     let jane: Promise<Employee>;
 
@@ -120,6 +151,118 @@ describe('Nymph REST Server and Client', () => {
     });
 
     expect(entities[0].salary).toEqual(9000000);
+  });
+
+  it('notified of entity update for qref query', async () => {
+    let [jane, john] = await createBossJane();
+    let entities: (Employee & EmployeeData)[] = [];
+
+    await new Promise((resolve) => {
+      let mdate = 0;
+      if (jane.guid == null || john.guid == null) {
+        throw new Error('Entity is null.');
+      }
+      const subscription = pubsub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          qref: [
+            'subordinates',
+            [{ class: Employee }, { type: '&', guid: john.guid }],
+          ],
+        }
+      )(async (update) => {
+        pubsub.updateArray(entities, update);
+
+        if (mdate > 0 && (entities[0]?.mdate ?? -1) === mdate) {
+          subscription.unsubscribe();
+          resolve(true);
+        } else if (Array.isArray(update)) {
+          expect(update.length).toEqual(1);
+          expect(entities[0].salary).toEqual(8000000);
+          // Time for a raise!
+          jane.salary = (jane.salary ?? 0) + 1000000;
+          await jane.$save();
+          mdate = jane.mdate ?? 0;
+        }
+      });
+    });
+
+    expect(entities[0].salary).toEqual(9000000);
+  });
+
+  it('notified of new match for qref query', async () => {
+    let [jane, john] = await createBossJane();
+    let entities: (Employee & EmployeeData)[] = [];
+
+    await new Promise((resolve) => {
+      if (jane.guid == null || john.guid == null) {
+        throw new Error('Entity is null.');
+      }
+      const subscription = pubsub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          guid: jane.guid,
+          qref: [
+            'subordinates',
+            [{ class: Employee }, { type: '&', '!truthy': 'current' }],
+          ],
+        }
+      )(async (update) => {
+        pubsub.updateArray(entities, update);
+
+        if (entities.length) {
+          subscription.unsubscribe();
+          resolve(true);
+        } else if (Array.isArray(update)) {
+          expect(update.length).toEqual(0);
+
+          // John gets fired.
+          john.current = false;
+          await john.$save();
+        }
+      });
+    });
+
+    expect(entities.length).toEqual(1);
+  });
+
+  it('notified of removed match for qref query', async () => {
+    let [jane, john] = await createBossJane();
+    let entities: (Employee & EmployeeData)[] = [];
+
+    await new Promise((resolve) => {
+      if (jane.guid == null || john.guid == null) {
+        throw new Error('Entity is null.');
+      }
+      const subscription = pubsub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          guid: jane.guid,
+          qref: [
+            'subordinates',
+            [{ class: Employee }, { type: '&', truthy: 'current' }],
+          ],
+        }
+      )(async (update) => {
+        pubsub.updateArray(entities, update);
+
+        if (!entities.length) {
+          subscription.unsubscribe();
+          resolve(true);
+        } else if (Array.isArray(update)) {
+          expect(update.length).toEqual(1);
+
+          // John gets fired.
+          john.current = false;
+          await john.$save();
+        }
+      });
+    });
+
+    expect(entities.length).toEqual(0);
   });
 
   it('receives correct number of updates', async () => {

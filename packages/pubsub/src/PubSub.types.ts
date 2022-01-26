@@ -1,5 +1,20 @@
 import { EntityJson, Options } from '@nymphjs/nymph';
 
+export type QuerySubscriptionData = {
+  current: string[];
+  query: string;
+  qrefParents: {
+    etype: string;
+    query: string;
+  }[];
+  /**
+   * This means the user directly subscribed to this query, as opposed
+   * to indirectly subscribing with a qref clause.
+   */
+  direct: boolean;
+  count: boolean;
+};
+
 export type AuthenticateMessageData = {
   action: 'authenticate';
   token: string;
@@ -7,7 +22,7 @@ export type AuthenticateMessageData = {
 
 export type QuerySubscribeMessageData = {
   action: 'subscribe' | 'unsubscribe';
-  query: never;
+  query: string;
   count?: boolean;
 };
 

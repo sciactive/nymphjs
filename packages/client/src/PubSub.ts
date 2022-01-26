@@ -12,6 +12,7 @@ import {
   PubSubSubscribable,
   PubSubUpdate,
 } from './PubSub.types';
+import { entityConstructorsToClassNames } from './utils';
 
 let authToken: string | null = null;
 
@@ -70,7 +71,10 @@ export default class PubSub {
     PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
   > {
     const promise = this.nymph.getEntities(options, ...selectors);
-    const query = [{ ...options, class: options.class.class }, ...selectors];
+    const query = [
+      entityConstructorsToClassNames(options),
+      ...entityConstructorsToClassNames(selectors),
+    ];
     const jsonQuery = JSON.stringify(query);
     const subscribe = (
       resolve?:
@@ -113,8 +117,8 @@ export default class PubSub {
   > {
     const promise = this.nymph.getEntity(options, ...selectors);
     const query = [
-      { ...options, class: options.class.class, limit: 1 },
-      ...selectors,
+      { ...entityConstructorsToClassNames(options), limit: 1 },
+      ...entityConstructorsToClassNames(selectors),
     ];
     const jsonQuery = JSON.stringify(query);
     const subscribe = (

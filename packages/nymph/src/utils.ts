@@ -1,6 +1,7 @@
 import Entity from './Entity';
 import { EntityReference } from './Entity.types';
 import Nymph from './Nymph';
+import { Options, Selector } from './Nymph.types';
 
 export function xor(a: any, b: any): boolean {
   return !!(a && !b) || (!a && b);
@@ -12,6 +13,64 @@ export function uniqueStrings(array: string[]) {
     obj[array[i]] = true;
   }
   return Object.keys(obj);
+}
+
+export function classNamesToEntityConstructors(
+  nymph: Nymph,
+  selectors: Selector[]
+): Selector[] {
+  const newSelectors: Selector[] = [];
+
+  for (const curSelector of selectors) {
+    const newSelector: Selector = { type: curSelector.type };
+
+    for (const k in curSelector) {
+      const key = k as keyof Selector;
+      const value = curSelector[key];
+
+      if (key === 'type') {
+        continue;
+      }
+
+      if (value === undefined) {
+        continue;
+      }
+
+      if (key === 'qref' || key === '!qref') {
+        const tmpArr = (
+          Array.isArray(((value as Selector['qref']) ?? [])[0])
+            ? value
+            : [value]
+        ) as [string, [Options, ...Selector[]]][];
+        for (let i = 0; i < tmpArr.length; i++) {
+          const name = tmpArr[i][0];
+          const [qrefOptions, ...selectors] = tmpArr[i][1];
+          const QrefEntityClass =
+            typeof qrefOptions.class === 'string'
+              ? nymph.getEntityClass(qrefOptions.class)
+              : qrefOptions.class ?? nymph.getEntityClass('Entity');
+          const options = { ...qrefOptions, class: QrefEntityClass };
+          if (!newSelector[key]) {
+            newSelector[key] = [];
+          }
+          (newSelector[key] as [string, [Options, ...Selector[]]][]).push([
+            name,
+            [options, ...classNamesToEntityConstructors(nymph, selectors)],
+          ]);
+        }
+      } else if (key === 'selector' || key === '!selector') {
+        const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
+        newSelector[key] = classNamesToEntityConstructors(nymph, tmpArr);
+      } else {
+        // @ts-ignore: ts doesn't know what value is here.
+        newSelector[key] = value;
+      }
+    }
+
+    newSelectors.push(newSelector);
+  }
+
+  return newSelectors;
 }
 
 export function entitiesToReferences(item: any): any {

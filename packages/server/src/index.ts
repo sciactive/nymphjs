@@ -12,6 +12,9 @@ import {
   EntityReference,
   InvalidParametersError,
   TilmeldAccessLevels,
+  classNamesToEntityConstructors,
+  Options,
+  Selector,
 } from '@nymphjs/nymph';
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
@@ -131,6 +134,7 @@ export default function createServer(
           httpError(response, 400, 'Bad Request');
           return;
         }
+        let [options, ...selectors] = data as [Options, ...Selector[]];
         let EntityClass;
         try {
           EntityClass = response.locals.nymph.getEntityClass(data[0].class);
@@ -138,9 +142,13 @@ export default function createServer(
           httpError(response, 400, 'Bad Request', e);
           return;
         }
-        data[0].class = EntityClass;
-        data[0].source = 'client';
-        data[0].skipAc = false;
+        options.class = EntityClass;
+        options.source = 'client';
+        options.skipAc = false;
+        selectors = classNamesToEntityConstructors(
+          response.locals.nymph,
+          selectors
+        );
         let result:
           | EntityInterface
           | EntityInterface[]
@@ -151,11 +159,14 @@ export default function createServer(
         try {
           if (action === 'entity') {
             result = await response.locals.nymph.getEntity(
-              data[0],
-              ...data.slice(1)
+              options,
+              ...selectors
             );
           } else {
-            result = await response.locals.nymph.getEntities(...data);
+            result = await response.locals.nymph.getEntities(
+              options,
+              ...selectors
+            );
           }
         } catch (e: any) {
           httpError(response, 500, 'Internal Server Error', e);

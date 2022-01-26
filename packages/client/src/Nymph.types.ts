@@ -58,7 +58,7 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
   skipCache?: boolean;
 };
 
-export type Clause<C> = C | C[];
+export type Clause<C> = C | Exclude<C, undefined>[];
 
 export type OrWithTime<T> = T | [string, null, string];
 
