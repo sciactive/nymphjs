@@ -6,7 +6,8 @@ export type HttpRequesterRequestCallback = (
 ) => void;
 export type HttpRequesterResponseCallback = (
   requester: HttpRequester,
-  response: Response
+  response: Response,
+  text: string
 ) => void;
 export type HttpRequesterRequestOptions = {
   url: string;
@@ -142,8 +143,15 @@ export default class HttpRequester {
     }
 
     const response = await this.fetch(url, options);
+    let text: string;
+    try {
+      text = await response.text();
+    } catch (e: any) {
+      throw new InvalidResponseError(
+        'Server response did not contain valid text body.'
+      );
+    }
     if (!response.ok) {
-      const text = await response.text();
       let errObj;
       try {
         errObj = JSON.parse(text);
@@ -164,9 +172,9 @@ export default class HttpRequester {
         : new ServerError(errObj);
     }
     for (let i = 0; i < this.responseCallbacks.length; i++) {
-      this.responseCallbacks[i] && this.responseCallbacks[i](this, response);
+      this.responseCallbacks[i] &&
+        this.responseCallbacks[i](this, response, text);
     }
-    const text = await response.text();
     if (opt.dataType === 'json') {
       if (!text.length) {
         throw new InvalidResponseError('Server response was empty.');

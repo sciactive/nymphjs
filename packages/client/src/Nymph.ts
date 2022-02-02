@@ -64,9 +64,9 @@ export default class Nymph {
       }
     });
 
-    requester.on('response', (_requester, response) => {
+    requester.on('response', (_requester, response, text) => {
       for (let i = 0; i < this.responseCallbacks.length; i++) {
-        this.responseCallbacks[i] && this.responseCallbacks[i](response);
+        this.responseCallbacks[i] && this.responseCallbacks[i](response, text);
       }
     });
   }

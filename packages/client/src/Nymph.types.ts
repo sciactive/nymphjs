@@ -46,7 +46,7 @@ export type EventType = 'request' | 'response';
 
 export type RequestCallback = (url: string, options: RequestInit) => void;
 
-export type ResponseCallback = (response: Response) => void;
+export type ResponseCallback = (response: Response, text: string) => void;
 
 export type Options<T extends EntityConstructor = EntityConstructor> = {
   class: T;
