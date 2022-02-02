@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.37](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.36...v1.0.0-alpha.37) (2022-02-02)
+
+### Bug Fixes
+
+- wrap response.text call in try block ([26b457a](https://github.com/sciactive/nymphjs/commit/26b457a934fa082e5d94ba32eb84574a67950e03))
+
 # [1.0.0-alpha.36](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.35...v1.0.0-alpha.36) (2022-01-26)
 
 ### Features
