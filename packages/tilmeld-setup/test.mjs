@@ -42,3 +42,6 @@ app.use(
 );
 
 app.listen(8080);
+
+console.log('App is loaded. Go here in your browser:');
+console.log('    http://localhost:8080/user/');

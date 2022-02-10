@@ -130,11 +130,11 @@
     entitiesSearching = true;
     failureMessage = undefined;
     try {
-      const query = queryParser(
-        entitySearch,
-        User,
-        ['username', 'name', 'email'],
-        {
+      const query = queryParser({
+        query: entitySearch,
+        entityClass: User,
+        defaultFields: ['username', 'name', 'email'],
+        qrefMap: {
           User: {
             class: User,
             defaultFields: ['username', 'name', 'email'],
@@ -143,8 +143,8 @@
             class: Group,
             defaultFields: ['groupname', 'name', 'email'],
           },
-        }
-      );
+        },
+      });
       entities = await nymph.getEntities(...query);
     } catch (e: any) {
       failureMessage = e?.message;

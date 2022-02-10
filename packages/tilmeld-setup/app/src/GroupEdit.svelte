@@ -433,11 +433,11 @@
       return;
     }
     try {
-      const query = queryParser(
-        parentSearch,
-        Group,
-        ['groupname', 'name', 'email'],
-        {
+      const query = queryParser({
+        query: parentSearch,
+        entityClass: Group,
+        defaultFields: ['groupname', 'name', 'email'],
+        qrefMap: {
           User: {
             class: User,
             defaultFields: ['username', 'name', 'email'],
@@ -446,8 +446,8 @@
             class: Group,
             defaultFields: ['groupname', 'name', 'email'],
           },
-        }
-      );
+        },
+      });
       parents = (await nymph.getEntities(...query)).filter((group) => {
         return !group.$is(entity) && !group.$is(entity.parent);
       });
