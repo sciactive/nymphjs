@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.38](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.37...v1.0.0-alpha.38) (2022-02-10)
+
+### Bug Fixes
+
+- queryParser props in setup app ([effba3f](https://github.com/sciactive/nymphjs/commit/effba3f3bbc30723b29874f20d54690c8a17adce))
+
 # [1.0.0-alpha.37](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.36...v1.0.0-alpha.37) (2022-02-02)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-setup
