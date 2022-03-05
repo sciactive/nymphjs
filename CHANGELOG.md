@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.39](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.38...v1.0.0-alpha.39) (2022-03-05)
+
+### Bug Fixes
+
+- tilmeld after registration callbacks don't have login info ([1e98a9b](https://github.com/sciactive/nymphjs/commit/1e98a9b337e359763bc9baf290463e6da0373efe))
+
 # [1.0.0-alpha.38](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.37...v1.0.0-alpha.38) (2022-02-10)
 
 ### Bug Fixes
