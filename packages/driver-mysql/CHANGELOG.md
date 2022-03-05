@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.40](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.39...v1.0.0-alpha.40) (2022-03-05)
+
+### Bug Fixes
+
+- allow queryIterSync to fail silently for undefined result ([ace517e](https://github.com/sciactive/nymphjs/commit/ace517ecdf7fb3124982fd3c4a6853cd64d8e9af))
+
 # [1.0.0-alpha.39](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.38...v1.0.0-alpha.39) (2022-03-05)
 
 **Note:** Version bump only for package @nymphjs/driver-mysql
