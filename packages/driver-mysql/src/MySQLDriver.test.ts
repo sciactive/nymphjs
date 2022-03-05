@@ -2,6 +2,9 @@ import { Nymph, QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
 import MySQLDriver from './MySQLDriver';
 
+// When using remote server, this can be helpful.
+jest.setTimeout(60000);
+
 const mysqlConfig = {
   host: 'localhost',
   database: 'nymph',

@@ -2,6 +2,9 @@ import { Nymph, QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
 import PostgreSQLDriver from './PostgreSQLDriver';
 
+// When using remote server, this can be helpful.
+jest.setTimeout(60000);
+
 const postgresqlConfig = {
   host: 'localhost',
   database: 'nymph',

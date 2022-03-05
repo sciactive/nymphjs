@@ -1977,7 +1977,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       formattedSelectors,
       etype
     );
-    const result = this.queryIterSync(query, { etypes, params })[
+    const result = (this.queryIterSync(query, { etypes, params }) || [])[
       Symbol.iterator
     ]();
     return {
