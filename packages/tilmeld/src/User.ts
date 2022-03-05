@@ -1221,7 +1221,7 @@ export default class User extends AbleObject<UserData> {
     password: string;
     additionalData?: { [k: string]: any };
   }): Promise<{ result: boolean; loggedin: boolean; message: string }> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let tilmeld = this.$nymph.tilmeld as Tilmeld;
     if (!tilmeld.config.allowRegistration) {
       return {
         result: false,
@@ -1283,6 +1283,7 @@ export default class User extends AbleObject<UserData> {
     const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
     this.$nymph = tnymph;
+    tilmeld = this.$nymph.tilmeld as Tilmeld;
 
     try {
       // Add primary group.
@@ -1431,16 +1432,24 @@ export default class User extends AbleObject<UserData> {
           tilmeld.config.unverifiedAccess &&
           !madeAdmin
         ) {
-          tilmeld.login(this, true);
+          (nymph.tilmeld as Tilmeld).login(this, true);
           message +=
             "You're now logged in! An email has been sent to " +
             `${this.$data.email} with a verification link for you to finish ` +
             'registration.';
           loggedin = true;
         } else {
-          tilmeld.login(this, true);
+          (nymph.tilmeld as Tilmeld).login(this, true);
           message += "You're now registered and logged in!";
           loggedin = true;
+        }
+
+        try {
+          await tnymph.commit(transaction);
+          this.$nymph = nymph;
+        } catch (e: any) {
+          (nymph.tilmeld as Tilmeld).logout();
+          throw e;
         }
 
         for (let callback of (this.constructor as typeof User)
@@ -1452,9 +1461,6 @@ export default class User extends AbleObject<UserData> {
             });
           }
         }
-
-        await tnymph.commit(transaction);
-        this.$nymph = nymph;
 
         return {
           result: true,
@@ -1478,7 +1484,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public async $save() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let tilmeld = this.$nymph.tilmeld as Tilmeld;
     if (this.$data.username == null || !this.$data.username.trim().length) {
       return false;
     }
@@ -1676,6 +1682,7 @@ export default class User extends AbleObject<UserData> {
     const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
     this.$nymph = tnymph;
+    tilmeld = this.$nymph.tilmeld as Tilmeld;
 
     if (
       this.$data.group != null &&
@@ -1722,14 +1729,14 @@ export default class User extends AbleObject<UserData> {
         }
       }
 
-      if (tilmeld.User.current(true).$is(this)) {
-        // Update the user in the session cache.
-        tilmeld.fillSession(this);
-      }
-
       this.$descendantGroups = undefined;
       this.$gatekeeperCache = undefined;
       await tnymph.commit(transaction);
+
+      if ((nymph.tilmeld as Tilmeld).User.current(true).$is(this)) {
+        // Update the user in the session cache.
+        (nymph.tilmeld as Tilmeld).fillSession(this);
+      }
     } else {
       await tnymph.rollback(transaction);
     }

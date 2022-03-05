@@ -746,7 +746,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public async $delete() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let tilmeld = this.$nymph.tilmeld as Tilmeld;
     if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete groups.");
     }
@@ -755,6 +755,7 @@ export default class Group extends AbleObject<GroupData> {
     const nymph = this.$nymph;
     const tnymph = await nymph.startTransaction(transaction);
     this.$nymph = tnymph;
+    tilmeld = this.$nymph.tilmeld as Tilmeld;
 
     // Delete descendants.
     const descendants = await this.$getDescendants();
