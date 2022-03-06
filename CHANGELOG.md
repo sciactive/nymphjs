@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.42](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.41...v1.0.0-alpha.42) (2022-03-06)
+
+### Bug Fixes
+
+- attempt to fix failure again ([0f3c071](https://github.com/sciactive/nymphjs/commit/0f3c0717c881cec2b69f96cab53bb9543d46e604))
+
 # [1.0.0-alpha.41](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.40...v1.0.0-alpha.41) (2022-03-06)
 
 ### Bug Fixes
