@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.41](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.40...v1.0.0-alpha.41) (2022-03-06)
+
+### Bug Fixes
+
+- attempt to fix transaction failure with azure mysql ([b5f3c8d](https://github.com/sciactive/nymphjs/commit/b5f3c8dcde684c7589c2de592d415ab4561fc002))
+
 # [1.0.0-alpha.40](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.39...v1.0.0-alpha.40) (2022-03-05)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
