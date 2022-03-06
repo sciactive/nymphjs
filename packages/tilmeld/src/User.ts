@@ -1432,26 +1432,18 @@ export default class User extends AbleObject<UserData> {
           tilmeld.config.unverifiedAccess &&
           !madeAdmin
         ) {
-          if (!(nymph.tilmeld as Tilmeld).login(this, true)) {
+          if (!tilmeld.login(this, true)) {
             throw new Error('An error occurred trying to log you in.');
           }
-          // Replace current user Tilmeld with logged in clone.
-          const tilmeld = (nymph.tilmeld as Tilmeld).clone();
-          tilmeld.nymph = this.$nymph;
-          this.$nymph.tilmeld = tilmeld;
           message +=
             "You're now logged in! An email has been sent to " +
             `${this.$data.email} with a verification link for you to finish ` +
             'registration.';
           loggedin = true;
         } else {
-          if (!(nymph.tilmeld as Tilmeld).login(this, true)) {
+          if (!tilmeld.login(this, true)) {
             throw new Error('An error occurred trying to log you in.');
           }
-          // Replace current user Tilmeld with logged in clone.
-          const tilmeld = (nymph.tilmeld as Tilmeld).clone();
-          tilmeld.nymph = this.$nymph;
-          this.$nymph.tilmeld = tilmeld;
           message += "You're now registered and logged in!";
           loggedin = true;
         }
@@ -1469,8 +1461,8 @@ export default class User extends AbleObject<UserData> {
         try {
           await tnymph.commit(transaction);
           this.$nymph = nymph;
+          this.$nymph.tilmeld?.fillSession(this);
         } catch (e: any) {
-          (nymph.tilmeld as Tilmeld).logout();
           throw e;
         }
 
