@@ -1432,24 +1432,28 @@ export default class User extends AbleObject<UserData> {
           tilmeld.config.unverifiedAccess &&
           !madeAdmin
         ) {
-          (nymph.tilmeld as Tilmeld).login(this, true);
+          if (!(nymph.tilmeld as Tilmeld).login(this, true)) {
+            throw new Error('An error occurred trying to log you in.');
+          }
+          // Replace current user Tilmeld with logged in clone.
+          const tilmeld = (nymph.tilmeld as Tilmeld).clone();
+          tilmeld.nymph = this.$nymph;
+          this.$nymph.tilmeld = tilmeld;
           message +=
             "You're now logged in! An email has been sent to " +
             `${this.$data.email} with a verification link for you to finish ` +
             'registration.';
           loggedin = true;
         } else {
-          (nymph.tilmeld as Tilmeld).login(this, true);
+          if (!(nymph.tilmeld as Tilmeld).login(this, true)) {
+            throw new Error('An error occurred trying to log you in.');
+          }
+          // Replace current user Tilmeld with logged in clone.
+          const tilmeld = (nymph.tilmeld as Tilmeld).clone();
+          tilmeld.nymph = this.$nymph;
+          this.$nymph.tilmeld = tilmeld;
           message += "You're now registered and logged in!";
           loggedin = true;
-        }
-
-        try {
-          await tnymph.commit(transaction);
-          this.$nymph = nymph;
-        } catch (e: any) {
-          (nymph.tilmeld as Tilmeld).logout();
-          throw e;
         }
 
         for (let callback of (this.constructor as typeof User)
@@ -1460,6 +1464,14 @@ export default class User extends AbleObject<UserData> {
               message,
             });
           }
+        }
+
+        try {
+          await tnymph.commit(transaction);
+          this.$nymph = nymph;
+        } catch (e: any) {
+          (nymph.tilmeld as Tilmeld).logout();
+          throw e;
         }
 
         return {
