@@ -107,16 +107,21 @@ export default {
     }
   },
   emailTemplateDir: path.join(__dirname, '..', '..', 'emails'),
-  sendEmail: async (tilmeld, options, user) => {
+  configEmail: async (tilmeld, _options, _user) => {
     const appUrl = new URL(tilmeld.config.appUrl);
-    const email = new Email({
+    return {
       message: {
         from: {
           name: tilmeld.config.appName,
           address: `noreply@${appUrl.hostname}`,
         },
       },
-    });
+    };
+  },
+  sendEmail: async (tilmeld, options, user) => {
+    const email = new Email(
+      await tilmeld.config.configEmail(tilmeld, options, user)
+    );
     try {
       const result = await email.send({
         ...options,

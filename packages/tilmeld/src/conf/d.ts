@@ -1,4 +1,4 @@
-import { EmailOptions } from 'email-templates';
+import { EmailOptions, EmailConfig } from 'email-templates';
 
 import type Tilmeld from '../Tilmeld';
 import Group, { GroupData } from '../Group';
@@ -245,6 +245,18 @@ export interface Config {
    * email sender.
    */
   emailTemplateDir: string;
+  /**
+   * Configure an email object to prepare for sending.
+   *
+   * You can use this, for example, for DKIM signing.
+   *
+   * See: https://github.com/forwardemail/email-templates/blob/v8.0.9/README.md#Options
+   */
+  configEmail: (
+    tilmeld: Tilmeld,
+    options: EmailOptions,
+    user: User & UserData
+  ) => Promise<EmailConfig>;
   /**
    * Send an email to a user. Uses `email-templates` by default.
    *
