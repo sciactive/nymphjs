@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-alpha.43](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.42...v1.0.0-alpha.43) (2022-03-07)
+
+### Features
+
+- allow custom email config on system emails ([b8f22bb](https://github.com/sciactive/nymphjs/commit/b8f22bb4c5420664ccff6bda754d5bd83be9b625))
+
 # [1.0.0-alpha.42](https://github.com/sciactive/nymphjs/compare/v1.0.0-alpha.41...v1.0.0-alpha.42) (2022-03-06)
 
 ### Bug Fixes
