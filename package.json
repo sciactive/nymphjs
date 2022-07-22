@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "An ORM for Node.js.",
   "scripts": {
-    "lint:format": "npx prettier --write .",
-    "lint:check": "npx prettier --check .",
+    "lint:format": "prettier --write .",
+    "lint:check": "prettier --check .",
     "clean": "lerna run clean",
     "docs": "typedoc",
     "prepare": "husky install && npm run bootstrap && npm run lint:check",
