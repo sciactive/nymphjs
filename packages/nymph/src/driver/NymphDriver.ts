@@ -2,9 +2,9 @@ import fs from 'fs';
 import { difference } from 'lodash';
 import ReadLines from 'n-readlines';
 import strtotime from 'locutus/php/datetime/strtotime';
+import { guid } from '@nymphjs/guid';
 
 import type Nymph from '../Nymph';
-import newGUID from '../newGUID';
 import {
   EntityConstructor,
   EntityData,
@@ -1030,7 +1030,7 @@ export default abstract class NymphDriver {
     let success = false;
     if (entity.guid == null) {
       const cdate = mdate;
-      const newId = newGUID();
+      const newId = guid();
       success = await saveNewEntityCallback(
         entity,
         newId,

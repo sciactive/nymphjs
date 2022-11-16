@@ -103,8 +103,7 @@
   import DataTable, { Head, Body, Row, Cell } from '@smui/data-table';
   import { Input } from '@smui/textfield';
   import Fab from '@smui/fab';
-  import { Icon } from '@smui/common';
-  import { Svg } from '@smui/common/elements';
+  import { Icon, Svg } from '@smui/common';
 
   import nymph from '../nymph';
 

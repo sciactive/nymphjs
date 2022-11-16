@@ -7,12 +7,11 @@ import {
 } from '@nymphjs/nymph';
 import { EmailOptions } from 'email-templates';
 import strtotime from 'locutus/php/datetime/strtotime';
-import { nanoid, customAlphabet } from 'nanoid';
-import { nolookalikesSafe } from 'nanoid-dictionary';
 import Base64 from 'crypto-js/enc-base64';
 import sha256 from 'crypto-js/sha256';
 import md5 from 'crypto-js/md5';
 import { difference } from 'lodash';
+import { humanSecret, nanoid } from '@nymphjs/guid';
 
 import type Tilmeld from './Tilmeld';
 import AbleObject from './AbleObject';
@@ -369,7 +368,7 @@ export default class User extends AbleObject<UserData> {
       }
 
       // Create a unique secret.
-      getUser.recoverSecret = customAlphabet(nolookalikesSafe, 10)();
+      getUser.recoverSecret = humanSecret();
       getUser.recoverSecretDate = Date.now();
       if (!(await getUser.$saveSkipAC())) {
         return { result: false, message: "Couldn't save recovery secret." };

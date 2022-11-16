@@ -214,7 +214,6 @@
   import { get_current_component } from 'svelte/internal';
   import CircularProgress from '@smui/circular-progress';
   import Button, { Label } from '@smui/button';
-  import type { TextfieldComponentDev } from '@smui/textfield';
   import Textfield from '@smui/textfield';
   import HelperText from '@smui/textfield/helper-text';
   import type { ActionArray } from '@smui/common/internal';
@@ -270,7 +269,7 @@
   /** Provide this for anything else that should go up to the server. You can look for it in the User events. */
   export let additionalData: { [k: string]: any } | undefined = undefined;
 
-  let usernameElem: TextfieldComponentDev;
+  let usernameElem: Textfield;
   let successLoginMessage: string | undefined = undefined;
   let successRegisteredMessage: string | undefined = undefined;
   let failureMessage: string | undefined = undefined;

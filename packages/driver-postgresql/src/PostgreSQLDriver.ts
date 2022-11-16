@@ -1,7 +1,6 @@
 import cp from 'child_process';
 import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
 import format from 'pg-format';
-import { customAlphabet } from 'nanoid';
 import {
   NymphDriver,
   EntityConstructor,
@@ -17,6 +16,7 @@ import {
   Selector,
   xor,
 } from '@nymphjs/nymph';
+import { makeTableSuffix } from '@nymphjs/guid';
 
 import {
   PostgreSQLDriverConfig,
@@ -32,11 +32,6 @@ type PostgreSQLDriverTransaction = {
   connection: PostgreSQLDriverConnection | null;
   count: number;
 };
-
-const makeTableSuffix = customAlphabet(
-  '0123456789abcdefghijklmnopqrstuvwxyz',
-  20
-);
 
 /**
  * The PostgreSQL Nymph database driver.

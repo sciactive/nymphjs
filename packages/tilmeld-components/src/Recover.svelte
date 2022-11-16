@@ -213,7 +213,6 @@
   import { get_current_component } from 'svelte/internal';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
-  import type { TextfieldComponentDev } from '@smui/textfield';
   import Textfield from '@smui/textfield';
   import Button, { Label } from '@smui/button';
   import FormField from '@smui/form-field';
@@ -253,7 +252,7 @@
 
   let recovering = false;
   let hasSentSecret: number | boolean = false;
-  let accountElem: TextfieldComponentDev;
+  let accountElem: Textfield;
   let failureMessage: string | undefined = undefined;
   let successRecoveredMessage: string | undefined = undefined;
 

@@ -44,7 +44,7 @@
             </FormField>
           </LayoutCell>
           <LayoutCell span={4} style="text-align: end;">
-            <a href="https://en.gravatar.com/" target="_blank">
+            <a href="https://en.gravatar.com/" target="_blank" rel="noreferrer">
               <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
             </a>
           </LayoutCell>
@@ -590,8 +590,7 @@
   import HelperText from '@smui/textfield/helper-text';
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
-  import { Icon, Label } from '@smui/common';
-  import { Svg } from '@smui/common/elements';
+  import { Icon, Label, Svg } from '@smui/common';
 
   const dispatch = createEventDispatcher();
 

@@ -35,18 +35,18 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
+    "@nymphjs/guid": "^1.0.0-alpha.43",
     "@nymphjs/nymph": "^1.0.0-alpha.43",
-    "nanoid": "^3.1.30",
-    "pg": "^8.7.1",
+    "pg": "^8.8.0",
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.1",
-    "@types/jest": "^27.4.0",
-    "@types/pg": "^8.6.3",
+    "@types/jest": "^29.2.3",
+    "@types/pg": "^8.6.5",
     "@types/pg-format": "^1.0.2",
-    "jest": "^27.4.7",
-    "ts-jest": "^27.1.2",
-    "typescript": "^4.5.4"
+    "jest": "^29.3.1",
+    "ts-jest": "^29.0.3",
+    "typescript": "^4.9.3"
   }
 }

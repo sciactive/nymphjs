@@ -16,6 +16,7 @@
       <IconButton
         href="https://github.com/sciactive/nymphjs"
         target="_blank"
+        rel="noreferrer"
         title="Nymph/Tilmeld on GitHub"
       >
         <Icon component={Svg} viewBox="0 0 24 24">
@@ -23,8 +24,19 @@
         </Icon>
       </IconButton>
       <IconButton
+        href="https://port87.social/@hperrin"
+        target="_blank"
+        rel="noreferrer"
+        title="SciActive on Mastodon"
+      >
+        <Icon component={Svg} viewBox="0 0 24 24">
+          <path fill="currentColor" d={mdiMastodon} />
+        </Icon>
+      </IconButton>
+      <IconButton
         href="https://twitter.com/SciActive"
         target="_blank"
+        rel="noreferrer"
         title="SciActive on Twitter"
       >
         <Icon component={Svg} viewBox="0 0 24 24">
@@ -36,7 +48,7 @@
           title="Account"
           on:click={() => user != null && accountMenu.setOpen(true)}
         >
-          <Icon component={Img} src={userAvatar} />
+          <Icon tag="img" src={userAvatar} />
         </IconButton>
         <Menu bind:this={accountMenu} anchorCorner="BOTTOM_LEFT">
           <List>
@@ -126,14 +138,13 @@
   import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
   import { User } from '@nymphjs/tilmeld-client';
   import { Login, Account } from '@nymphjs/tilmeld-components';
-  import { mdiGithub, mdiTwitter } from '@mdi/js';
+  import { mdiGithub, mdiMastodon, mdiTwitter } from '@mdi/js';
   import TopAppBar, { Row, Section, Title } from '@smui/top-app-bar';
   import Drawer, { Content, Scrim, AppContent } from '@smui/drawer';
   import IconButton from '@smui/icon-button';
   import List, { Item, Text, Separator } from '@smui/list';
   import Menu from '@smui/menu';
-  import { Icon } from '@smui/common';
-  import { Img, Svg } from '@smui/common/elements';
+  import { Icon, Svg } from '@smui/common';
 
   import Intro from './Intro.svelte';
   import Users from './Users.svelte';

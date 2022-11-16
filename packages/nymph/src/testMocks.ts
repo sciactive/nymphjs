@@ -1,7 +1,8 @@
+import { guid } from '@nymphjs/guid';
+
 import type Nymph from './Nymph';
 import { EntityConstructor, EntityInterface, EntityJson } from './Entity.types';
 import { Options, Selector } from './Nymph.types';
-import newGUID from './newGUID';
 import { ClassNotAvailableError } from './errors';
 import Entity from './Entity';
 
@@ -108,7 +109,7 @@ export class MockNymph {
     const className = (entity.constructor as any).class as string;
 
     if (entity.guid == null) {
-      entity.guid = newGUID();
+      entity.guid = guid();
       entity.cdate = Date.now();
     } else if (
       entity.guid in entities &&

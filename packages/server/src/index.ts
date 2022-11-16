@@ -172,7 +172,7 @@ export default function createServer(
           httpError(response, 500, 'Internal Server Error', e);
           return;
         }
-        if (result === [] || result == null) {
+        if (result == null || (Array.isArray(result) && result.length === 0)) {
           if (
             action === 'entity' ||
             response.locals.nymph.config.emptyListError

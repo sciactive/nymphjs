@@ -1,5 +1,4 @@
 import SQLite3 from 'better-sqlite3';
-import { customAlphabet } from 'nanoid';
 import {
   NymphDriver,
   EntityConstructor,
@@ -15,16 +14,12 @@ import {
   Selector,
   xor,
 } from '@nymphjs/nymph';
+import { makeTableSuffix } from '@nymphjs/guid';
 
 import {
   SQLite3DriverConfig,
   SQLite3DriverConfigDefaults as defaults,
 } from './conf';
-
-const makeTableSuffix = customAlphabet(
-  '0123456789abcdefghijklmnopqrstuvwxyz',
-  20
-);
 
 /**
  * The SQLite3 Nymph database driver.

@@ -1,9 +1,9 @@
-import { nymphJoiProps } from '@nymphjs/nymph';
 import path from 'path';
 import jwt from 'jsonwebtoken';
-import { nanoid } from 'nanoid';
 import Email from 'email-templates';
 import Joi from 'joi';
+import { nanoid } from '@nymphjs/guid';
+import { nymphJoiProps } from '@nymphjs/nymph';
 
 import { Config } from './d';
 import User from '../User';

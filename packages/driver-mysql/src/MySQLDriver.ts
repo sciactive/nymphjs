@@ -3,7 +3,6 @@ import cp from 'child_process';
 import { default as MySQLType } from '@types/mysql';
 // @ts-ignore: replace with mysql once https://github.com/mysqljs/mysql/pull/2233 is merged.
 import vlaskyMysql from '@vlasky/mysql';
-import { customAlphabet } from 'nanoid';
 import {
   NymphDriver,
   EntityConstructor,
@@ -19,6 +18,7 @@ import {
   Selector,
   xor,
 } from '@nymphjs/nymph';
+import { makeTableSuffix } from '@nymphjs/guid';
 
 import {
   MySQLDriverConfig,
@@ -31,11 +31,6 @@ type MySQLDriverTransaction = {
 };
 
 const mysql = vlaskyMysql as typeof MySQLType;
-
-const makeTableSuffix = customAlphabet(
-  '0123456789abcdefghijklmnopqrstuvwxyz',
-  20
-);
 
 /**
  * The MySQL Nymph database driver.

@@ -3,15 +3,16 @@
   "version": "1.0.0",
   "description": "An ORM for Node.js.",
   "scripts": {
-    "lint:format": "prettier --write .",
-    "lint:check": "prettier --check .",
+    "format": "prettier --write .",
+    "lint": "prettier --check .",
     "clean": "lerna run clean",
     "docs": "typedoc",
-    "prepare": "husky install && npm run bootstrap && npm run lint:check",
+    "prepare": "husky install && npm run bootstrap && npm run lint",
     "bootstrap": "lerna bootstrap",
-    "test": "lerna run test --concurrency=1 --stream --no-prefix --no-bail -- -- --passWithNoTests",
+    "test": "lerna run test --concurrency=1 --stream --no-prefix --no-bail -- --passWithNoTests",
     "test:db:run": "lerna run test:db:run --stream --parallel",
-    "test:db:stop": "lerna run test:db:stop"
+    "test:db:stop": "lerna run test:db:stop",
+    "test:db:clean": "lerna run test:db:clean"
   },
   "repository": {
     "type": "git",
@@ -29,15 +30,15 @@
   },
   "homepage": "https://github.com/sciactive/nymphjs#readme",
   "devDependencies": {
-    "@commitlint/cli": "^15.0.0",
-    "@commitlint/config-conventional": "^15.0.0",
-    "husky": "^7.0.4",
-    "lerna": "^4.0.0",
-    "lint-staged": "^12.1.2",
-    "prettier": "2.5.1",
-    "prettier-plugin-svelte": "^2.5.1",
-    "typedoc": "^0.22.10",
-    "typescript": "^4.5.4"
+    "@commitlint/cli": "^17.2.0",
+    "@commitlint/config-conventional": "^17.2.0",
+    "husky": "^8.0.2",
+    "lerna": "^6.0.3",
+    "lint-staged": "^13.0.3",
+    "prettier": "2.7.1",
+    "prettier-plugin-svelte": "^2.8.0",
+    "typedoc": "^0.23.21",
+    "typescript": "^4.9.3"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"

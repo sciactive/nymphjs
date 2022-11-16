@@ -1,8 +1,8 @@
 import fs from 'fs';
 import strtotime from 'locutus/php/datetime/strtotime';
+import { guid } from '@nymphjs/guid';
 
 import type Nymph from '../Nymph';
-import newGUID from '../newGUID';
 import { TestBModel, TestModel, TestModelData } from '../testArtifacts';
 
 export function QueriesTest(
@@ -131,7 +131,7 @@ This one's zip code is 92064.`;
     expect(testEntity.$is(resultEntity)).toEqual(true);
 
     // Testing wrong GUID...
-    resultEntity = await nymph.getEntity({ class: TestModel }, newGUID());
+    resultEntity = await nymph.getEntity({ class: TestModel }, guid());
     expect(testEntity.$is(resultEntity)).toEqual(false);
   });
 
@@ -259,7 +259,7 @@ This one's zip code is 92064.`;
     // Retrieving entity by GUID and tags...
     const resultEntity = await nymph.getEntity(
       { class: TestModel },
-      { type: '|', guid: [testGuid, newGUID()] }
+      { type: '|', guid: [testGuid, guid()] }
     );
     expect(testEntity.$is(resultEntity)).toEqual(true);
   });
@@ -270,7 +270,7 @@ This one's zip code is 92064.`;
     // Retrieving entity by GUID and tags...
     const resultEntity = await nymph.getEntity(
       { class: TestModel },
-      { type: '|', guid: [newGUID(), newGUID()] }
+      { type: '|', guid: [guid(), guid()] }
     );
     expect(testEntity.$is(resultEntity)).toEqual(false);
   });
@@ -281,7 +281,7 @@ This one's zip code is 92064.`;
     // Retrieving entity by !GUID...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', '!guid': newGUID(), tag: 'test' }
+      { type: '&', '!guid': guid(), tag: 'test' }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1185,7 +1185,7 @@ This one's zip code is 92064.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
-      { type: '!&', ref: ['reference', newGUID()] }
+      { type: '!&', ref: ['reference', guid()] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1196,7 +1196,7 @@ This one's zip code is 92064.`;
     // Testing wrong reference...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', ref: ['reference', newGUID()] }
+      { type: '&', ref: ['reference', guid()] }
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1222,7 +1222,7 @@ This one's zip code is 92064.`;
         type: '|',
         ref: [
           ['reference', refGuid],
-          ['reference', newGUID()],
+          ['reference', guid()],
         ],
       }
     );
@@ -1238,8 +1238,8 @@ This one's zip code is 92064.`;
       {
         type: '|',
         ref: [
-          ['reference', newGUID()],
-          ['reference', newGUID()],
+          ['reference', guid()],
+          ['reference', guid()],
         ],
       }
     );
@@ -1267,7 +1267,7 @@ This one's zip code is 92064.`;
         type: '&',
         ref: [
           ['refArray', refGuid],
-          ['refArray', newGUID()],
+          ['refArray', guid()],
         ],
       }
     );
@@ -1283,8 +1283,8 @@ This one's zip code is 92064.`;
       {
         type: '&',
         '!ref': [
-          ['refArray', newGUID()],
-          ['refArray', newGUID()],
+          ['refArray', guid()],
+          ['refArray', guid()],
         ],
         '!lte': ['number', 29.99],
       },
@@ -1363,7 +1363,7 @@ This one's zip code is 92064.`;
     // Testing empty count...
     const resultSelectorsEmpty = await nymph.getEntities(
       { class: TestModel, return: 'count' },
-      { type: '&', ref: ['reference', newGUID()] }
+      { type: '&', ref: ['reference', guid()] }
     );
     expect(resultSelectorsEmpty).toEqual(0);
   });
@@ -1377,8 +1377,8 @@ This one's zip code is 92064.`;
       {
         type: '&',
         '!ref': [
-          ['refArray', newGUID()],
-          ['refArray', newGUID()],
+          ['refArray', guid()],
+          ['refArray', guid()],
         ],
         '!lte': ['number', 29.99],
       },
@@ -1422,8 +1422,8 @@ This one's zip code is 92064.`;
       {
         type: '&',
         '!ref': [
-          ['refArray', newGUID()],
-          ['refArray', newGUID()],
+          ['refArray', guid()],
+          ['refArray', guid()],
         ],
         '!lte': ['number', 29.99],
       },
@@ -1467,8 +1467,8 @@ This one's zip code is 92064.`;
       {
         type: '&',
         '!ref': [
-          ['refArray', newGUID()],
-          ['refArray', newGUID()],
+          ['refArray', guid()],
+          ['refArray', guid()],
         ],
         '!lte': ['number', 29.99],
       },
@@ -1514,7 +1514,7 @@ This one's zip code is 92064.`;
         selector: [
           {
             type: '&',
-            '!ref': ['refArray', newGUID()],
+            '!ref': ['refArray', guid()],
             '!lte': ['number', 29.99],
           },
           { type: '&', gte: ['number', 16000] },
@@ -1530,7 +1530,7 @@ This one's zip code is 92064.`;
         selector: [
           {
             type: '&',
-            '!ref': ['refArray', newGUID()],
+            '!ref': ['refArray', guid()],
             '!lte': ['number', 29.99],
           },
           {
@@ -1555,7 +1555,7 @@ This one's zip code is 92064.`;
         selector: [
           {
             type: '&',
-            '!ref': ['refArray', newGUID()],
+            '!ref': ['refArray', guid()],
             '!lte': ['number', 29.99],
           },
           { type: '&', gte: ['number', 16000] },
