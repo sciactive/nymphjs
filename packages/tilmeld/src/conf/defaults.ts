@@ -1,4 +1,5 @@
 import path from 'path';
+import { URL } from 'url';
 import jwt from 'jsonwebtoken';
 import Email from 'email-templates';
 import Joi from 'joi';

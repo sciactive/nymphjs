@@ -6,6 +6,7 @@ import {
   TilmeldInterface,
   TilmeldAccessLevels,
 } from '@nymphjs/nymph';
+import { URL } from 'url';
 import { Request, Response } from 'express';
 import { xor } from 'lodash';
 

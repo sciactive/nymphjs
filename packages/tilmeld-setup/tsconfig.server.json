@@ -2,6 +2,8 @@
   "extends": "@tsconfig/recommended/tsconfig.json",
 
   "compilerOptions": {
+    "lib": ["ES2021"],
+    "target": "ES2021",
     "noImplicitAny": true,
     "removeComments": true,
     "sourceMap": true,
