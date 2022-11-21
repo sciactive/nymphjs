@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.2](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.1...v1.0.0-beta.2) (2022-11-21)
+
+### Features
+
+- migrate all callbacks to async so errors are properly caught ([7dc8241](https://github.com/sciactive/nymphjs/commit/7dc82411eab381ad81ece044d0998b0c0707749c))
+
 # [1.0.0-beta.1](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.0...v1.0.0-beta.1) (2022-11-21)
 
 ### Bug Fixes
