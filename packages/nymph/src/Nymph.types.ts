@@ -29,12 +29,22 @@ export type NymphDisconnectCallback = (
   nymph: Nymph,
   result: Promise<boolean>
 ) => Promise<void>;
-/** The NymphQueryCallback will be called on both top level and qref queries. */
+/**
+ * The NymphQueryCallback will be called on both top level and qref queries.
+ *
+ * This is the only callback that is not asynchronous.
+ *
+ * This also isn't necessarily run on every "query". It is run before a database
+ * query for an entity, but it is not run during PubSub entity change
+ * propagation. Therefore, it shouldn't do anything _entity_ specific, instead
+ * it should be _query_ specific. For example, throw an error if the user is not
+ * permitted to run the query at all.
+ */
 export type NymphQueryCallback = (
   nymph: Nymph,
   options: Options,
   selectors: FormattedSelector[]
-) => Promise<void>;
+) => void;
 export type NymphBeforeGetEntityCallback = (
   nymph: Nymph,
   options: Options,

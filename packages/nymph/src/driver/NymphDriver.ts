@@ -283,7 +283,7 @@ export default abstract class NymphDriver {
     guid: string | null = null,
     tags: string[] | null = null
   ) {
-    const formattedSelectors = this.formatSelectors(selectors);
+    const formattedSelectors = this.formatSelectors(selectors).selectors;
 
     for (const curSelector of formattedSelectors) {
       const type = curSelector.type;
@@ -575,8 +575,12 @@ export default abstract class NymphDriver {
   public formatSelectors(
     selectors: Selector[],
     options: Options = {}
-  ): FormattedSelector[] {
+  ): {
+    selectors: FormattedSelector[];
+    qrefs: [Options, ...FormattedSelector[]][];
+  } {
     const newSelectors: FormattedSelector[] = [];
+    const qrefs: [Options, ...FormattedSelector[]][] = [];
 
     for (const curSelector of selectors) {
       const newSelector: FormattedSelector = {
@@ -615,13 +619,18 @@ export default abstract class NymphDriver {
               source: options.source,
             };
             const newSelectors = this.formatSelectors(qrefSelectors, options);
-            this.nymph.runQueryCallbacks(newOptions, newSelectors);
-            formatArr[i] = [name, [newOptions, ...newSelectors]];
+            qrefs.push(
+              [newOptions, ...newSelectors.selectors],
+              ...newSelectors.qrefs
+            );
+            formatArr[i] = [name, [newOptions, ...newSelectors.selectors]];
           }
           newSelector[key] = formatArr;
         } else if (key === 'selector' || key === '!selector') {
           const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-          newSelector[key] = this.formatSelectors(tmpArr, options);
+          const newSelectors = this.formatSelectors(tmpArr, options);
+          newSelector[key] = newSelectors.selectors;
+          qrefs.push(...newSelectors.qrefs);
         } else if (!Array.isArray(value)) {
           // @ts-ignore: ts doesn't know what value is here.
           newSelector[key] = [[value]];
@@ -655,7 +664,7 @@ export default abstract class NymphDriver {
       newSelectors.push(newSelector);
     }
 
-    return newSelectors;
+    return { selectors: newSelectors, qrefs };
   }
 
   protected iterateSelectorsForQuery(
@@ -774,7 +783,7 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): { result: any; process: () => number };
+  ): { result: any; process: () => number | Error };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     selectors: Selector[],
@@ -798,7 +807,7 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): { result: any; process: () => string[] };
+  ): { result: any; process: () => string[] | Error };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
@@ -822,7 +831,7 @@ export default abstract class NymphDriver {
       name: string;
       svalue: string;
     }
-  ): { result: any; process: () => ReturnType<T['factorySync']>[] };
+  ): { result: any; process: () => ReturnType<T['factorySync']>[] | Error };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
@@ -848,7 +857,7 @@ export default abstract class NymphDriver {
     }
   ): {
     result: any;
-    process: () => ReturnType<T['factorySync']>[] | string[] | number;
+    process: () => ReturnType<T['factorySync']>[] | string[] | number | Error;
   } {
     if (!this.isConnected()) {
       throw new UnableToConnectError('not connected to DB');
@@ -918,78 +927,95 @@ export default abstract class NymphDriver {
       }
     }
 
-    const formattedSelectors = this.formatSelectors(selectors, options);
-    this.nymph.runQueryCallbacks(options, formattedSelectors);
-    const { result } = performQueryCallback(options, formattedSelectors, etype);
+    try {
+      const formattedSelectors = this.formatSelectors(selectors, options);
+      this.nymph.runQueryCallbacks(options, formattedSelectors.selectors);
+      for (let qref of formattedSelectors.qrefs) {
+        const [options, ...selectors] = qref;
+        this.nymph.runQueryCallbacks(options, selectors);
+      }
+      const { result } = performQueryCallback(
+        options,
+        formattedSelectors.selectors,
+        etype
+      );
 
-    return {
-      result,
-      process: () => {
-        let row = rowFetchCallback();
-        if (options.return === 'count') {
-          while (row != null) {
-            count += getCountCallback(row);
-            row = rowFetchCallback();
-          }
-        } else if (options.return === 'guid') {
-          while (row != null) {
-            (entities as string[]).push(getGUIDCallback(row));
-            row = rowFetchCallback();
-          }
-        } else {
-          while (row != null) {
-            const guid = getGUIDCallback(row);
-            const tagsAndDates = getTagsAndDatesCallback(row);
-            const tags = tagsAndDates.tags;
-            const cdate = tagsAndDates.cdate;
-            const mdate = tagsAndDates.mdate;
-            let dataNameAndSValue = getDataNameAndSValueCallback(row);
-            // Data.
-            const data: EntityData = {};
-            // Serialized data.
-            const sdata: SerializedEntityData = {};
-            if (dataNameAndSValue.name !== '') {
-              // This do will keep going and adding the data until the
-              // next entity is reached. $row will end on the next entity.
-              do {
-                dataNameAndSValue = getDataNameAndSValueCallback(row);
-                sdata[dataNameAndSValue.name] = dataNameAndSValue.svalue;
-                row = rowFetchCallback();
-              } while (row != null && getGUIDCallback(row) === guid);
-            } else {
-              // Make sure that $row is incremented :)
+      return {
+        result,
+        process: () => {
+          let row = rowFetchCallback();
+          if (options.return === 'count') {
+            while (row != null) {
+              count += getCountCallback(row);
               row = rowFetchCallback();
             }
-            const entity = EntityClass.factorySync() as ReturnType<
-              T['factorySync']
-            >;
-            entity.$nymph = this.nymph;
-            if (options.skipAc != null) {
-              entity.$useSkipAc(!!options.skipAc);
+          } else if (options.return === 'guid') {
+            while (row != null) {
+              (entities as string[]).push(getGUIDCallback(row));
+              row = rowFetchCallback();
             }
-            entity.guid = guid;
-            entity.cdate = cdate;
-            entity.mdate = mdate;
-            entity.tags = tags;
-            this.putDataCounter++;
-            if (this.putDataCounter == 100) {
-              throw new Error('Infinite loop detected in Entity loading.');
+          } else {
+            while (row != null) {
+              const guid = getGUIDCallback(row);
+              const tagsAndDates = getTagsAndDatesCallback(row);
+              const tags = tagsAndDates.tags;
+              const cdate = tagsAndDates.cdate;
+              const mdate = tagsAndDates.mdate;
+              let dataNameAndSValue = getDataNameAndSValueCallback(row);
+              // Data.
+              const data: EntityData = {};
+              // Serialized data.
+              const sdata: SerializedEntityData = {};
+              if (dataNameAndSValue.name !== '') {
+                // This do will keep going and adding the data until the
+                // next entity is reached. $row will end on the next entity.
+                do {
+                  dataNameAndSValue = getDataNameAndSValueCallback(row);
+                  sdata[dataNameAndSValue.name] = dataNameAndSValue.svalue;
+                  row = rowFetchCallback();
+                } while (row != null && getGUIDCallback(row) === guid);
+              } else {
+                // Make sure that $row is incremented :)
+                row = rowFetchCallback();
+              }
+              const entity = EntityClass.factorySync() as ReturnType<
+                T['factorySync']
+              >;
+              entity.$nymph = this.nymph;
+              if (options.skipAc != null) {
+                entity.$useSkipAc(!!options.skipAc);
+              }
+              entity.guid = guid;
+              entity.cdate = cdate;
+              entity.mdate = mdate;
+              entity.tags = tags;
+              this.putDataCounter++;
+              if (this.putDataCounter == 100) {
+                throw new Error('Infinite loop detected in Entity loading.');
+              }
+              entity.$putData(data, sdata);
+              this.putDataCounter--;
+              if (this.nymph.config.cache) {
+                this.pushCache(guid, cdate, mdate, tags, data, sdata);
+              }
+              // @ts-ignore: ts doesn't know the return type here.
+              entities.push(entity);
             }
-            entity.$putData(data, sdata);
-            this.putDataCounter--;
-            if (this.nymph.config.cache) {
-              this.pushCache(guid, cdate, mdate, tags, data, sdata);
-            }
-            // @ts-ignore: ts doesn't know the return type here.
-            entities.push(entity);
           }
-        }
 
-        freeResultCallback();
+          freeResultCallback();
 
-        return options.return === 'count' ? count : entities;
-      },
-    };
+          return options.return === 'count' ? count : entities;
+        },
+      };
+    } catch (e: any) {
+      return {
+        result: Promise.resolve(e),
+        process: () => {
+          return e;
+        },
+      };
+    }
   }
 
   protected async saveEntityRowLike(

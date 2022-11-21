@@ -150,7 +150,7 @@ export default class Tilmeld implements TilmeldInterface {
 
   private initAccessControl() {
     // Check for the skip access control option and add AC selectors.
-    const handleQuery = async function (
+    const handleQuery = function (
       nymph: Nymph,
       options: Options,
       selectors: FormattedSelector[]

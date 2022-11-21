@@ -2026,7 +2026,11 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
 
     const result = await resultPromise;
-    return process();
+    const value = process();
+    if (value instanceof Error) {
+      throw value;
+    }
+    return value;
   }
 
   protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
@@ -2073,7 +2077,11 @@ export default class PostgreSQLDriver extends NymphDriver {
             : row.value,
       })
     );
-    return process();
+    const value = process();
+    if (value instanceof Error) {
+      throw value;
+    }
+    return value;
   }
 
   public async getUID(name: string) {

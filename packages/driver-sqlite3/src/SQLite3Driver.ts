@@ -1575,7 +1575,11 @@ export default class SQLite3Driver extends NymphDriver {
             : row.value,
       })
     );
-    return process();
+    const value = process();
+    if (value instanceof Error) {
+      throw value;
+    }
+    return value;
   }
 
   public async getUID(name: string) {

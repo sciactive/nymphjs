@@ -214,13 +214,10 @@ export default class Nymph {
   /**
    * Run all the query callbacks on a query.
    */
-  public async runQueryCallbacks(
-    options: Options,
-    selectors: FormattedSelector[]
-  ) {
+  public runQueryCallbacks(options: Options, selectors: FormattedSelector[]) {
     for (let callback of this.queryCallbacks) {
       if (callback) {
-        await callback(this, options, selectors);
+        callback(this, options, selectors);
       }
     }
   }
