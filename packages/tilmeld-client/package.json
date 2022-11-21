@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/tilmeld-client",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0-beta.1",
   "description": "NymphJS - Tilmeld Client",
   "browser": "dist/index.js",
   "main": "lib/index.js",
@@ -46,6 +46,6 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
-    "@nymphjs/client": "^1.0.0-beta.0"
+    "@nymphjs/client": "^1.0.0-beta.1"
   }
 }
