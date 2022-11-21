@@ -37,11 +37,11 @@ export type EventType =
 export type TilmeldBeforeRegisterCallback = (
   user: User & UserData,
   data: { password: string; additionalData?: { [k: string]: any } }
-) => Promise<void> | void;
+) => Promise<void>;
 export type TilmeldAfterRegisterCallback = (
   user: User & UserData,
   result: { loggedin: boolean; message: string }
-) => Promise<void> | void;
+) => Promise<void>;
 /**
  * These are run after the authentication checks, but before the login action.
  */
@@ -52,14 +52,20 @@ export type TilmeldBeforeLoginCallback = (
     password: string;
     additionalData?: { [k: string]: any };
   }
-) => void;
+) => Promise<void>;
 /**
  * This is run before the transaction is committed, and you can perform
  * additional functions on the transaction, which is available in `user.$nymph`.
  */
-export type TilmeldAfterLoginCallback = (user: User & UserData) => void;
-export type TilmeldBeforeLogoutCallback = (user: User & UserData) => void;
-export type TilmeldAfterLogoutCallback = (user: User & UserData) => void;
+export type TilmeldAfterLoginCallback = (
+  user: User & UserData
+) => Promise<void>;
+export type TilmeldBeforeLogoutCallback = (
+  user: User & UserData
+) => Promise<void>;
+export type TilmeldAfterLogoutCallback = (
+  user: User & UserData
+) => Promise<void>;
 
 export type UserData = {
   /**
@@ -482,7 +488,7 @@ export default class User extends AbleObject<UserData> {
     }
     const user = await this.tilmeld.User.factoryUsername(data.username);
     const result: { result: boolean; message: string; user?: User & UserData } =
-      user.$login(data);
+      await user.$login(data);
     if (result.result) {
       user.$updateDataProtection();
       result.user = user;
@@ -490,7 +496,7 @@ export default class User extends AbleObject<UserData> {
     return result;
   }
 
-  public $login(data: {
+  public async $login(data: {
     username: string;
     password: string;
     additionalData?: { [k: string]: any };
@@ -513,7 +519,7 @@ export default class User extends AbleObject<UserData> {
       for (let callback of (this.constructor as typeof User)
         .beforeLoginCallbacks) {
         if (callback) {
-          callback(this, data);
+          await callback(this, data);
         }
       }
     } catch (e: any) {
@@ -531,7 +537,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLoginCallbacks) {
       if (callback) {
-        callback(this);
+        await callback(this);
       }
     }
 
@@ -543,14 +549,14 @@ export default class User extends AbleObject<UserData> {
    * Log a user out of the system.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
-  public $logout() {
+  public async $logout() {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
 
     try {
       for (let callback of (this.constructor as typeof User)
         .beforeLogoutCallbacks) {
         if (callback) {
-          callback(this);
+          await callback(this);
         }
       }
     } catch (e: any) {
@@ -565,7 +571,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLogoutCallbacks) {
       if (callback) {
-        callback(this);
+        await callback(this);
       }
     }
 
@@ -1777,7 +1783,7 @@ export default class User extends AbleObject<UserData> {
       );
     }
     if (tilmeld.User.current(true).$is(this)) {
-      this.$logout();
+      await this.$logout();
     }
     return await super.$delete();
   }

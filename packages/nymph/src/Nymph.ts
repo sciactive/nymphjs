@@ -190,7 +190,7 @@ export default class Nymph {
     const result = this.driver.connect();
     for (let callback of this.connectCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -205,7 +205,7 @@ export default class Nymph {
     const result = this.driver.disconnect();
     for (let callback of this.disconnectCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -220,7 +220,7 @@ export default class Nymph {
   ) {
     for (let callback of this.queryCallbacks) {
       if (callback) {
-        callback(this, options, selectors);
+        await callback(this, options, selectors);
       }
     }
   }
@@ -292,13 +292,13 @@ export default class Nymph {
   public async newUID(name: string): Promise<number | null> {
     for (let callback of this.beforeNewUIDCallbacks) {
       if (callback) {
-        callback(this, name);
+        await callback(this, name);
       }
     }
     const result = this.driver.newUID(name);
     for (let callback of this.afterNewUIDCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -323,13 +323,13 @@ export default class Nymph {
   public async setUID(name: string, value: number): Promise<boolean> {
     for (let callback of this.beforeSetUIDCallbacks) {
       if (callback) {
-        callback(this, name, value);
+        await callback(this, name, value);
       }
     }
     const result = this.driver.setUID(name, value);
     for (let callback of this.afterSetUIDCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -344,13 +344,13 @@ export default class Nymph {
   public async deleteUID(name: string): Promise<boolean> {
     for (let callback of this.beforeDeleteUIDCallbacks) {
       if (callback) {
-        callback(this, name);
+        await callback(this, name);
       }
     }
     const result = this.driver.deleteUID(name);
     for (let callback of this.afterDeleteUIDCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -366,13 +366,13 @@ export default class Nymph {
   public async renameUID(oldName: string, newName: string): Promise<boolean> {
     for (let callback of this.beforeRenameUIDCallbacks) {
       if (callback) {
-        callback(this, oldName, newName);
+        await callback(this, oldName, newName);
       }
     }
     const result = this.driver.renameUID(oldName, newName);
     for (let callback of this.afterRenameUIDCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -392,13 +392,13 @@ export default class Nymph {
   public async saveEntity(entity: EntityInterface): Promise<boolean> {
     for (let callback of this.beforeSaveEntityCallbacks) {
       if (callback) {
-        callback(this, entity);
+        await callback(this, entity);
       }
     }
     const result = this.driver.saveEntity(entity);
     for (let callback of this.afterSaveEntityCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -581,7 +581,7 @@ export default class Nymph {
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
     for (let callback of this.beforeGetEntitiesCallbacks) {
       if (callback) {
-        callback(this, options, selectors);
+        await callback(this, options, selectors);
       }
     }
     return await this.driver.getEntities(options, ...selectors);
@@ -631,7 +631,7 @@ export default class Nymph {
     options.limit = 1;
     for (let callback of this.beforeGetEntityCallbacks) {
       if (callback) {
-        callback(this, options, selectors as Selector[]);
+        await callback(this, options, selectors as Selector[]);
       }
     }
     const entities = await this.driver.getEntities(
@@ -656,13 +656,13 @@ export default class Nymph {
   public async deleteEntity(entity: EntityInterface): Promise<boolean> {
     for (let callback of this.beforeDeleteEntityCallbacks) {
       if (callback) {
-        callback(this, entity);
+        await callback(this, entity);
       }
     }
     const result = this.driver.deleteEntity(entity);
     for (let callback of this.afterDeleteEntityCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;
@@ -681,13 +681,13 @@ export default class Nymph {
   ): Promise<boolean> {
     for (let callback of this.beforeDeleteEntityByIDCallbacks) {
       if (callback) {
-        callback(this, guid, className);
+        await callback(this, guid, className);
       }
     }
     const result = this.driver.deleteEntityByID(guid, className);
     for (let callback of this.afterDeleteEntityByIDCallbacks) {
       if (callback) {
-        callback(this, result);
+        await callback(this, result);
       }
     }
     return await result;

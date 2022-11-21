@@ -68,58 +68,64 @@ export default class PubSub {
   public static initPublisher(config: Partial<Config>, nymph: Nymph) {
     const configWithDefaults: Config = { ...defaults, ...config };
 
-    nymph.on('beforeSaveEntity', (nymph: Nymph, entity: EntityInterface) => {
-      const guid = entity.guid;
-      const etype = (entity.constructor as EntityConstructor).ETYPE;
+    nymph.on(
+      'beforeSaveEntity',
+      async (nymph: Nymph, entity: EntityInterface) => {
+        const guid = entity.guid;
+        const etype = (entity.constructor as EntityConstructor).ETYPE;
 
-      const off = nymph.on(
-        'afterSaveEntity',
-        async (_nymph: Nymph, result: Promise<boolean>) => {
-          off();
-          if (!(await result)) {
-            return;
+        const off = nymph.on(
+          'afterSaveEntity',
+          async (_nymph: Nymph, result: Promise<boolean>) => {
+            off();
+            if (!(await result)) {
+              return;
+            }
+            this.publish(
+              JSON.stringify({
+                action: 'publish',
+                event: guid == null ? 'create' : 'update',
+                guid: entity.guid,
+                entity: entity.toJSON(),
+                etype: etype,
+              }),
+              configWithDefaults
+            );
           }
-          this.publish(
-            JSON.stringify({
-              action: 'publish',
-              event: guid == null ? 'create' : 'update',
-              guid: entity.guid,
-              entity: entity.toJSON(),
-              etype: etype,
-            }),
-            configWithDefaults
-          );
-        }
-      );
-    });
+        );
+      }
+    );
 
-    nymph.on('beforeDeleteEntity', (nymph: Nymph, entity: EntityInterface) => {
-      const guid = entity.guid;
-      const etype = (entity.constructor as EntityConstructor).ETYPE;
+    nymph.on(
+      'beforeDeleteEntity',
+      async (nymph: Nymph, entity: EntityInterface) => {
+        const guid = entity.guid;
+        const etype = (entity.constructor as EntityConstructor).ETYPE;
 
-      const off = nymph.on(
-        'afterDeleteEntity',
-        async (_nymph: Nymph, result: Promise<boolean>) => {
-          off();
-          if (!(await result)) {
-            return;
+        const off = nymph.on(
+          'afterDeleteEntity',
+          async (_nymph: Nymph, result: Promise<boolean>) => {
+            off();
+            if (!(await result)) {
+              return;
+            }
+            this.publish(
+              JSON.stringify({
+                action: 'publish',
+                event: 'delete',
+                guid: guid,
+                etype: etype,
+              }),
+              configWithDefaults
+            );
           }
-          this.publish(
-            JSON.stringify({
-              action: 'publish',
-              event: 'delete',
-              guid: guid,
-              etype: etype,
-            }),
-            configWithDefaults
-          );
-        }
-      );
-    });
+        );
+      }
+    );
 
     nymph.on(
       'beforeDeleteEntityByID',
-      (nymph: Nymph, guid: string, className?: string) => {
+      async (nymph: Nymph, guid: string, className?: string) => {
         try {
           const etype = nymph.getEntityClass(className ?? 'Entity').ETYPE;
 
@@ -147,7 +153,7 @@ export default class PubSub {
       }
     );
 
-    nymph.on('beforeNewUID', (nymph: Nymph, name: string) => {
+    nymph.on('beforeNewUID', async (nymph: Nymph, name: string) => {
       const off = nymph.on(
         'afterNewUID',
         async (_nymph: Nymph, result: Promise<number | null>) => {
@@ -169,30 +175,33 @@ export default class PubSub {
       );
     });
 
-    nymph.on('beforeSetUID', (nymph: Nymph, name: string, value: number) => {
-      const off = nymph.on(
-        'afterSetUID',
-        async (_nymph: Nymph, result: Promise<boolean>) => {
-          off();
-          if (!(await result)) {
-            return;
+    nymph.on(
+      'beforeSetUID',
+      async (nymph: Nymph, name: string, value: number) => {
+        const off = nymph.on(
+          'afterSetUID',
+          async (_nymph: Nymph, result: Promise<boolean>) => {
+            off();
+            if (!(await result)) {
+              return;
+            }
+            this.publish(
+              JSON.stringify({
+                action: 'publish',
+                event: 'setUID',
+                name: name,
+                value: value,
+              }),
+              configWithDefaults
+            );
           }
-          this.publish(
-            JSON.stringify({
-              action: 'publish',
-              event: 'setUID',
-              name: name,
-              value: value,
-            }),
-            configWithDefaults
-          );
-        }
-      );
-    });
+        );
+      }
+    );
 
     nymph.on(
       'beforeRenameUID',
-      (nymph: Nymph, oldName: string, newName: string) => {
+      async (nymph: Nymph, oldName: string, newName: string) => {
         const off = nymph.on(
           'afterRenameUID',
           async (_nymph: Nymph, result: Promise<boolean>) => {
@@ -214,7 +223,7 @@ export default class PubSub {
       }
     );
 
-    nymph.on('beforeDeleteUID', (nymph: Nymph, name: string) => {
+    nymph.on('beforeDeleteUID', async (nymph: Nymph, name: string) => {
       const off = nymph.on(
         'afterDeleteUID',
         async (_nymph: Nymph, result: Promise<boolean>) => {

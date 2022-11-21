@@ -150,7 +150,7 @@ export default class Tilmeld implements TilmeldInterface {
 
   private initAccessControl() {
     // Check for the skip access control option and add AC selectors.
-    const handleQuery = function (
+    const handleQuery = async function (
       nymph: Nymph,
       options: Options,
       selectors: FormattedSelector[]
@@ -191,7 +191,7 @@ export default class Tilmeld implements TilmeldInterface {
     handleQuery.skipOnClone = true;
 
     // Filter entities being deleted for user permissions.
-    const checkPermissionsDelete = function (
+    const checkPermissionsDelete = async function (
       nymph: Nymph,
       entity: EntityInterface
     ) {
@@ -210,7 +210,7 @@ export default class Tilmeld implements TilmeldInterface {
     checkPermissionsDelete.skipOnClone = true;
 
     // Filter entities being deleted for user permissions.
-    const checkPermissionsDeleteByID = function (
+    const checkPermissionsDeleteByID = async function (
       nymph: Nymph,
       guid: string,
       className?: string
@@ -227,7 +227,7 @@ export default class Tilmeld implements TilmeldInterface {
 
     // Filter entities being saved for user permissions, and filter any
     // disallowed changes to AC properties.
-    const checkPermissionsSaveAndFilterAcChanges = function (
+    const checkPermissionsSaveAndFilterAcChanges = async function (
       nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
@@ -394,7 +394,7 @@ export default class Tilmeld implements TilmeldInterface {
      * - acGroup = TilmeldAccessLevels.READ_ACCESS
      * - acOther = TilmeldAccessLevels.NO_ACCESS
      */
-    const addAccess = function (
+    const addAccess = async function (
       nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
@@ -438,7 +438,7 @@ export default class Tilmeld implements TilmeldInterface {
     };
     addAccess.skipOnClone = true;
 
-    const validate = function (
+    const validate = async function (
       _nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
