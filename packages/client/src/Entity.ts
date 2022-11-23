@@ -524,7 +524,7 @@ export default class Entity<T extends EntityData = EntityData>
     const mdate = this.mdate;
 
     await this.$nymph.patchEntity(this);
-    return mdate === this.mdate;
+    return mdate !== this.mdate;
   }
 
   public $ready() {
