@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.4](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.3...v1.0.0-beta.4) (2022-11-23)
+
+### Bug Fixes
+
+- client entity patch returning opposite result ([c29260c](https://github.com/sciactive/nymphjs/commit/c29260c6c9037134dbf51091810823edcab44b4a))
+
 # [1.0.0-beta.3](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.2...v1.0.0-beta.3) (2022-11-21)
 
 ### Bug Fixes
