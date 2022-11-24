@@ -633,7 +633,8 @@ export default class User extends AbleObject<UserData> {
     this.$referenceWake();
 
     if (
-      input.data.abilities?.indexOf('system/admin') !== -1 &&
+      'abilities' in input.data &&
+      input.data.abilities.indexOf('system/admin') !== -1 &&
       this.$data.abilities?.indexOf('system/admin') === -1 &&
       tilmeld.gatekeeper('tilmeld/admin') &&
       !tilmeld.gatekeeper('system/admin')
@@ -652,7 +653,8 @@ export default class User extends AbleObject<UserData> {
     this.$referenceWake();
 
     if (
-      patch.set.abilities?.indexOf('system/admin') !== -1 &&
+      'abilities' in patch.set &&
+      patch.set.abilities.indexOf('system/admin') !== -1 &&
       this.$data.abilities?.indexOf('system/admin') === -1 &&
       tilmeld.gatekeeper('tilmeld/admin') &&
       !tilmeld.gatekeeper('system/admin')
