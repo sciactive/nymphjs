@@ -105,6 +105,7 @@ export default class Tilmeld implements TilmeldInterface {
    */
   public init(nymph: Nymph) {
     this.nymph = nymph;
+    const tilmeld = this;
 
     // Set up access control hooks when Nymph is called.
     if (this.nymph.driver == null) {
@@ -112,15 +113,17 @@ export default class Tilmeld implements TilmeldInterface {
     }
 
     // Configure the classes.
-    class NymphUser extends User {}
-    NymphUser.nymph = this.nymph;
-    NymphUser.tilmeld = this;
+    class NymphUser extends User {
+      static nymph: Nymph = nymph;
+      static tilmeld: Tilmeld = tilmeld;
+    }
     (NymphUser as any).skipOnClone = true;
     this.User = NymphUser;
     this.nymph.addEntityClass(NymphUser);
-    class NymphGroup extends Group {}
-    NymphGroup.nymph = this.nymph;
-    NymphGroup.tilmeld = this;
+    class NymphGroup extends Group {
+      static nymph: Nymph = nymph;
+      static tilmeld: Tilmeld = tilmeld;
+    }
     (NymphUser as any).skipOnClone = true;
     this.Group = NymphGroup;
     this.nymph.addEntityClass(NymphGroup);

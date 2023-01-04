@@ -87,16 +87,27 @@ export default class Nymph {
   private beforeDeleteUIDCallbacks: NymphBeforeDeleteUIDCallback[] = [];
   private afterDeleteUIDCallbacks: NymphAfterDeleteUIDCallback[] = [];
 
+  /**
+   * Add your class to this instance.
+   *
+   * This will create a class that extends your class within this instance of
+   * Nymph. Because this creates a subclass, don't use the class returned from
+   * `getEntityClass` to check with `instanceof`.
+   */
   public addEntityClass(entityClass: EntityConstructor) {
-    this.entityClasses[entityClass.class] = entityClass;
-    entityClass.nymph = this;
+    const nymph = this;
+    class NymphEntity extends entityClass {
+      static nymph: Nymph = nymph;
+    }
+    this.entityClasses[entityClass.class] = NymphEntity;
   }
 
+  /**
+   * Get the class that uses the specified class name.
+   */
   public getEntityClass(className: string): EntityConstructor {
     if (className in this.entityClasses) {
-      const EntityClass = this.entityClasses[className];
-      EntityClass.nymph = this;
-      return EntityClass;
+      return this.entityClasses[className];
     }
     throw new ClassNotAvailableError('Tried to use class: ' + className);
   }
