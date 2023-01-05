@@ -72,6 +72,38 @@ The Query Parser is a utility for creating complex Nymph entity queries from a s
 
 The GUID and unique code generators are used to generate new GUIDs for Nymph objects and various random unique strings.
 
+# Development
+
+To develop NymphJS, checkout the repo and run:
+
+```sh
+npm i
+npm run bootstrap
+rm packages/*/package-lock.json
+```
+
+Once you make changes in one package, you can either build that package directly or build all packages with `bootstrap`, then the other packages will be aware of the changes.
+
+## Testing
+
+When you're ready to run all the tests, in a separate shell, bring up the test DBs.
+
+```sh
+npm run test:db:run
+```
+
+Now in your main terminal, you can run the tests.
+
+```sh
+npm run test
+```
+
+Once you're all done, in your main terminal, you can bring down the test DBs (don't use Ctrl-C where the tests are running).
+
+```sh
+npm run test:db:stop
+```
+
 # License
 
 Copyright 2021 SciActive Inc
