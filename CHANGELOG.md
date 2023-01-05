@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.6](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.5...v1.0.0-beta.6) (2023-01-05)
+
+### Bug Fixes
+
+- extend class with correct nymph property when added to instance ([1d63f45](https://github.com/sciactive/nymphjs/commit/1d63f457c16de852322d81fd9fdc25e3eb841c8d))
+
+### Features
+
+- addEntityClass now returns the new class, which is required to use the class ([e752c3e](https://github.com/sciactive/nymphjs/commit/e752c3e50796656bdea8f8525932ede07c8a5378))
+
 # [1.0.0-beta.5](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.4...v1.0.0-beta.5) (2022-11-24)
 
 ### Bug Fixes

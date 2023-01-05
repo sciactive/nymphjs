@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/query-parser",
-  "version": "1.0.0-beta.5",
+  "version": "1.0.0-beta.6",
   "description": "NymphJS - Query Parse",
   "browser": "dist/index.js",
   "main": "lib/index.js",
@@ -36,7 +36,7 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@nymphjs/client": "^1.0.0-beta.5",
+    "@nymphjs/client": "^1.0.0-beta.6",
     "@tsconfig/recommended": "^1.0.1",
     "@types/jest": "^29.2.5",
     "jest": "^29.3.1",
