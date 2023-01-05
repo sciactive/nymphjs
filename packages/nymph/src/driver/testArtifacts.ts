@@ -3,16 +3,20 @@ import strtotime from 'locutus/php/datetime/strtotime';
 import { guid } from '@nymphjs/guid';
 
 import type Nymph from '../Nymph';
-import { TestBModel, TestModel, TestModelData } from '../testArtifacts';
+import {
+  TestBModel as TestBModelClass,
+  TestModel as TestModelClass,
+  TestModelData,
+} from '../testArtifacts';
 
 export function QueriesTest(
   nymph: Nymph,
   it: (name: string, fn: () => void) => void
 ) {
-  nymph.addEntityClass(TestModel);
-  nymph.addEntityClass(TestBModel);
+  const TestModel = nymph.addEntityClass(TestModelClass);
+  const TestBModel = nymph.addEntityClass(TestBModelClass);
 
-  let testEntity: TestModel & TestModelData;
+  let testEntity: TestModelClass & TestModelData;
   let testGuid: string;
   let refGuid: string;
   let createdMultiple = false;
@@ -43,7 +47,7 @@ This one's zip code is 92064.`;
     expect(testEntity.guid).not.toBeNull();
     testGuid = testEntity.guid as string;
 
-    const entityReferenceTest: TestModel & TestModelData = new TestModel();
+    const entityReferenceTest: TestModelClass & TestModelData = new TestModel();
     entityReferenceTest.string = 'wrong';
     entityReferenceTest.timestamp = strtotime('-2 days') * 1000;
     expect(await entityReferenceTest.$save()).toEqual(true);
@@ -59,7 +63,7 @@ This one's zip code is 92064.`;
     testEntity = nymph.driver.getEntitySync(
       { class: TestModel },
       testGuid
-    ) as TestModel & TestModelData;
+    ) as TestModelClass & TestModelData;
     expect(testEntity).toBeInstanceOf(TestModel);
     expect(testEntity.guid).toEqual(testGuid);
 
@@ -67,7 +71,7 @@ This one's zip code is 92064.`;
     testEntity = (await nymph.getEntity(
       { class: TestModel },
       testGuid
-    )) as TestModel & TestModelData;
+    )) as TestModelClass & TestModelData;
     expect(testEntity).toBeInstanceOf(TestModel);
     expect(testEntity.guid).toEqual(testGuid);
   }
@@ -191,7 +195,7 @@ This one's zip code is 92064.`;
     testEntity = (await transaction.getEntity(
       { class: TestModel },
       testGuid
-    )) as TestModel & TestModelData;
+    )) as TestModelClass & TestModelData;
 
     expect(testEntity.guid).toEqual(testGuid);
 
@@ -1728,9 +1732,6 @@ export function UIDTest(
   nymph: Nymph,
   it: (name: string, fn: () => void) => void
 ) {
-  nymph.addEntityClass(TestModel);
-  nymph.addEntityClass(TestBModel);
-
   it('delete old test data', async () => {
     expect(await nymph.deleteUID('TestUID')).toEqual(true);
     expect(await nymph.deleteUID('NewUID')).toEqual(true);
@@ -1772,8 +1773,8 @@ export function ExportImportTest(
   nymph: Nymph,
   it: (name: string, fn: () => void) => void
 ) {
-  nymph.addEntityClass(TestModel);
-  nymph.addEntityClass(TestBModel);
+  const TestModel = nymph.addEntityClass(TestModelClass);
+  const TestBModel = nymph.addEntityClass(TestBModelClass);
 
   async function deleteTestData() {
     let all = await nymph.getEntities({ class: TestModel });

@@ -118,15 +118,13 @@ export default class Tilmeld implements TilmeldInterface {
       static tilmeld: Tilmeld = tilmeld;
     }
     (NymphUser as any).skipOnClone = true;
-    this.User = NymphUser;
-    this.nymph.addEntityClass(NymphUser);
+    this.User = this.nymph.addEntityClass(NymphUser);
     class NymphGroup extends Group {
       static nymph: Nymph = nymph;
       static tilmeld: Tilmeld = tilmeld;
     }
     (NymphUser as any).skipOnClone = true;
-    this.Group = NymphGroup;
-    this.nymph.addEntityClass(NymphGroup);
+    this.Group = this.nymph.addEntityClass(NymphGroup);
 
     this.initAccessControl();
     if (this.request != null && !this.skipAuthenticate) {

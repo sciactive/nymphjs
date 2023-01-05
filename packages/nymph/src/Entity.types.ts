@@ -271,7 +271,7 @@ export interface EntityInterface extends DataObjectInterface {
   $useSkipAc(useSkipAc: boolean): void;
 }
 
-export type EntityConstructor = (new (guid?: string) => EntityInterface) & {
+export type EntityConstructor = (new (...args: any[]) => EntityInterface) & {
   /**
    * The instance of Nymph to use for queries.
    */

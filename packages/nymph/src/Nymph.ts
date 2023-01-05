@@ -63,7 +63,7 @@ export default class Nymph {
   /**
    * The entity class for this instance of Nymph.
    */
-  public Entity: typeof Entity = Entity;
+  public Entity: typeof Entity;
 
   private connectCallbacks: NymphConnectCallback[] = [];
   private disconnectCallbacks: NymphDisconnectCallback[] = [];
@@ -91,15 +91,23 @@ export default class Nymph {
    * Add your class to this instance.
    *
    * This will create a class that extends your class within this instance of
-   * Nymph. Because this creates a subclass, don't use the class returned from
-   * `getEntityClass` to check with `instanceof`.
+   * Nymph and return it. You can then use this class's constructor and methods,
+   * which will use this instance of Nymph.
+   *
+   * Because this creates a subclass, don't use the class
+   * returned from `getEntityClass` to check with `instanceof`.
    */
-  public addEntityClass(entityClass: EntityConstructor) {
+  public addEntityClass<T extends EntityConstructor>(entityClass: T): T {
     const nymph = this;
     class NymphEntity extends entityClass {
       static nymph: Nymph = nymph;
+
+      constructor(...args: any[]) {
+        super(...args);
+      }
     }
     this.entityClasses[entityClass.class] = NymphEntity;
+    return NymphEntity;
   }
 
   /**
@@ -126,14 +134,13 @@ export default class Nymph {
   ) {
     this.config = { ...defaults, ...config };
     this.driver = driver;
+
+    this.addEntityClass(Entity);
+    this.Entity = this.getEntityClass('Entity') as typeof Entity;
+
     if (typeof tilmeld !== 'undefined') {
       this.tilmeld = tilmeld;
     }
-
-    class NymphEntity<T extends EntityData = EntityData> extends Entity<T> {}
-    NymphEntity.nymph = this;
-    this.Entity = NymphEntity;
-    this.addEntityClass(NymphEntity);
 
     this.driver.init(this);
     if (this.tilmeld) {
