@@ -1,7 +1,7 @@
 import { Config, ConfigDefaults as defaults } from './conf';
 import { NymphDriver } from './driver';
 import Entity from './Entity';
-import { EntityConstructor, EntityData, EntityInterface } from './Entity.types';
+import { EntityConstructor, EntityInterface } from './Entity.types';
 import { ClassNotAvailableError } from './errors';
 import type {
   Selector,
@@ -135,8 +135,7 @@ export default class Nymph {
     this.config = { ...defaults, ...config };
     this.driver = driver;
 
-    this.addEntityClass(Entity);
-    this.Entity = this.getEntityClass('Entity') as typeof Entity;
+    this.Entity = this.addEntityClass(Entity);
 
     if (typeof tilmeld !== 'undefined') {
       this.tilmeld = tilmeld;
@@ -154,7 +153,11 @@ export default class Nymph {
    * @returns A clone of this instance.
    */
   public clone() {
-    const nymph = new Nymph(this.config, this.driver, this.tilmeld?.clone());
+    const nymph = new Nymph(
+      this.config,
+      this.driver.clone(),
+      this.tilmeld?.clone()
+    );
     for (const name in this.entityClasses) {
       if (name === 'Entity' || (this.entityClasses[name] as any).skipOnClone) {
         continue;
@@ -250,7 +253,7 @@ export default class Nymph {
    * Transactions will nest as long as every name is unique. Internally, Nymph
    * uses names prefixed with "nymph-".
    *
-   * @returns True on success, false on failure.
+   * @returns A new instance of Nymph that should be used for the transaction.
    */
   public async startTransaction(name: string): Promise<Nymph> {
     return await this.driver.startTransaction(name);
@@ -258,6 +261,8 @@ export default class Nymph {
 
   /**
    * Commit the named transaction.
+   *
+   * After this is called, the transaction instance should be discarded.
    *
    * @returns True on success, false on failure.
    */
@@ -267,6 +272,8 @@ export default class Nymph {
 
   /**
    * Rollback the named transaction.
+   *
+   * After this is called, the transaction instance should be discarded.
    *
    * @returns True on success, false on failure.
    */

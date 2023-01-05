@@ -21,16 +21,24 @@ import {
   SQLite3DriverConfigDefaults as defaults,
 } from './conf';
 
+class InternalStore {
+  public link: SQLite3.Database;
+  public connected: boolean = false;
+  public transactionsStarted = 0;
+
+  constructor(link: SQLite3.Database) {
+    this.link = link;
+  }
+}
+
 /**
  * The SQLite3 Nymph database driver.
  */
 export default class SQLite3Driver extends NymphDriver {
   public config: SQLite3DriverConfig;
   protected prefix: string;
-  protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
-  protected link: SQLite3.Database;
-  protected transactionsStarted = 0;
+  protected store: InternalStore;
 
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
@@ -42,11 +50,24 @@ export default class SQLite3Driver extends NymphDriver {
     return '"' + input.replace(/"/g, () => '""') + '"';
   }
 
-  constructor(config: Partial<SQLite3DriverConfig>) {
+  constructor(config: Partial<SQLite3DriverConfig>, store?: InternalStore) {
     super();
     this.config = { ...defaults, ...config };
     this.prefix = this.config.prefix;
-    this.connect();
+    if (store) {
+      this.store = store;
+    } else {
+      this.connect();
+    }
+  }
+
+  /**
+   * This is used internally by Nymph. Don't call it yourself.
+   *
+   * @returns A clone of this instance.
+   */
+  public clone() {
+    return new SQLite3Driver(this.config, this.store);
   }
 
   /**
@@ -56,39 +77,51 @@ export default class SQLite3Driver extends NymphDriver {
    */
   public async connect() {
     const { filename, fileMustExist, timeout, readonly, verbose } = this.config;
+
+    if (this.store && this.store.connected) {
+      return true;
+    }
+
     // Connecting
-    if (!this.connected) {
-      try {
-        this.link = new SQLite3(filename, {
-          readonly,
-          fileMustExist,
-          timeout,
-          verbose,
-        });
-        this.connected = true;
-        // Set database and connection options.
-        this.link.pragma('encoding = "UTF-8";');
-        this.link.pragma('foreign_keys = 1;');
-        this.link.pragma('case_sensitive_like = 1;');
-        // Create the preg_match and regexp functions.
-        this.link.function(
-          'regexp',
-          { deterministic: true },
-          (pattern: string, subject: string) =>
-            this.posixRegexMatch(pattern, subject) ? 1 : 0
+    try {
+      const link = new SQLite3(filename, {
+        readonly,
+        fileMustExist,
+        timeout,
+        verbose,
+      });
+
+      if (!this.store) {
+        this.store = new InternalStore(link);
+      } else {
+        this.store.link = link;
+      }
+      this.store.connected = true;
+      // Set database and connection options.
+      this.store.link.pragma('encoding = "UTF-8";');
+      this.store.link.pragma('foreign_keys = 1;');
+      this.store.link.pragma('case_sensitive_like = 1;');
+      // Create the preg_match and regexp functions.
+      this.store.link.function(
+        'regexp',
+        { deterministic: true },
+        (pattern: string, subject: string) =>
+          this.posixRegexMatch(pattern, subject) ? 1 : 0
+      );
+    } catch (e: any) {
+      if (this.store) {
+        this.store.connected = false;
+      }
+      if (filename === ':memory:') {
+        throw new NotConfiguredError(
+          "It seems the config hasn't been set up correctly."
         );
-      } catch (e: any) {
-        this.connected = false;
-        if (filename === ':memory:') {
-          throw new NotConfiguredError(
-            "It seems the config hasn't been set up correctly."
-          );
-        } else {
-          throw new UnableToConnectError('Could not connect: ' + e?.message);
-        }
+      } else {
+        throw new UnableToConnectError('Could not connect: ' + e?.message);
       }
     }
-    return this.connected;
+
+    return this.store.connected;
   }
 
   /**
@@ -97,16 +130,16 @@ export default class SQLite3Driver extends NymphDriver {
    * @returns Whether this instance is connected to a SQLite3 database.
    */
   public async disconnect() {
-    if (this.connected) {
-      this.link.exec('PRAGMA optimize;');
-      this.link.close();
-      this.connected = false;
+    if (this.store.connected) {
+      this.store.link.exec('PRAGMA optimize;');
+      this.store.link.close();
+      this.store.connected = false;
     }
-    return this.connected;
+    return this.store.connected;
   }
 
   public async inTransaction() {
-    return this.transactionsStarted > 0;
+    return this.store.transactionsStarted > 0;
   }
 
   /**
@@ -115,7 +148,7 @@ export default class SQLite3Driver extends NymphDriver {
    * @returns Whether this instance is connected to a SQLite3 database.
    */
   public isConnected() {
-    return this.connected;
+    return this.store.connected;
   }
 
   /**
@@ -326,7 +359,7 @@ export default class SQLite3Driver extends NymphDriver {
     }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
-      () => this.link.prepare(query).iterate(params),
+      () => this.store.link.prepare(query).iterate(params),
       `${query} -- ${JSON.stringify(params)}`,
       etypes
     );
@@ -340,7 +373,7 @@ export default class SQLite3Driver extends NymphDriver {
     }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
-      () => this.link.prepare(query).get(params),
+      () => this.store.link.prepare(query).get(params),
       `${query} -- ${JSON.stringify(params)}`,
       etypes
     );
@@ -354,7 +387,7 @@ export default class SQLite3Driver extends NymphDriver {
     }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
-      () => this.link.prepare(query).run(params),
+      () => this.store.link.prepare(query).run(params),
       `${query} -- ${JSON.stringify(params)}`,
       etypes
     );
@@ -366,11 +399,11 @@ export default class SQLite3Driver extends NymphDriver {
         'Transaction commit attempted without a name.'
       );
     }
-    if (this.transactionsStarted === 0) {
+    if (this.store.transactionsStarted === 0) {
       return true;
     }
     this.queryRun(`RELEASE SAVEPOINT ${SQLite3Driver.escape(name)};`);
-    this.transactionsStarted--;
+    this.store.transactionsStarted--;
     return true;
   }
 
@@ -1837,11 +1870,11 @@ export default class SQLite3Driver extends NymphDriver {
         'Transaction rollback attempted without a name.'
       );
     }
-    if (this.transactionsStarted === 0) {
+    if (this.store.transactionsStarted === 0) {
       return true;
     }
     this.queryRun(`ROLLBACK TO SAVEPOINT ${SQLite3Driver.escape(name)};`);
-    this.transactionsStarted--;
+    this.store.transactionsStarted--;
     return true;
   }
 
@@ -2044,7 +2077,7 @@ export default class SQLite3Driver extends NymphDriver {
       );
     }
     this.queryRun(`SAVEPOINT ${SQLite3Driver.escape(name)};`);
-    this.transactionsStarted++;
+    this.store.transactionsStarted++;
     return this.nymph;
   }
 }

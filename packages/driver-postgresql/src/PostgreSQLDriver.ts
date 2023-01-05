@@ -82,6 +82,19 @@ export default class PostgreSQLDriver extends NymphDriver {
     }
   }
 
+  /**
+   * This is used internally by Nymph. Don't call it yourself.
+   *
+   * @returns A clone of this instance.
+   */
+  public clone() {
+    return new PostgreSQLDriver(
+      this.config,
+      this.link,
+      this.transaction ?? undefined
+    );
+  }
+
   private getConnection(): Promise<PostgreSQLDriverConnection> {
     if (this.transaction != null && this.transaction.connection != null) {
       return Promise.resolve(this.transaction.connection);
@@ -2682,8 +2695,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     }
 
     const nymph = this.nymph.clone();
-    nymph.driver = new PostgreSQLDriver(this.config, this.link, transaction);
-    nymph.driver.init(nymph);
+    (nymph.driver as PostgreSQLDriver).transaction = transaction;
 
     return nymph;
   }

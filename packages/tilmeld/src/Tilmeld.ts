@@ -84,6 +84,7 @@ export default class Tilmeld implements TilmeldInterface {
 
   /**
    * This is used internally by Nymph. Don't call it yourself.
+   *
    * @returns A clone of this instance.
    */
   public clone() {

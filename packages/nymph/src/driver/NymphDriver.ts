@@ -54,7 +54,18 @@ export default abstract class NymphDriver {
    */
   private putDataCounter = 0;
 
+  /**
+   * This is used internally by Nymph. Don't call it yourself.
+   *
+   * @returns A clone of this instance.
+   */
+  abstract clone(): NymphDriver;
+
+  /**
+   * Connect to the data store.
+   */
   abstract connect(): Promise<boolean>;
+
   abstract isConnected(): boolean;
   abstract startTransaction(name: string): Promise<Nymph>;
   abstract commit(name: string): Promise<boolean>;
@@ -66,7 +77,12 @@ export default abstract class NymphDriver {
   ): Promise<boolean>;
   abstract deleteEntityByID(guid: string, className?: string): Promise<boolean>;
   abstract deleteUID(name: string): Promise<boolean>;
+
+  /**
+   * Disconnect from the data store.
+   */
   abstract disconnect(): Promise<boolean>;
+
   protected abstract exportEntities(
     writeLine: (line: string) => void
   ): Promise<void>;

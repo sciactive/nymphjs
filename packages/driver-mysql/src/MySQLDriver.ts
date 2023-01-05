@@ -81,6 +81,19 @@ export default class MySQLDriver extends NymphDriver {
     }
   }
 
+  /**
+   * This is used internally by Nymph. Don't call it yourself.
+   *
+   * @returns A clone of this instance.
+   */
+  public clone() {
+    return new MySQLDriver(
+      this.config,
+      this.link,
+      this.transaction ?? undefined
+    );
+  }
+
   private getConnection(): Promise<MySQLType.PoolConnection> {
     if (this.transaction != null && this.transaction.connection != null) {
       return Promise.resolve(this.transaction.connection);
@@ -2518,8 +2531,7 @@ export default class MySQLDriver extends NymphDriver {
     }
 
     const nymph = this.nymph.clone();
-    nymph.driver = new MySQLDriver(this.config, this.link, transaction);
-    nymph.driver.init(nymph);
+    (nymph.driver as MySQLDriver).transaction = transaction;
 
     return nymph;
   }
