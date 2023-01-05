@@ -68,6 +68,10 @@ The Nymph Entity Sorter lets you sort entities by their properties, including hi
 
 The Query Parser is a utility for creating complex Nymph entity queries from a simple text input. Essentially, it turns a string into a Nymph query.
 
+## [GUID / Unique Code Generator](packages/guid)
+
+The GUID and unique code generators are used to generate new GUIDs for Nymph objects and various random unique strings.
+
 # License
 
 Copyright 2021 SciActive Inc
