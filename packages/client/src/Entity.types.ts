@@ -208,7 +208,7 @@ export interface EntityInterface extends DataObjectInterface {
   $toReference(): EntityReference | EntityInterface;
 }
 
-export type EntityConstructor = (new () => EntityInterface) & {
+export type EntityConstructor = (new (...args: any[]) => EntityInterface) & {
   /**
    * The instance of Nymph to use for queries.
    */

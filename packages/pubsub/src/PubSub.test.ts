@@ -4,8 +4,8 @@ import { Nymph as NymphServer } from '@nymphjs/nymph';
 import { Nymph, PubSub } from '@nymphjs/client-node';
 import createRestServer from '@nymphjs/server';
 import {
-  EmployeeModel,
-  Employee,
+  EmployeeModel as EmployeeModelClass,
+  Employee as EmployeeClass,
   EmployeeData,
 } from '@nymphjs/server/dist/testArtifacts.js';
 
@@ -23,7 +23,7 @@ const pubSubConfig = {
 };
 
 const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
-nymphServer.addEntityClass(EmployeeModel);
+const EmployeeModel = nymphServer.addEntityClass(EmployeeModelClass);
 PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
 const app = express();
@@ -39,7 +39,7 @@ const nymphOptions = {
 };
 const nymph = new Nymph(nymphOptions);
 const pubsub = new PubSub(nymphOptions, nymph);
-nymph.addEntityClass(Employee);
+const Employee = nymph.addEntityClass(EmployeeClass);
 
 describe('Nymph REST Server and Client', () => {
   async function createJane() {
@@ -91,7 +91,7 @@ describe('Nymph REST Server and Client', () => {
   }
 
   it('notified of new match', async () => {
-    let jane: Promise<Employee>;
+    let jane: Promise<EmployeeClass>;
 
     await new Promise((resolve) => {
       let updated = false;
@@ -120,7 +120,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('notified of entity update', async () => {
     let jane = await createJane();
-    let entities: (Employee & EmployeeData)[] = [];
+    let entities: (EmployeeClass & EmployeeData)[] = [];
 
     await new Promise((resolve) => {
       let mdate = 0;
@@ -155,7 +155,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('notified of entity update for qref query', async () => {
     let [jane, john] = await createBossJane();
-    let entities: (Employee & EmployeeData)[] = [];
+    let entities: (EmployeeClass & EmployeeData)[] = [];
 
     await new Promise((resolve) => {
       let mdate = 0;
@@ -193,7 +193,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('notified of new match for qref query', async () => {
     let [jane, john] = await createBossJane();
-    let entities: (Employee & EmployeeData)[] = [];
+    let entities: (EmployeeClass & EmployeeData)[] = [];
 
     await new Promise((resolve) => {
       if (jane.guid == null || john.guid == null) {
@@ -230,7 +230,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('notified of removed match for qref query', async () => {
     let [jane, john] = await createBossJane();
-    let entities: (Employee & EmployeeData)[] = [];
+    let entities: (EmployeeClass & EmployeeData)[] = [];
 
     await new Promise((resolve) => {
       if (jane.guid == null || john.guid == null) {
@@ -267,7 +267,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('receives correct number of updates', async () => {
     let jane = await createJane();
-    let entities: (Employee & EmployeeData)[] = [];
+    let entities: (EmployeeClass & EmployeeData)[] = [];
 
     // Wait for change to propagate. (Only needed since we're not going across network.)
     await new Promise((resolve) => setTimeout(() => resolve(true), 10));
@@ -306,7 +306,7 @@ describe('Nymph REST Server and Client', () => {
 
   it('notified of entity delete', async () => {
     let jane = await createJane();
-    let entities: (Employee & EmployeeData)[] = [];
+    let entities: (EmployeeClass & EmployeeData)[] = [];
 
     // Wait for change to propagate. (Only needed since we're not going across network.)
     await new Promise((resolve) => setTimeout(() => resolve(true), 10));
@@ -342,8 +342,8 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('entire match is updated', async () => {
-    let jane: (Employee & EmployeeData) | undefined;
-    let entities: (Employee & EmployeeData)[] = [];
+    let jane: (EmployeeClass & EmployeeData) | undefined;
+    let entities: (EmployeeClass & EmployeeData)[] = [];
     await createJane();
 
     // Wait for change to propagate. (Only needed since we're not going across network.)

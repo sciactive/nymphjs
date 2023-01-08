@@ -59,24 +59,31 @@ export class MockNymph {
   private entityClasses: { [k: string]: EntityConstructor } = {};
   public driver: MockNymphDriver;
   public Tilmeld: any = undefined;
+  public Entity: typeof Entity;
 
   public constructor() {
     this.driver = new MockNymphDriver(this);
 
     // class NymphEntity extends Entity {}
-    this.addEntityClass(Entity);
+    this.Entity = this.addEntityClass(Entity);
   }
 
-  public addEntityClass(entityClass: EntityConstructor) {
-    this.entityClasses[entityClass.class] = entityClass;
-    entityClass.nymph = this as unknown as Nymph;
+  public addEntityClass<T extends EntityConstructor>(entityClass: T): T {
+    const nymph = this;
+    class NymphEntity extends entityClass {
+      static nymph: Nymph = nymph as unknown as Nymph;
+
+      constructor(...args: any[]) {
+        super(...args);
+      }
+    }
+    this.entityClasses[entityClass.class] = NymphEntity;
+    return NymphEntity;
   }
 
   public getEntityClass(className: string): EntityConstructor {
     if (className in this.entityClasses) {
-      const EntityClass = this.entityClasses[className];
-      EntityClass.nymph = this as unknown as Nymph;
-      return EntityClass;
+      return this.entityClasses[className];
     }
     throw new ClassNotAvailableError('Tried to use class: ' + className);
   }

@@ -170,15 +170,15 @@ export class Employee extends Entity<EmployeeData> {
   }
 
   static testStatic(value: number) {
-    return Employee.serverCallStatic('testStatic', [value]);
+    return this.serverCallStatic('testStatic', [value]);
   }
 
   static throwErrorStatic() {
-    return Employee.serverCallStatic('throwErrorStatic', []);
+    return this.serverCallStatic('throwErrorStatic', []);
   }
 
   static inaccessibleMethod() {
-    return Employee.serverCallStatic('inaccessibleMethod', []);
+    return this.serverCallStatic('inaccessibleMethod', []);
   }
 }
 

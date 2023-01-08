@@ -1,5 +1,9 @@
 import { MockNymph } from './testMocks';
-import { TestBModel, TestModel, TestModelData } from './testArtifacts';
+import {
+  TestBModel as TestBModelClass,
+  TestModel as TestModelClass,
+  TestModelData,
+} from './testArtifacts';
 import { cloneDeep } from 'lodash';
 
 const nymph = new MockNymph();
@@ -9,11 +13,11 @@ jest.mock('./Nymph', () => ({
   default: nymph,
 }));
 
-nymph.addEntityClass(TestModel);
-nymph.addEntityClass(TestBModel);
+const TestModel = nymph.addEntityClass(TestModelClass);
+const TestBModel = nymph.addEntityClass(TestBModelClass);
 
 let testEntity = TestModel.factorySync();
-let entityReferenceTest: TestModel & TestModelData;
+let entityReferenceTest: TestModelClass & TestModelData;
 let entityReferenceGuid: string;
 
 describe('Entity', () => {
@@ -71,7 +75,7 @@ describe('Entity', () => {
 
   it('array searching work', async () => {
     const testInArray = await TestModel.factory(testEntity.guid as string);
-    const array: (string | (TestModel & TestModelData))[] = [
+    const array: (string | (TestModelClass & TestModelData))[] = [
       'thing',
       testInArray,
     ];
@@ -198,7 +202,7 @@ describe('Entity', () => {
       'nymph_entity_reference',
       testEntity.guid as string,
       'TestModel',
-    ]) as TestModel & TestModelData;
+    ]) as TestModelClass & TestModelData;
 
     expect(entity.guid).toEqual(testEntity.guid);
     expect(entity.cdate).toEqual(testEntity.cdate);

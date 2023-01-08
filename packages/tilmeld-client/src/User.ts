@@ -127,46 +127,45 @@ export type AdminUserData = CurrentUserData & {
 
 let currentToken: string | null = null;
 
-export default class User extends Entity<UserData> {
-  /**
-   * Adds listeners to Nymph to handle authentication changes.
-   */
-  public static set nymph(value: Nymph) {
-    this.nymphValue = value;
+type InstanceStore = {
+  registerCallbacks: RegisterCallback[];
+  loginCallbacks: LoginCallback[];
+  logoutCallbacks: LogoutCallback[];
+  clientConfig?: ClientConfig;
+  clientConfigPromise?: Promise<ClientConfig>;
+  removeNymphResponseListener?: () => void;
+};
 
-    if (this.removeNymphResponseListener) {
-      this.removeNymphResponseListener();
+export default class User extends Entity<UserData> {
+  protected static stores = new WeakMap<Nymph, InstanceStore>();
+
+  // The name of the server class
+  public static class = 'User';
+
+  public static init(nymph: Nymph) {
+    let store: InstanceStore = {
+      registerCallbacks: [],
+      loginCallbacks: [],
+      logoutCallbacks: [],
+    };
+
+    if (User.stores.has(nymph)) {
+      const storeVal = User.stores.get(nymph);
+
+      if (storeVal) {
+        store = storeVal;
+      }
     }
-    this.removeNymphResponseListener = this.nymph.on('response', (response) =>
+
+    User.stores.set(nymph, store);
+
+    if (store.removeNymphResponseListener) {
+      store.removeNymphResponseListener();
+    }
+    store.removeNymphResponseListener = nymph.on('response', (response) =>
       this.handleToken(response)
     );
     this.handleToken();
-  }
-  public static get nymph() {
-    return this.nymphValue;
-  }
-  protected static nymphValue: Nymph;
-  // The name of the server class
-  public static class = 'User';
-  protected static registerCallbacks: RegisterCallback[] = [];
-  protected static loginCallbacks: LoginCallback[] = [];
-  protected static logoutCallbacks: LogoutCallback[] = [];
-  protected static clientConfig?: ClientConfig;
-  protected static clientConfigPromise?: Promise<ClientConfig>;
-  protected static removeNymphResponseListener?: () => void;
-
-  public static clone(): typeof User {
-    class UserClone extends User {
-      protected static nymphValue: Nymph;
-      protected static registerCallbacks: RegisterCallback[] = [];
-      protected static loginCallbacks: LoginCallback[] = [];
-      protected static logoutCallbacks: LogoutCallback[] = [];
-      protected static clientConfig?: ClientConfig;
-      protected static clientConfigPromise?: Promise<ClientConfig>;
-      protected static removeNymphResponseListener?: () => void;
-    }
-
-    return UserClone;
   }
 
   constructor(guid?: string) {
@@ -236,29 +235,41 @@ export default class User extends Entity<UserData> {
     password: string;
     additionalData?: { [k: string]: any };
   }): Promise<{ result: boolean; loggedin: boolean; message: string }> {
-    const UserClass = this.constructor as typeof User;
+    const store = User.stores.get(this.$nymph);
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph'
+      );
+    }
+
     const response = await this.$serverCall('$register', [data]);
     if (response.result) {
-      for (let i = 0; i < UserClass.registerCallbacks.length; i++) {
-        UserClass.registerCallbacks[i] && UserClass.registerCallbacks[i](this);
+      for (let i = 0; i < store.registerCallbacks.length; i++) {
+        store.registerCallbacks[i] && store.registerCallbacks[i](this);
       }
     }
     if (response.loggedin) {
-      UserClass.handleToken();
-      for (let i = 0; i < UserClass.loginCallbacks.length; i++) {
-        UserClass.loginCallbacks[i] && UserClass.loginCallbacks[i](this);
+      (this.constructor as typeof User).handleToken();
+      for (let i = 0; i < store.loginCallbacks.length; i++) {
+        store.loginCallbacks[i] && store.loginCallbacks[i](this);
       }
     }
     return response;
   }
 
   public async $logout(): Promise<{ result: boolean; message: string }> {
-    const UserClass = this.constructor as typeof User;
+    const store = User.stores.get(this.$nymph);
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph'
+      );
+    }
+
     const response = await this.$serverCall('$logout', []);
     if (response.result) {
-      UserClass.handleToken();
-      for (let i = 0; i < UserClass.logoutCallbacks.length; i++) {
-        UserClass.logoutCallbacks[i] && UserClass.logoutCallbacks[i](this);
+      (this.constructor as typeof User).handleToken();
+      for (let i = 0; i < store.logoutCallbacks.length; i++) {
+        store.logoutCallbacks[i] && store.logoutCallbacks[i](this);
       }
     }
     return response;
@@ -300,11 +311,18 @@ export default class User extends Entity<UserData> {
     message: string;
     user?: User & CurrentUserData;
   }> {
+    const store = User.stores.get(this.nymph);
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph'
+      );
+    }
+
     const response = await this.serverCallStatic('loginUser', [data]);
     if (response.result) {
       this.handleToken();
-      for (let i = 0; i < this.loginCallbacks.length; i++) {
-        this.loginCallbacks[i] && this.loginCallbacks[i](response.user);
+      for (let i = 0; i < store.loginCallbacks.length; i++) {
+        store.loginCallbacks[i] && store.loginCallbacks[i](response.user);
       }
     }
     return response;
@@ -326,20 +344,27 @@ export default class User extends Entity<UserData> {
   }
 
   public static async getClientConfig(): Promise<ClientConfig> {
-    if (this.clientConfig) {
-      return this.clientConfig;
+    const store = User.stores.get(this.nymph);
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph'
+      );
     }
-    if (!this.clientConfigPromise) {
-      this.clientConfigPromise = this.serverCallStatic(
+
+    if (store.clientConfig) {
+      return store.clientConfig;
+    }
+    if (!store.clientConfigPromise) {
+      store.clientConfigPromise = this.serverCallStatic(
         'getClientConfig',
         []
       ).then((config) => {
-        this.clientConfig = config;
-        this.clientConfigPromise = undefined;
+        store.clientConfig = config;
+        store.clientConfigPromise = undefined;
         return config;
       });
     }
-    return await this.clientConfigPromise;
+    return await store.clientConfigPromise;
   }
 
   private static handleToken(response?: Response) {
@@ -392,6 +417,13 @@ export default class User extends Entity<UserData> {
       ? LogoutCallback
       : never
   ) {
+    const store = User.stores.get(this.nymph);
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph'
+      );
+    }
+
     const prop = (event + 'Callbacks') as T extends 'register'
       ? 'registerCallbacks'
       : T extends 'login'
@@ -399,11 +431,11 @@ export default class User extends Entity<UserData> {
       : T extends 'logout'
       ? 'logoutCallbacks'
       : never;
-    if (!(prop in this)) {
+    if (!(prop in store)) {
       throw new Error('Invalid event type.');
     }
     // @ts-ignore: The callback should always be the right type here.
-    this[prop].push(callback);
+    store[prop].push(callback);
     return () => this.off(event, callback);
   }
 
@@ -417,6 +449,13 @@ export default class User extends Entity<UserData> {
       ? LogoutCallback
       : never
   ) {
+    const store = User.stores.get(this.nymph);
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph'
+      );
+    }
+
     const prop = (event + 'Callbacks') as T extends 'register'
       ? 'registerCallbacks'
       : T extends 'login'
@@ -424,14 +463,14 @@ export default class User extends Entity<UserData> {
       : T extends 'logout'
       ? 'logoutCallbacks'
       : never;
-    if (!(prop in this)) {
+    if (!(prop in store)) {
       return false;
     }
     // @ts-ignore: The callback should always be the right type here.
-    const i = this[prop].indexOf(callback);
+    const i = store[prop].indexOf(callback);
     if (i > -1) {
       // @ts-ignore: The callback should always be the right type here.
-      this[prop].splice(i, 1);
+      store[prop].splice(i, 1);
     }
     return true;
   }

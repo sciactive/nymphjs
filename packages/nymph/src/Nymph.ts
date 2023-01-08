@@ -88,6 +88,33 @@ export default class Nymph {
   private afterDeleteUIDCallbacks: NymphAfterDeleteUIDCallback[] = [];
 
   /**
+   * Initialize Nymph.
+   *
+   * @param config The Nymph configuration.
+   * @param driver The Nymph database driver.
+   * @param tilmeld The Tilmeld user/group manager instance, if you want to use it.
+   */
+  public constructor(
+    config: Partial<Config>,
+    driver: NymphDriver,
+    tilmeld?: TilmeldInterface
+  ) {
+    this.config = { ...defaults, ...config };
+    this.driver = driver;
+
+    this.Entity = this.addEntityClass(Entity);
+
+    if (typeof tilmeld !== 'undefined') {
+      this.tilmeld = tilmeld;
+    }
+
+    this.driver.init(this);
+    if (this.tilmeld) {
+      this.tilmeld.init(this);
+    }
+  }
+
+  /**
    * Add your class to this instance.
    *
    * This will create a class that extends your class within this instance of
@@ -118,33 +145,6 @@ export default class Nymph {
       return this.entityClasses[className];
     }
     throw new ClassNotAvailableError('Tried to use class: ' + className);
-  }
-
-  /**
-   * Initialize Nymph.
-   *
-   * @param config The Nymph configuration.
-   * @param driver The Nymph database driver.
-   * @param tilmeld The Tilmeld user/group manager instance, if you want to use it.
-   */
-  public constructor(
-    config: Partial<Config>,
-    driver: NymphDriver,
-    tilmeld?: TilmeldInterface
-  ) {
-    this.config = { ...defaults, ...config };
-    this.driver = driver;
-
-    this.Entity = this.addEntityClass(Entity);
-
-    if (typeof tilmeld !== 'undefined') {
-      this.tilmeld = tilmeld;
-    }
-
-    this.driver.init(this);
-    if (this.tilmeld) {
-      this.tilmeld.init(this);
-    }
   }
 
   /**

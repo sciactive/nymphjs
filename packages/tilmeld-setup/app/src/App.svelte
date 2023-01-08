@@ -135,8 +135,11 @@
 
 <script lang="ts">
   import { onMount, SvelteComponent } from 'svelte';
-  import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
-  import { User } from '@nymphjs/tilmeld-client';
+  import type {
+    User as UserClass,
+    ClientConfig,
+    CurrentUserData,
+  } from '@nymphjs/tilmeld-client';
   import { Login, Account } from '@nymphjs/tilmeld-components';
   import { mdiGithub, mdiMastodon, mdiTwitter } from '@mdi/js';
   import TopAppBar, { Row, Section, Title } from '@smui/top-app-bar';
@@ -146,6 +149,7 @@
   import Menu from '@smui/menu';
   import { Icon, Svg } from '@smui/common';
 
+  import { User } from './nymph';
   import Intro from './Intro.svelte';
   import Users from './Users.svelte';
   import Groups from './Groups.svelte';
@@ -159,7 +163,7 @@
   let accountMenu: any;
   let active: typeof SvelteComponentDev = Intro;
   let clientConfig: ClientConfig;
-  let user: (User & CurrentUserData) | undefined = undefined;
+  let user: (UserClass & CurrentUserData) | undefined = undefined;
   let userAvatar: string = DEFAULT_AVATAR;
   let tilmeldAdmin: boolean | undefined = undefined;
   let accountOpen = false;
@@ -207,7 +211,7 @@
     },
   ];
 
-  const onLogin = (currentUser: User & CurrentUserData) => {
+  const onLogin = (currentUser: UserClass & CurrentUserData) => {
     user = currentUser;
   };
   const onLogout = () => {

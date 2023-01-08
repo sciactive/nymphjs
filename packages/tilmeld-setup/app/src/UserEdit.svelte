@@ -568,7 +568,10 @@
     ClientConfig,
     CurrentUserData,
   } from '@nymphjs/tilmeld-client';
-  import { Group, User } from '@nymphjs/tilmeld-client';
+  import type {
+    Group as GroupClass,
+    User as UserClass,
+  } from '@nymphjs/tilmeld-client';
   import queryParser from '@nymphjs/query-parser';
   import {
     mdiArrowLeft,
@@ -592,12 +595,14 @@
   import Button from '@smui/button';
   import { Icon, Label, Svg } from '@smui/common';
 
+  import { User, Group } from './nymph';
+
   const dispatch = createEventDispatcher();
 
-  export let entity: User & AdminUserData;
+  export let entity: UserClass & AdminUserData;
 
   let clientConfig: ClientConfig | undefined = undefined;
-  let user: (User & CurrentUserData) | undefined = undefined;
+  let user: (UserClass & CurrentUserData) | undefined = undefined;
   let sysAdmin = false;
   let activeTab: 'General' | 'Groups' | 'Abilities' | 'Security' = 'General';
   let primaryGroupSearch = '';
@@ -690,7 +695,7 @@
   }
 
   let primaryGroupsSearching = false;
-  let primaryGroups: (Group & AdminGroupData)[] | undefined = undefined;
+  let primaryGroups: (GroupClass & AdminGroupData)[] | undefined = undefined;
   async function searchPrimaryGroups() {
     primaryGroupsSearching = true;
     failureMessage = undefined;
@@ -729,7 +734,7 @@
   }
 
   let secondaryGroupsSearching = false;
-  let secondaryGroups: (Group & AdminGroupData)[] | undefined = undefined;
+  let secondaryGroups: (GroupClass & AdminGroupData)[] | undefined = undefined;
   async function searchSecondaryGroups() {
     secondaryGroupsSearching = true;
     failureMessage = undefined;

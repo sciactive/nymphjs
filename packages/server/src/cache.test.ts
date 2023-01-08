@@ -4,14 +4,17 @@ import { Nymph as NymphServer } from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
 
 import createServer from './index';
-import { EmployeeModel, Employee } from './testArtifacts';
+import {
+  EmployeeModel as EmployeeModelClass,
+  Employee as EmployeeClass,
+} from './testArtifacts';
 
 const sqliteConfig = {
   filename: ':memory:',
 };
 
 const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
-nymphServer.addEntityClass(EmployeeModel);
+const EmployeeModel = nymphServer.addEntityClass(EmployeeModelClass);
 
 const app = express();
 app.use('/test', createServer(nymphServer));
@@ -21,7 +24,7 @@ const nymph = new Nymph({
   restUrl: 'http://localhost:5081/test/',
   weakCache: true,
 });
-nymph.addEntityClass(Employee);
+const Employee = nymph.addEntityClass(EmployeeClass);
 
 describe('Nymph REST Server and Client with Client Weak Ref Cache', () => {
   async function createJane() {

@@ -36,7 +36,7 @@ export default class Nymph {
   /**
    * The entity class for this instance of Nymph.
    */
-  public Entity: typeof Entity = Entity;
+  public Entity: typeof Entity;
 
   private requestCallbacks: RequestCallback[] = [];
   private responseCallbacks: ResponseCallback[] = [];
@@ -49,10 +49,7 @@ export default class Nymph {
     // @ts-ignore TS doesn't know about WeakRef.
     this.weakCache = !!NymphOptions.weakCache && typeof WeakRef !== 'undefined';
 
-    class NymphEntity<T extends EntityData = EntityData> extends Entity<T> {}
-    NymphEntity.nymph = this;
-    this.Entity = NymphEntity;
-    this.addEntityClass(NymphEntity);
+    this.Entity = this.addEntityClass(Entity);
 
     requester = new HttpRequester(
       'fetch' in NymphOptions ? NymphOptions.fetch : undefined
@@ -71,16 +68,32 @@ export default class Nymph {
     });
   }
 
-  public addEntityClass(entityClass: EntityConstructor) {
-    this.entityClasses[entityClass.class] = entityClass;
-    entityClass.nymph = this;
+  /**
+   * Add your class to this instance.
+   *
+   * This will create a class that extends your class within this instance of
+   * Nymph and return it. You can then use this class's constructor and methods,
+   * which will use this instance of Nymph.
+   *
+   * Because this creates a subclass, don't use the class
+   * returned from `getEntityClass` to check with `instanceof`.
+   */
+  public addEntityClass<T extends EntityConstructor>(entityClass: T): T {
+    const nymph = this;
+    class NymphEntity extends entityClass {
+      static nymph: Nymph = nymph;
+
+      constructor(...args: any[]) {
+        super(...args);
+      }
+    }
+    this.entityClasses[entityClass.class] = NymphEntity;
+    return NymphEntity;
   }
 
   public getEntityClass(className: string) {
-    if (this.entityClasses.hasOwnProperty(className)) {
-      const EntityClass = this.entityClasses[className];
-      EntityClass.nymph = this;
-      return EntityClass;
+    if (className in this.entityClasses) {
+      return this.entityClasses[className];
     }
     throw new ClassNotAvailableError(
       "Tried to get class that's not available: " + className

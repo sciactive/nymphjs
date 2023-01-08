@@ -332,7 +332,10 @@
     ClientConfig,
     CurrentUserData,
   } from '@nymphjs/tilmeld-client';
-  import { Group, User } from '@nymphjs/tilmeld-client';
+  import type {
+    Group as GroupClass,
+    User as UserClass,
+  } from '@nymphjs/tilmeld-client';
   import queryParser from '@nymphjs/query-parser';
   import {
     mdiArrowLeft,
@@ -356,14 +359,14 @@
   import Button from '@smui/button';
   import { Icon, Label, Svg } from '@smui/common';
 
-  import nymph from '../nymph';
+  import { nymph, Group, User } from './nymph';
 
   const dispatch = createEventDispatcher();
 
-  export let entity: Group & AdminGroupData;
+  export let entity: GroupClass & AdminGroupData;
 
   let clientConfig: ClientConfig | undefined = undefined;
-  let user: (User & CurrentUserData) | undefined = undefined;
+  let user: (UserClass & CurrentUserData) | undefined = undefined;
   let activeTab: 'General' | 'Parent' | 'Abilities' = 'General';
   let parentSearch = '';
   let ability = '';
@@ -424,7 +427,7 @@
   }
 
   let parentsSearching = false;
-  let parents: (Group & AdminGroupData)[] | undefined = undefined;
+  let parents: (GroupClass & AdminGroupData)[] | undefined = undefined;
   async function searchParents() {
     parentsSearching = true;
     failureMessage = undefined;

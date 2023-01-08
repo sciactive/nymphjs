@@ -96,7 +96,10 @@
     ClientConfig,
     CurrentUserData,
   } from '@nymphjs/tilmeld-client';
-  import { Group, User } from '@nymphjs/tilmeld-client';
+  import type {
+    Group as GroupClass,
+    User as UserClass,
+  } from '@nymphjs/tilmeld-client';
   import { mdiMagnify, mdiArrowRight, mdiPlus } from '@mdi/js';
   import CircularProgress from '@smui/circular-progress';
   import Paper from '@smui/paper';
@@ -105,16 +108,15 @@
   import Fab from '@smui/fab';
   import { Icon, Svg } from '@smui/common';
 
-  import nymph from '../nymph';
-
+  import { nymph, User, Group } from './nymph';
   import UserEdit from './UserEdit.svelte';
 
   let clientConfig: ClientConfig | undefined = undefined;
-  let user: (User & CurrentUserData) | undefined = undefined;
+  let user: (UserClass & CurrentUserData) | undefined = undefined;
   let entitySearch = '';
   let failureMessage: string | undefined = undefined;
 
-  let entity: (User & AdminUserData) | undefined = undefined;
+  let entity: (UserClass & AdminUserData) | undefined = undefined;
 
   onMount(async () => {
     user = (await User.current()) ?? undefined;
@@ -124,7 +126,7 @@
   });
 
   let entitiesSearching = false;
-  let entities: (User & AdminUserData)[] | undefined = undefined;
+  let entities: (UserClass & AdminUserData)[] | undefined = undefined;
   async function searchEntities() {
     entitiesSearching = true;
     failureMessage = undefined;
