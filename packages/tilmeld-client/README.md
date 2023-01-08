@@ -16,33 +16,24 @@ You can find UMD in `dist`, or TS source in `src`.
 
 The Tilmeld client contains the client versions of the `User` and `Group` entities. It also contains helpers, `login`, `register`, and `checkUsername`.
 
-Once you've initialized Nymph Client, set the User and Group classes on it.
+Once you've initialized Nymph Client, set the User and Group classes on it. Then initialize the new User class with the Nymph instance. (This allows the class to set up authentication listeners.)
 
 ```ts
 import { Nymph } from '@nymphjs/client';
-import { User, Group } from '@nymphjs/tilmeld-client';
+import {
+  User as UserClass,
+  Group as GroupClass,
+} from '@nymphjs/tilmeld-client';
 
 const nymph = new Nymph({
   restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
 });
-nymph.addEntityClass(User);
-nymph.addEntityClass(Group);
+const User = nymph.addEntityClass(UserClass);
+const Group = nymph.addEntityClass(GroupClass);
+User.init(nymph);
 ```
 
-If you're running more than one instance of Nymph client, you can clone the classes and add those instead. This will keep event listeners and Tilmeld client config separated.
-
-```ts
-import { Nymph } from '@nymphjs/client';
-import { User, Group } from '@nymphjs/tilmeld-client';
-
-const nymph = new Nymph({
-  restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
-});
-const UserClone = User.clone();
-nymph.addEntityClass(UserClone);
-const GroupClone = Group.clone();
-nymph.addEntityClass(GroupClone);
-```
+If you're running more than one instance of Nymph client, be sure to use the classes returned by `addEntityClass`, so as not to accidentally submit entities from one instances to another instance.
 
 # License
 

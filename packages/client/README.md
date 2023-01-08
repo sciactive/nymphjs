@@ -18,7 +18,7 @@ Here's an overview:
 
 ```ts
 import { Nymph, PubSub } from '@nymphjs/client';
-import Todo from 'Todo';
+import TodoClass from 'Todo';
 
 const nymphOptions = {
   restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
@@ -26,7 +26,7 @@ const nymphOptions = {
 };
 const nymph = new Nymph(nymphOptions);
 const pubsub = new PubSub(nymphOptions, nymph);
-nymph.addEntityClass(Todo);
+const Todo = nymph.addEntityClass(TodoClass);
 
 // Now you can use Nymph and PubSub.
 const myTodo = new Todo();

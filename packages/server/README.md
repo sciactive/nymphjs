@@ -21,7 +21,7 @@ import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import createServer from '@nymphjs/server';
 
 // Import all the entities you will be using on the server.
-import MyEntity from './entities/MyEntity';
+import MyEntityClass from './entities/MyEntity';
 
 // Configure Nymph.
 const nymph = new Nymph(
@@ -30,7 +30,7 @@ const nymph = new Nymph(
     filename: ':memory:',
   })
 );
-nymph.addEntityClass(MyEntity);
+const MyEntity = nymph.addEntityClass(MyEntityClass);
 
 // Create your Express app.
 const app = express();
@@ -51,14 +51,14 @@ Now you can configure your client using your server's address (and the optional 
 ```ts
 import { Nymph } from '@nymphjs/client';
 
-import MyEntity from './entities/MyEntityClient';
+import MyEntityClass from './entities/MyEntityClient';
 
 const nymph = new Nymph({
   // You should configure your Express server to
   // use HTTPS, but you don't have to.
   restUrl: 'https://mydomain.tld/rest',
 });
-nymph.addEntityClass(MyEntity);
+const MyEntity = nymph.addEntityClass(MyEntityClass);
 ```
 
 # License

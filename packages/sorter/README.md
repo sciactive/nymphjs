@@ -18,7 +18,7 @@ Here's an overview:
 import { Nymph } from '@nymphjs/nymph';
 // or
 import { Nymph } from '@nymphjs/client';
-import Page from 'Page';
+import PageClass from 'Page';
 
 import { Sorter } from '@nymphjs/sorter';
 
@@ -26,7 +26,7 @@ const nymphOptions = {
   // the options for your Nymph instance.
 };
 const nymph = new Nymph(nymphOptions);
-nymph.addEntityClass(Page);
+const Page = nymph.addEntityClass(PageClass);
 
 let pages = await nymph.getEntities({ class: Page });
 
