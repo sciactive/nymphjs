@@ -949,6 +949,7 @@ export default class PubSub {
         class: nymph.getEntityClass(clientOptions.class),
         return: 'entity',
         source: 'client',
+        skipAc: false,
       };
       const selectors = classNamesToEntityConstructors(nymph, clientSelectors);
       if (this.sessions.has(curClient)) {
