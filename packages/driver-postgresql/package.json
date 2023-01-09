@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/driver-postgresql",
-  "version": "1.0.0-beta.8",
+  "version": "1.0.0-beta.9",
   "description": "NymphJS - PostgreSQL DB Driver",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -35,8 +35,8 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.8",
-    "@nymphjs/nymph": "^1.0.0-beta.8",
+    "@nymphjs/guid": "^1.0.0-beta.9",
+    "@nymphjs/nymph": "^1.0.0-beta.9",
     "pg": "^8.8.0",
     "pg-format": "^1.0.4"
   },
