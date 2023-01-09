@@ -419,9 +419,6 @@ export default class Entity<T extends EntityData = EntityData>
         return false;
       }
     }
-    if (object.constructor !== this.constructor) {
-      return false;
-    }
     if (object.cdate !== this.cdate) {
       return false;
     }

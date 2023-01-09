@@ -45,9 +45,9 @@ import {
  *
  * Some notes about $equals() and $is(), the replacements for "==":
  *
- * The == operator will likely not give you the result you want, since any yet
- * to be unserialized data causes == to return false when you probably want it
- * to return true.
+ * The == operator will likely not give you the result you want, since two
+ * instances of the same entity will fail that check, even though they represent
+ * the same data in the database.
  *
  * $equals() performs a more strict comparison of the entity to another. Use
  * $equals() instead of the == operator when you want to check both the entities
@@ -56,8 +56,7 @@ import {
  *
  * - They must be entities.
  * - They must have equal GUIDs, or both must have no GUID.
- * - They must be instances of the same class.
- * - Their data must be equal.
+ * - Their data and tags must be equal.
  *
  * $is() performs a less strict comparison of the entity to another. Use $is()
  * instead of the == operator when the entity's data may have been changed, but
@@ -66,7 +65,7 @@ import {
  *
  * - They must be entities.
  * - They must have equal GUIDs, or both must have no GUID.
- * - If they have no GUIDs, their data must be equal.
+ * - If they have no GUIDs, their data and tags must be equal.
  *
  * Some notes about saving entities in other entity's properties:
  *
@@ -513,13 +512,15 @@ export default class Entity<T extends EntityData = EntityData>
         return false;
       }
     }
-    if (object.constructor !== this.constructor) {
-      return false;
-    }
     if (object.cdate !== this.cdate) {
       return false;
     }
     if (object.mdate !== this.mdate) {
+      return false;
+    }
+    const obTags = [...object.tags].sort();
+    const myTags = [...this.tags].sort();
+    if (!isEqual(obTags, myTags)) {
       return false;
     }
     const obData = object.$getData(true);
@@ -615,6 +616,11 @@ export default class Entity<T extends EntityData = EntityData>
     if (typeof object.$getData !== 'function') {
       return false;
     } else {
+      const obTags = [...object.tags].sort();
+      const myTags = [...this.tags].sort();
+      if (!isEqual(obTags, myTags)) {
+        return false;
+      }
       const obData = object.$getData(true);
       const myData = this.$getData(true);
       return isEqual(obData, myData);
