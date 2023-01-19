@@ -27,6 +27,15 @@ export interface SQLite3DriverConfig {
    */
   readonly: boolean;
   /**
+   * Turn on WAL mode.
+   *
+   * This will generally increase performance, but does mean that the DB must be
+   * on a local disk.
+   *
+   * See: https://www.sqlite.org/wal.html
+   */
+  wal: boolean;
+  /**
    * Function that gets called with every SQL string executed.
    */
   verbose: ((message?: any, ...additionalArgs: any[]) => void) | undefined;

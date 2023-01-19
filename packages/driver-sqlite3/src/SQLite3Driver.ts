@@ -76,7 +76,8 @@ export default class SQLite3Driver extends NymphDriver {
    * @returns Whether this instance is connected to a SQLite3 database.
    */
   public async connect() {
-    const { filename, fileMustExist, timeout, readonly, verbose } = this.config;
+    const { filename, fileMustExist, timeout, readonly, wal, verbose } =
+      this.config;
 
     if (this.store && this.store.connected) {
       return true;
@@ -98,6 +99,9 @@ export default class SQLite3Driver extends NymphDriver {
       }
       this.store.connected = true;
       // Set database and connection options.
+      if (wal) {
+        this.store.link.pragma('journal_mode = WAL;');
+      }
       this.store.link.pragma('encoding = "UTF-8";');
       this.store.link.pragma('foreign_keys = 1;');
       this.store.link.pragma('case_sensitive_like = 1;');
