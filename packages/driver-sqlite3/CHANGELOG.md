@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.10](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2023-01-19)
+
+### Features
+
+- add wal mode setting to sqlite driver ([0071d66](https://github.com/sciactive/nymphjs/commit/0071d6628534b8b35d49c0238a99fe143fd03207))
+
 # [1.0.0-beta.9](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2023-01-09)
 
 **Note:** Version bump only for package @nymphjs/driver-sqlite3

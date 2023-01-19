@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.10](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2023-01-19)
+
+### Bug Fixes
+
+- explicitly set skipAc to false in PubSub server ([33f96f7](https://github.com/sciactive/nymphjs/commit/33f96f7ccabaedb9e226fe302a996259e0158315))
+
 # [1.0.0-beta.9](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.8...v1.0.0-beta.9) (2023-01-09)
 
 ### Bug Fixes
