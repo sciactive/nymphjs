@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.11](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.10...v1.0.0-beta.11) (2023-02-27)
+
+### Features
+
+- allow customizing HTTP status codes in response from server called methods ([8c5c3d4](https://github.com/sciactive/nymphjs/commit/8c5c3d4af741edabc1a8947aaebf026ba546c46a))
+
 # [1.0.0-beta.10](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.9...v1.0.0-beta.10) (2023-01-19)
 
 **Note:** Version bump only for package @nymphjs/client
