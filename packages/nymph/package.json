@@ -32,19 +32,19 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.10",
-    "joi": "^17.7.0",
+    "joi": "^17.8.3",
     "locutus": "^2.0.16",
     "lodash": "^4.17.21",
     "n-readlines": "^1.0.3"
   },
   "devDependencies": {
-    "@tsconfig/recommended": "^1.0.1",
-    "@types/jest": "^29.2.5",
+    "@tsconfig/recommended": "^1.0.2",
+    "@types/jest": "^29.4.0",
     "@types/locutus": "^0.0.6",
     "@types/lodash": "^4.14.191",
     "@types/n-readlines": "^1.0.3",
-    "jest": "^29.3.1",
-    "ts-jest": "^29.0.3",
-    "typescript": "^4.9.4"
+    "jest": "^29.4.3",
+    "ts-jest": "^29.0.5",
+    "typescript": "^4.9.5"
   }
 }
