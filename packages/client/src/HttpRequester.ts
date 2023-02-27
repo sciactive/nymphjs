@@ -167,9 +167,15 @@ export default class HttpRequester {
         };
       }
       errObj.status = response.status;
-      throw response.status < 500
-        ? new ClientError(errObj)
-        : new ServerError(errObj);
+      throw response.status < 200
+        ? new InformationalError(response, errObj)
+        : response.status < 300
+        ? new SuccessError(response, errObj)
+        : response.status < 400
+        ? new RedirectError(response, errObj)
+        : response.status < 500
+        ? new ClientError(response, errObj)
+        : new ServerError(response, errObj);
     }
     for (let i = 0; i < this.responseCallbacks.length; i++) {
       this.responseCallbacks[i] &&
@@ -202,18 +208,49 @@ export class InvalidResponseError extends Error {
   }
 }
 
-export class ClientError extends Error {
-  constructor(errObj: { textStatus: string }) {
+export class HttpError extends Error {
+  status: number;
+  statusText: string;
+
+  constructor(
+    name: string,
+    response: Response,
+    errObj: { textStatus: string }
+  ) {
     super(errObj.textStatus);
-    this.name = 'ClientError';
+    this.name = name;
+    this.status = response.status;
+    this.statusText = response.statusText;
     Object.assign(this, errObj);
   }
 }
 
-export class ServerError extends Error {
-  constructor(errObj: { textStatus: string }) {
-    super(errObj.textStatus);
-    this.name = 'ServerError';
-    Object.assign(this, errObj);
+export class InformationalError extends HttpError {
+  constructor(response: Response, errObj: { textStatus: string }) {
+    super('InformationalError', response, errObj);
+  }
+}
+
+export class SuccessError extends HttpError {
+  constructor(response: Response, errObj: { textStatus: string }) {
+    super('SuccessError', response, errObj);
+  }
+}
+
+export class RedirectError extends HttpError {
+  constructor(response: Response, errObj: { textStatus: string }) {
+    super('RedirectError', response, errObj);
+  }
+}
+
+export class ClientError extends HttpError {
+  constructor(response: Response, errObj: { textStatus: string }) {
+    super('ClientError', response, errObj);
+  }
+}
+
+export class ServerError extends HttpError {
+  constructor(response: Response, errObj: { textStatus: string }) {
+    super('ServerError', response, errObj);
   }
 }

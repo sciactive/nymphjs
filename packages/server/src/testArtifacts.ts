@@ -1,6 +1,8 @@
 import { Entity as EntityServer, EntityInvalidDataError } from '@nymphjs/nymph';
 import { Entity } from '@nymphjs/client';
 
+import { HttpError } from './HttpError';
+
 export type EmployeeBaseData<T> = {
   name?: string;
   id?: number;
@@ -34,6 +36,8 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     '$testMethodStateless',
     '$testMethod',
     '$throwError',
+    '$throwHttpError',
+    '$throwHttpErrorWithDescription',
   ];
   public static clientEnabledStaticMethods = ['testStatic', 'throwErrorStatic'];
   protected $protectedTags = ['employee'];
@@ -121,6 +125,14 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     throw new BadFunctionCallError('This function only throws errors.');
   }
 
+  public $throwHttpError() {
+    throw new HttpError('A 501 HTTP error.', 501);
+  }
+
+  public $throwHttpErrorWithDescription() {
+    throw new HttpError('A 512 HTTP error.', 512, 'Some Error');
+  }
+
   public static inaccessibleMethod() {
     return true;
   }
@@ -167,6 +179,14 @@ export class Employee extends Entity<EmployeeData> {
 
   $throwError() {
     return this.$serverCall('$throwError', []);
+  }
+
+  $throwHttpError() {
+    return this.$serverCall('$throwHttpError', []);
+  }
+
+  $throwHttpErrorWithDescription() {
+    return this.$serverCall('$throwHttpErrorWithDescription', []);
   }
 
   static testStatic(value: number) {

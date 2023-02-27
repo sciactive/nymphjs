@@ -493,25 +493,55 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('handle server side static error', async () => {
-    let error = { error: { name: '' } };
+    let error = { status: 0, error: { name: '' } };
     try {
       await Employee.throwErrorStatic();
     } catch (e: any) {
       error = e;
     }
+    expect(error.status).toEqual(500);
     expect(error.error.name).toEqual('BadFunctionCallError');
   });
 
   it('handle server side error', async () => {
     const jane = await createJane();
 
-    let error = { error: { name: '' } };
+    let error = { status: 0, error: { name: '' } };
     try {
       await jane.$throwError();
     } catch (e: any) {
       error = e;
     }
+    expect(error.status).toEqual(500);
     expect(error.error.name).toEqual('BadFunctionCallError');
+  });
+
+  it('handle server side HTTP error', async () => {
+    const jane = await createJane();
+
+    let error = { status: 0, statusText: '', message: '' };
+    try {
+      await jane.$throwHttpError();
+    } catch (e: any) {
+      error = e;
+    }
+    expect(error.status).toEqual(501);
+    expect(error.statusText).toEqual('Not Implemented');
+    expect(error.message).toEqual('A 501 HTTP error.');
+  });
+
+  it('handle server side custom HTTP error', async () => {
+    const jane = await createJane();
+
+    let error = { status: 0, statusText: '', message: '' };
+    try {
+      await jane.$throwHttpErrorWithDescription();
+    } catch (e: any) {
+      error = e;
+    }
+    expect(error.status).toEqual(512);
+    expect(error.statusText).toEqual('Some Error');
+    expect(error.message).toEqual('A 512 HTTP error.');
   });
 
   it('call a server side static method', async () => {
