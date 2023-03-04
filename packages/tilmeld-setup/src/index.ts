@@ -4,7 +4,7 @@ import { NymphOptions } from '@nymphjs/client';
 import { Nymph } from '@nymphjs/nymph';
 import type { Tilmeld } from '@nymphjs/tilmeld';
 
-export default function setup(options: NymphOptions, nymph: Nymph) {
+export function setup(options: NymphOptions, nymph: Nymph) {
   const app = express();
 
   if (!nymph.tilmeld) {
@@ -211,3 +211,5 @@ export default function setup(options: NymphOptions, nymph: Nymph) {
 
   return app;
 }
+
+export default setup;
