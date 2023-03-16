@@ -64,183 +64,221 @@ export default class PubSub {
   protected uidSubs: {
     [uidName: string]: Map<connection, { count: boolean }>;
   } = {};
+  protected static transactionPublishes: {
+    nymph: Nymph;
+    payload: string;
+    config: Config;
+  }[] = [];
 
   public static initPublisher(config: Partial<Config>, nymph: Nymph) {
     const configWithDefaults: Config = { ...defaults, ...config };
 
-    nymph.on(
-      'beforeSaveEntity',
-      async (nymph: Nymph, entity: EntityInterface) => {
-        const guid = entity.guid;
-        const etype = (entity.constructor as EntityConstructor).ETYPE;
+    nymph.on('beforeSaveEntity', async (nymph, entity) => {
+      const guid = entity.guid;
+      const etype = (entity.constructor as EntityConstructor).ETYPE;
 
-        const off = nymph.on(
-          'afterSaveEntity',
-          async (_nymph: Nymph, result: Promise<boolean>) => {
-            off();
-            if (!(await result)) {
-              return;
-            }
-            this.publish(
-              JSON.stringify({
-                action: 'publish',
-                event: guid == null ? 'create' : 'update',
-                guid: entity.guid,
-                entity: entity.toJSON(),
-                etype: etype,
-              }),
-              configWithDefaults
-            );
-          }
-        );
-      }
-    );
-
-    nymph.on(
-      'beforeDeleteEntity',
-      async (nymph: Nymph, entity: EntityInterface) => {
-        const guid = entity.guid;
-        const etype = (entity.constructor as EntityConstructor).ETYPE;
-
-        const off = nymph.on(
-          'afterDeleteEntity',
-          async (_nymph: Nymph, result: Promise<boolean>) => {
-            off();
-            if (!(await result)) {
-              return;
-            }
-            this.publish(
-              JSON.stringify({
-                action: 'publish',
-                event: 'delete',
-                guid: guid,
-                etype: etype,
-              }),
-              configWithDefaults
-            );
-          }
-        );
-      }
-    );
-
-    nymph.on(
-      'beforeDeleteEntityByID',
-      async (nymph: Nymph, guid: string, className?: string) => {
-        try {
-          const etype = nymph.getEntityClass(className ?? 'Entity').ETYPE;
-
-          const off = nymph.on(
-            'afterDeleteEntityByID',
-            async (_nymph: Nymph, result: Promise<boolean>) => {
-              off();
-              if (!(await result)) {
-                return;
-              }
-              this.publish(
-                JSON.stringify({
-                  action: 'publish',
-                  event: 'delete',
-                  guid: guid,
-                  etype: etype,
-                }),
-                configWithDefaults
-              );
-            }
-          );
-        } catch (e: any) {
+      const off = nymph.on('afterSaveEntity', async (curNymph, result) => {
+        off();
+        off2();
+        if (!(await result)) {
           return;
         }
-      }
-    );
-
-    nymph.on('beforeNewUID', async (nymph: Nymph, name: string) => {
-      const off = nymph.on(
-        'afterNewUID',
-        async (_nymph: Nymph, result: Promise<number | null>) => {
-          off();
-          const value = await result;
-          if (value == null) {
-            return;
-          }
-          this.publish(
-            JSON.stringify({
-              action: 'publish',
-              event: 'newUID',
-              name: name,
-              value: value,
-            }),
-            configWithDefaults
-          );
-        }
-      );
+        const payload = JSON.stringify({
+          action: 'publish',
+          event: guid == null ? 'create' : 'update',
+          guid: entity.guid,
+          entity: entity.toJSON(),
+          etype: etype,
+        });
+        this.transactionPublishes.push({
+          nymph: curNymph,
+          payload,
+          config: configWithDefaults,
+        });
+        await this.publishTransactionPublishes(curNymph);
+      });
+      const off2 = nymph.on('failedSaveEntity', async () => {
+        off();
+        off2();
+      });
     });
 
-    nymph.on(
-      'beforeSetUID',
-      async (nymph: Nymph, name: string, value: number) => {
-        const off = nymph.on(
-          'afterSetUID',
-          async (_nymph: Nymph, result: Promise<boolean>) => {
-            off();
-            if (!(await result)) {
-              return;
-            }
-            this.publish(
-              JSON.stringify({
-                action: 'publish',
-                event: 'setUID',
-                name: name,
-                value: value,
-              }),
-              configWithDefaults
-            );
-          }
-        );
-      }
-    );
+    nymph.on('beforeDeleteEntity', async (nymph, entity) => {
+      const guid = entity.guid;
+      const etype = (entity.constructor as EntityConstructor).ETYPE;
 
-    nymph.on(
-      'beforeRenameUID',
-      async (nymph: Nymph, oldName: string, newName: string) => {
-        const off = nymph.on(
-          'afterRenameUID',
-          async (_nymph: Nymph, result: Promise<boolean>) => {
-            off();
-            if (!(await result)) {
-              return;
-            }
-            this.publish(
-              JSON.stringify({
-                action: 'publish',
-                event: 'renameUID',
-                oldName: oldName,
-                newName: newName,
-              }),
-              configWithDefaults
-            );
-          }
-        );
-      }
-    );
-
-    nymph.on('beforeDeleteUID', async (nymph: Nymph, name: string) => {
-      const off = nymph.on(
-        'afterDeleteUID',
-        async (_nymph: Nymph, result: Promise<boolean>) => {
-          off();
-          if (!(await result)) {
-            return;
-          }
-          this.publish(
-            JSON.stringify({
-              action: 'publish',
-              event: 'deleteUID',
-              name: name,
-            }),
-            configWithDefaults
-          );
+      const off = nymph.on('afterDeleteEntity', async (curNymph, result) => {
+        off();
+        off2();
+        if (!(await result)) {
+          return;
         }
-      );
+        const payload = JSON.stringify({
+          action: 'publish',
+          event: 'delete',
+          guid: guid,
+          etype: etype,
+        });
+        this.transactionPublishes.push({
+          nymph: curNymph,
+          payload,
+          config: configWithDefaults,
+        });
+        await this.publishTransactionPublishes(curNymph);
+      });
+      const off2 = nymph.on('failedDeleteEntity', async () => {
+        off();
+        off2();
+      });
+    });
+
+    nymph.on('beforeDeleteEntityByID', async (nymph, guid, className) => {
+      try {
+        const etype = nymph.getEntityClass(className ?? 'Entity').ETYPE;
+
+        const off = nymph.on(
+          'afterDeleteEntityByID',
+          async (curNymph, result) => {
+            off();
+            off2();
+            if (!(await result)) {
+              return;
+            }
+            const payload = JSON.stringify({
+              action: 'publish',
+              event: 'delete',
+              guid: guid,
+              etype: etype,
+            });
+            this.transactionPublishes.push({
+              nymph: curNymph,
+              payload,
+              config: configWithDefaults,
+            });
+            await this.publishTransactionPublishes(curNymph);
+          }
+        );
+        const off2 = nymph.on('failedDeleteEntityByID', async () => {
+          off();
+          off2();
+        });
+      } catch (e: any) {
+        return;
+      }
+    });
+
+    nymph.on('beforeNewUID', async (nymph, name) => {
+      const off = nymph.on('afterNewUID', async (curNymph, result) => {
+        off();
+        off2();
+        const value = await result;
+        if (value == null) {
+          return;
+        }
+        const payload = JSON.stringify({
+          action: 'publish',
+          event: 'newUID',
+          name: name,
+          value: value,
+        });
+        this.transactionPublishes.push({
+          nymph: curNymph,
+          payload,
+          config: configWithDefaults,
+        });
+        await this.publishTransactionPublishes(curNymph);
+      });
+      const off2 = nymph.on('failedNewUID', async () => {
+        off();
+        off2();
+      });
+    });
+
+    nymph.on('beforeSetUID', async (nymph, name, value) => {
+      const off = nymph.on('afterSetUID', async (curNymph, result) => {
+        off();
+        off2();
+        if (!(await result)) {
+          return;
+        }
+        const payload = JSON.stringify({
+          action: 'publish',
+          event: 'setUID',
+          name: name,
+          value: value,
+        });
+        this.transactionPublishes.push({
+          nymph: curNymph,
+          payload,
+          config: configWithDefaults,
+        });
+        await this.publishTransactionPublishes(curNymph);
+      });
+      const off2 = nymph.on('failedSetUID', async () => {
+        off();
+        off2();
+      });
+    });
+
+    nymph.on('beforeRenameUID', async (nymph, oldName, newName) => {
+      const off = nymph.on('afterRenameUID', async (curNymph, result) => {
+        off();
+        off2();
+        if (!(await result)) {
+          return;
+        }
+        const payload = JSON.stringify({
+          action: 'publish',
+          event: 'renameUID',
+          oldName: oldName,
+          newName: newName,
+        });
+        this.transactionPublishes.push({
+          nymph: curNymph,
+          payload,
+          config: configWithDefaults,
+        });
+        await this.publishTransactionPublishes(curNymph);
+      });
+      const off2 = nymph.on('failedRenameUID', async () => {
+        off();
+        off2();
+      });
+    });
+
+    nymph.on('beforeDeleteUID', async (nymph, name) => {
+      const off = nymph.on('afterDeleteUID', async (curNymph, result) => {
+        off();
+        off2();
+        if (!(await result)) {
+          return;
+        }
+        const payload = JSON.stringify({
+          action: 'publish',
+          event: 'deleteUID',
+          name: name,
+        });
+        this.transactionPublishes.push({
+          nymph: curNymph,
+          payload,
+          config: configWithDefaults,
+        });
+        await this.publishTransactionPublishes(curNymph);
+      });
+      const off2 = nymph.on('failedDeleteUID', async () => {
+        off();
+        off2();
+      });
+    });
+
+    nymph.on('afterCommitTransaction', async (nymph, _name, result) => {
+      if (result) {
+        await this.publishTransactionPublishes(nymph);
+      }
+    });
+
+    nymph.on('afterRollbackTransaction', async (nymph) => {
+      this.removeTransactionPublishes(nymph);
     });
   }
 
@@ -278,6 +316,54 @@ export default class PubSub {
 
       client.connect(host, 'nymph');
     }
+  }
+
+  private static isOrIsDescendent(parent: Nymph, child: Nymph) {
+    let check: Nymph | null = child;
+    while (check) {
+      if (check === parent) {
+        return true;
+      }
+      check = check.parent;
+    }
+    return false;
+  }
+
+  private static async publishTransactionPublishes(nymph: Nymph) {
+    if (await nymph.inTransaction()) {
+      // This instance is still in a transaction, so nothing gets published yet.
+      return;
+    }
+
+    this.transactionPublishes = (
+      await Promise.all(
+        this.transactionPublishes.map(async (publish) => {
+          // Check that this instance is a parent and the instance is not in a
+          // transaction.
+          if (
+            !this.isOrIsDescendent(nymph, publish.nymph) ||
+            (await publish.nymph.inTransaction())
+          ) {
+            return publish;
+          }
+          this.publish(publish.payload, publish.config);
+          return null;
+        })
+      )
+    ).filter((value) => value != null) as {
+      nymph: Nymph;
+      payload: string;
+      config: Config;
+    }[];
+  }
+
+  private static removeTransactionPublishes(nymph: Nymph) {
+    this.transactionPublishes = this.transactionPublishes.filter((publish) => {
+      if (this.isOrIsDescendent(nymph, publish.nymph)) {
+        return false;
+      }
+      return true;
+    });
   }
 
   /**

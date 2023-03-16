@@ -9,18 +9,31 @@ export type NymphEventType =
   | 'beforeGetEntities'
   | 'beforeSaveEntity'
   | 'afterSaveEntity'
+  | 'failedSaveEntity'
   | 'beforeDeleteEntity'
   | 'afterDeleteEntity'
+  | 'failedDeleteEntity'
   | 'beforeDeleteEntityByID'
   | 'afterDeleteEntityByID'
+  | 'failedDeleteEntityByID'
   | 'beforeNewUID'
   | 'afterNewUID'
+  | 'failedNewUID'
   | 'beforeSetUID'
   | 'afterSetUID'
+  | 'failedSetUID'
   | 'beforeRenameUID'
   | 'afterRenameUID'
+  | 'failedRenameUID'
   | 'beforeDeleteUID'
-  | 'afterDeleteUID';
+  | 'afterDeleteUID'
+  | 'failedDeleteUID'
+  | 'beforeStartTransaction'
+  | 'afterStartTransaction'
+  | 'beforeCommitTransaction'
+  | 'afterCommitTransaction'
+  | 'beforeRollbackTransaction'
+  | 'afterRollbackTransaction';
 export type NymphConnectCallback = (
   nymph: Nymph,
   result: Promise<boolean>
@@ -63,6 +76,10 @@ export type NymphAfterSaveEntityCallback = (
   nymph: Nymph,
   result: Promise<boolean>
 ) => Promise<void>;
+export type NymphFailedSaveEntityCallback = (
+  nymph: Nymph,
+  error: any
+) => Promise<void>;
 export type NymphBeforeDeleteEntityCallback = (
   nymph: Nymph,
   entity: EntityInterface
@@ -70,6 +87,10 @@ export type NymphBeforeDeleteEntityCallback = (
 export type NymphAfterDeleteEntityCallback = (
   nymph: Nymph,
   result: Promise<boolean>
+) => Promise<void>;
+export type NymphFailedDeleteEntityCallback = (
+  nymph: Nymph,
+  error: any
 ) => Promise<void>;
 export type NymphBeforeDeleteEntityByIDCallback = (
   nymph: Nymph,
@@ -80,6 +101,10 @@ export type NymphAfterDeleteEntityByIDCallback = (
   nymph: Nymph,
   result: Promise<boolean>
 ) => Promise<void>;
+export type NymphFailedDeleteEntityByIDCallback = (
+  nymph: Nymph,
+  error: any
+) => Promise<void>;
 export type NymphBeforeNewUIDCallback = (
   nymph: Nymph,
   name: string
@@ -87,6 +112,10 @@ export type NymphBeforeNewUIDCallback = (
 export type NymphAfterNewUIDCallback = (
   nymph: Nymph,
   result: Promise<number | null>
+) => Promise<void>;
+export type NymphFailedNewUIDCallback = (
+  nymph: Nymph,
+  error: any
 ) => Promise<void>;
 export type NymphBeforeSetUIDCallback = (
   nymph: Nymph,
@@ -97,6 +126,10 @@ export type NymphAfterSetUIDCallback = (
   nymph: Nymph,
   result: Promise<boolean>
 ) => Promise<void>;
+export type NymphFailedSetUIDCallback = (
+  nymph: Nymph,
+  error: any
+) => Promise<void>;
 export type NymphBeforeRenameUIDCallback = (
   nymph: Nymph,
   oldName: string,
@@ -106,6 +139,10 @@ export type NymphAfterRenameUIDCallback = (
   nymph: Nymph,
   result: Promise<boolean>
 ) => Promise<void>;
+export type NymphFailedRenameUIDCallback = (
+  nymph: Nymph,
+  error: any
+) => Promise<void>;
 export type NymphBeforeDeleteUIDCallback = (
   nymph: Nymph,
   name: string
@@ -113,6 +150,37 @@ export type NymphBeforeDeleteUIDCallback = (
 export type NymphAfterDeleteUIDCallback = (
   nymph: Nymph,
   result: Promise<boolean>
+) => Promise<void>;
+export type NymphFailedDeleteUIDCallback = (
+  nymph: Nymph,
+  error: any
+) => Promise<void>;
+export type NymphBeforeStartTransactionCallback = (
+  nymph: Nymph,
+  name: string
+) => Promise<void>;
+export type NymphAfterStartTransactionCallback = (
+  nymph: Nymph,
+  name: string,
+  result: Nymph
+) => Promise<void>;
+export type NymphBeforeCommitTransactionCallback = (
+  nymph: Nymph,
+  name: string
+) => Promise<void>;
+export type NymphAfterCommitTransactionCallback = (
+  nymph: Nymph,
+  name: string,
+  result: boolean
+) => Promise<void>;
+export type NymphBeforeRollbackTransactionCallback = (
+  nymph: Nymph,
+  name: string
+) => Promise<void>;
+export type NymphAfterRollbackTransactionCallback = (
+  nymph: Nymph,
+  name: string,
+  result: boolean
 ) => Promise<void>;
 
 export type Options<T extends EntityConstructor = EntityConstructor> = {

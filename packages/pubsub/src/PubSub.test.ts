@@ -118,6 +118,183 @@ describe('Nymph REST Server and Client', () => {
     });
   });
 
+  it('notified of new match only after transaction committed', async () => {
+    let guid: string;
+    let committed = false;
+
+    await new Promise((resolve) => {
+      let updated = false;
+      const subscription = pubsub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          equal: ['name', 'Steve Transaction'],
+        }
+      )(async (update) => {
+        if (updated) {
+          if (committed) {
+            expect('added' in update && update.added).toEqual(guid);
+            expect('data' in update && update.data.guid).toEqual(guid);
+          } else {
+            throw new Error('Update arrived before transaction committed.');
+          }
+          subscription.unsubscribe();
+          resolve(true);
+        } else {
+          expect(update).toEqual([]);
+          updated = true;
+          const tnymph = await nymphServer.startTransaction('steve');
+          const Employee = tnymph.getEntityClass(
+            EmployeeModel.class
+          ) as typeof EmployeeModel;
+          const steve = await Employee.factory();
+          steve.name = 'Steve Transaction';
+          steve.current = true;
+          steve.salary = 8000000;
+          steve.startDate = Date.now();
+          steve.subordinates = [];
+          steve.title = 'Seniorer Person';
+          try {
+            await steve.$save();
+            guid = steve.guid as string;
+            await new Promise((res) => setTimeout(res, 1000));
+            committed = true;
+            await tnymph.commit('steve');
+          } catch (e: any) {
+            console.error('Error creating entity: ', e);
+            throw e;
+          }
+        }
+      });
+    });
+  });
+
+  it('not notified of new match when transaction rolled back', async () => {
+    let guid: string;
+
+    await new Promise((resolve) => {
+      let updated = false;
+      const subscription = pubsub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          equal: ['name', 'Steve Rollback'],
+        }
+      )(async (update) => {
+        if (updated) {
+          if ('added' in update && update.added === guid) {
+            throw new Error('Update arrived after transaction rolled back.');
+          }
+          throw new Error('Update arrived unrelated to transaction.');
+        } else {
+          expect(update).toEqual([]);
+          updated = true;
+          const tnymph = await nymphServer.startTransaction('steve');
+          const Employee = tnymph.getEntityClass(
+            EmployeeModel.class
+          ) as typeof EmployeeModel;
+          const steve = await Employee.factory();
+          steve.name = 'Steve Rollback';
+          steve.current = true;
+          steve.salary = 8000000;
+          steve.startDate = Date.now();
+          steve.subordinates = [];
+          steve.title = 'Seniorer Person';
+          try {
+            await steve.$save();
+            guid = steve.guid as string;
+            await new Promise((res) => setTimeout(res, 600));
+            await tnymph.rollback('steve');
+            await new Promise((res) => setTimeout(res, 600));
+            subscription.unsubscribe();
+            resolve(true);
+          } catch (e: any) {
+            console.error('Error creating entity: ', e);
+            throw e;
+          }
+        }
+      });
+    });
+  });
+
+  it('notified of new match after complex transactions committed', async () => {
+    let guid: string;
+    let committed = false;
+
+    await new Promise((resolve) => {
+      let updated = false;
+      const subscription = pubsub.subscribeEntities(
+        { class: Employee },
+        {
+          type: '&',
+          equal: ['name', 'Steve Complex'],
+        }
+      )(async (update) => {
+        if (updated) {
+          if (committed) {
+            expect('added' in update && update.added).toEqual(guid);
+            expect('data' in update && update.data.guid).toEqual(guid);
+          } else {
+            throw new Error('Update arrived before transaction committed.');
+          }
+          subscription.unsubscribe();
+          resolve(true);
+        } else {
+          expect(update).toEqual([]);
+          updated = true;
+          const tnymphTop = await nymphServer.startTransaction('steve-top');
+
+          // Start a transaction that ultimately gets rolled back.
+          const tnymphB = await tnymphTop.startTransaction('steve-b');
+          const EmployeeB = tnymphB.getEntityClass(
+            EmployeeModel.class
+          ) as typeof EmployeeModel;
+          const badSteve = await EmployeeB.factory();
+          badSteve.name = 'Steve Complex';
+          badSteve.current = true;
+          badSteve.salary = 8000000;
+          badSteve.startDate = Date.now();
+          badSteve.subordinates = [];
+          badSteve.title = 'Seniorer Person';
+          try {
+            await badSteve.$save();
+            await new Promise((res) => setTimeout(res, 200));
+            await tnymphB.rollback('steve-b');
+            await new Promise((res) => setTimeout(res, 200));
+          } catch (e: any) {
+            console.error('Error creating entity: ', e);
+            throw e;
+          }
+
+          // Start a transaction that ultimately gets committed.
+          const tnymphA = await tnymphTop.startTransaction('steve-a');
+          const EmployeeA = tnymphA.getEntityClass(
+            EmployeeModel.class
+          ) as typeof EmployeeModel;
+          const goodSteve = await EmployeeA.factory();
+          goodSteve.name = 'Steve Complex';
+          goodSteve.current = true;
+          goodSteve.salary = 8000000;
+          goodSteve.startDate = Date.now();
+          goodSteve.subordinates = [];
+          goodSteve.title = 'Seniorer Person';
+          try {
+            await goodSteve.$save();
+            guid = goodSteve.guid as string;
+            await new Promise((res) => setTimeout(res, 200));
+            await tnymphA.commit('steve-a');
+            await new Promise((res) => setTimeout(res, 400));
+            committed = true;
+            await tnymphTop.commit('steve-top');
+          } catch (e: any) {
+            console.error('Error creating entity: ', e);
+            throw e;
+          }
+        }
+      });
+    });
+  });
+
   it('notified of entity update', async () => {
     let jane = await createJane();
     let entities: (EmployeeClass & EmployeeData)[] = [];
