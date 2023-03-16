@@ -23,6 +23,7 @@ import {
 
 class InternalStore {
   public link: SQLite3.Database;
+  public linkWrite?: SQLite3.Database;
   public connected: boolean = false;
   public transactionsStarted = 0;
 
@@ -53,6 +54,9 @@ export default class SQLite3Driver extends NymphDriver {
   constructor(config: Partial<SQLite3DriverConfig>, store?: InternalStore) {
     super();
     this.config = { ...defaults, ...config };
+    if (this.config.filename === ':memory:') {
+      this.config.explicitWrite = true;
+    }
     this.prefix = this.config.prefix;
     if (store) {
       this.store = store;
@@ -75,38 +79,81 @@ export default class SQLite3Driver extends NymphDriver {
    *
    * @returns Whether this instance is connected to a SQLite3 database.
    */
-  public async connect() {
-    const { filename, fileMustExist, timeout, readonly, wal, verbose } =
-      this.config;
-
+  public connect() {
     if (this.store && this.store.connected) {
-      return true;
+      return Promise.resolve(true);
     }
 
     // Connecting
+    this._connect(false);
+
+    return Promise.resolve(this.store.connected);
+  }
+
+  private _connect(write: boolean) {
+    const { filename, fileMustExist, timeout, explicitWrite, wal, verbose } =
+      this.config;
+
     try {
-      const link = new SQLite3(filename, {
-        readonly,
-        fileMustExist,
-        timeout,
-        verbose,
-      });
+      let link: SQLite3.Database;
+      try {
+        link = new SQLite3(filename, {
+          readonly: !explicitWrite && !write,
+          fileMustExist,
+          timeout,
+          verbose,
+        });
+      } catch (e: any) {
+        if (
+          e.code === 'SQLITE_CANTOPEN' &&
+          !explicitWrite &&
+          !write &&
+          !this.config.fileMustExist
+        ) {
+          // This happens when the file doesn't exist and we attempt to open it
+          // readonly.
+          // First open it in write mode.
+          const writeLink = new SQLite3(filename, {
+            readonly: false,
+            fileMustExist,
+            timeout,
+            verbose,
+          });
+          writeLink.close();
+          // Now open in readonly.
+          link = new SQLite3(filename, {
+            readonly: true,
+            fileMustExist,
+            timeout,
+            verbose,
+          });
+        } else {
+          throw e;
+        }
+      }
 
       if (!this.store) {
+        if (write) {
+          throw new Error(
+            'Tried to open in write without opening in read first.'
+          );
+        }
         this.store = new InternalStore(link);
+      } else if (write) {
+        this.store.linkWrite = link;
       } else {
         this.store.link = link;
       }
       this.store.connected = true;
       // Set database and connection options.
       if (wal) {
-        this.store.link.pragma('journal_mode = WAL;');
+        link.pragma('journal_mode = WAL;');
       }
-      this.store.link.pragma('encoding = "UTF-8";');
-      this.store.link.pragma('foreign_keys = 1;');
-      this.store.link.pragma('case_sensitive_like = 1;');
+      link.pragma('encoding = "UTF-8";');
+      link.pragma('foreign_keys = 1;');
+      link.pragma('case_sensitive_like = 1;');
       // Create the preg_match and regexp functions.
-      this.store.link.function(
+      link.function(
         'regexp',
         { deterministic: true },
         (pattern: string, subject: string) =>
@@ -118,14 +165,13 @@ export default class SQLite3Driver extends NymphDriver {
       }
       if (filename === ':memory:') {
         throw new NotConfiguredError(
-          "It seems the config hasn't been set up correctly."
+          "It seems the config hasn't been set up correctly. Could not connect: " +
+            e?.message
         );
       } else {
         throw new UnableToConnectError('Could not connect: ' + e?.message);
       }
     }
-
-    return this.store.connected;
   }
 
   /**
@@ -135,8 +181,16 @@ export default class SQLite3Driver extends NymphDriver {
    */
   public async disconnect() {
     if (this.store.connected) {
-      this.store.link.exec('PRAGMA optimize;');
+      if (this.store.linkWrite && !this.config.explicitWrite) {
+        this.store.linkWrite.exec('PRAGMA optimize;');
+        this.store.linkWrite.close();
+        this.store.linkWrite = undefined;
+      }
+      if (this.config.explicitWrite) {
+        this.store.link.exec('PRAGMA optimize;');
+      }
       this.store.link.close();
+      this.store.transactionsStarted = 0;
       this.store.connected = false;
     }
     return this.store.connected;
@@ -156,23 +210,11 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   /**
-   * Check if SQLite3 DB is read only and throw error if so.
-   */
-  private checkReadOnlyMode() {
-    if (this.config.readonly) {
-      throw new InvalidParametersError(
-        'Attempt to write to SQLite3 DB in read only mode.'
-      );
-    }
-  }
-
-  /**
    * Create entity tables in the database.
    *
    * @param etype The entity type to create a table for. If this is blank, the default tables are created.
    */
   private createTables(etype: string | null = null) {
-    this.checkReadOnlyMode();
     this.startTransaction('nymph-tablecreation');
     try {
       if (etype != null) {
@@ -363,7 +405,10 @@ export default class SQLite3Driver extends NymphDriver {
     }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
-      () => this.store.link.prepare(query).iterate(params),
+      () =>
+        (this.store.linkWrite || this.store.link)
+          .prepare(query)
+          .iterate(params),
       `${query} -- ${JSON.stringify(params)}`,
       etypes
     );
@@ -377,7 +422,8 @@ export default class SQLite3Driver extends NymphDriver {
     }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
-      () => this.store.link.prepare(query).get(params),
+      () =>
+        (this.store.linkWrite || this.store.link).prepare(query).get(params),
       `${query} -- ${JSON.stringify(params)}`,
       etypes
     );
@@ -391,7 +437,8 @@ export default class SQLite3Driver extends NymphDriver {
     }: { etypes?: string[]; params?: { [k: string]: any } } = {}
   ) {
     return this.query(
-      () => this.store.link.prepare(query).run(params),
+      () =>
+        (this.store.linkWrite || this.store.link).prepare(query).run(params),
       `${query} -- ${JSON.stringify(params)}`,
       etypes
     );
@@ -408,6 +455,17 @@ export default class SQLite3Driver extends NymphDriver {
     }
     this.queryRun(`RELEASE SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted--;
+
+    if (
+      this.store.transactionsStarted === 0 &&
+      this.store.linkWrite &&
+      !this.config.explicitWrite
+    ) {
+      this.store.linkWrite.exec('PRAGMA optimize;');
+      this.store.linkWrite.close();
+      this.store.linkWrite = undefined;
+    }
+
     return true;
   }
 
@@ -423,7 +481,6 @@ export default class SQLite3Driver extends NymphDriver {
       EntityClass = className;
     }
     const etype = EntityClass.ETYPE;
-    this.checkReadOnlyMode();
     await this.startTransaction('nymph-delete');
     try {
       this.queryRun(
@@ -486,7 +543,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (!name) {
       throw new InvalidParametersError('Name not given for UID');
     }
-    this.checkReadOnlyMode();
+    await this.startTransaction('nymph-delete-uid');
     this.queryRun(
       `DELETE FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`
@@ -497,6 +554,7 @@ export default class SQLite3Driver extends NymphDriver {
         },
       }
     );
+    await this.commit('nymph-delete-uid');
     return true;
   }
 
@@ -1637,7 +1695,6 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   public async import(filename: string) {
-    this.checkReadOnlyMode();
     try {
       return this.importFromFile(
         filename,
@@ -1800,7 +1857,6 @@ export default class SQLite3Driver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
-    this.checkReadOnlyMode();
     await this.startTransaction('nymph-newuid');
     try {
       let curUid =
@@ -1853,7 +1909,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (oldName == null || newName == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
-    this.checkReadOnlyMode();
+    await this.startTransaction('nymph-rename-uid');
     this.queryRun(
       `UPDATE ${SQLite3Driver.escape(
         `${this.prefix}uids`
@@ -1865,6 +1921,7 @@ export default class SQLite3Driver extends NymphDriver {
         },
       }
     );
+    await this.commit('nymph-rename-uid');
     return true;
   }
 
@@ -1879,11 +1936,21 @@ export default class SQLite3Driver extends NymphDriver {
     }
     this.queryRun(`ROLLBACK TO SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted--;
+
+    if (
+      this.store.transactionsStarted === 0 &&
+      this.store.linkWrite &&
+      !this.config.explicitWrite
+    ) {
+      this.store.linkWrite.exec('PRAGMA optimize;');
+      this.store.linkWrite.close();
+      this.store.linkWrite = undefined;
+    }
+
     return true;
   }
 
   public async saveEntity(entity: EntityInterface) {
-    this.checkReadOnlyMode();
     const insertData = (
       guid: string,
       data: EntityData,
@@ -2049,7 +2116,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
-    this.checkReadOnlyMode();
+    await this.startTransaction('nymph-set-uid');
     this.queryRun(
       `DELETE FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`
@@ -2071,6 +2138,7 @@ export default class SQLite3Driver extends NymphDriver {
         },
       }
     );
+    await this.commit('nymph-set-uid');
     return true;
   }
 
@@ -2079,6 +2147,9 @@ export default class SQLite3Driver extends NymphDriver {
       throw new InvalidParametersError(
         'Transaction start attempted without a name.'
       );
+    }
+    if (!this.config.explicitWrite && !this.store.linkWrite) {
+      this._connect(true);
     }
     this.queryRun(`SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted++;

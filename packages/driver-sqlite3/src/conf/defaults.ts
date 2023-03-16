@@ -5,7 +5,7 @@ export default {
   fileMustExist: false,
   prefix: 'nymph_',
   timeout: 10000,
-  readonly: false,
+  explicitWrite: false,
   wal: false,
   verbose: undefined,
 } as SQLite3DriverConfig;

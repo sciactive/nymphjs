@@ -23,9 +23,19 @@ export interface SQLite3DriverConfig {
    */
   timeout: number;
   /**
-   * Open for readonly, which is needed for PubSub.
+   * Open explicitly for writing.
+   *
+   * By default, the driver will always open the DB as readonly, and attempt to
+   * open another link to perform write operations. If you know that only one
+   * instance will be writing, you can force the driver to open for writing by
+   * default, which will block any other instance from opening it for writing.
+   *
+   * One thing to note is that starting a transaction is a write operation, so
+   * as long as an instance is in a transaction, no other instances can write.
+   *
+   * PubSub also needs to open the DB, and it only needs read access.
    */
-  readonly: boolean;
+  explicitWrite: boolean;
   /**
    * Turn on WAL mode.
    *
