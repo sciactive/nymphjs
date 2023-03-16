@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.13](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2023-03-16)
+
+### Features
+
+- open sqlite in readonly unless actively writing to db ([0443b91](https://github.com/sciactive/nymphjs/commit/0443b9188df3ebd557b96baf873abc4e4ddd9137))
+
 # [1.0.0-beta.12](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2023-03-04)
 
 **Note:** Version bump only for package @nymphjs/driver-sqlite3

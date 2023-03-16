@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.13](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2023-03-16)
+
+### Features
+
+- add noAutoconnect option to pubsub client ([266e715](https://github.com/sciactive/nymphjs/commit/266e715988b34f3e0d58ac68178677d2086b5160))
+
 # [1.0.0-beta.12](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2023-03-04)
 
 **Note:** Version bump only for package @nymphjs/client

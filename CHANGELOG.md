@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.13](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2023-03-16)
+
+### Bug Fixes
+
+- pubsub publishing changes before transaction is finished ([a918cc1](https://github.com/sciactive/nymphjs/commit/a918cc1451e03015ecce20f1c9bf6ceb62b7dff1))
+
+### Features
+
+- add noAutoconnect option to pubsub client ([266e715](https://github.com/sciactive/nymphjs/commit/266e715988b34f3e0d58ac68178677d2086b5160))
+- open sqlite in readonly unless actively writing to db ([0443b91](https://github.com/sciactive/nymphjs/commit/0443b9188df3ebd557b96baf873abc4e4ddd9137))
+
 # [1.0.0-beta.12](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.11...v1.0.0-beta.12) (2023-03-04)
 
 ### Bug Fixes
