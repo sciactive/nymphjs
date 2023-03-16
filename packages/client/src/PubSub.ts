@@ -51,7 +51,10 @@ export default class PubSub {
     if (typeof addEventListener !== 'undefined') {
       addEventListener('online', () => this.connect());
     }
-    if (typeof navigator === 'undefined' || navigator.onLine) {
+    if (
+      !nymphOptions.noAutoconnect &&
+      (typeof navigator === 'undefined' || navigator.onLine)
+    ) {
       this.connect();
     }
   }

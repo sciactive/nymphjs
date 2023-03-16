@@ -22,6 +22,10 @@ export type NymphOptions = {
    */
   noConsole?: boolean;
   /**
+   * Don't automatically try to connect to PubSub server.
+   */
+  noAutoconnect?: boolean;
+  /**
    * Use a WeakRef based cache of entities.
    *
    * This ensures all entities returned are the same instance if they have the
