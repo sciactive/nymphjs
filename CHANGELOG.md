@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.14](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2023-03-17)
+
+### Bug Fixes
+
+- run pragma and function on write link on new sqlite3 db ([6c28ba1](https://github.com/sciactive/nymphjs/commit/6c28ba1a396f7cec098d4e550c7b82c93979eaec))
+
 # [1.0.0-beta.13](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.12...v1.0.0-beta.13) (2023-03-16)
 
 ### Bug Fixes
