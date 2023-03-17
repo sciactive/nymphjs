@@ -95,6 +95,23 @@ export default class SQLite3Driver extends NymphDriver {
       this.config;
 
     try {
+      const setOptions = (link: SQLite3.Database) => {
+        // Set database and connection options.
+        if (wal) {
+          link.pragma('journal_mode = WAL;');
+        }
+        link.pragma('encoding = "UTF-8";');
+        link.pragma('foreign_keys = 1;');
+        link.pragma('case_sensitive_like = 1;');
+        // Create the preg_match and regexp functions.
+        link.function(
+          'regexp',
+          { deterministic: true },
+          (pattern: string, subject: string) =>
+            this.posixRegexMatch(pattern, subject) ? 1 : 0
+        );
+      };
+
       let link: SQLite3.Database;
       try {
         link = new SQLite3(filename, {
@@ -119,6 +136,7 @@ export default class SQLite3Driver extends NymphDriver {
             timeout,
             verbose,
           });
+          setOptions(writeLink);
           writeLink.close();
           // Now open in readonly.
           link = new SQLite3(filename, {
@@ -145,20 +163,7 @@ export default class SQLite3Driver extends NymphDriver {
         this.store.link = link;
       }
       this.store.connected = true;
-      // Set database and connection options.
-      if (wal) {
-        link.pragma('journal_mode = WAL;');
-      }
-      link.pragma('encoding = "UTF-8";');
-      link.pragma('foreign_keys = 1;');
-      link.pragma('case_sensitive_like = 1;');
-      // Create the preg_match and regexp functions.
-      link.function(
-        'regexp',
-        { deterministic: true },
-        (pattern: string, subject: string) =>
-          this.posixRegexMatch(pattern, subject) ? 1 : 0
-      );
+      setOptions(link);
     } catch (e: any) {
       if (this.store) {
         this.store.connected = false;
