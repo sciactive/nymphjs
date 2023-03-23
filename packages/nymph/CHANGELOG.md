@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.15](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2023-03-23)
+
+### Features
+
+- add option to sort results by a property ([16384e7](https://github.com/sciactive/nymphjs/commit/16384e7bdab88abb55ccccabb06ac09f92fa8a03))
+
 # [1.0.0-beta.14](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.13...v1.0.0-beta.14) (2023-03-17)
 
 **Note:** Version bump only for package @nymphjs/nymph
