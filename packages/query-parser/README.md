@@ -23,7 +23,7 @@ import Category from './Category';
 async function doQuery() {
   const [options, ...selectors] = queryParser({
     query:
-      'limit:4 foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>',
+      'limit:4 sort:mdate foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>',
     entityClass: BlogPost,
     defaultFields: ['title', 'body'],
     qrefMap: {
@@ -37,7 +37,8 @@ async function doQuery() {
   Options will be
     {
       class: BlogPost,
-      limit: 4
+      limit: 4,
+      sort: 'mdate'
     }
 
   And selectors will be (equivalent to)
@@ -81,10 +82,11 @@ async function doQuery() {
 
 ## Options
 
-You can set limit, offset, and reverse like this.
+You can set limit, offset, sort, and reverse like this.
 
 - `limit:number`
 - `offset:number`
+- `sort:string`
 - `reverse:true`, `reverse:false`, `reverse:1`, or `reverse:0`
 
 These must appear in the top level of the query (outside of any parentheses).

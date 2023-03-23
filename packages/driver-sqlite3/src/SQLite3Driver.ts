@@ -674,6 +674,7 @@ export default class SQLite3Driver extends NymphDriver {
     const cTable = `c${tableSuffix}`;
     const fTable = `f${tableSuffix}`;
     const ieTable = `ie${tableSuffix}`;
+    const sTable = `s${tableSuffix}`;
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -1419,17 +1420,30 @@ export default class SQLite3Driver extends NymphDriver {
     );
 
     let sortBy: string;
+    let sortByInner: string;
+    let sortJoin = '';
+    const order = options.reverse ? ' DESC' : '';
     switch (sort) {
       case 'mdate':
-        sortBy = '"mdate"';
+        sortBy = `${eTable}."mdate"${order}`;
+        sortByInner = `${ieTable}."mdate"${order}`;
         break;
       case 'cdate':
-      default:
-        sortBy = '"cdate"';
+        sortBy = `${eTable}."cdate"${order}`;
+        sortByInner = `${ieTable}."cdate"${order}`;
         break;
-    }
-    if (options.reverse) {
-      sortBy += ' DESC';
+      default:
+        const name = `param${++count.i}`;
+        sortJoin = `LEFT JOIN (
+            SELECT "guid", "string", "number"
+            FROM ${SQLite3Driver.escape(this.prefix + 'comparisons_' + etype)}
+            WHERE "name"=@${name}
+            ORDER BY "number"${order}, "string"${order}
+          ) ${sTable} USING ("guid")`;
+        sortBy = `${sTable}."number"${order}, ${sTable}."string"${order}`;
+        sortByInner = sortBy;
+        params[name] = sort;
+        break;
     }
 
     let query: string;
@@ -1467,8 +1481,9 @@ export default class SQLite3Driver extends NymphDriver {
             FROM ${SQLite3Driver.escape(
               this.prefix + 'entities_' + etype
             )} ${ieTable}
+            ${sortJoin}
             WHERE (${whereClause})
-            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
+            ORDER BY ${sortByInner}, "guid"${limit}${offset}`;
         } else {
           query = `SELECT
               ${eTable}."guid",
@@ -1488,15 +1503,17 @@ export default class SQLite3Driver extends NymphDriver {
             INNER JOIN ${SQLite3Driver.escape(
               this.prefix + 'comparisons_' + etype
             )} ${cTable} USING ("guid", "name")
+            ${sortJoin}
             INNER JOIN (
               SELECT "guid"
               FROM ${SQLite3Driver.escape(
                 this.prefix + 'entities_' + etype
               )} ${ieTable}
+              ${sortJoin}
               WHERE (${whereClause})
-              ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+              ORDER BY ${sortByInner}${limit}${offset}
             ) ${fTable} USING ("guid")
-            ORDER BY ${eTable}.${sortBy}`;
+            ORDER BY ${sortBy}, ${eTable}."guid"`;
         }
       }
     } else {
@@ -1530,7 +1547,8 @@ export default class SQLite3Driver extends NymphDriver {
             FROM ${SQLite3Driver.escape(
               this.prefix + 'entities_' + etype
             )} ${ieTable}
-            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
+            ${sortJoin}
+            ORDER BY ${sortByInner}, "guid"${limit}${offset}`;
         } else {
           if (limit || offset) {
             query = `SELECT
@@ -1551,14 +1569,16 @@ export default class SQLite3Driver extends NymphDriver {
               INNER JOIN ${SQLite3Driver.escape(
                 this.prefix + 'comparisons_' + etype
               )} c USING ("guid", "name")
+              ${sortJoin}
               INNER JOIN (
                 SELECT "guid"
                 FROM ${SQLite3Driver.escape(
                   this.prefix + 'entities_' + etype
                 )} ${ieTable}
-                ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+                ${sortJoin}
+                ORDER BY ${sortByInner}${limit}${offset}
               ) ${fTable} USING ("guid")
-              ORDER BY ${eTable}.${sortBy}`;
+              ORDER BY ${sortBy}, ${eTable}."guid"`;
           } else {
             query = `SELECT
                 ${eTable}."guid",
@@ -1578,7 +1598,8 @@ export default class SQLite3Driver extends NymphDriver {
               INNER JOIN ${SQLite3Driver.escape(
                 this.prefix + 'comparisons_' + etype
               )} ${cTable} USING ("guid", "name")
-              ORDER BY ${eTable}.${sortBy}`;
+              ${sortJoin}
+              ORDER BY ${sortBy}, ${eTable}."guid"`;
           }
         }
       }

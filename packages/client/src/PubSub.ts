@@ -648,8 +648,7 @@ export default class PubSub {
       const query = JSON.parse(update.query);
       if (entity != null) {
         // Insert the entity in order.
-        const sort =
-          'sort' in query[0] ? (query[0].sort as 'cdate' | 'mdate') : 'cdate';
+        const sort = 'sort' in query[0] ? (query[0].sort as string) : 'cdate';
         const reverse = query[0].hasOwnProperty('reverse')
           ? query[0].reverse
           : false;

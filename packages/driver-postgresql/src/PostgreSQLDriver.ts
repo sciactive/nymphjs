@@ -966,6 +966,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     const fTable = `f${tableSuffix}`;
     const ieTable = `ie${tableSuffix}`;
     const countTable = `count${tableSuffix}`;
+    const sTable = `s${tableSuffix}`;
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
@@ -1761,17 +1762,41 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
 
     let sortBy: string;
+    let sortByInner: string;
+    let sortJoin = '';
+    let sortJoinInner = '';
+    const order = options.reverse ? ' DESC' : '';
     switch (sort) {
       case 'mdate':
-        sortBy = '"mdate"';
+        sortBy = `${eTable}."mdate"${order}`;
+        sortByInner = `${ieTable}."mdate"${order}`;
         break;
       case 'cdate':
-      default:
-        sortBy = '"cdate"';
+        sortBy = `${eTable}."cdate"${order}`;
+        sortByInner = `${ieTable}."cdate"${order}`;
         break;
-    }
-    if (options.reverse) {
-      sortBy += ' DESC';
+      default:
+        const name = `param${++count.i}`;
+        sortJoin = `LEFT JOIN (
+            SELECT "guid", "string", "number"
+            FROM ${PostgreSQLDriver.escape(
+              this.prefix + 'comparisons_' + etype
+            )}
+            WHERE "name"=@${name}
+            ORDER BY "number"${order}, "string"${order}
+          ) ${sTable} ON ${eTable}."guid"=${sTable}."guid"`;
+        sortJoinInner = `LEFT JOIN (
+            SELECT "guid", "string", "number"
+            FROM ${PostgreSQLDriver.escape(
+              this.prefix + 'comparisons_' + etype
+            )}
+            WHERE "name"=@${name}
+            ORDER BY "number"${order}, "string"${order}
+          ) ${sTable} ON ${ieTable}."guid"=${sTable}."guid"`;
+        sortBy = `${sTable}."number"${order}, ${sTable}."string"${order}`;
+        sortByInner = sortBy;
+        params[name] = sort;
+        break;
     }
 
     let query: string;
@@ -1817,8 +1842,9 @@ export default class PostgreSQLDriver extends NymphDriver {
             FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
             )} ${ieTable}
+            ${sortJoinInner}
             WHERE (${whereClause})
-            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
+            ORDER BY ${sortByInner}, ${ieTable}."guid"${limit}${offset}`;
         } else {
           query = `SELECT
               encode(${eTable}."guid", 'hex') AS "guid",
@@ -1838,15 +1864,17 @@ export default class PostgreSQLDriver extends NymphDriver {
             INNER JOIN ${PostgreSQLDriver.escape(
               `${this.prefix}comparisons_${etype}`
             )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
+            ${sortJoin}
             INNER JOIN (
               SELECT ${ieTable}."guid"
               FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`
               )} ${ieTable}
+              ${sortJoinInner}
               WHERE (${whereClause})
-              ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+              ORDER BY ${sortByInner}${limit}${offset}
             ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
-            ORDER BY ${eTable}.${sortBy}`;
+            ORDER BY ${sortBy}, ${eTable}."guid"`;
         }
       }
     } else {
@@ -1888,7 +1916,8 @@ export default class PostgreSQLDriver extends NymphDriver {
             FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
             )} ${ieTable}
-            ORDER BY ${ieTable}.${sortBy}${limit}${offset}`;
+            ${sortJoinInner}
+            ORDER BY ${sortByInner}, ${ieTable}."guid"${limit}${offset}`;
         } else {
           if (limit || offset) {
             query = `SELECT
@@ -1909,14 +1938,16 @@ export default class PostgreSQLDriver extends NymphDriver {
               INNER JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
               )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
+              ${sortJoin}
               INNER JOIN (
                 SELECT ${ieTable}."guid"
                 FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}entities_${etype}`
                 )} ${ieTable}
-                ORDER BY ${ieTable}.${sortBy}${limit}${offset}
+                ${sortJoinInner}
+                ORDER BY ${sortByInner}${limit}${offset}
               ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
-              ORDER BY ${eTable}.${sortBy}`;
+              ORDER BY ${sortBy}, ${eTable}."guid"`;
           } else {
             query = `SELECT
                 encode(${eTable}."guid", 'hex') AS "guid",
@@ -1936,7 +1967,8 @@ export default class PostgreSQLDriver extends NymphDriver {
               INNER JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}comparisons_${etype}`
               )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
-              ORDER BY ${eTable}.${sortBy}`;
+              ${sortJoin}
+              ORDER BY ${sortBy}, ${eTable}."guid"`;
           }
         }
       }

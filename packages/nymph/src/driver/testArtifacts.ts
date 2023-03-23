@@ -84,6 +84,8 @@ This one's zip code is 92064.`;
       for (let i = 0; i < 100; i++) {
         const testEntity = await TestModel.factory();
         testEntity.name = `Multi Test ${i}`;
+        // Reverse the number for sort testing.
+        testEntity.number = 100 - i;
         testEntity.$removeTag('test');
         testEntity.$addTag('multiTest');
         expect(await testEntity.$save()).toEqual(true);
@@ -1637,26 +1639,23 @@ This one's zip code is 92064.`;
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
 
-  it('sort option', async () => {
+  it('cdate and mdate sort option', async () => {
     await createMultipleTestEntities();
 
-    for (const sort of ['cdate', 'mdate']) {
+    for (const sort of ['cdate', 'mdate'] as ('cdate' | 'mdate')[]) {
       // Retrieving entities sorted...
-      let resultEntities = await nymph.getEntities({
-        class: TestModel,
-        sort: sort as 'cdate' | 'mdate',
-      });
+      let resultEntities = await nymph.getEntities({ class: TestModel, sort });
       expect(resultEntities.length).toBeGreaterThan(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
-        expect(
-          resultEntities[i + 1][sort as 'cdate' | 'mdate']
-        ).toBeGreaterThan(resultEntities[i][sort as 'cdate' | 'mdate'] ?? 0);
+        expect(resultEntities[i + 1][sort]).toBeGreaterThan(
+          resultEntities[i][sort] ?? 0
+        );
       }
 
       // And test the same with guid return...
       let resultGuids = await nymph.getEntities({
         class: TestModel,
-        sort: sort as 'cdate' | 'mdate',
+        sort,
         return: 'guid',
       });
       expect(resultGuids.length).toBeGreaterThan(100);
@@ -1667,40 +1666,111 @@ This one's zip code is 92064.`;
       // Retrieving entities reverse sorted...
       resultEntities = await nymph.getEntities({
         class: TestModel,
-        sort: sort as 'cdate' | 'mdate',
+        sort,
         reverse: true,
       });
       expect(resultEntities.length).toBeGreaterThan(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
-        expect(resultEntities[i + 1][sort as 'cdate' | 'mdate']).toBeLessThan(
-          resultEntities[i][sort as 'cdate' | 'mdate'] ?? 0
+        expect(resultEntities[i + 1][sort]).toBeLessThan(
+          resultEntities[i][sort] ?? 0
         );
       }
 
       // And again with other selectors.
       // Retrieving entities sorted...
       resultEntities = await nymph.getEntities(
-        { class: TestModel, sort: sort as 'cdate' | 'mdate' },
+        { class: TestModel, sort },
         { type: '&', match: ['name', '^Multi Test '] }
       );
       expect(resultEntities.length).toEqual(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
-        expect(
-          resultEntities[i + 1][sort as 'cdate' | 'mdate']
-        ).toBeGreaterThan(resultEntities[i][sort as 'cdate' | 'mdate'] ?? 0);
+        expect(resultEntities[i + 1][sort]).toBeGreaterThan(
+          resultEntities[i][sort] ?? 0
+        );
       }
 
       // Retrieving entities reverse sorted...
       resultEntities = await nymph.getEntities(
-        { class: TestModel, sort: sort as 'cdate' | 'mdate', reverse: true },
+        { class: TestModel, sort, reverse: true },
         { type: '&', match: ['name', '^Multi Test '] }
       );
       expect(resultEntities.length).toEqual(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
-        expect(resultEntities[i + 1][sort as 'cdate' | 'mdate']).toBeLessThan(
-          resultEntities[i][sort as 'cdate' | 'mdate'] ?? 0
+        expect(resultEntities[i + 1][sort]).toBeLessThan(
+          resultEntities[i][sort] ?? 0
         );
       }
+    }
+  });
+
+  it('property sort option', async () => {
+    await createMultipleTestEntities();
+
+    // Retrieving entities sorted...
+    let resultEntities = await nymph.getEntities({
+      class: TestModel,
+      sort: 'number',
+    });
+    expect(resultEntities.length).toBeGreaterThan(100);
+    for (let i = 0; i < resultEntities.length - 1; i++) {
+      expect(resultEntities[i + 1].number ?? Infinity).toBeGreaterThanOrEqual(
+        resultEntities[i].number ?? 0
+      );
+    }
+
+    // And test the same with guid return...
+    let resultGuids = await nymph.getEntities({
+      class: TestModel,
+      sort: 'number',
+      return: 'guid',
+    });
+    expect(resultGuids.length).toBeGreaterThan(100);
+    for (let i = 0; i < resultGuids.length - 1; i++) {
+      expect(resultGuids[i]).toEqual(resultEntities[i].guid);
+    }
+
+    // Retrieving entities reverse sorted...
+    resultEntities = await nymph.getEntities({
+      class: TestModel,
+      sort: 'number',
+      reverse: true,
+    });
+    expect(resultEntities.length).toBeGreaterThan(100);
+    for (let i = 0; i < resultEntities.length - 1; i++) {
+      expect(resultEntities[i + 1].number ?? 0).toBeLessThanOrEqual(
+        resultEntities[i].number ?? Infinity
+      );
+    }
+
+    // And again with other selectors.
+    // Retrieving entities sorted...
+    resultEntities = await nymph.getEntities(
+      { class: TestModel, sort: 'number' },
+      { type: '&', match: ['name', '^Multi Test '] }
+    );
+    expect(resultEntities.length).toEqual(100);
+    for (let i = 0; i < resultEntities.length - 1; i++) {
+      expect(resultEntities[i + 1].number ?? Infinity).toBeGreaterThan(
+        resultEntities[i].number ?? 0
+      );
+      expect(resultEntities[i].name).toEqual(
+        `Multi Test ${100 - (resultEntities[i].number ?? 0)}`
+      );
+    }
+
+    // Retrieving entities reverse sorted...
+    resultEntities = await nymph.getEntities(
+      { class: TestModel, sort: 'number', reverse: true },
+      { type: '&', match: ['name', '^Multi Test '] }
+    );
+    expect(resultEntities.length).toEqual(100);
+    for (let i = 0; i < resultEntities.length - 1; i++) {
+      expect(resultEntities[i + 1].number ?? 0).toBeLessThan(
+        resultEntities[i].number ?? Infinity
+      );
+      expect(resultEntities[i].name).toEqual(
+        `Multi Test ${100 - (resultEntities[i].number ?? 0)}`
+      );
     }
   });
 

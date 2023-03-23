@@ -151,7 +151,7 @@ describe('queryParser', () => {
   });
 
   it('parses all options', () => {
-    const query = 'limit:10 offset:15 reverse:true search';
+    const query = 'limit:10 offset:15 sort:someProp reverse:true search';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -162,6 +162,7 @@ describe('queryParser', () => {
       class: BlogPost,
       limit: 10,
       offset: 15,
+      sort: 'someProp',
       reverse: true,
     });
 

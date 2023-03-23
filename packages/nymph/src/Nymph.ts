@@ -1,7 +1,7 @@
 import { Config, ConfigDefaults as defaults } from './conf';
-import { NymphDriver } from './driver';
+import type { NymphDriver } from './driver';
 import Entity from './Entity';
-import { EntityConstructor, EntityInterface } from './Entity.types';
+import type { EntityConstructor, EntityInterface } from './Entity.types';
 import { ClassNotAvailableError } from './errors';
 import type {
   Selector,
@@ -575,8 +575,10 @@ export default class Nymph {
    * - offset - The offset from the oldest matching entity to start retrieving.
    * - reverse - If true, entities will be retrieved from newest to oldest.
    *   Therefore, offset will be from the newest entity.
-   * - sort - How to sort the entities. Accepts "cdate" or "mdate". Defaults to
-   *   "cdate".
+   * - sort - How to sort the entities. Accepts "cdate", "mdate", or the name of
+   *   a top-level property. The method of sorting properties other than cdate
+   *   and mdate is driver dependent. The only hard rule is that numbers should
+   *   be sorted numerically (2 before 10). Defaults to "cdate".
    * - return - What to return. "entity", "guid", or "count". Defaults to
    *   "entity".
    * - source - Will be 'client' if the query came from a REST call.

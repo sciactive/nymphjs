@@ -1,7 +1,6 @@
 import Entity from './Entity';
-import {
+import type {
   EntityConstructor,
-  EntityData,
   EntityInterface,
   EntityJson,
   ServerCallResponse,
@@ -9,7 +8,7 @@ import {
 } from './Entity.types';
 import EntityWeakCache from './EntityWeakCache';
 import HttpRequester from './HttpRequester';
-import {
+import type {
   EventType,
   NymphOptions,
   Options,
@@ -17,7 +16,7 @@ import {
   ResponseCallback,
   Selector,
 } from './Nymph.types';
-import PubSub from './PubSub';
+import type PubSub from './PubSub';
 import { entitiesToReferences, entityConstructorsToClassNames } from './utils';
 
 let requester: HttpRequester;
