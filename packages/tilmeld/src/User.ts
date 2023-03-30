@@ -24,12 +24,22 @@ import {
 } from './errors';
 
 export type EventType =
+  | 'checkUsername'
   | 'beforeRegister'
   | 'afterRegister'
   | 'beforeLogin'
   | 'afterLogin'
   | 'beforeLogout'
   | 'afterLogout';
+/**
+ * This is run when the user has entered an otherwise valid username into the
+ * signup form. It should return a result, which when false will stop the
+ * process and return the included message, disallowing the username.
+ */
+export type TilmeldCheckUsernameCallback = (
+  user: User & UserData,
+  data: { username: string }
+) => Promise<{ result: boolean; message?: string }>;
 /**
  * Theses are run before the user data checks, so the only checks before are
  * whether registration is allowed and whether the user is already registered.
@@ -185,6 +195,7 @@ export default class User extends AbleObject<UserData> {
   static tilmeld: Tilmeld;
   static ETYPE = 'tilmeld_user';
   static class = 'User';
+  private static checkUsernameCallbacks: TilmeldCheckUsernameCallback[] = [];
   private static beforeRegisterCallbacks: TilmeldBeforeRegisterCallback[] = [];
   private static afterRegisterCallbacks: TilmeldAfterRegisterCallback[] = [];
   private static beforeLoginCallbacks: TilmeldBeforeLoginCallback[] = [];
@@ -1111,6 +1122,18 @@ export default class User extends AbleObject<UserData> {
         return { result: false, message: 'That username is taken.' };
       }
 
+      for (let callback of (this.constructor as typeof User)
+        .checkUsernameCallbacks) {
+        if (callback) {
+          const result = await callback(this, {
+            username: this.$data.username,
+          });
+          if (!result.result) {
+            return { message: 'Username is not available.', ...result };
+          }
+        }
+      }
+
       return {
         result: true,
         message:
@@ -1792,7 +1815,9 @@ export default class User extends AbleObject<UserData> {
 
   public static on<T extends EventType>(
     event: T,
-    callback: T extends 'beforeRegister'
+    callback: T extends 'checkUsername'
+      ? TilmeldCheckUsernameCallback
+      : T extends 'beforeRegister'
       ? TilmeldBeforeRegisterCallback
       : T extends 'afterRegister'
       ? TilmeldAfterRegisterCallback
@@ -1806,7 +1831,9 @@ export default class User extends AbleObject<UserData> {
       ? TilmeldAfterLogoutCallback
       : never
   ) {
-    const prop = (event + 'Callbacks') as T extends 'beforeRegister'
+    const prop = (event + 'Callbacks') as T extends 'checkUsername'
+      ? 'checkUsernameCallbacks'
+      : T extends 'beforeRegister'
       ? 'beforeRegisterCallbacks'
       : T extends 'afterRegister'
       ? 'afterRegisterCallbacks'
@@ -1829,7 +1856,9 @@ export default class User extends AbleObject<UserData> {
 
   public static off<T extends EventType>(
     event: T,
-    callback: T extends 'beforeRegister'
+    callback: T extends 'checkUsername'
+      ? TilmeldCheckUsernameCallback
+      : T extends 'beforeRegister'
       ? TilmeldBeforeRegisterCallback
       : T extends 'afterRegister'
       ? TilmeldAfterRegisterCallback
@@ -1843,7 +1872,9 @@ export default class User extends AbleObject<UserData> {
       ? TilmeldAfterLogoutCallback
       : never
   ) {
-    const prop = (event + 'Callbacks') as T extends 'beforeRegister'
+    const prop = (event + 'Callbacks') as T extends 'checkUsername'
+      ? 'checkUsernameCallbacks'
+      : T extends 'beforeRegister'
       ? 'beforeRegisterCallbacks'
       : T extends 'afterRegister'
       ? 'afterRegisterCallbacks'
