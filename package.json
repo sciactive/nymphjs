@@ -30,15 +30,15 @@
   },
   "homepage": "https://github.com/sciactive/nymphjs#readme",
   "devDependencies": {
-    "@commitlint/cli": "^17.4.4",
+    "@commitlint/cli": "^17.5.1",
     "@commitlint/config-conventional": "^17.4.4",
     "husky": "^8.0.3",
-    "lerna": "^6.5.1",
-    "lint-staged": "^13.1.2",
-    "prettier": "2.8.4",
-    "prettier-plugin-svelte": "^2.9.0",
-    "typedoc": "^0.23.26",
-    "typescript": "^4.9.5"
+    "lerna": "^6.6.1",
+    "lint-staged": "^13.2.0",
+    "prettier": "2.8.7",
+    "prettier-plugin-svelte": "^2.10.0",
+    "typedoc": "^0.23.28",
+    "typescript": "^5.0.2"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"
