@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.16](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2023-03-31)
+
+### Features
+
+- add ability to tell tilmeld to log in a specific user during authentication ([922e145](https://github.com/sciactive/nymphjs/commit/922e1452adae44bed2aa9655be16e19796acb39b))
+
 # [1.0.0-beta.15](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.14...v1.0.0-beta.15) (2023-03-23)
 
 **Note:** Version bump only for package @nymphjs/server
