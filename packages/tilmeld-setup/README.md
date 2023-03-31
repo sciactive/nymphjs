@@ -53,7 +53,8 @@ const app = express();
 
 // Use the REST server.
 app.use('/rest', createServer(nymph));
-// Use the Tilmeld Setup App, passing in the Nymph Client Config.
+
+// Create Tilmeld setup app.
 app.use(
   '/user',
   setup(

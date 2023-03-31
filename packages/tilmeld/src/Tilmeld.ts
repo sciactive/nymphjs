@@ -960,12 +960,32 @@ export default class Tilmeld implements TilmeldInterface {
   /**
    * Check for a TILMELDAUTH token, and, if set, authenticate from it.
    *
+   * You can also call this function after setting `response.locals.user` to the
+   * user you want to authenticate. You *should* check for `user.enabled` before
+   * setting this variable, unless you explicitly want to log in as a disabled
+   * user. (The user must be an instance of the User class for this Tilmeld
+   * instance.)
+   *
+   * This function will set `response.locals.user` to the logged in user on
+   * successful authentication.
+   *
    * @param skipXsrfToken Skip the XSRF token check.
    * @returns True if a user was authenticated, false on any failure.
    */
   public authenticate(skipXsrfToken = false) {
     if (this.request == null) {
       return false;
+    }
+
+    if (
+      this.response &&
+      this.response.locals.user &&
+      this.response.locals.user instanceof this.User
+    ) {
+      // The user has already been authenticated through some other means.
+      const user = this.response.locals.user;
+      this.fillSession(user);
+      return true;
     }
 
     const cookies = this.request.cookies ?? {};
@@ -1022,6 +1042,11 @@ export default class Tilmeld implements TilmeldInterface {
     } else {
       this.fillSession(user);
     }
+
+    if (this.response) {
+      this.response.locals.user = user;
+    }
+
     return true;
   }
 
@@ -1029,26 +1054,40 @@ export default class Tilmeld implements TilmeldInterface {
    * Logs the given user into the system.
    *
    * @param user The user.
-   * @param sendAuthHeader When true, a custom header with the auth token will be sent.
+   * @param sendAuthHeader Send the auth token as a custom header.
+   * @param sendCookie Send the auth token as a cookie.
    * @returns True on success, false on failure.
    */
-  public login(user: User & UserData, sendAuthHeader: boolean) {
+  public login(
+    user: User & UserData,
+    sendAuthHeader: boolean,
+    sendCookie = true
+  ) {
     if (user.guid != null && user.enabled) {
-      if (this.response && !this.response.headersSent) {
-        const token = this.config.jwtBuilder(this.config, user);
-        const appUrl = new URL(this.config.appUrl);
-        this.response.cookie('TILMELDAUTH', token, {
-          domain: this.config.cookieDomain,
-          path: this.config.cookiePath,
-          maxAge: this.config.jwtExpire * 1000,
-          secure: appUrl.protocol === 'https',
-          httpOnly: false, // Allow JS access (for CSRF protection).
-          sameSite: appUrl.protocol === 'https' ? 'lax' : 'strict',
-        });
-        if (sendAuthHeader) {
-          this.response.set('X-TILMELDAUTH', token);
+      if (this.response) {
+        if (!this.response.headersSent) {
+          const token = this.config.jwtBuilder(this.config, user);
+
+          if (sendCookie) {
+            const appUrl = new URL(this.config.appUrl);
+            this.response.cookie('TILMELDAUTH', token, {
+              domain: this.config.cookieDomain,
+              path: this.config.cookiePath,
+              maxAge: this.config.jwtExpire * 1000,
+              secure: appUrl.protocol === 'https',
+              httpOnly: false, // Allow JS access (for CSRF protection).
+              sameSite: appUrl.protocol === 'https' ? 'lax' : 'strict',
+            });
+          }
+
+          if (sendAuthHeader) {
+            this.response.set('X-TILMELDAUTH', token);
+          }
         }
+
+        this.response.locals.user = user;
       }
+
       this.fillSession(user);
       return true;
     }
@@ -1057,15 +1096,20 @@ export default class Tilmeld implements TilmeldInterface {
 
   /**
    * Logs the current user out of the system.
+   *
+   * @param clearCookie Clear the auth cookie. (Also send a header.)
    */
-  public logout() {
+  public logout(clearCookie = true) {
     this.clearSession();
-    if (this.response && !this.response.headersSent) {
-      this.response.clearCookie('TILMELDAUTH', {
-        domain: this.config.cookieDomain,
-        path: this.config.cookiePath,
-      });
-      this.response.set('X-TILMELDAUTH', '');
+    if (this.response) {
+      if (clearCookie && !this.response.headersSent) {
+        this.response.clearCookie('TILMELDAUTH', {
+          domain: this.config.cookieDomain,
+          path: this.config.cookiePath,
+        });
+        this.response.set('X-TILMELDAUTH', '');
+      }
+      this.response.locals.user = null;
     }
   }
 
