@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.17](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2023-04-24)
+
+### Features
+
+- add spa router to user admin app ([25bb344](https://github.com/sciactive/nymphjs/commit/25bb344f4d358eeb2254df98782f1cba229b5f50))
+
 # [1.0.0-beta.16](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2023-03-31)
 
 ### Features

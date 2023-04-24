@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.17](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2023-04-24)
+
+### Features
+
+- use a long lived worker thread for synchronous mysql and postgres queries ([7e2bf84](https://github.com/sciactive/nymphjs/commit/7e2bf84a2d584d6906c31f44147025b793a05026))
+
 # [1.0.0-beta.16](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.15...v1.0.0-beta.16) (2023-03-31)
 
 **Note:** Version bump only for package @nymphjs/driver-mysql
