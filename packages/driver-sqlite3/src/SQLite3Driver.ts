@@ -104,12 +104,12 @@ export default class SQLite3Driver extends NymphDriver {
         link.pragma('foreign_keys = 1;');
         link.pragma('case_sensitive_like = 1;');
         // Create the preg_match and regexp functions.
-        link.function(
-          'regexp',
-          { deterministic: true },
-          (pattern: string, subject: string) =>
-            this.posixRegexMatch(pattern, subject) ? 1 : 0
-        );
+        link.function('regexp', { deterministic: true }, ((
+          pattern: string,
+          subject: string
+        ) => (this.posixRegexMatch(pattern, subject) ? 1 : 0)) as (
+          ...params: any[]
+        ) => any);
       };
 
       let link: SQLite3.Database;
@@ -577,7 +577,7 @@ export default class SQLite3Driver extends NymphDriver {
     writeLine('');
 
     // Export UIDs.
-    let uids = this.queryIter(
+    let uids: IterableIterator<any> = this.queryIter(
       `SELECT * FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`
       )} ORDER BY "name";`
@@ -593,7 +593,7 @@ export default class SQLite3Driver extends NymphDriver {
     writeLine('');
 
     // Get the etypes.
-    const tables = this.queryIter(
+    const tables: IterableIterator<any> = this.queryIter(
       "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;"
     );
     const etypes = [];
@@ -605,7 +605,7 @@ export default class SQLite3Driver extends NymphDriver {
 
     for (const etype of etypes) {
       // Export entities.
-      const dataIterator = this.queryIter(
+      const dataIterator: IterableIterator<any> = this.queryIter(
         `SELECT e.*, d."name" AS "dname", d."value" AS "dvalue", c."string", c."number" FROM ${SQLite3Driver.escape(
           `${this.prefix}entities_${etype}`
         )} e LEFT JOIN ${SQLite3Driver.escape(
@@ -1707,7 +1707,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
-    const result = this.queryGet(
+    const result: any = this.queryGet(
       `SELECT "cur_uid" FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`
       )} WHERE "name"=@name;`,
@@ -1886,15 +1886,17 @@ export default class SQLite3Driver extends NymphDriver {
     await this.startTransaction('nymph-newuid');
     try {
       let curUid =
-        this.queryGet(
-          `SELECT "cur_uid" FROM ${SQLite3Driver.escape(
-            `${this.prefix}uids`
-          )} WHERE "name"=@name;`,
-          {
-            params: {
-              name,
-            },
-          }
+        (
+          this.queryGet(
+            `SELECT "cur_uid" FROM ${SQLite3Driver.escape(
+              `${this.prefix}uids`
+            )} WHERE "name"=@name;`,
+            {
+              params: {
+                name,
+              },
+            }
+          ) as any
         )?.cur_uid ?? null;
       if (curUid == null) {
         curUid = 1;

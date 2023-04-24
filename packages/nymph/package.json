@@ -39,12 +39,12 @@
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.2",
-    "@types/jest": "^29.5.0",
+    "@types/jest": "^29.5.1",
     "@types/locutus": "^0.0.6",
-    "@types/lodash": "^4.14.192",
+    "@types/lodash": "^4.14.194",
     "@types/n-readlines": "^1.0.3",
     "jest": "^29.5.0",
-    "ts-jest": "^29.0.5",
-    "typescript": "^5.0.2"
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.4"
   }
 }
