@@ -4,7 +4,11 @@ import { NymphOptions } from '@nymphjs/client';
 import { Nymph } from '@nymphjs/nymph';
 import type { Tilmeld } from '@nymphjs/tilmeld';
 
-export function setup(options: NymphOptions, nymph: Nymph) {
+export function setup(
+  options: NymphOptions,
+  nymph: Nymph,
+  { allowRegistration = false }: { allowRegistration?: boolean } = {}
+) {
   const app = express();
 
   if (!nymph.tilmeld) {
@@ -198,7 +202,10 @@ export function setup(options: NymphOptions, nymph: Nymph) {
 
   app.get('/options.js', async (_request, response) => {
     response.type('text/javascript');
-    response.send(`window.nymphOptions = ${JSON.stringify(options)};`);
+    response.send(
+      `window.nymphOptions = ${JSON.stringify(options)};\n` +
+        `window.allowRegistration = ${JSON.stringify(allowRegistration)};`
+    );
   });
 
   app.use(

@@ -17,6 +17,7 @@ module.exports = {
     },
     extensions: ['.mjs', '.js', '.ts', '.svelte'],
     mainFields: ['svelte', 'browser', 'module', 'main'],
+    conditionNames: ['svelte', 'import', 'module'],
   },
   module: {
     rules: [

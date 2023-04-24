@@ -1,332 +1,333 @@
-<div style="display: flex; align-items: center; padding: 12px;">
-  <IconButton title="Back" on:click={() => dispatch('leave')}>
-    <Icon component={Svg} viewBox="0 0 24 24">
-      <path fill="currentColor" d={mdiArrowLeft} />
-    </Icon>
-  </IconButton>
-  <h2 style="margin: 0px 12px 0px;" class="mdc-typography--headline5">
-    Editing {entity.guid ? entity.name : 'New Group'}
-  </h2>
-</div>
-{#if entity.user}
-  {#await entity.user.$ready() then _user}
-    <div style="padding: 12px;" class="mdc-typography--subtitle1">
-      Generated primary group for {entity.user.name} ({entity.user.username})
+{#if clientConfig == null || user == null || loading}
+  <section>
+    <div style="display: flex; justify-content: center; align-items: center;">
+      <CircularProgress style="height: 45px; width: 45px;" indeterminate />
     </div>
-  {/await}
-{/if}
-{#if entity != null}
-  {#if clientConfig == null || user == null}
-    <section style="padding-top: 0;">
-      <div style="display: flex; justify-content: center; align-items: center;">
-        <CircularProgress style="height: 45px; width: 45px;" indeterminate />
-      </div>
-    </section>
-  {:else}
-    <TabBar
-      tabs={['General', 'Parent', 'Abilities']}
-      let:tab
-      bind:active={activeTab}
-    >
-      <Tab {tab}>
-        <Label>{tab}</Label>
-      </Tab>
-    </TabBar>
+  </section>
+{:else}
+  <div style="display: flex; align-items: center; padding: 12px;">
+    <IconButton title="Back" on:click={pop}>
+      <Icon component={Svg} viewBox="0 0 24 24">
+        <path fill="currentColor" d={mdiArrowLeft} />
+      </Icon>
+    </IconButton>
+    <h2 style="margin: 0px 12px 0px;" class="mdc-typography--headline5">
+      Editing {entity.guid ? entity.name : 'New Group'}
+    </h2>
+  </div>
 
-    <section>
-      {#if activeTab === 'General'}
-        <LayoutGrid style="padding: 0;">
-          {#if entity.user != null}
-            <LayoutCell span={12}>
-              Some of these fields are not editable, since this group inherits
-              the values from its user.
-            </LayoutCell>
-          {/if}
-          <LayoutCell span={4}>
-            <div class="mdc-typography--headline6">GUID</div>
-            <code>{entity.guid}</code>
+  {#if entity.user}
+    {#await entity.user.$ready() then _user}
+      <div style="padding: 12px;" class="mdc-typography--subtitle1">
+        Generated primary group for <a
+          href="#/users/edit/{encodeURIComponent(entity.user.guid || '')}"
+          >{entity.user.name} ({entity.user.username})</a
+        >
+      </div>
+    {/await}
+  {/if}
+
+  <TabBar
+    tabs={['General', 'Parent', 'Abilities']}
+    let:tab
+    bind:active={activeTab}
+  >
+    <Tab {tab}>
+      <Label>{tab}</Label>
+    </Tab>
+  </TabBar>
+
+  <section>
+    {#if activeTab === 'General'}
+      <LayoutGrid style="padding: 0;">
+        {#if entity.user != null}
+          <LayoutCell span={12}>
+            Some of these fields are not editable, since this group inherits the
+            values from its user.
           </LayoutCell>
-          <LayoutCell span={4}>
-            <FormField>
-              <Checkbox bind:checked={entity.enabled} />
-              <span slot="label">Enabled (Able to give abilities)</span>
-            </FormField>
-          </LayoutCell>
-          <LayoutCell span={4} style="text-align: end;">
-            <a href="https://en.gravatar.com/" target="_blank" rel="noreferrer">
-              <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
-            </a>
-          </LayoutCell>
-          {#if !clientConfig.emailUsernames}
-            <LayoutCell span={6}>
-              <Textfield
-                bind:value={entity.groupname}
-                label="Groupname"
-                type="text"
-                style="width: 100%;"
-                helperLine$style="width: 100%;"
-                invalid={groupnameVerified === false}
-                input$autocomplete="off"
-                input$autocapitalize="off"
-                input$spellcheck="false"
-                disabled={entity.user != null}
-              >
-                <HelperText persistent slot="helper">
-                  {groupnameVerifiedMessage ?? ''}
-                </HelperText>
-              </Textfield>
-            </LayoutCell>
-          {/if}
-          <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
+        {/if}
+        <LayoutCell span={4}>
+          <div class="mdc-typography--headline6">GUID</div>
+          <code>{entity.guid}</code>
+        </LayoutCell>
+        <LayoutCell span={4}>
+          <FormField>
+            <Checkbox bind:checked={entity.enabled} />
+            <span slot="label">Enabled (Able to give abilities)</span>
+          </FormField>
+        </LayoutCell>
+        <LayoutCell span={4} style="text-align: end;">
+          <a href="https://en.gravatar.com/" target="_blank" rel="noreferrer">
+            <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
+          </a>
+        </LayoutCell>
+        {#if !clientConfig.emailUsernames}
+          <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.email}
-              label="Email"
-              type="email"
+              bind:value={entity.groupname}
+              label="Groupname"
+              type="text"
               style="width: 100%;"
               helperLine$style="width: 100%;"
-              invalid={emailVerified === false}
+              invalid={groupnameVerified === false}
               input$autocomplete="off"
               input$autocapitalize="off"
               input$spellcheck="false"
               disabled={entity.user != null}
             >
               <HelperText persistent slot="helper">
-                {emailVerifiedMessage ?? ''}
+                {groupnameVerifiedMessage ?? ''}
               </HelperText>
             </Textfield>
           </LayoutCell>
-          <LayoutCell span={12}>
-            <Textfield
-              bind:value={entity.name}
-              label="Display Name"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-              disabled={entity.user != null}
-            />
-          </LayoutCell>
-          <LayoutCell span={8}>
-            <Textfield
-              bind:value={entity.avatar}
-              label="Avatar"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-              disabled={entity.user != null}
-            />
-          </LayoutCell>
-          <LayoutCell span={4}>
-            <Textfield
-              bind:value={entity.phone}
-              label="Phone"
-              type="tel"
-              style="width: 100%;"
-              input$autocomplete="off"
-              disabled={entity.user != null}
-            />
-          </LayoutCell>
-          <LayoutCell span={12}>
-            <FormField>
-              <Checkbox bind:checked={entity.defaultPrimary} />
-              <span slot="label"
-                >Default primary group for newly registered users. <small
-                  class="form-text text-muted"
-                  >Setting this will unset any current default primary group.</small
-                ></span
-              >
-            </FormField>
-          </LayoutCell>
-          <LayoutCell span={12}>
-            <FormField>
-              <Checkbox bind:checked={entity.defaultSecondary} />
-              <span slot="label"
-                >Default secondary group for newly registered{clientConfig.verifyEmail &&
-                clientConfig.unverifiedAccess
-                  ? ', verified'
-                  : ''} users.</span
-              >
-            </FormField>
-          </LayoutCell>
-          {#if clientConfig.verifyEmail && clientConfig.unverifiedAccess}
-            <LayoutCell span={12}>
-              <FormField>
-                <Checkbox bind:checked={entity.unverifiedSecondary} />
-                <span slot="label"
-                  >Default secondary group for newly registered, unverified
-                  users.</span
-                >
-              </FormField>
-            </LayoutCell>
-          {/if}
-        </LayoutGrid>
-      {/if}
-
-      {#if activeTab === 'Parent'}
-        <h5 style="margin-top: 0;">Parent</h5>
-
-        <Paper
-          style="display: flex; justify-content: space-between; align-items: center;"
-        >
-          {#if !entity.parent}
-            No parent
-          {:else}
-            <span
-              >{entity.parent.name + ' (' + entity.parent.groupname + ')'}</span
-            >
-
-            <IconButton
-              on:click={() => {
-                delete entity.parent;
-                entity = entity;
-              }}
-            >
-              <Icon component={Svg} viewBox="0 0 24 24">
-                <path fill="currentColor" d={mdiMinus} />
-              </Icon>
-            </IconButton>
-          {/if}
-        </Paper>
-
-        <h6>Change Parent</h6>
-
-        <div class="solo-search-container solo-container">
-          <Paper class="solo-paper" elevation={1}>
-            <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiMagnify} />
-            </Icon>
-            <Input
-              bind:value={parentSearch}
-              on:keydown={parentSearchKeyDown}
-              placeholder="Parent Search"
-              class="solo-input"
-            />
-          </Paper>
-          <IconButton
-            on:click={searchParents}
-            disabled={parentSearch === ''}
-            class="solo-fab"
-            title="Search"
-          >
-            <Icon component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiArrowRight} />
-            </Icon>
-          </IconButton>
-        </div>
-
-        {#if parentsSearching}
-          <div
-            style="display: flex; justify-content: center; align-items: center;"
-          >
-            <CircularProgress
-              style="height: 32px; width: 32px;"
-              indeterminate
-            />
-          </div>
-        {:else if parents != null}
-          <DataTable table$aria-label="Parent list" style="width: 100%;">
-            <Head>
-              <Row>
-                {#if !clientConfig.emailUsernames}
-                  <Cell>Groupname</Cell>
-                {/if}
-                <Cell>Name</Cell>
-                <Cell>Email</Cell>
-                <Cell>Enabled</Cell>
-              </Row>
-            </Head>
-            <Body>
-              {#each parents as curEntity (curEntity.guid)}
-                <Row
-                  on:click={() => (entity.parent = curEntity)}
-                  style="cursor: pointer;"
-                >
-                  {#if !clientConfig.emailUsernames}
-                    <Cell>{curEntity.groupname}</Cell>
-                  {/if}
-                  <Cell>{curEntity.name}</Cell>
-                  <Cell>{curEntity.email}</Cell>
-                  <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
-                </Row>
-              {/each}
-            </Body>
-          </DataTable>
         {/if}
-      {/if}
-
-      {#if activeTab === 'Abilities'}
-        <h5 style="margin-top: 0;">Abilities</h5>
-
-        <List nonInteractive>
-          {#if entity.abilities}
-            {#each entity.abilities as ability, index (ability)}
-              <Item>
-                <Text>
-                  {ability}
-                </Text>
-                <Meta>
-                  <IconButton
-                    on:click={() => {
-                      entity.abilities?.splice(index, 1);
-                      entity = entity;
-                    }}
-                  >
-                    <Icon component={Svg} viewBox="0 0 24 24">
-                      <path fill="currentColor" d={mdiMinus} />
-                    </Icon>
-                  </IconButton>
-                </Meta>
-              </Item>
-            {:else}
-              <Item>
-                <Text>No abilities</Text>
-              </Item>
-            {/each}
-          {/if}
-        </List>
-
-        <h6>Add Ability</h6>
-
-        <div style="display: flex; align-items: center; flex-wrap: wrap;">
+        <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
           <Textfield
-            bind:value={ability}
-            label="Ability"
+            bind:value={entity.email}
+            label="Email"
+            type="email"
+            style="width: 100%;"
+            helperLine$style="width: 100%;"
+            invalid={emailVerified === false}
+            input$autocomplete="off"
+            input$autocapitalize="off"
+            input$spellcheck="false"
+            disabled={entity.user != null}
+          >
+            <HelperText persistent slot="helper">
+              {emailVerifiedMessage ?? ''}
+            </HelperText>
+          </Textfield>
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <Textfield
+            bind:value={entity.name}
+            label="Display Name"
             type="text"
-            style="width: 250px; max-width: 100%;"
-            on:keydown={abilityKeyDown}
+            style="width: 100%;"
+            input$autocomplete="off"
+            disabled={entity.user != null}
           />
-          <IconButton on:click={addAbility}>
+        </LayoutCell>
+        <LayoutCell span={8}>
+          <Textfield
+            bind:value={entity.avatar}
+            label="Avatar"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+            disabled={entity.user != null}
+          />
+        </LayoutCell>
+        <LayoutCell span={4}>
+          <Textfield
+            bind:value={entity.phone}
+            label="Phone"
+            type="tel"
+            style="width: 100%;"
+            input$autocomplete="off"
+            disabled={entity.user != null}
+          />
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <FormField>
+            <Checkbox bind:checked={entity.defaultPrimary} />
+            <span slot="label"
+              >Default primary group for newly registered users. <small
+                class="form-text text-muted"
+                >Setting this will unset any current default primary group.</small
+              ></span
+            >
+          </FormField>
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <FormField>
+            <Checkbox bind:checked={entity.defaultSecondary} />
+            <span slot="label"
+              >Default secondary group for newly registered{clientConfig.verifyEmail &&
+              clientConfig.unverifiedAccess
+                ? ', verified'
+                : ''} users.</span
+            >
+          </FormField>
+        </LayoutCell>
+        {#if clientConfig.verifyEmail && clientConfig.unverifiedAccess}
+          <LayoutCell span={12}>
+            <FormField>
+              <Checkbox bind:checked={entity.unverifiedSecondary} />
+              <span slot="label"
+                >Default secondary group for newly registered, unverified users.</span
+              >
+            </FormField>
+          </LayoutCell>
+        {/if}
+      </LayoutGrid>
+    {/if}
+
+    {#if activeTab === 'Parent'}
+      <h5 style="margin-top: 0;">Parent</h5>
+
+      <Paper
+        style="display: flex; justify-content: space-between; align-items: center;"
+      >
+        {#if !entity.parent}
+          No parent
+        {:else}
+          <a href="#/groups/edit/{encodeURIComponent(entity.parent.guid || '')}"
+            >{entity.parent.name + ' (' + entity.parent.groupname + ')'}</a
+          >
+
+          <IconButton
+            on:click={() => {
+              delete entity.parent;
+              entity = entity;
+            }}
+          >
             <Icon component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiPlus} />
+              <path fill="currentColor" d={mdiMinus} />
             </Icon>
           </IconButton>
-        </div>
-      {/if}
-
-      {#if failureMessage}
-        <div class="tilmeld-failure">
-          {failureMessage}
-        </div>
-      {/if}
-
-      <div style="margin-top: 36px;">
-        <Button variant="raised" on:click={saveEntity} disabled={saving}>
-          <Label>Save Group</Label>
-        </Button>
-        {#if entity.guid}
-          <Button on:click={deleteEntity} disabled={saving}>
-            <Label>Delete</Label>
-          </Button>
         {/if}
-        {#if success}
-          <span>Successfully saved!</span>
-        {/if}
+      </Paper>
+
+      <h6>Change Parent</h6>
+
+      <div class="solo-search-container solo-container">
+        <Paper class="solo-paper" elevation={1}>
+          <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiMagnify} />
+          </Icon>
+          <Input
+            bind:value={parentSearch}
+            on:keydown={parentSearchKeyDown}
+            placeholder="Parent Search"
+            class="solo-input"
+          />
+        </Paper>
+        <IconButton
+          on:click={searchParents}
+          disabled={parentSearch === ''}
+          class="solo-fab"
+          title="Search"
+        >
+          <Icon component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiArrowRight} />
+          </Icon>
+        </IconButton>
       </div>
-    </section>
-  {/if}
+
+      {#if parentsSearching}
+        <div
+          style="display: flex; justify-content: center; align-items: center;"
+        >
+          <CircularProgress style="height: 32px; width: 32px;" indeterminate />
+        </div>
+      {:else if parents != null}
+        <DataTable table$aria-label="Parent list" style="width: 100%;">
+          <Head>
+            <Row>
+              {#if !clientConfig.emailUsernames}
+                <Cell>Groupname</Cell>
+              {/if}
+              <Cell>Name</Cell>
+              <Cell>Email</Cell>
+              <Cell>Enabled</Cell>
+            </Row>
+          </Head>
+          <Body>
+            <!-- Purposefully not making these links. -->
+            {#each parents as curEntity (curEntity.guid)}
+              <Row
+                on:click={() => (entity.parent = curEntity)}
+                style="cursor: pointer;"
+              >
+                {#if !clientConfig.emailUsernames}
+                  <Cell>{curEntity.groupname}</Cell>
+                {/if}
+                <Cell>{curEntity.name}</Cell>
+                <Cell>{curEntity.email}</Cell>
+                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+              </Row>
+            {/each}
+          </Body>
+        </DataTable>
+      {/if}
+    {/if}
+
+    {#if activeTab === 'Abilities'}
+      <h5 style="margin-top: 0;">Abilities</h5>
+
+      <List nonInteractive>
+        {#if entity.abilities}
+          {#each entity.abilities as ability, index (ability)}
+            <Item>
+              <Text>
+                {ability}
+              </Text>
+              <Meta>
+                <IconButton
+                  on:click={() => {
+                    entity.abilities?.splice(index, 1);
+                    entity = entity;
+                  }}
+                >
+                  <Icon component={Svg} viewBox="0 0 24 24">
+                    <path fill="currentColor" d={mdiMinus} />
+                  </Icon>
+                </IconButton>
+              </Meta>
+            </Item>
+          {:else}
+            <Item>
+              <Text>No abilities</Text>
+            </Item>
+          {/each}
+        {/if}
+      </List>
+
+      <h6>Add Ability</h6>
+
+      <div style="display: flex; align-items: center; flex-wrap: wrap;">
+        <Textfield
+          bind:value={ability}
+          label="Ability"
+          type="text"
+          style="width: 250px; max-width: 100%;"
+          on:keydown={abilityKeyDown}
+        />
+        <IconButton on:click={addAbility}>
+          <Icon component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiPlus} />
+          </Icon>
+        </IconButton>
+      </div>
+    {/if}
+
+    {#if failureMessage}
+      <div class="tilmeld-failure">
+        {failureMessage}
+      </div>
+    {/if}
+
+    <div style="margin-top: 36px;">
+      <Button variant="raised" on:click={saveEntity} disabled={saving}>
+        <Label>Save Group</Label>
+      </Button>
+      {#if entity.guid}
+        <Button on:click={deleteEntity} disabled={saving}>
+          <Label>Delete</Label>
+        </Button>
+      {/if}
+      {#if success}
+        <span>Successfully saved!</span>
+      {/if}
+    </div>
+  </section>
 {/if}
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { onMount } from 'svelte';
+  import { pop, replace } from 'svelte-spa-router';
   import type {
     AdminGroupData,
     ClientConfig,
@@ -361,10 +362,9 @@
 
   import { nymph, Group, User } from '../nymph';
 
-  const dispatch = createEventDispatcher();
+  export let params: { guid: string };
 
-  export let entity: GroupClass & AdminGroupData;
-
+  let entity: GroupClass & AdminGroupData;
   let clientConfig: ClientConfig | undefined = undefined;
   let user: (UserClass & CurrentUserData) | undefined = undefined;
   let activeTab: 'General' | 'Parent' | 'Abilities' = 'General';
@@ -380,6 +380,11 @@
   let emailVerifiedMessage: string | undefined = undefined;
   let saving = false;
   let success: boolean | undefined = undefined;
+  let loading = true;
+
+  $: if (params) {
+    handleGuidParam();
+  }
 
   onMount(async () => {
     user = (await User.current()) ?? undefined;
@@ -388,8 +393,24 @@
     clientConfig = await User.getClientConfig();
   });
 
-  readyEntity();
-  function readyEntity() {
+  async function handleGuidParam() {
+    loading = true;
+    failureMessage = undefined;
+    try {
+      entity =
+        params.guid === '+' || params.guid === ' ' || params.guid === '%20'
+          ? await Group.factory()
+          : await Group.factory(params.guid);
+      oldGroupname = entity.groupname;
+      oldEmail = entity.email;
+      await readyEntity();
+    } catch (e: any) {
+      failureMessage = e.message;
+    }
+    loading = false;
+  }
+
+  async function readyEntity() {
     // Make sure all fields are defined.
     if (entity.enabled == null) {
       entity.enabled = false;
@@ -418,12 +439,8 @@
     if (entity.unverifiedSecondary == null) {
       entity.unverifiedSecondary = false;
     }
-    entity.$getAvatar().then((value) => {
-      avatar = value;
-    });
-    entity.$readyAll(1).then(() => {
-      entity = entity;
-    });
+    avatar = await entity.$getAvatar();
+    await entity.$readyAll(1);
   }
 
   let parentsSearching = false;
@@ -463,8 +480,8 @@
     if (event.key === 'Enter') searchParents();
   }
 
-  let oldGroupname = entity.groupname;
-  $: if (entity.groupname !== oldGroupname) {
+  let oldGroupname: string | undefined = undefined;
+  $: if (entity && entity.groupname !== oldGroupname) {
     if (groupnameTimer) {
       clearTimeout(groupnameTimer);
     }
@@ -486,8 +503,8 @@
     oldGroupname = entity.groupname;
   }
 
-  let oldEmail = entity.email;
-  $: if (entity.email !== oldEmail) {
+  let oldEmail: string | undefined = undefined;
+  $: if (entity && entity.email !== oldEmail) {
     if (emailTimer) {
       clearTimeout(emailTimer);
     }
@@ -534,13 +551,17 @@
   async function saveEntity() {
     saving = true;
     failureMessage = undefined;
+    const newEntity = entity.guid == null;
     try {
       if (await entity.$save()) {
         success = true;
+        if (newEntity) {
+          replace(`/users/edit/${encodeURIComponent(entity.guid || '')}`);
+        }
+        await readyEntity();
         setTimeout(() => {
           success = undefined;
         }, 1000);
-        readyEntity();
       } else {
         failureMessage = 'Error saving group.';
       }
@@ -557,7 +578,7 @@
       saving = true;
       try {
         if (await entity.$delete()) {
-          dispatch('leave');
+          pop();
         } else {
           failureMessage = 'An error occurred.';
         }

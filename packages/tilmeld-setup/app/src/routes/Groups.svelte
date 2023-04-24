@@ -4,10 +4,10 @@
       <CircularProgress style="height: 45px; width: 45px;" indeterminate />
     </div>
   </section>
-{:else if entity == null}
+{:else}
   <div class="solo-search-container solo-container">
     <Fab
-      on:click={async () => (entity = await Group.factory())}
+      href="#/groups/edit/+"
       color="primary"
       mini
       class="solo-fab"
@@ -66,30 +66,48 @@
         </Head>
         <Body>
           {#each entities as curEntity (curEntity.guid)}
-            <Row on:click={() => (entity = curEntity)} style="cursor: pointer;">
+            <Row>
               {#if !clientConfig.emailUsernames}
-                <Cell>{curEntity.groupname}</Cell>
+                <Cell
+                  ><a
+                    href="#/groups/edit/{encodeURIComponent(
+                      curEntity.guid || ''
+                    )}">{curEntity.groupname}</a
+                  ></Cell
+                >
               {/if}
-              <Cell>{curEntity.name}</Cell>
-              <Cell>{curEntity.email}</Cell>
+              <Cell
+                ><a
+                  href="#/groups/edit/{encodeURIComponent(
+                    curEntity.guid || ''
+                  )}">{curEntity.name}</a
+                ></Cell
+              >
+              <Cell
+                ><a
+                  href="#/groups/edit/{encodeURIComponent(
+                    curEntity.guid || ''
+                  )}">{curEntity.email}</a
+                ></Cell
+              >
               <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+            </Row>
+          {:else}
+            <Row>
+              <Cell colspan={!clientConfig.emailUsernames ? 4 : 3}
+                >None found.</Cell
+              >
             </Row>
           {/each}
         </Body>
       </DataTable>
     {/if}
   </section>
-{:else}
-  <GroupEdit
-    {entity}
-    on:leave={() => {
-      entity = undefined;
-    }}
-  />
 {/if}
 
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { push } from 'svelte-spa-router';
   import queryParser from '@nymphjs/query-parser';
   import type {
     AdminGroupData,
@@ -109,14 +127,17 @@
   import { Icon, Svg } from '@smui/common';
 
   import { nymph, Group, User } from '../nymph';
-  import GroupEdit from './GroupEdit.svelte';
+
+  export let params: { query?: string } = {};
 
   let clientConfig: ClientConfig | undefined = undefined;
   let user: (UserClass & CurrentUserData) | undefined = undefined;
-  let entitySearch = '';
+  let entitySearch = params.query ?? '';
   let failureMessage: string | undefined = undefined;
 
-  let entity: (GroupClass & AdminGroupData) | undefined = undefined;
+  $: if (params) {
+    handleSearchParam();
+  }
 
   onMount(async () => {
     user = (await User.current()) ?? undefined;
@@ -125,32 +146,38 @@
     clientConfig = await User.getClientConfig();
   });
 
+  async function handleSearchParam() {
+    if (params.query && params.query !== '') {
+      entitiesSearching = true;
+      failureMessage = undefined;
+      try {
+        const query = queryParser({
+          query: params.query,
+          entityClass: Group,
+          defaultFields: ['groupname', 'name', 'email'],
+          qrefMap: {
+            User: {
+              class: User,
+              defaultFields: ['username', 'name', 'email'],
+            },
+            Group: {
+              class: Group,
+              defaultFields: ['groupname', 'name', 'email'],
+            },
+          },
+        });
+        entities = await nymph.getEntities(...query);
+      } catch (e: any) {
+        failureMessage = e?.message;
+      }
+      entitiesSearching = false;
+    }
+  }
+
   let entitiesSearching = false;
   let entities: (GroupClass & AdminGroupData)[] | undefined = undefined;
   async function searchEntities() {
-    entitiesSearching = true;
-    failureMessage = undefined;
-    try {
-      const query = queryParser({
-        query: entitySearch,
-        entityClass: Group,
-        defaultFields: ['groupname', 'name', 'email'],
-        qrefMap: {
-          User: {
-            class: User,
-            defaultFields: ['username', 'name', 'email'],
-          },
-          Group: {
-            class: Group,
-            defaultFields: ['groupname', 'name', 'email'],
-          },
-        },
-      });
-      entities = await nymph.getEntities(...query);
-    } catch (e: any) {
-      failureMessage = e?.message;
-    }
-    entitiesSearching = false;
+    push(`/groups/${encodeURIComponent(entitySearch)}`);
   }
   function entitySearchKeyDown(event: CustomEvent | KeyboardEvent) {
     event = event as KeyboardEvent;

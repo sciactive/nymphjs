@@ -33,16 +33,6 @@
           <path fill="currentColor" d={mdiMastodon} />
         </Icon>
       </IconButton>
-      <IconButton
-        href="https://twitter.com/SciActive"
-        target="_blank"
-        rel="noreferrer"
-        title="SciActive on Twitter"
-      >
-        <Icon component={Svg} viewBox="0 0 24 24">
-          <path fill="currentColor" d={mdiTwitter} />
-        </Icon>
-      </IconButton>
       <div>
         <IconButton
           title="Account"
@@ -74,7 +64,7 @@
       : 'hide-initial-small'}"
   >
     <Content>
-      <List>
+      <List tag="div">
         {#if tilmeldAdmin}
           {#each sections as section (section.name)}
             {#if 'separator' in section}
@@ -82,13 +72,12 @@
             {:else}
               <Item
                 bind:this={section.component}
-                nonInteractive={!('route' in section)}
-                on:click={() => {
-                  if ('route' in section) {
-                    active = section.route ?? Intro;
-                  }
-                }}
-                activated={active === section.route}
+                tag="a"
+                nonInteractive={!('href' in section)}
+                href={'href' in section ? `#${section.href}` : undefined}
+                activated={section.absolute
+                  ? $location === section.href
+                  : $location.startsWith(section.href ?? '!')}
                 style={section.indent
                   ? 'margin-left: ' + section.indent * 25 + 'px;'
                   : ''}
@@ -98,11 +87,11 @@
             {/if}
           {/each}
         {:else if user == null}
-          <Item on:click={() => (drawerOpen = false)} activated>
+          <Item tag="span" on:click={() => (drawerOpen = false)} activated>
             <Text class="mdc-theme--on-secondary">Login</Text>
           </Item>
         {:else}
-          <Item on:click={() => (drawerOpen = false)} activated>
+          <Item tag="span" on:click={() => (drawerOpen = false)} activated>
             <Text class="mdc-theme--on-secondary">Forbidden</Text>
           </Item>
         {/if}
@@ -117,13 +106,17 @@
     <main class="tilmeld-main-content" bind:this={mainContent}>
       {#if tilmeldAdmin}
         {#if clientConfig}
-          <svelte:component this={active} />
+          <Router {routes} />
         {:else}
           Loading...
         {/if}
       {:else if user == null}
         <section style="display: flex; justify-content: center;">
-          <Login {User} {clientConfig} />
+          <Login
+            {User}
+            {clientConfig}
+            showExistingUserToggle={allowRegistration}
+          />
         </section>
       {:else}
         <section>You don't have permission to access this app.</section>
@@ -135,13 +128,14 @@
 
 <script lang="ts">
   import { onMount, SvelteComponent } from 'svelte';
+  import Router, { location } from 'svelte-spa-router';
   import type {
     User as UserClass,
     ClientConfig,
     CurrentUserData,
   } from '@nymphjs/tilmeld-client';
   import { Login, Account } from '@nymphjs/tilmeld-components';
-  import { mdiGithub, mdiMastodon, mdiTwitter } from '@mdi/js';
+  import { mdiGithub, mdiMastodon } from '@mdi/js';
   import TopAppBar, { Row, Section, Title } from '@smui/top-app-bar';
   import Drawer, { Content, Scrim, AppContent } from '@smui/drawer';
   import IconButton from '@smui/icon-button';
@@ -150,28 +144,32 @@
   import { Icon, Svg } from '@smui/common';
 
   import { User } from './nymph';
-  import Intro from './Intro.svelte';
-  import Users from './Users.svelte';
-  import Groups from './Groups.svelte';
-  import type { SvelteComponentDev } from 'svelte/internal';
+  import Intro from './routes/Intro.svelte';
+  import Users from './routes/Users.svelte';
+  import UserEdit from './routes/UserEdit.svelte';
+  import Groups from './routes/Groups.svelte';
+  import GroupEdit from './routes/GroupEdit.svelte';
+  import NotFound from './routes/NotFound.svelte';
 
   const DEFAULT_AVATAR = 'https://secure.gravatar.com/avatar/?d=mm&s=40';
+  const allowRegistration = (window as any).allowRegistration;
 
   let mainContent: HTMLElement;
   let miniWindow = false;
   let drawerOpen = false;
   let accountMenu: any;
-  let active: typeof SvelteComponentDev = Intro;
   let clientConfig: ClientConfig;
   let user: (UserClass & CurrentUserData) | undefined = undefined;
   let userAvatar: string = DEFAULT_AVATAR;
   let tilmeldAdmin: boolean | undefined = undefined;
   let accountOpen = false;
 
-  $: if (active && mainContent) {
-    drawerOpen = false;
-    mainContent.scrollTop = 0;
-  }
+  location.subscribe(() => {
+    if (mainContent) {
+      drawerOpen = false;
+      mainContent.scrollTop = 0;
+    }
+  });
 
   $: if (user) {
     user.$gatekeeper('tilmeld/admin').then((value) => (tilmeldAdmin = value));
@@ -181,18 +179,29 @@
     userAvatar = DEFAULT_AVATAR;
   }
 
+  const routes = {
+    '/': Intro,
+    '/users/edit/:guid': UserEdit,
+    '/users/:query?': Users,
+    '/groups/edit/:guid': GroupEdit,
+    '/groups/:query?': Groups,
+    '*': NotFound,
+  };
+
   const sections: (
     | {
         name: string;
         indent: number;
-        route?: typeof SvelteComponentDev;
+        href?: string;
+        absolute?: boolean;
         component?: SvelteComponent;
       }
     | { name: string; separator: true }
   )[] = [
     {
       name: 'Introduction',
-      route: Intro,
+      href: '/',
+      absolute: true,
       indent: 0,
     },
     {
@@ -201,12 +210,12 @@
     },
     {
       name: 'Users',
-      route: Users,
+      href: '/users/',
       indent: 0,
     },
     {
       name: 'Groups',
-      route: Groups,
+      href: '/groups/',
       indent: 0,
     },
   ];

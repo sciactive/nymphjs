@@ -1,254 +1,217 @@
-<div style="display: flex; align-items: center; padding: 12px;">
-  <IconButton title="Back" on:click={() => dispatch('leave')}>
-    <Icon component={Svg} viewBox="0 0 24 24">
-      <path fill="currentColor" d={mdiArrowLeft} />
-    </Icon>
-  </IconButton>
-  <h2 style="margin: 0px 12px 0px;" class="mdc-typography--headline5">
-    Editing {entity.guid
-      ? entity.$is(user)
-        ? 'Yourself'
-        : entity.name
-      : 'New User'}
-  </h2>
-</div>
-{#if entity != null}
-  {#if clientConfig == null || user == null}
-    <section style="padding-top: 0;">
-      <div style="display: flex; justify-content: center; align-items: center;">
-        <CircularProgress style="height: 45px; width: 45px;" indeterminate />
-      </div>
-    </section>
-  {:else}
-    <TabBar
-      tabs={['General', 'Groups', 'Abilities', 'Security']}
-      let:tab
-      bind:active={activeTab}
-    >
-      <Tab {tab}>
-        <Label>{tab}</Label>
-      </Tab>
-    </TabBar>
+{#if clientConfig == null || user == null || loading}
+  <section>
+    <div style="display: flex; justify-content: center; align-items: center;">
+      <CircularProgress style="height: 45px; width: 45px;" indeterminate />
+    </div>
+  </section>
+{:else}
+  <div style="display: flex; align-items: center; padding: 12px;">
+    <IconButton title="Back" on:click={pop}>
+      <Icon component={Svg} viewBox="0 0 24 24">
+        <path fill="currentColor" d={mdiArrowLeft} />
+      </Icon>
+    </IconButton>
+    <h2 style="margin: 0px 12px 0px;" class="mdc-typography--headline5">
+      Editing {entity.guid
+        ? entity.$is(user)
+          ? 'Yourself'
+          : entity.name
+        : 'New User'}
+    </h2>
+  </div>
 
-    <section>
-      {#if activeTab === 'General'}
-        <LayoutGrid style="padding: 0;">
-          <LayoutCell span={4}>
-            <div class="mdc-typography--headline6">GUID</div>
-            <code>{entity.guid}</code>
-          </LayoutCell>
-          <LayoutCell span={4}>
-            <FormField>
-              <Checkbox bind:checked={entity.enabled} />
-              <span slot="label">Enabled (Able to log in)</span>
-            </FormField>
-          </LayoutCell>
-          <LayoutCell span={4} style="text-align: end;">
-            <a href="https://en.gravatar.com/" target="_blank" rel="noreferrer">
-              <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
-            </a>
-          </LayoutCell>
-          {#if !clientConfig.emailUsernames}
-            <LayoutCell span={6}>
-              <Textfield
-                bind:value={entity.username}
-                label="Username"
-                type="text"
-                style="width: 100%;"
-                helperLine$style="width: 100%;"
-                invalid={usernameVerified === false}
-                input$autocomplete="off"
-                input$autocapitalize="off"
-                input$spellcheck="false"
-              >
-                <HelperText persistent slot="helper">
-                  {usernameVerifiedMessage ?? ''}
-                </HelperText>
-              </Textfield>
-            </LayoutCell>
-          {/if}
-          <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
+  <TabBar
+    tabs={['General', 'Groups', 'Abilities', 'Security']}
+    let:tab
+    bind:active={activeTab}
+  >
+    <Tab {tab}>
+      <Label>{tab}</Label>
+    </Tab>
+  </TabBar>
+
+  <section>
+    {#if activeTab === 'General'}
+      <LayoutGrid style="padding: 0;">
+        <LayoutCell span={4}>
+          <div class="mdc-typography--headline6">GUID</div>
+          <code>{entity.guid}</code>
+        </LayoutCell>
+        <LayoutCell span={4}>
+          <FormField>
+            <Checkbox bind:checked={entity.enabled} />
+            <span slot="label">Enabled (Able to log in)</span>
+          </FormField>
+        </LayoutCell>
+        <LayoutCell span={4} style="text-align: end;">
+          <a href="https://en.gravatar.com/" target="_blank" rel="noreferrer">
+            <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
+          </a>
+        </LayoutCell>
+        {#if !clientConfig.emailUsernames}
+          <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.email}
-              label="Email"
-              type="email"
+              bind:value={entity.username}
+              label="Username"
+              type="text"
               style="width: 100%;"
               helperLine$style="width: 100%;"
-              invalid={emailVerified === false}
+              invalid={usernameVerified === false}
               input$autocomplete="off"
               input$autocapitalize="off"
               input$spellcheck="false"
             >
               <HelperText persistent slot="helper">
-                {emailVerifiedMessage ?? ''}
+                {usernameVerifiedMessage ?? ''}
               </HelperText>
             </Textfield>
           </LayoutCell>
-          <LayoutCell span={4}>
-            <Textfield
-              bind:value={entity.nameFirst}
-              label="First Name"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={4}>
-            <Textfield
-              bind:value={entity.nameMiddle}
-              label="Middle Name"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={4}>
-            <Textfield
-              bind:value={entity.nameLast}
-              label="Last Name"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={8}>
-            <Textfield
-              bind:value={entity.avatar}
-              label="Avatar"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={4}>
-            <Textfield
-              bind:value={entity.phone}
-              label="Phone"
-              type="tel"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={entity.passwordTemp}
-              label={`${entity.guid ? 'Update ' : ''}Password`}
-              type="password"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={passwordVerify}
-              label="Repeat Password"
-              type="password"
-              style="width: 100%;"
-              invalid={passwordVerified === false}
-              input$autocomplete="off"
-              on:blur={doVerifyPassword}
-            />
-          </LayoutCell>
-        </LayoutGrid>
-      {/if}
+        {/if}
+        <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
+          <Textfield
+            bind:value={entity.email}
+            label="Email"
+            type="email"
+            style="width: 100%;"
+            helperLine$style="width: 100%;"
+            invalid={emailVerified === false}
+            input$autocomplete="off"
+            input$autocapitalize="off"
+            input$spellcheck="false"
+          >
+            <HelperText persistent slot="helper">
+              {emailVerifiedMessage ?? ''}
+            </HelperText>
+          </Textfield>
+        </LayoutCell>
+        <LayoutCell span={4}>
+          <Textfield
+            bind:value={entity.nameFirst}
+            label="First Name"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={4}>
+          <Textfield
+            bind:value={entity.nameMiddle}
+            label="Middle Name"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={4}>
+          <Textfield
+            bind:value={entity.nameLast}
+            label="Last Name"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={8}>
+          <Textfield
+            bind:value={entity.avatar}
+            label="Avatar"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={4}>
+          <Textfield
+            bind:value={entity.phone}
+            label="Phone"
+            type="tel"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={entity.passwordTemp}
+            label={`${entity.guid ? 'Update ' : ''}Password`}
+            type="password"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={passwordVerify}
+            label="Repeat Password"
+            type="password"
+            style="width: 100%;"
+            invalid={passwordVerified === false}
+            input$autocomplete="off"
+            on:blur={doVerifyPassword}
+          />
+        </LayoutCell>
+      </LayoutGrid>
+    {/if}
 
-      {#if activeTab === 'Groups'}
-        <h5 style="margin-top: 0;">Primary Group</h5>
+    {#if activeTab === 'Groups'}
+      <h5 style="margin-top: 0;">Primary Group</h5>
 
-        <Paper
-          style="display: flex; justify-content: space-between; align-items: center;"
-        >
-          {#if !entity.group}
-            No primary group
-          {:else}
-            <span
-              >{entity.group.name + ' (' + entity.group.groupname + ')'}</span
-            >
+      <Paper
+        style="display: flex; justify-content: space-between; align-items: center;"
+      >
+        {#if !entity.group}
+          No primary group
+        {:else}
+          <a href="#/groups/edit/{encodeURIComponent(entity.group.guid || '')}"
+            >{entity.group.name + ' (' + entity.group.groupname + ')'}</a
+          >
 
-            <IconButton
-              on:click={() => {
-                delete entity.group;
-                entity = entity;
-              }}
-            >
-              <Icon component={Svg} viewBox="0 0 24 24">
-                <path fill="currentColor" d={mdiMinus} />
-              </Icon>
-            </IconButton>
-          {/if}
-        </Paper>
-
-        <h6>Change Primary Group</h6>
-
-        <div class="solo-search-container solo-container">
-          <Paper class="solo-paper" elevation={1}>
-            <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiMagnify} />
-            </Icon>
-            <Input
-              bind:value={primaryGroupSearch}
-              on:keydown={primaryGroupSearchKeyDown}
-              placeholder="Primary Group Search"
-              class="solo-input"
-            />
-          </Paper>
           <IconButton
-            on:click={searchPrimaryGroups}
-            disabled={primaryGroupSearch === ''}
-            class="solo-fab"
-            title="Search"
+            on:click={() => {
+              delete entity.group;
+              entity = entity;
+            }}
           >
             <Icon component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiArrowRight} />
+              <path fill="currentColor" d={mdiMinus} />
             </Icon>
           </IconButton>
-        </div>
-
-        {#if primaryGroupsSearching}
-          <div
-            style="display: flex; justify-content: center; align-items: center;"
-          >
-            <CircularProgress
-              style="height: 32px; width: 32px;"
-              indeterminate
-            />
-          </div>
-        {:else if primaryGroups != null}
-          <DataTable table$aria-label="Primary group list" style="width: 100%;">
-            <Head>
-              <Row>
-                {#if !clientConfig.emailUsernames}
-                  <Cell>Groupname</Cell>
-                {/if}
-                <Cell>Name</Cell>
-                <Cell>Email</Cell>
-                <Cell>Enabled</Cell>
-              </Row>
-            </Head>
-            <Body>
-              {#each primaryGroups as curEntity (curEntity.guid)}
-                <Row
-                  on:click={() => (entity.group = curEntity)}
-                  style="cursor: pointer;"
-                >
-                  {#if !clientConfig.emailUsernames}
-                    <Cell>{curEntity.groupname}</Cell>
-                  {/if}
-                  <Cell>{curEntity.name}</Cell>
-                  <Cell>{curEntity.email}</Cell>
-                  <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
-                </Row>
-              {/each}
-            </Body>
-          </DataTable>
         {/if}
+      </Paper>
 
-        <h5>Secondary Groups</h5>
+      <h6>Change Primary Group</h6>
 
-        <DataTable
-          table$aria-label="Current secondary groups"
-          style="width: 100%;"
+      <div class="solo-search-container solo-container">
+        <Paper class="solo-paper" elevation={1}>
+          <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiMagnify} />
+          </Icon>
+          <Input
+            bind:value={primaryGroupSearch}
+            on:keydown={primaryGroupSearchKeyDown}
+            placeholder="Primary Group Search"
+            class="solo-input"
+          />
+        </Paper>
+        <IconButton
+          on:click={searchPrimaryGroups}
+          disabled={primaryGroupSearch === ''}
+          class="solo-fab"
+          title="Search"
         >
+          <Icon component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiArrowRight} />
+          </Icon>
+        </IconButton>
+      </div>
+
+      {#if primaryGroupsSearching}
+        <div
+          style="display: flex; justify-content: center; align-items: center;"
+        >
+          <CircularProgress style="height: 32px; width: 32px;" indeterminate />
+        </div>
+      {:else if primaryGroups != null}
+        <DataTable table$aria-label="Primary group list" style="width: 100%;">
           <Head>
             <Row>
               {#if !clientConfig.emailUsernames}
@@ -257,130 +220,76 @@
               <Cell>Name</Cell>
               <Cell>Email</Cell>
               <Cell>Enabled</Cell>
-              <Cell>Remove</Cell>
             </Row>
           </Head>
           <Body>
-            {#if entity.groups}
-              {#each entity.groups as curEntity, index (curEntity.guid)}
-                <Row>
-                  {#if !clientConfig.emailUsernames}
-                    <Cell>{curEntity.groupname}</Cell>
-                  {/if}
-                  <Cell>{curEntity.name}</Cell>
-                  <Cell>{curEntity.email}</Cell>
-                  <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
-                  <Cell>
-                    <IconButton
-                      on:click={() => {
-                        entity.groups?.splice(index, 1);
-                        entity = entity;
-                      }}
-                    >
-                      <Icon component={Svg} viewBox="0 0 24 24">
-                        <path fill="currentColor" d={mdiMinus} />
-                      </Icon>
-                    </IconButton>
-                  </Cell>
-                </Row>
-              {:else}
-                <Row>
-                  <Cell colspan={clientConfig.emailUsernames ? 4 : 5}>
-                    No secondary groups
-                  </Cell>
-                </Row>
-              {/each}
-            {/if}
+            <!-- Purposefully not making these links. -->
+            {#each primaryGroups as curEntity (curEntity.guid)}
+              <Row
+                on:click={() => (entity.group = curEntity)}
+                style="cursor: pointer;"
+              >
+                {#if !clientConfig.emailUsernames}
+                  <Cell>{curEntity.groupname}</Cell>
+                {/if}
+                <Cell>{curEntity.name}</Cell>
+                <Cell>{curEntity.email}</Cell>
+                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+              </Row>
+            {/each}
           </Body>
         </DataTable>
-
-        <h6>Add Secondary Groups</h6>
-
-        <div class="solo-search-container solo-container">
-          <Paper class="solo-paper" elevation={1}>
-            <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiMagnify} />
-            </Icon>
-            <Input
-              bind:value={secondaryGroupSearch}
-              on:keydown={secondaryGroupSearchKeyDown}
-              placeholder="Secondary Group Search"
-              class="solo-input"
-            />
-          </Paper>
-          <IconButton
-            on:click={searchSecondaryGroups}
-            disabled={secondaryGroupSearch === ''}
-            class="solo-fab"
-            title="Search"
-          >
-            <Icon component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiArrowRight} />
-            </Icon>
-          </IconButton>
-        </div>
-
-        {#if secondaryGroupsSearching}
-          <div
-            style="display: flex; justify-content: center; align-items: center;"
-          >
-            <CircularProgress
-              style="height: 32px; width: 32px;"
-              indeterminate
-            />
-          </div>
-        {:else if secondaryGroups != null}
-          <DataTable
-            table$aria-label="Secondary group list"
-            style="width: 100%;"
-          >
-            <Head>
-              <Row>
-                {#if !clientConfig.emailUsernames}
-                  <Cell>Groupname</Cell>
-                {/if}
-                <Cell>Name</Cell>
-                <Cell>Email</Cell>
-                <Cell>Enabled</Cell>
-              </Row>
-            </Head>
-            <Body>
-              {#each secondaryGroups as curEntity, index (curEntity.guid)}
-                <Row
-                  on:click={() => {
-                    entity.groups?.push(curEntity);
-                    secondaryGroups?.splice(index, 1);
-                    entity = entity;
-                  }}
-                  style="cursor: pointer;"
-                >
-                  {#if !clientConfig.emailUsernames}
-                    <Cell>{curEntity.groupname}</Cell>
-                  {/if}
-                  <Cell>{curEntity.name}</Cell>
-                  <Cell>{curEntity.email}</Cell>
-                  <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
-                </Row>
-              {/each}
-            </Body>
-          </DataTable>
-        {/if}
       {/if}
 
-      {#if activeTab === 'Abilities'}
-        <h5 style="margin-top: 0;">Abilities</h5>
+      <h5>Secondary Groups</h5>
 
-        <List nonInteractive>
-          {#if entity.abilities}
-            {#each entity.abilities as ability, index (ability)}
-              <Item>
-                <Text>
-                  {ability}
-                </Text>
-                <Meta>
+      <DataTable
+        table$aria-label="Current secondary groups"
+        style="width: 100%;"
+      >
+        <Head>
+          <Row>
+            {#if !clientConfig.emailUsernames}
+              <Cell>Groupname</Cell>
+            {/if}
+            <Cell>Name</Cell>
+            <Cell>Email</Cell>
+            <Cell>Enabled</Cell>
+            <Cell>Remove</Cell>
+          </Row>
+        </Head>
+        <Body>
+          {#if entity.groups}
+            {#each entity.groups as curEntity, index (curEntity.guid)}
+              <Row>
+                {#if !clientConfig.emailUsernames}
+                  <Cell
+                    ><a
+                      href="#/groups/edit/{encodeURIComponent(
+                        curEntity.guid || ''
+                      )}">{curEntity.groupname}</a
+                    ></Cell
+                  >
+                {/if}
+                <Cell
+                  ><a
+                    href="#/groups/edit/{encodeURIComponent(
+                      curEntity.guid || ''
+                    )}">{curEntity.name}</a
+                  ></Cell
+                >
+                <Cell
+                  ><a
+                    href="#/groups/edit/{encodeURIComponent(
+                      curEntity.guid || ''
+                    )}">{curEntity.email}</a
+                  ></Cell
+                >
+                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+                <Cell>
                   <IconButton
                     on:click={() => {
-                      entity.abilities?.splice(index, 1);
+                      entity.groups?.splice(index, 1);
                       entity = entity;
                     }}
                   >
@@ -388,180 +297,282 @@
                       <path fill="currentColor" d={mdiMinus} />
                     </Icon>
                   </IconButton>
-                </Meta>
-              </Item>
+                </Cell>
+              </Row>
             {:else}
-              <Item>
-                <Text>No abilities</Text>
-              </Item>
+              <Row>
+                <Cell colspan={clientConfig.emailUsernames ? 4 : 5}>
+                  No secondary groups
+                </Cell>
+              </Row>
             {/each}
           {/if}
-        </List>
+        </Body>
+      </DataTable>
 
-        <h6>Add Ability</h6>
+      <h6>Add Secondary Groups</h6>
 
-        <div style="display: flex; align-items: center; flex-wrap: wrap;">
-          <Textfield
-            bind:value={ability}
-            label="Ability"
-            type="text"
-            style="width: 250px; max-width: 100%;"
-            on:keydown={abilityKeyDown}
+      <div class="solo-search-container solo-container">
+        <Paper class="solo-paper" elevation={1}>
+          <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiMagnify} />
+          </Icon>
+          <Input
+            bind:value={secondaryGroupSearch}
+            on:keydown={secondaryGroupSearchKeyDown}
+            placeholder="Secondary Group Search"
+            class="solo-input"
           />
-          <IconButton on:click={addAbility}>
-            <Icon component={Svg} viewBox="0 0 24 24">
-              <path fill="currentColor" d={mdiPlus} />
-            </Icon>
-          </IconButton>
-          <Button
-            on:click={addTilmeldAdminAbility}
-            title="Tilmeld Admins have the ability to modify, create, and delete users and groups, and grant and revoke abilities."
-          >
-            <Label>Tilmeld Admin</Label>
-          </Button>
-          {#if sysAdmin}
-            <Button
-              on:click={addSystemAdminAbility}
-              title="System Admins have all abilities. Gatekeeper checks always return true."
-            >
-              <Label>System Admin</Label>
-            </Button>
-          {/if}
+        </Paper>
+        <IconButton
+          on:click={searchSecondaryGroups}
+          disabled={secondaryGroupSearch === ''}
+          class="solo-fab"
+          title="Search"
+        >
+          <Icon component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiArrowRight} />
+          </Icon>
+        </IconButton>
+      </div>
+
+      {#if secondaryGroupsSearching}
+        <div
+          style="display: flex; justify-content: center; align-items: center;"
+        >
+          <CircularProgress style="height: 32px; width: 32px;" indeterminate />
         </div>
-
-        <h6>Inherit Abilities</h6>
-
-        <div>
-          <FormField>
-            <Checkbox bind:checked={entity.inheritAbilities} />
-            <span slot="label"
-              >Additionally, inherit the abilities of the group(s) this user
-              belongs to.</span
-            >
-          </FormField>
-        </div>
+      {:else if secondaryGroups != null}
+        <DataTable table$aria-label="Secondary group list" style="width: 100%;">
+          <Head>
+            <Row>
+              {#if !clientConfig.emailUsernames}
+                <Cell>Groupname</Cell>
+              {/if}
+              <Cell>Name</Cell>
+              <Cell>Email</Cell>
+              <Cell>Enabled</Cell>
+            </Row>
+          </Head>
+          <Body>
+            <!-- Purposefully not making these links. -->
+            {#each secondaryGroups as curEntity, index (curEntity.guid)}
+              <Row
+                on:click={() => {
+                  entity.groups?.push(curEntity);
+                  secondaryGroups?.splice(index, 1);
+                  entity = entity;
+                }}
+                style="cursor: pointer;"
+              >
+                {#if !clientConfig.emailUsernames}
+                  <Cell>{curEntity.groupname}</Cell>
+                {/if}
+                <Cell>{curEntity.name}</Cell>
+                <Cell>{curEntity.email}</Cell>
+                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+              </Row>
+            {/each}
+          </Body>
+        </DataTable>
       {/if}
+    {/if}
 
-      {#if activeTab === 'Security'}
-        <LayoutGrid style="padding: 0;">
-          <LayoutCell span={12}>
-            The email verification secret is the code emailed to the user to
-            verify their address when they first sign up.
-          </LayoutCell>
-          <LayoutCell span={12}>
-            <Textfield
-              bind:value={entity.secret}
-              label="Email Verification Secret"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={12}>
-            The account recovery secret is the code emailed to the user to allow
-            them to change their password and recover their account. The date is
-            used to determine if the code has expired.
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={entity.recoverSecret}
-              label="Account Recovery Secret"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={entity.recoverSecretDate}
-              label="Account Recovery Date (Timestamp)"
-              type="number"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={12}>
-            An email change uses all of the following properties. The email
-            change date is used to rate limit email changes and to allow the
-            user to cancel the change within the rate limit time. The new secret
-            is emailed to the new address, and when the user clicks the link,
-            that email address is set for their account. The cancel secret is
-            emailed to the old address and will reset the user's email to the
-            cancel address if the link is clicked in time.
-          </LayoutCell>
-          <LayoutCell span={12}>
-            <Textfield
-              bind:value={entity.emailChangeDate}
-              label="Email Change Date (Timestamp)"
-              type="number"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={entity.newEmailSecret}
-              label="New Email Verification Secret"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={entity.newEmailAddress}
-              label="New Email Address"
-              type="email"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={entity.cancelEmailSecret}
-              label="Cancel Email Verification Secret"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={entity.cancelEmailAddress}
-              label="Cancel Email Address"
-              type="email"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-        </LayoutGrid>
-      {/if}
+    {#if activeTab === 'Abilities'}
+      <h5 style="margin-top: 0;">Abilities</h5>
 
-      {#if failureMessage}
-        <div class="tilmeld-failure">
-          {failureMessage}
-        </div>
-      {/if}
-
-      <div style="margin-top: 36px;">
-        <Button variant="raised" on:click={saveEntity} disabled={saving}>
-          <Label>Save User</Label>
-        </Button>
-        {#if entity.guid}
-          <Button on:click={deleteEntity} disabled={saving}>
-            <Label>Delete</Label>
-          </Button>
+      <List nonInteractive>
+        {#if entity.abilities}
+          {#each entity.abilities as ability, index (ability)}
+            <Item>
+              <Text>
+                {ability}
+              </Text>
+              <Meta>
+                <IconButton
+                  on:click={() => {
+                    entity.abilities?.splice(index, 1);
+                    entity = entity;
+                  }}
+                >
+                  <Icon component={Svg} viewBox="0 0 24 24">
+                    <path fill="currentColor" d={mdiMinus} />
+                  </Icon>
+                </IconButton>
+              </Meta>
+            </Item>
+          {:else}
+            <Item>
+              <Text>No abilities</Text>
+            </Item>
+          {/each}
         {/if}
-        {#if success}
-          <span>Successfully saved!</span>
+      </List>
+
+      <h6>Add Ability</h6>
+
+      <div style="display: flex; align-items: center; flex-wrap: wrap;">
+        <Textfield
+          bind:value={ability}
+          label="Ability"
+          type="text"
+          style="width: 250px; max-width: 100%;"
+          on:keydown={abilityKeyDown}
+        />
+        <IconButton on:click={addAbility}>
+          <Icon component={Svg} viewBox="0 0 24 24">
+            <path fill="currentColor" d={mdiPlus} />
+          </Icon>
+        </IconButton>
+        <Button
+          on:click={addTilmeldAdminAbility}
+          title="Tilmeld Admins have the ability to modify, create, and delete users and groups, and grant and revoke abilities."
+        >
+          <Label>Tilmeld Admin</Label>
+        </Button>
+        {#if sysAdmin}
+          <Button
+            on:click={addSystemAdminAbility}
+            title="System Admins have all abilities. Gatekeeper checks always return true."
+          >
+            <Label>System Admin</Label>
+          </Button>
         {/if}
       </div>
-    </section>
-  {/if}
+
+      <h6>Inherit Abilities</h6>
+
+      <div>
+        <FormField>
+          <Checkbox bind:checked={entity.inheritAbilities} />
+          <span slot="label"
+            >Additionally, inherit the abilities of the group(s) this user
+            belongs to.</span
+          >
+        </FormField>
+      </div>
+    {/if}
+
+    {#if activeTab === 'Security'}
+      <LayoutGrid style="padding: 0;">
+        <LayoutCell span={12}>
+          The email verification secret is the code emailed to the user to
+          verify their address when they first sign up.
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <Textfield
+            bind:value={entity.secret}
+            label="Email Verification Secret"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={12}>
+          The account recovery secret is the code emailed to the user to allow
+          them to change their password and recover their account. The date is
+          used to determine if the code has expired.
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={entity.recoverSecret}
+            label="Account Recovery Secret"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={entity.recoverSecretDate}
+            label="Account Recovery Date (Timestamp)"
+            type="number"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={12}>
+          An email change uses all of the following properties. The email change
+          date is used to rate limit email changes and to allow the user to
+          cancel the change within the rate limit time. The new secret is
+          emailed to the new address, and when the user clicks the link, that
+          email address is set for their account. The cancel secret is emailed
+          to the old address and will reset the user's email to the cancel
+          address if the link is clicked in time.
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <Textfield
+            bind:value={entity.emailChangeDate}
+            label="Email Change Date (Timestamp)"
+            type="number"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={entity.newEmailSecret}
+            label="New Email Verification Secret"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={entity.newEmailAddress}
+            label="New Email Address"
+            type="email"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={entity.cancelEmailSecret}
+            label="Cancel Email Verification Secret"
+            type="text"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+        <LayoutCell span={6}>
+          <Textfield
+            bind:value={entity.cancelEmailAddress}
+            label="Cancel Email Address"
+            type="email"
+            style="width: 100%;"
+            input$autocomplete="off"
+          />
+        </LayoutCell>
+      </LayoutGrid>
+    {/if}
+
+    {#if failureMessage}
+      <div class="tilmeld-failure">
+        {failureMessage}
+      </div>
+    {/if}
+
+    <div style="margin-top: 36px;">
+      <Button variant="raised" on:click={saveEntity} disabled={saving}>
+        <Label>Save User</Label>
+      </Button>
+      {#if entity.guid}
+        <Button on:click={deleteEntity} disabled={saving}>
+          <Label>Delete</Label>
+        </Button>
+      {/if}
+      {#if success}
+        <span>Successfully saved!</span>
+      {/if}
+    </div>
+  </section>
 {/if}
 
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { onMount } from 'svelte';
+  import { pop, replace } from 'svelte-spa-router';
   import type {
     AdminGroupData,
     AdminUserData,
@@ -597,10 +608,9 @@
 
   import { User, Group } from '../nymph';
 
-  const dispatch = createEventDispatcher();
+  export let params: { guid: string };
 
-  export let entity: UserClass & AdminUserData;
-
+  let entity: UserClass & AdminUserData;
   let clientConfig: ClientConfig | undefined = undefined;
   let user: (UserClass & CurrentUserData) | undefined = undefined;
   let sysAdmin = false;
@@ -620,6 +630,11 @@
   let emailVerifiedMessage: string | undefined = undefined;
   let saving = false;
   let success: boolean | undefined = undefined;
+  let loading = true;
+
+  $: if (params) {
+    handleGuidParam();
+  }
 
   onMount(async () => {
     user = (await User.current()) ?? undefined;
@@ -629,8 +644,24 @@
     clientConfig = await User.getClientConfig();
   });
 
-  readyEntity();
-  function readyEntity() {
+  async function handleGuidParam() {
+    loading = true;
+    failureMessage = undefined;
+    try {
+      entity =
+        params.guid === '+' || params.guid === ' ' || params.guid === '%20'
+          ? await User.factory()
+          : await User.factory(params.guid);
+      oldUsername = entity.username;
+      oldEmail = entity.email;
+      await readyEntity();
+    } catch (e: any) {
+      failureMessage = e.message;
+    }
+    loading = false;
+  }
+
+  async function readyEntity() {
     // Make sure all fields are defined.
     if (entity.enabled == null) {
       entity.enabled = false;
@@ -686,12 +717,8 @@
     if (entity.recoverSecretDate == null) {
       entity.recoverSecretDate = 0;
     }
-    entity.$getAvatar().then((value) => {
-      avatar = value;
-    });
-    entity.$readyAll(1).then(() => {
-      entity = entity;
-    });
+    avatar = await entity.$getAvatar();
+    await entity.$readyAll(1);
   }
 
   let primaryGroupsSearching = false;
@@ -772,8 +799,8 @@
     if (event.key === 'Enter') searchSecondaryGroups();
   }
 
-  let oldUsername = entity.username;
-  $: if (entity.username !== oldUsername) {
+  let oldUsername: string | undefined = undefined;
+  $: if (entity && entity.username !== oldUsername) {
     if (usernameTimer) {
       clearTimeout(usernameTimer);
     }
@@ -795,8 +822,8 @@
     oldUsername = entity.username;
   }
 
-  let oldEmail = entity.email;
-  $: if (entity.email !== oldEmail) {
+  let oldEmail: string | undefined = undefined;
+  $: if (entity && entity.email !== oldEmail) {
     if (emailTimer) {
       clearTimeout(emailTimer);
     }
@@ -866,13 +893,18 @@
 
     saving = true;
     failureMessage = undefined;
+    const newEntity = entity.guid == null;
     try {
       if (await entity.$save()) {
         success = true;
+        passwordVerify = '';
+        if (newEntity) {
+          replace(`/users/edit/${encodeURIComponent(entity.guid || '')}`);
+        }
+        await readyEntity();
         setTimeout(() => {
           success = undefined;
         }, 1000);
-        readyEntity();
       } else {
         failureMessage = 'Error saving user.';
       }
@@ -889,7 +921,7 @@
       saving = true;
       try {
         if (await entity.$delete()) {
-          dispatch('leave');
+          pop();
         } else {
           failureMessage = 'An error occurred.';
         }

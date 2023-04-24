@@ -3,7 +3,12 @@
 
   <p>
     Welcome to Tilmeld. This program handles users and groups. It can be a
-    little tricky to set up, so read through this introduction carefully.
+    little tricky to set up, so read through this introduction carefully. You
+    can familiarize yourself with the search box's syntax <a
+      href="https://nymph.io/packages/query-parser/"
+      target="_blank"
+      rel="noreferrer noopener">here</a
+    >.
   </p>
 
   <h3>How It Works</h3>
