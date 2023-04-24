@@ -1,35 +1,41 @@
+const { isMainThread, workerData, parentPort } = require('node:worker_threads');
 const pg = require('pg');
 
-let stdin = '';
+if (isMainThread) {
+  throw new Error("Don't load this file as main thread.");
+}
 
-process.stdin.on('data', (data) => {
-  if (data != null) {
-    stdin += data.toString();
-  }
-});
+try {
+  const postgresqlConfig = workerData;
+  const pool = new pg.Pool(postgresqlConfig);
 
-process.stdin.on('end', () => {
-  run();
-});
-
-async function run() {
-  try {
-    const { postgresqlConfig, query, params } = JSON.parse(stdin);
-    const pool = new pg.Pool(postgresqlConfig);
-    const results = await new Promise((resolve, reject) =>
-      pool.query(query, params).then(
-        (results) => resolve(results),
-        (error) => reject(error)
-      )
-    );
-    process.stdout.end(JSON.stringify(results), 'utf8', () => {
+  parentPort.on('message', async (message) => {
+    if (message === 'halt') {
       pool.end(() => {
-        process.exit(0);
+        parentPort.postMessage('halted');
       });
-    });
-  } catch (e) {
-    process.stderr.end(JSON.stringify(e), 'utf8', () => {
-      process.exit(1);
-    });
-  }
+    } else {
+      const { query, params, port } = message;
+
+      try {
+        const results = await new Promise((resolve, reject) =>
+          pool.query(query, params).then(
+            (results) => resolve(results),
+            (error) => reject(error)
+          )
+        );
+
+        port.postMessage({
+          results: {
+            rows: results.rows,
+            rowCount: results.rowCount,
+          },
+        });
+      } catch (e) {
+        port.postMessage({ error: e.message });
+      }
+    }
+  });
+} catch (e) {
+  parentPort.postMessage({ error: e.message });
 }

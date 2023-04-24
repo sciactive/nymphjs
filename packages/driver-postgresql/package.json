@@ -12,14 +12,12 @@
   ],
   "scripts": {
     "clean": "test -d dist && rm -r dist || true",
-    "build": "tsc;  cp src/runPostgresqlSync.js dist/runPostgresqlSync.js",
+    "build": "tsc; cp src/runPostgresqlSync.js dist/runPostgresqlSync.js",
     "watch": "tsc --watch",
     "prepare": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:db:run": "npm run test:db:start && npm run test:db:clean",
-    "test:db:clean": "docker container rm nymph-postgresql",
-    "test:db:start": "docker run --name nymph-postgresql -e POSTGRES_USER=nymph -e POSTGRES_PASSWORD=nymph -p 5432:5432 postgres",
+    "test:db:start": "docker run --rm --name nymph-postgresql -e POSTGRES_USER=nymph -e POSTGRES_PASSWORD=nymph -p 5432:5432 postgres",
     "test:db:stop": "docker kill -s TERM nymph-postgresql"
   },
   "publishConfig": {

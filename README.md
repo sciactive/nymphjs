@@ -89,7 +89,7 @@ Once you make changes in one package, you can either build that package directly
 When you're ready to run all the tests, in a separate shell, bring up the test DBs.
 
 ```sh
-npm run test:db:run
+npm run test:db:start
 ```
 
 Now in your main terminal, you can run the tests.

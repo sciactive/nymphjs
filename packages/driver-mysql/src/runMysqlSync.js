@@ -1,44 +1,41 @@
+const { isMainThread, workerData, parentPort } = require('node:worker_threads');
 const mysql = require('@vlasky/mysql');
 
-let stdin = '';
+if (isMainThread) {
+  throw new Error("Don't load this file as main thread.");
+}
 
-process.stdin.on('data', (data) => {
-  if (data != null) {
-    stdin += data.toString();
-  }
-});
+try {
+  const mysqlConfig = workerData;
+  const pool = mysql.createPool(mysqlConfig);
 
-process.stdin.on('end', () => {
-  run();
-});
+  parentPort.on('message', async (message) => {
+    if (message === 'halt') {
+      pool.end(() => {
+        parentPort.postMessage('halted');
+      });
+    } else {
+      const { query, params, port } = message;
 
-async function run() {
-  try {
-    const { mysqlConfig, query, params } = JSON.parse(stdin);
-    const pool = mysql.createPool(mysqlConfig);
-    const [results, fields] = await new Promise((resolve, reject) =>
-      pool.query(query, params, (error, results, fields) => {
-        if (error) {
-          reject(error);
-        }
-        resolve([results, fields]);
-      })
-    );
-    process.stdout.end(
-      JSON.stringify({
-        results,
-        fields,
-      }),
-      'utf8',
-      () => {
-        pool.end(() => {
-          process.exit(0);
+      try {
+        const [results, fields] = await new Promise((resolve, reject) =>
+          pool.query(query, params, (error, results, fields) => {
+            if (error) {
+              reject(error);
+            }
+            resolve([results, fields]);
+          })
+        );
+
+        port.postMessage({
+          results,
+          fields,
         });
+      } catch (e) {
+        port.postMessage({ error: e.message });
       }
-    );
-  } catch (e) {
-    process.stderr.end(JSON.stringify(e), 'utf8', () => {
-      process.exit(1);
-    });
-  }
+    }
+  });
+} catch (e) {
+  parentPort.postMessage({ error: e.message });
 }

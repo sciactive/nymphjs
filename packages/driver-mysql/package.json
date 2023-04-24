@@ -12,14 +12,12 @@
   ],
   "scripts": {
     "clean": "test -d dist && rm -r dist || true",
-    "build": "tsc;  cp src/runMysqlSync.js dist/runMysqlSync.js",
+    "build": "tsc; cp src/runMysqlSync.js dist/runMysqlSync.js",
     "watch": "tsc --watch",
     "prepare": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:db:run": "npm run test:db:start && npm run test:db:clean",
-    "test:db:clean": "docker container rm nymph-mysql",
-    "test:db:start": "docker run --name nymph-mysql -e MYSQL_ROOT_PASSWORD=123nymphroot -e MYSQL_DATABASE=nymph -e MYSQL_USER=nymph -e MYSQL_PASSWORD=nymph -p 3306:3306 mysql",
+    "test:db:start": "docker run --rm --name nymph-mysql -e MYSQL_ROOT_PASSWORD=123nymphroot -e MYSQL_DATABASE=nymph -e MYSQL_USER=nymph -e MYSQL_PASSWORD=nymph -p 3306:3306 mysql",
     "test:db:stop": "docker kill -s TERM nymph-mysql"
   },
   "publishConfig": {

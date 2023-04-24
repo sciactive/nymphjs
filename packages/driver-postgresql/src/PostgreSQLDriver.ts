@@ -1,4 +1,9 @@
-import cp from 'child_process';
+import {
+  Worker,
+  MessageChannel,
+  receiveMessageOnPort,
+} from 'node:worker_threads';
+import { resolve } from 'node:path';
 import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
 import format from 'pg-format';
 import {
@@ -44,6 +49,8 @@ export default class PostgreSQLDriver extends NymphDriver {
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: Pool;
   protected transaction: PostgreSQLDriverTransaction | null = null;
+  // @ts-ignore: this is assigned in connect(), which is called by the constructor.
+  protected worker: Worker;
 
   static escape(input: string) {
     return format.ident(input);
@@ -56,7 +63,8 @@ export default class PostgreSQLDriver extends NymphDriver {
   constructor(
     config: Partial<PostgreSQLDriverConfig>,
     link?: Pool,
-    transaction?: PostgreSQLDriverTransaction
+    transaction?: PostgreSQLDriverTransaction,
+    worker?: Worker
   ) {
     super();
     this.config = { ...defaults, ...config };
@@ -77,6 +85,9 @@ export default class PostgreSQLDriver extends NymphDriver {
     if (transaction != null) {
       this.transaction = transaction;
     }
+    if (worker != null) {
+      this.worker = worker;
+    }
     if (link == null) {
       this.connect();
     }
@@ -91,7 +102,8 @@ export default class PostgreSQLDriver extends NymphDriver {
     return new PostgreSQLDriver(
       this.config,
       this.link,
-      this.transaction ?? undefined
+      this.transaction ?? undefined,
+      this.worker ?? undefined
     );
   }
 
@@ -130,6 +142,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           })
         );
         connection.done();
+        this.worker.postMessage('halt');
       }
     } catch (e: any) {
       this.connected = false;
@@ -139,6 +152,17 @@ export default class PostgreSQLDriver extends NymphDriver {
     if (!this.connected) {
       try {
         this.link = new Pool(this.postgresqlConfig);
+        const worker = new Worker(resolve(__dirname, 'runPostgresqlSync.js'), {
+          workerData: this.postgresqlConfig,
+        });
+        worker.on('message', (message) => {
+          if (message === 'halted') {
+            worker.terminate();
+          } else if (typeof message === 'object' && 'error' in message) {
+            console.error('Worker Thread Error', message.error);
+          }
+        });
+        this.worker = worker;
         this.connected = true;
       } catch (e: any) {
         if (
@@ -166,6 +190,7 @@ export default class PostgreSQLDriver extends NymphDriver {
   public async disconnect() {
     if (this.connected) {
       await new Promise((resolve) => this.link.end(() => resolve(0)));
+      this.worker.postMessage('halt');
       this.connected = false;
     }
     return this.connected;
@@ -585,34 +610,24 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
     return this.querySync(
       () => {
-        const output = cp.spawnSync(
-          process.argv0,
-          [__dirname + '/runPostgresqlSync.js'],
-          {
-            input: JSON.stringify({
-              postgresqlConfig: this.postgresqlConfig,
-              query: newQuery,
-              params: newParams,
-            }),
-            timeout: 30000,
-            maxBuffer: 100 * 1024 * 1024,
-            encoding: 'utf8',
-            windowsHide: true,
-          }
+        const channel = new MessageChannel();
+
+        this.worker.postMessage(
+          { query: newQuery, params: newParams, port: channel.port2 },
+          [channel.port2]
         );
-        try {
-          return JSON.parse(output.stdout).rows;
-        } catch (e) {
-          // Do nothing.
+
+        let output = undefined;
+        while (!output) {
+          output = receiveMessageOnPort(channel.port1);
         }
-        if (output.status === 0) {
-          throw new Error('Unknown parse error.');
+
+        if (output.message.error) {
+          throw new Error(output.message.error);
         }
-        const err = JSON.parse(output.stderr);
-        const e = new Error(err.name);
-        for (const name in err) {
-          (e as any)[name] = err[name];
-        }
+
+        const { results } = output.message;
+        return results.rows;
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes
@@ -706,35 +721,24 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
     return this.querySync(
       () => {
-        const output = cp.spawnSync(
-          process.argv0,
-          [__dirname + '/runPostgresqlSync.js'],
-          {
-            input: JSON.stringify({
-              postgresqlConfig: this.postgresqlConfig,
-              query: newQuery,
-              params: newParams,
-            }),
-            timeout: 30000,
-            maxBuffer: 100 * 1024 * 1024,
-            encoding: 'utf8',
-            windowsHide: true,
-          }
+        const channel = new MessageChannel();
+
+        this.worker.postMessage(
+          { query: newQuery, params: newParams, port: channel.port2 },
+          [channel.port2]
         );
-        try {
-          const results = JSON.parse(output.stdout);
-          return { rowCount: results.rowCount ?? 0 };
-        } catch (e) {
-          // Do nothing.
+
+        let output = undefined;
+        while (!output) {
+          output = receiveMessageOnPort(channel.port1);
         }
-        if (output.status === 0) {
-          throw new Error('Unknown parse error.');
+
+        if (output.message.error) {
+          throw new Error(output.message.error);
         }
-        const err = JSON.parse(output.stderr);
-        const e = new Error(err.name);
-        for (const name in err) {
-          (e as any)[name] = err[name];
-        }
+
+        const { results } = output.message;
+        return { rowCount: results.rowCount ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes

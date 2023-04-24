@@ -10,9 +10,8 @@
     "prepare": "husky install && npm run bootstrap && npm run lint",
     "bootstrap": "lerna bootstrap",
     "test": "lerna run test --concurrency=1 --stream --no-prefix --no-bail -- --passWithNoTests",
-    "test:db:run": "lerna run test:db:run --stream --parallel",
-    "test:db:stop": "lerna run test:db:stop",
-    "test:db:clean": "lerna run test:db:clean"
+    "test:db:start": "lerna run test:db:start --stream --parallel",
+    "test:db:stop": "lerna run test:db:stop"
   },
   "repository": {
     "type": "git",

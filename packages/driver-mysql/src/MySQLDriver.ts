@@ -1,4 +1,9 @@
-import cp from 'child_process';
+import {
+  Worker,
+  MessageChannel,
+  receiveMessageOnPort,
+} from 'node:worker_threads';
+import { resolve } from 'node:path';
 // @ts-ignore: types are wonky with @vlasky/mysql.
 import { default as MySQLType } from '@types/mysql';
 // @ts-ignore: replace with mysql once https://github.com/mysqljs/mysql/pull/2233 is merged.
@@ -43,6 +48,8 @@ export default class MySQLDriver extends NymphDriver {
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: MySQLType.Pool;
   protected transaction: MySQLDriverTransaction | null = null;
+  // @ts-ignore: this is assigned in connect(), which is called by the constructor.
+  protected worker: Worker;
 
   static escape(input: string) {
     return mysql.escapeId(input);
@@ -55,7 +62,8 @@ export default class MySQLDriver extends NymphDriver {
   constructor(
     config: Partial<MySQLDriverConfig>,
     link?: MySQLType.Pool,
-    transaction?: MySQLDriverTransaction
+    transaction?: MySQLDriverTransaction,
+    worker?: Worker
   ) {
     super();
     this.config = { ...defaults, ...config };
@@ -76,6 +84,9 @@ export default class MySQLDriver extends NymphDriver {
     if (transaction != null) {
       this.transaction = transaction;
     }
+    if (worker != null) {
+      this.worker = worker;
+    }
     if (link == null) {
       this.connect();
     }
@@ -90,7 +101,8 @@ export default class MySQLDriver extends NymphDriver {
     return new MySQLDriver(
       this.config,
       this.link,
-      this.transaction ?? undefined
+      this.transaction ?? undefined,
+      this.worker ?? undefined
     );
   }
 
@@ -124,6 +136,7 @@ export default class MySQLDriver extends NymphDriver {
           })
         );
         connection.release();
+        this.worker.postMessage('halt');
       }
     } catch (e: any) {
       this.connected = false;
@@ -133,6 +146,17 @@ export default class MySQLDriver extends NymphDriver {
     if (!this.connected) {
       try {
         this.link = mysql.createPool(this.mysqlConfig);
+        const worker = new Worker(resolve(__dirname, 'runMysqlSync.js'), {
+          workerData: this.mysqlConfig,
+        });
+        worker.on('message', (message) => {
+          if (message === 'halted') {
+            worker.terminate();
+          } else if (typeof message === 'object' && 'error' in message) {
+            console.error('Worker Thread Error', message.error);
+          }
+        });
+        this.worker = worker;
         this.connected = true;
       } catch (e: any) {
         if (
@@ -160,6 +184,7 @@ export default class MySQLDriver extends NymphDriver {
   public async disconnect() {
     if (this.connected) {
       await new Promise((resolve) => this.link.end(() => resolve(0)));
+      this.worker.postMessage('halt');
       this.connected = false;
     }
     return this.connected;
@@ -434,35 +459,24 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.querySync(
       () => {
-        const output = cp.spawnSync(
-          process.argv0,
-          [__dirname + '/runMysqlSync.js'],
-          {
-            input: JSON.stringify({
-              mysqlConfig: this.mysqlConfig,
-              query: newQuery,
-              params: newParams,
-            }),
-            timeout: 30000,
-            maxBuffer: 100 * 1024 * 1024,
-            encoding: 'utf8',
-            windowsHide: true,
-          }
+        const channel = new MessageChannel();
+
+        this.worker.postMessage(
+          { query: newQuery, params: newParams, port: channel.port2 },
+          [channel.port2]
         );
-        try {
-          const { results } = JSON.parse(output.stdout);
-          return results;
-        } catch (e) {
-          // Do nothing.
+
+        let output = undefined;
+        while (!output) {
+          output = receiveMessageOnPort(channel.port1);
         }
-        if (output.status === 0) {
-          throw new Error('Unknown parse error.');
+
+        if (output.message.error) {
+          throw new Error(output.message.error);
         }
-        const err = JSON.parse(output.stderr);
-        const e = new Error(err.name);
-        for (const name in err) {
-          (e as any)[name] = err[name];
-        }
+
+        const { results } = output.message;
+        return results;
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes
@@ -560,35 +574,24 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.querySync(
       () => {
-        const output = cp.spawnSync(
-          process.argv0,
-          [__dirname + '/runMysqlSync.js'],
-          {
-            input: JSON.stringify({
-              mysqlConfig: this.mysqlConfig,
-              query: newQuery,
-              params: newParams,
-            }),
-            timeout: 30000,
-            maxBuffer: 100 * 1024 * 1024,
-            encoding: 'utf8',
-            windowsHide: true,
-          }
+        const channel = new MessageChannel();
+
+        this.worker.postMessage(
+          { query: newQuery, params: newParams, port: channel.port2 },
+          [channel.port2]
         );
-        try {
-          const { results } = JSON.parse(output.stdout);
-          return { changes: results.changedRows ?? 0 };
-        } catch (e) {
-          // Do nothing.
+
+        let output = undefined;
+        while (!output) {
+          output = receiveMessageOnPort(channel.port1);
         }
-        if (output.status === 0) {
-          throw new Error('Unknown parse error.');
+
+        if (output.message.error) {
+          throw new Error(output.message.error);
         }
-        const err = JSON.parse(output.stderr);
-        const e = new Error(err.name);
-        for (const name in err) {
-          (e as any)[name] = err[name];
-        }
+
+        const { results } = output.message;
+        return { changes: results.changedRows ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes
