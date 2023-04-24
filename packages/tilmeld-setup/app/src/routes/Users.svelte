@@ -108,7 +108,7 @@
   import Fab from '@smui/fab';
   import { Icon, Svg } from '@smui/common';
 
-  import { nymph, User, Group } from './nymph';
+  import { nymph, User, Group } from '../nymph';
   import UserEdit from './UserEdit.svelte';
 
   let clientConfig: ClientConfig | undefined = undefined;

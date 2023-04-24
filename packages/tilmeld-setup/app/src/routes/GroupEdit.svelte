@@ -359,7 +359,7 @@
   import Button from '@smui/button';
   import { Icon, Label, Svg } from '@smui/common';
 
-  import { nymph, Group, User } from './nymph';
+  import { nymph, Group, User } from '../nymph';
 
   const dispatch = createEventDispatcher();
 
