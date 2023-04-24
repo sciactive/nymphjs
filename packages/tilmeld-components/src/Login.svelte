@@ -170,7 +170,7 @@
         <div class="tilmeld-login-action">
           {#if mode === 'login'}
             <a
-              href="javascript:void(0);"
+              href={'javascript:void(0);'}
               on:click={() => (mode = 'register')}
               {...prefixFilter($$restProps, 'registerLink$')}
             >
@@ -178,7 +178,7 @@
             </a>
           {:else}
             <a
-              href="javascript:void(0);"
+              href={'javascript:void(0);'}
               on:click={() => (mode = 'login')}
               {...prefixFilter($$restProps, 'loginLink$')}
             >
@@ -191,7 +191,7 @@
       {#if !hideRecovery && clientConfig.pwRecovery && mode === 'login'}
         <div class="tilmeld-login-action">
           <a
-            href="javascript:void(0);"
+            href={'javascript:void(0);'}
             on:click={() => (recoverOpen = true)}
             {...prefixFilter($$restProps, 'recoverLink$')}
           >

@@ -88,7 +88,7 @@
           {#if recoveryType === 'password'}
             <div class="tilmeld-recover-action">
               <a
-                href="javascript:void(0);"
+                href={'javascript:void(0);'}
                 on:click={() => (hasSentSecret = 1)}
                 {...prefixFilter($$restProps, 'alreadyGotCodeLink$')}
               >
@@ -155,7 +155,7 @@
 
           <div class="tilmeld-recover-action">
             <a
-              href="javascript:void(0);"
+              href={'javascript:void(0);'}
               on:click={() => (hasSentSecret = false)}
               {...prefixFilter($$restProps, 'needCodeLink$')}
             >

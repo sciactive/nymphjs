@@ -123,7 +123,7 @@
 
       <div class="tilmeld-account-action">
         <a
-          href="javascript:void(0);"
+          href={'javascript:void(0);'}
           on:click={() => {
             open = false;
             changePasswordOpen = true;
