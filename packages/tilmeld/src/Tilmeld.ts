@@ -537,14 +537,6 @@ export default class Tilmeld implements TilmeldInterface {
   ) {
     const user = this.currentUser;
 
-    if (
-      user != null &&
-      (user.abilities?.indexOf('system/admin') ?? -1) !== -1
-    ) {
-      // The user is a system admin, so they can see everything.
-      return;
-    }
-
     if (options == null) {
       throw new Error('No options in argument.');
     } else if (
@@ -676,7 +668,7 @@ export default class Tilmeld implements TilmeldInterface {
    * - FULL_ACCESS, the user has read, write, and delete access to the entity,
    *   as well as being able to manage its access controls and ownership.
    *
-   * These properties defaults to:
+   * These properties default to:
    *
    * - acUser = TilmeldAccessLevels.FULL_ACCESS
    * - acGroup = TilmeldAccessLevels.READ_ACCESS
@@ -691,9 +683,7 @@ export default class Tilmeld implements TilmeldInterface {
    * The following conditions will result in different checks, which determine
    * whether the check passes:
    *
-   * - The user has the "system/admin" ability. (Always true.)
    * - It is a user or group. (True for READ_ACCESS or Tilmeld admins.)
-   * - The entity has no "user" and no "group". (Always true.)
    * - No user is logged in. (Check other AC.)
    * - The entity is the user. (Always true.)
    * - It is the user's primary group. (True for READ_ACCESS.)
@@ -734,21 +724,13 @@ export default class Tilmeld implements TilmeldInterface {
       userOrEmpty = user;
     }
 
-    if (userOrEmpty.abilities?.includes('system/admin')) {
-      return true;
-    }
-
     // Users and groups are always readable. Editable by Tilmeld admins.
     if (
       (entity instanceof User || entity instanceof Group) &&
       (type === TilmeldAccessLevels.READ_ACCESS ||
-        userOrEmpty.abilities?.includes('tilmeld/admin'))
+        userOrEmpty.abilities?.includes('tilmeld/admin') ||
+        userOrEmpty.abilities?.includes('system/admin'))
     ) {
-      return true;
-    }
-
-    // Entities with no owners are always editable.
-    if (entity.user == null && entity.group == null) {
       return true;
     }
 
@@ -757,7 +739,7 @@ export default class Tilmeld implements TilmeldInterface {
     const acGroup = entity.acGroup ?? TilmeldAccessLevels.READ_ACCESS;
     const acOther = entity.acOther ?? TilmeldAccessLevels.NO_ACCESS;
 
-    if (userOrNull === null) {
+    if (userOrNull == null) {
       return acOther >= type;
     }
 

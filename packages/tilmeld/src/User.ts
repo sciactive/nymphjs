@@ -211,23 +211,31 @@ export default class User extends AbleObject<UserData> {
     '$register',
   ];
   private static DEFAULT_PRIVATE_DATA = [
+    // The things that are commented are there to show what is _not_ private.
+    'abilities',
+    // 'username',
+    // 'nameFirst',
+    // 'nameMiddle',
+    // 'nameLast',
+    // 'name',
     'email',
-    'originalEmail',
+    // 'avatar',
     'phone',
     'group',
     'groups',
-    'abilities',
     'inheritAbilities',
+    'enabled',
+    'secret',
+    'emailChangeDate',
+    'newEmailSecret',
+    'newEmailAddress',
+    'cancelEmailSecret',
+    'cancelEmailAddress',
     'recoverSecret',
     'recoverSecretDate',
-    'password',
     'salt',
-    'secret',
-    'newEmailAddress',
-    'newEmailSecret',
-    'cancelEmailAddress',
-    'cancelEmailSecret',
-    'emailChangeDate',
+    'password',
+    'passwordTemp',
   ];
   private static DEFAULT_ALLOWLIST_DATA: string[] = [];
 
@@ -859,15 +867,31 @@ export default class User extends AbleObject<UserData> {
         this.$allowlistData.push('phone');
       }
       this.$privateData = [
+        // The things that are commented are there to show what is _not_ private.
+        // 'abilities',
+        // 'username',
+        // 'nameFirst',
+        // 'nameMiddle',
+        // 'nameLast',
+        // 'name',
+        // 'email',
+        // 'avatar',
+        // 'phone',
+        // 'group',
+        // 'groups',
+        // 'inheritAbilities',
+        'enabled',
         'secret',
-        'newEmailSecret',
-        'cancelEmailAddress',
-        'cancelEmailSecret',
         'emailChangeDate',
+        'newEmailSecret',
+        // 'newEmailAddress',
+        'cancelEmailSecret',
+        'cancelEmailAddress',
         'recoverSecret',
         'recoverSecretDate',
-        'password',
         'salt',
+        'password',
+        // 'passwordTemp',
       ];
     }
 
