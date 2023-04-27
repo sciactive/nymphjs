@@ -1,7 +1,7 @@
 import express from 'express';
 import strtotime from 'locutus/php/datetime/strtotime';
-import { NymphOptions } from '@nymphjs/client';
-import { Nymph } from '@nymphjs/nymph';
+import type { NymphOptions } from '@nymphjs/client';
+import type { Nymph } from '@nymphjs/nymph';
 import type { Tilmeld } from '@nymphjs/tilmeld';
 
 export function setup(

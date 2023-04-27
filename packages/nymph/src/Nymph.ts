@@ -144,7 +144,7 @@ export default class Nymph {
 
     this.Entity = this.addEntityClass(Entity);
 
-    if (typeof tilmeld !== 'undefined') {
+    if (tilmeld != null) {
       this.tilmeld = tilmeld;
     }
 

@@ -1,4 +1,4 @@
-import type { Nymph, TilmeldInterface } from '@nymphjs/nymph';
+import type { Nymph } from '@nymphjs/nymph';
 import http from 'http';
 import { server as WebSocketServer } from 'websocket';
 

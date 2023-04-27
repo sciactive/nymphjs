@@ -230,7 +230,11 @@ export interface Config {
   /**
    * Function to build the JWT for user sessions.
    */
-  jwtBuilder: (config: Config, user: User, switchToken?: boolean) => string;
+  jwtBuilder: (
+    config: Config,
+    user: User & UserData,
+    switchToken?: boolean
+  ) => string;
   /**
    * Function to verify that a JWT was signed with the secret key, vaildate its
    * data, validate the XSRF token, and extract the GUID.
