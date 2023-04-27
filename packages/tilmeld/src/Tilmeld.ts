@@ -15,6 +15,7 @@ import { AccessControlError } from './errors';
 import Group from './Group';
 import User, { UserData } from './User';
 import { AccessControlData } from './Tilmeld.types';
+import { enforceTilmeld } from './enforceTilmeld';
 
 /**
  * A user and group system for Nymph.js.
@@ -162,7 +163,7 @@ export default class Tilmeld implements TilmeldInterface {
       options: Options,
       selectors: FormattedSelector[]
     ) {
-      const tilmeld = nymph.tilmeld as Tilmeld;
+      const tilmeld = enforceTilmeld(nymph);
       if (
         !options ||
         !('skipAc' in options) ||
@@ -202,7 +203,7 @@ export default class Tilmeld implements TilmeldInterface {
       nymph: Nymph,
       entity: EntityInterface
     ) {
-      const tilmeld = nymph.tilmeld as Tilmeld;
+      const tilmeld = enforceTilmeld(nymph);
       if (
         typeof entity.$tilmeldDeleteSkipAC === 'function' &&
         entity.$tilmeldDeleteSkipAC()
@@ -238,7 +239,7 @@ export default class Tilmeld implements TilmeldInterface {
       nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
-      const tilmeld = nymph.tilmeld as Tilmeld;
+      const tilmeld = enforceTilmeld(nymph);
       if (!entity) {
         return;
       }
@@ -403,7 +404,7 @@ export default class Tilmeld implements TilmeldInterface {
       nymph: Nymph,
       entity: EntityInterface & AccessControlData
     ) {
-      const tilmeld = nymph.tilmeld as Tilmeld;
+      const tilmeld = enforceTilmeld(nymph);
       const user = tilmeld.currentUser;
       if (
         user != null &&

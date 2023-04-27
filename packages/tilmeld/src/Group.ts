@@ -11,6 +11,7 @@ import md5 from 'crypto-js/md5';
 import { difference } from 'lodash';
 
 import type Tilmeld from './Tilmeld';
+import { enforceTilmeld } from './enforceTilmeld';
 import AbleObject from './AbleObject';
 import {
   BadDataError,
@@ -245,7 +246,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     this.$referenceWake();
 
     if (
@@ -285,7 +286,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     this.$referenceWake();
 
     if (
@@ -335,7 +336,7 @@ export default class Group extends AbleObject<GroupData> {
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
   public $updateDataProtection(givenUser?: User & UserData) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
 
     this.$privateData = [...Group.DEFAULT_PRIVATE_DATA];
@@ -370,7 +371,7 @@ export default class Group extends AbleObject<GroupData> {
    * @returns True or false.
    */
   public $isDescendant(givenGroup: (Group & GroupData) | string): boolean {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     let group: Group & GroupData;
     if (typeof givenGroup === 'string') {
       group = tilmeld.Group.factorySync(givenGroup);
@@ -399,7 +400,7 @@ export default class Group extends AbleObject<GroupData> {
    * @returns An array of groups.
    */
   public async $getChildren() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     return await this.$nymph.getEntities(
       { class: tilmeld.Group },
       {
@@ -419,7 +420,7 @@ export default class Group extends AbleObject<GroupData> {
   public async $getDescendants(
     andSelf = false
   ): Promise<(Group & GroupData)[]> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     let groups: (Group & GroupData)[] = [];
     const entities = await this.$nymph.getEntities(
       { class: tilmeld.Group },
@@ -445,7 +446,7 @@ export default class Group extends AbleObject<GroupData> {
    * @returns An array of groups.
    */
   public $getDescendantsSync(andSelf = false): (Group & GroupData)[] {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     let groups: (Group & GroupData)[] = [];
     let entity: EntityInterface | null;
     let offset = 0;
@@ -481,7 +482,7 @@ export default class Group extends AbleObject<GroupData> {
    * @returns The level of the group.
    */
   public $getLevel() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     let group = tilmeld.Group.factorySync(this.guid ?? undefined);
     let level = 0;
     while (group.parent != null && group.parent.cdate != null && level < 1024) {
@@ -504,7 +505,7 @@ export default class Group extends AbleObject<GroupData> {
     limit?: number,
     offset?: number
   ): Promise<(User & UserData)[]> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     let groups: (Group & GroupData)[] = [];
     if (descendants) {
       groups = await this.$getDescendants();
@@ -546,7 +547,7 @@ export default class Group extends AbleObject<GroupData> {
     result: boolean;
     message: string;
   }> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (!tilmeld.config.emailUsernames) {
       if (this.$data.groupname == null || !this.$data.groupname.length) {
         return { result: false, message: 'Please specify a groupname.' };
@@ -632,7 +633,7 @@ export default class Group extends AbleObject<GroupData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (this.$data.email === '') {
       return { result: true, message: '' };
     }
@@ -671,7 +672,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public async $save() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (this.$data.groupname == null || !this.$data.groupname.trim().length) {
       return false;
     }
@@ -792,7 +793,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public async $delete() {
-    let tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let tilmeld = enforceTilmeld(this);
     if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete groups.");
     }
@@ -801,7 +802,7 @@ export default class Group extends AbleObject<GroupData> {
     const nymph = this.$nymph;
     const tnymph = await nymph.startTransaction(transaction);
     this.$nymph = tnymph;
-    tilmeld = this.$nymph.tilmeld as Tilmeld;
+    tilmeld = enforceTilmeld(this);
 
     // Delete descendants.
     const descendants = await this.$getDescendants();

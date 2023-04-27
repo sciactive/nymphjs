@@ -1,5 +1,7 @@
 export * from './conf';
 
+export * from './enforceTilmeld';
+
 export * from './errors';
 
 import AbleObject from './AbleObject';

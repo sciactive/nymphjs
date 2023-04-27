@@ -14,6 +14,7 @@ import { difference } from 'lodash';
 import { humanSecret, nanoid } from '@nymphjs/guid';
 
 import type Tilmeld from './Tilmeld';
+import { enforceTilmeld } from './enforceTilmeld';
 import AbleObject from './AbleObject';
 import Group, { GroupData } from './Group';
 import {
@@ -520,7 +521,7 @@ export default class User extends AbleObject<UserData> {
     password: string;
     additionalData?: { [k: string]: any };
   }) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (this.guid == null) {
       return { result: false, message: 'Incorrect login/password.' };
     }
@@ -565,7 +566,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public async $switchUser(data?: { additionalData?: { [k: string]: any } }) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (this.guid == null) {
       return { result: false, message: 'Incorrect login/password.' };
     }
@@ -641,7 +642,7 @@ export default class User extends AbleObject<UserData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   public async $logout() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
 
     try {
       for (let callback of (this.constructor as typeof User)
@@ -720,7 +721,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     this.$referenceWake();
 
     if (
@@ -761,7 +762,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     this.$referenceWake();
 
     if (
@@ -812,7 +813,7 @@ export default class User extends AbleObject<UserData> {
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
   public $updateDataProtection(givenUser?: User & UserData) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
 
     this.$clientEnabledMethods = [...User.DEFAULT_CLIENT_ENABLED_METHODS];
@@ -921,7 +922,7 @@ export default class User extends AbleObject<UserData> {
    * @returns True or false.
    */
   public $gatekeeper(ability?: string): boolean {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (ability == null) {
       return tilmeld.User.current()?.$is(this) ?? false;
     }
@@ -965,7 +966,7 @@ export default class User extends AbleObject<UserData> {
    * @returns True on success, false on failure.
    */
   public async $sendEmailVerification() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (this.guid == null) {
       return false;
     }
@@ -1078,7 +1079,7 @@ export default class User extends AbleObject<UserData> {
    * @returns True if the passwords match, otherwise false.
    */
   public $checkPassword(password: string) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     switch (tilmeld.config.pwMethod) {
       case 'plain':
         return this.$data.password === password;
@@ -1189,7 +1190,7 @@ export default class User extends AbleObject<UserData> {
    * @returns The resulting password or hash which is stored in the entity.
    */
   public $password(password: string) {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     switch (tilmeld.config.pwMethod) {
       case 'plain':
         delete this.$data.salt;
@@ -1216,7 +1217,7 @@ export default class User extends AbleObject<UserData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (!tilmeld.config.emailUsernames) {
       if (this.$data.username == null || !this.$data.username.length) {
         return { result: false, message: 'Please specify a username.' };
@@ -1315,7 +1316,7 @@ export default class User extends AbleObject<UserData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (this.$data.email == null || !this.$data.email.length) {
       if (tilmeld.config.verifyEmail) {
         return { result: false, message: 'Please specify an email.' };
@@ -1360,7 +1361,7 @@ export default class User extends AbleObject<UserData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   public async $checkPhone(): Promise<{ result: boolean; message: string }> {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (this.$data.phone == null || !this.$data.phone.length) {
       return { result: false, message: 'Please specify a phone number.' };
     }
@@ -1399,7 +1400,7 @@ export default class User extends AbleObject<UserData> {
     password: string;
     additionalData?: { [k: string]: any };
   }): Promise<{ result: boolean; loggedin: boolean; message: string }> {
-    let tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let tilmeld = enforceTilmeld(this);
     if (!tilmeld.config.allowRegistration) {
       return {
         result: false,
@@ -1461,7 +1462,7 @@ export default class User extends AbleObject<UserData> {
     const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
     this.$nymph = tnymph;
-    tilmeld = this.$nymph.tilmeld as Tilmeld;
+    tilmeld = enforceTilmeld(this);
 
     try {
       // Add primary group.
@@ -1666,7 +1667,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public async $save() {
-    let tilmeld = this.$nymph.tilmeld as Tilmeld;
+    let tilmeld = enforceTilmeld(this);
     if (this.$data.username == null || !this.$data.username.trim().length) {
       return false;
     }
@@ -1864,7 +1865,7 @@ export default class User extends AbleObject<UserData> {
     const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
     this.$nymph = tnymph;
-    tilmeld = this.$nymph.tilmeld as Tilmeld;
+    tilmeld = enforceTilmeld(this);
 
     if (
       this.$data.group != null &&
@@ -1915,9 +1916,9 @@ export default class User extends AbleObject<UserData> {
       this.$gatekeeperCache = undefined;
       await tnymph.commit(transaction);
 
-      if ((nymph.tilmeld as Tilmeld).User.current(true).$is(this)) {
+      if (enforceTilmeld(nymph).User.current(true).$is(this)) {
         // Update the user in the session cache.
-        (nymph.tilmeld as Tilmeld).fillSession(this);
+        enforceTilmeld(nymph).fillSession(this);
       }
     } else {
       await tnymph.rollback(transaction);
@@ -1943,7 +1944,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public async $delete() {
-    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    const tilmeld = enforceTilmeld(this);
     if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete users.");
     }

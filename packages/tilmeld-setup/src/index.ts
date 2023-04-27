@@ -2,7 +2,7 @@ import express from 'express';
 import strtotime from 'locutus/php/datetime/strtotime';
 import type { NymphOptions } from '@nymphjs/client';
 import type { Nymph } from '@nymphjs/nymph';
-import type { Tilmeld } from '@nymphjs/tilmeld';
+import { enforceTilmeld } from '@nymphjs/tilmeld';
 
 export function setup(
   options: NymphOptions,
@@ -10,14 +10,7 @@ export function setup(
   { allowRegistration = false }: { allowRegistration?: boolean } = {}
 ) {
   const app = express();
-
-  if (!nymph.tilmeld) {
-    throw new Error(
-      'You need to configure Tilmeld on your Nymph instance first.'
-    );
-  }
-
-  const tilmeld = nymph.tilmeld as Tilmeld;
+  const tilmeld = enforceTilmeld(nymph);
 
   app.use('/verify', async (request, response, next) => {
     if (!tilmeld.config.verifyEmail || request.query.action == null) {
