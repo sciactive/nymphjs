@@ -11,12 +11,13 @@ export function setup(
 ) {
   const app = express();
 
-  const tilmeld = nymph.tilmeld as Tilmeld;
-  if (!tilmeld) {
+  if (!nymph.tilmeld) {
     throw new Error(
       'You need to configure Tilmeld on your Nymph instance first.'
     );
   }
+
+  const tilmeld = nymph.tilmeld as Tilmeld;
 
   app.use('/verify', async (request, response, next) => {
     if (!tilmeld.config.verifyEmail || request.query.action == null) {

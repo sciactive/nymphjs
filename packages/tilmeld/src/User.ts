@@ -1,21 +1,9 @@
-import type {
+import {
   EntityData,
-  UserInterface,
-  UserData,
-  GroupInterface,
-  GroupData,
   EntityJson,
   EntityPatch,
   Selector,
   SerializedEntityData,
-  TilmeldUserEventType,
-  TilmeldCheckUsernameCallback,
-  TilmeldBeforeRegisterCallback,
-  TilmeldAfterRegisterCallback,
-  TilmeldBeforeLoginCallback,
-  TilmeldAfterLoginCallback,
-  TilmeldBeforeLogoutCallback,
-  TilmeldAfterLogoutCallback,
 } from '@nymphjs/nymph';
 import { EmailOptions } from 'email-templates';
 import strtotime from 'locutus/php/datetime/strtotime';
@@ -27,12 +15,169 @@ import { humanSecret, nanoid } from '@nymphjs/guid';
 
 import type Tilmeld from './Tilmeld';
 import AbleObject from './AbleObject';
+import Group, { GroupData } from './Group';
 import {
   BadDataError,
   BadEmailError,
   BadUsernameError,
   EmailChangeRateLimitExceededError,
 } from './errors';
+
+export type EventType =
+  | 'checkUsername'
+  | 'beforeRegister'
+  | 'afterRegister'
+  | 'beforeLogin'
+  | 'afterLogin'
+  | 'beforeLogout'
+  | 'afterLogout';
+/**
+ * This is run when the user has entered an otherwise valid username into the
+ * signup form. It should return a result, which when false will stop the
+ * process and return the included message, disallowing the username.
+ */
+export type TilmeldCheckUsernameCallback = (
+  user: User & UserData,
+  data: { username: string }
+) => Promise<{ result: boolean; message?: string }>;
+/**
+ * Theses are run before the user data checks, so the only checks before are
+ * whether registration is allowed and whether the user is already registered.
+ */
+export type TilmeldBeforeRegisterCallback = (
+  user: User & UserData,
+  data: { password: string; additionalData?: { [k: string]: any } }
+) => Promise<void>;
+export type TilmeldAfterRegisterCallback = (
+  user: User & UserData,
+  result: { loggedin: boolean; message: string }
+) => Promise<void>;
+/**
+ * These are run after the authentication checks, but before the login action.
+ */
+export type TilmeldBeforeLoginCallback = (
+  user: User & UserData,
+  data: {
+    username: string;
+    password: string;
+    additionalData?: { [k: string]: any };
+  }
+) => Promise<void>;
+/**
+ * This is run before the transaction is committed, and you can perform
+ * additional functions on the transaction, which is available in `user.$nymph`.
+ */
+export type TilmeldAfterLoginCallback = (
+  user: User & UserData
+) => Promise<void>;
+export type TilmeldBeforeLogoutCallback = (
+  user: User & UserData
+) => Promise<void>;
+export type TilmeldAfterLogoutCallback = (
+  user: User & UserData
+) => Promise<void>;
+
+export type UserData = {
+  /**
+   * The abilities granted to the user.
+   */
+  abilities?: string[];
+  /**
+   * The user's username.
+   */
+  username?: string;
+  /**
+   * The user's first name.
+   */
+  nameFirst?: string;
+  /**
+   * The user's middle name.
+   */
+  nameMiddle?: string;
+  /**
+   * The user's last name.
+   */
+  nameLast?: string;
+  /**
+   * The user's full name. This is generated from the first, middle, and last
+   * names.
+   */
+  name?: string;
+  /**
+   * The user's email address.
+   */
+  email?: string;
+  /**
+   * The user's avatar URL. (Use $getAvatar() to support Gravatar.)
+   */
+  avatar?: string;
+  /**
+   * The user's telephone number.
+   */
+  phone?: string;
+  /**
+   * The user's primary group.
+   */
+  group?: Group & GroupData;
+  /**
+   * The user's secondary groups.
+   */
+  groups?: (Group & GroupData)[];
+  /**
+   * Whether the user should inherit the abilities of his groups.
+   */
+  inheritAbilities?: boolean;
+
+  /**
+   * Whether the user can log in.
+   */
+  enabled?: boolean;
+  /**
+   * A verification secret.
+   */
+  secret?: string;
+  /**
+   * The timestamp of when the email address was last changed.
+   */
+  emailChangeDate?: number;
+  /**
+   * An email change proceed secret.
+   */
+  newEmailSecret?: string;
+  /**
+   * The new email address.
+   */
+  newEmailAddress?: string;
+  /**
+   * An email change cancellation secret.
+   */
+  cancelEmailSecret?: string;
+  /**
+   * The old email address.
+   */
+  cancelEmailAddress?: string;
+  /**
+   * A recovery secret.
+   */
+  recoverSecret?: string;
+  /**
+   * The timestamp of when the recovery secret was issued.
+   */
+  recoverSecretDate?: number;
+  /**
+   * The password hash salt.
+   */
+  salt?: string;
+  /**
+   * The password or password hash.
+   */
+  password?: string;
+  /**
+   * Temporary storage for passwords. This will be hashed before going into the
+   * database.
+   */
+  passwordTemp?: string;
+};
 
 /**
  * A user data model.
@@ -43,10 +188,7 @@ import {
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export default class User
-  extends AbleObject<UserData>
-  implements UserInterface
-{
+export default class User extends AbleObject<UserData> {
   /**
    * The instance of Tilmeld to use for queries.
    */
@@ -124,7 +266,7 @@ export default class User
   /**
    * The user's group descendants.
    */
-  private $descendantGroups?: (GroupInterface & GroupData)[];
+  private $descendantGroups?: (Group & GroupData)[];
   /**
    * Used to save the current email address to send verification if it changes
    * from the frontend.
@@ -134,13 +276,11 @@ export default class User
    */
   public $originalEmail?: string;
 
-  static async factory(guid?: string): Promise<UserInterface & UserData> {
-    return (await super.factory(guid)) as UserInterface & UserData;
+  static async factory(guid?: string): Promise<User & UserData> {
+    return (await super.factory(guid)) as User & UserData;
   }
 
-  static async factoryUsername(
-    username?: string
-  ): Promise<UserInterface & UserData> {
+  static async factoryUsername(username?: string): Promise<User & UserData> {
     const entity = new this();
     if (username != null) {
       const entity = await this.nymph.getEntity(
@@ -159,8 +299,8 @@ export default class User
     return entity;
   }
 
-  static factorySync(guid?: string): UserInterface & UserData {
-    return super.factorySync(guid) as UserInterface & UserData;
+  static factorySync(guid?: string): User & UserData {
+    return super.factorySync(guid) as User & UserData;
   }
 
   constructor(guid?: string) {
@@ -176,13 +316,13 @@ export default class User
     }
   }
 
-  public static current(returnObjectIfNotExist: true): UserInterface & UserData;
+  public static current(returnObjectIfNotExist: true): User & UserData;
   public static current(
     returnObjectIfNotExist?: false
-  ): (UserInterface & UserData) | null;
+  ): (User & UserData) | null;
   public static current(
     returnObjectIfNotExist?: boolean
-  ): (UserInterface & UserData) | null {
+  ): (User & UserData) | null {
     if (this.tilmeld.currentUser == null) {
       return returnObjectIfNotExist ? this.factorySync() : null;
     }
@@ -206,7 +346,7 @@ export default class User
       };
     }
 
-    let user: UserInterface & UserData;
+    let user: User & UserData;
     const options: EmailOptions = {};
 
     if (
@@ -366,11 +506,8 @@ export default class User
       return { result: false, message: 'Incorrect login/password.' };
     }
     const user = await this.tilmeld.User.factoryUsername(data.username);
-    const result: {
-      result: boolean;
-      message: string;
-      user?: UserInterface & UserData;
-    } = await user.$login(data);
+    const result: { result: boolean; message: string; user?: User & UserData } =
+      await user.$login(data);
     if (result.result) {
       user.$updateDataProtection();
       result.user = user;
@@ -549,7 +686,7 @@ export default class User
   /**
    * Get the user's group descendants.
    */
-  public async $getDescendantGroups(): Promise<(GroupInterface & GroupData)[]> {
+  public async $getDescendantGroups(): Promise<(Group & GroupData)[]> {
     if (this.$descendantGroups == null) {
       this.$descendantGroups = [];
       if (this.$data.group != null) {
@@ -567,7 +704,7 @@ export default class User
   /**
    * Get the user's group descendants.
    */
-  public $getDescendantGroupsSync(): (GroupInterface & GroupData)[] {
+  public $getDescendantGroupsSync(): (Group & GroupData)[] {
     if (this.$descendantGroups == null) {
       this.$descendantGroups = [];
       if (this.$data.group != null) {
@@ -674,7 +811,7 @@ export default class User
    *
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
-  public $updateDataProtection(givenUser?: UserInterface & UserData) {
+  public $updateDataProtection(givenUser?: User & UserData) {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let user = givenUser ?? tilmeld.User.current();
 
@@ -923,7 +1060,7 @@ export default class User
    * @param group The group.
    * @returns True if the user is already in the group. The resulting array of groups if the user was not.
    */
-  public $addGroup(group: GroupInterface & GroupData) {
+  public $addGroup(group: Group & GroupData) {
     if (this.$data.groups == null) {
       this.$data.groups = [];
     }
@@ -962,9 +1099,9 @@ export default class User
    * @param group The group.
    * @returns True if the user wasn't in the group. The resulting array of groups if the user was.
    */
-  public $delGroup(group: GroupInterface & GroupData) {
+  public $delGroup(group: Group & GroupData) {
     if (this.$data.groups != null && group.$inArray(this.$data.groups)) {
-      const newGroups: (GroupInterface & GroupData)[] = [];
+      const newGroups: (Group & GroupData)[] = [];
       for (let curGroup of this.$data.groups) {
         if (!group.$is(curGroup)) {
           newGroups.push(curGroup);
@@ -982,7 +1119,7 @@ export default class User
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public $inGroup(group: (GroupInterface & GroupData) | string) {
+  public $inGroup(group: (Group & GroupData) | string) {
     if (typeof group === 'string') {
       if (this.$data.group?.guid === group) {
         return true;
@@ -1005,7 +1142,7 @@ export default class User
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public $isDescendant(group: (GroupInterface & GroupData) | string) {
+  public $isDescendant(group: (Group & GroupData) | string) {
     // Check to see if the user is in a descendant group of the given group.
     if (
       this.$data.group?.cdate != null &&
@@ -1328,7 +1465,7 @@ export default class User
 
     try {
       // Add primary group.
-      let generatedPrimaryGroup: (GroupInterface & GroupData) | null = null;
+      let generatedPrimaryGroup: (Group & GroupData) | null = null;
       if (tilmeld.config.generatePrimary) {
         // Generate a new primary group for the user.
         generatedPrimaryGroup = await tilmeld.Group.factory();
@@ -1824,7 +1961,7 @@ export default class User
     return await super.$delete();
   }
 
-  public static on<T extends TilmeldUserEventType>(
+  public static on<T extends EventType>(
     event: T,
     callback: T extends 'checkUsername'
       ? TilmeldCheckUsernameCallback
@@ -1865,7 +2002,7 @@ export default class User
     return () => this.off(event, callback);
   }
 
-  public static off<T extends TilmeldUserEventType>(
+  public static off<T extends EventType>(
     event: T,
     callback: T extends 'checkUsername'
       ? TilmeldCheckUsernameCallback

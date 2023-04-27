@@ -1,11 +1,6 @@
-import type {
+import {
   EntityData,
   EntityInterface,
-  GroupInterface,
-  GroupData,
-  GroupConstructor,
-  UserInterface,
-  UserData,
   EntityJson,
   EntityPatch,
   Options,
@@ -23,6 +18,59 @@ import {
   BadUsernameError,
   CouldNotChangeDefaultPrimaryGroupError,
 } from './errors';
+import User, { UserData } from './User';
+
+export type GroupData = {
+  /**
+   * The abilities granted to the group.
+   */
+  abilities?: string[];
+  /**
+   * The group's groupname.
+   */
+  groupname?: string;
+  /**
+   * The group's name.
+   */
+  name?: string;
+  /**
+   * The group's email address.
+   */
+  email?: string;
+  /**
+   * The group's avatar URL. (Use getAvatar() to support Gravatar.)
+   */
+  avatar?: string;
+  /**
+   * The group's telephone number.
+   */
+  phone?: string;
+  /**
+   * The group's parent.
+   */
+  parent?: Group & GroupData;
+  /**
+   * If generatePrimary is on, this will be the user who generated this group.
+   */
+  user?: (User & UserData) | null;
+
+  /**
+   * Whether the group can be used.
+   */
+  enabled?: boolean;
+  /**
+   * Whether this group is the default primary group for new users.
+   */
+  defaultPrimary?: boolean;
+  /**
+   * Whether this group is a default secondary group for new users.
+   */
+  defaultSecondary?: boolean;
+  /**
+   * Whether this group is a default secondary group for unverified users.
+   */
+  unverifiedSecondary?: boolean;
+};
 
 /**
  * A user group data model.
@@ -33,10 +81,7 @@ import {
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export default class Group
-  extends AbleObject<GroupData>
-  implements GroupInterface
-{
+export default class Group extends AbleObject<GroupData> {
   /**
    * The instance of Tilmeld to use for queries.
    */
@@ -71,13 +116,13 @@ export default class Group
    */
   private $skipAcWhenSaving = false;
 
-  static async factory(guid?: string): Promise<GroupInterface & GroupData> {
-    return (await super.factory(guid)) as GroupInterface & GroupData;
+  static async factory(guid?: string): Promise<Group & GroupData> {
+    return (await super.factory(guid)) as Group & GroupData;
   }
 
   static async factoryGroupname(
     groupname?: string
-  ): Promise<GroupInterface & GroupData> {
+  ): Promise<Group & GroupData> {
     const entity = new this();
     if (groupname != null) {
       const entity = await this.nymph.getEntity(
@@ -96,8 +141,8 @@ export default class Group
     return entity;
   }
 
-  static factorySync(guid?: string): GroupInterface & GroupData {
-    return super.factorySync(guid) as GroupInterface & GroupData;
+  static factorySync(guid?: string): Group & GroupData {
+    return super.factorySync(guid) as Group & GroupData;
   }
 
   constructor(guid?: string) {
@@ -157,10 +202,10 @@ export default class Group
 
   private static async getAssignableGroups(
     highestParent: string | boolean,
-    options: Options<GroupConstructor>,
+    options: Options<typeof Group>,
     selectors: Selector[]
   ) {
-    let assignableGroups: (GroupInterface & GroupData)[] = [];
+    let assignableGroups: (Group & GroupData)[] = [];
 
     if (highestParent === false) {
       return assignableGroups;
@@ -172,7 +217,7 @@ export default class Group
     );
     if (highestParent !== true) {
       assignableGroups = assignableGroups.filter((group) => {
-        let curGroup: GroupInterface & GroupData = group;
+        let curGroup = group;
         while (curGroup.parent != null && curGroup.parent.cdate != null) {
           if (curGroup.parent.guid === highestParent) {
             return true;
@@ -289,7 +334,7 @@ export default class Group
    *
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
-  public $updateDataProtection(givenUser?: UserInterface & UserData) {
+  public $updateDataProtection(givenUser?: User & UserData) {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
     let user = givenUser ?? tilmeld.User.current();
 
@@ -324,11 +369,9 @@ export default class Group
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public $isDescendant(
-    givenGroup: (GroupInterface & GroupData) | string
-  ): boolean {
+  public $isDescendant(givenGroup: (Group & GroupData) | string): boolean {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
-    let group: GroupInterface & GroupData;
+    let group: Group & GroupData;
     if (typeof givenGroup === 'string') {
       group = tilmeld.Group.factorySync(givenGroup);
     } else {
@@ -375,9 +418,9 @@ export default class Group
    */
   public async $getDescendants(
     andSelf = false
-  ): Promise<(GroupInterface & GroupData)[]> {
+  ): Promise<(Group & GroupData)[]> {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
-    let groups: (GroupInterface & GroupData)[] = [];
+    let groups: (Group & GroupData)[] = [];
     const entities = await this.$nymph.getEntities(
       { class: tilmeld.Group },
       {
@@ -401,9 +444,9 @@ export default class Group
    * @param andSelf Include this group in the returned array.
    * @returns An array of groups.
    */
-  public $getDescendantsSync(andSelf = false): (GroupInterface & GroupData)[] {
+  public $getDescendantsSync(andSelf = false): (Group & GroupData)[] {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
-    let groups: (GroupInterface & GroupData)[] = [];
+    let groups: (Group & GroupData)[] = [];
     let entity: EntityInterface | null;
     let offset = 0;
     do {
@@ -439,9 +482,7 @@ export default class Group
    */
   public $getLevel() {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
-    let group: GroupInterface & GroupData = tilmeld.Group.factorySync(
-      this.guid ?? undefined
-    );
+    let group = tilmeld.Group.factorySync(this.guid ?? undefined);
     let level = 0;
     while (group.parent != null && group.parent.cdate != null && level < 1024) {
       level++;
@@ -462,9 +503,9 @@ export default class Group
     descendants = false,
     limit?: number,
     offset?: number
-  ): Promise<(UserInterface & UserData)[]> {
+  ): Promise<(User & UserData)[]> {
     const tilmeld = this.$nymph.tilmeld as Tilmeld;
-    let groups: (GroupInterface & GroupData)[] = [];
+    let groups: (Group & GroupData)[] = [];
     if (descendants) {
       groups = await this.$getDescendants();
     }
@@ -483,11 +524,11 @@ export default class Group
         ref: [
           ['group', this],
           ['groups', this],
-          ...groups.map((group): [string, GroupInterface & GroupData] => [
+          ...groups.map((group): [string, Group & GroupData] => [
             'group',
             group,
           ]),
-          ...groups.map((group): [string, GroupInterface & GroupData] => [
+          ...groups.map((group): [string, Group & GroupData] => [
             'groups',
             group,
           ]),

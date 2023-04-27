@@ -1,12 +1,8 @@
-import type {
-  UserInterface,
-  UserData,
-  GroupInterface,
-  GroupData,
-} from '@nymphjs/nymph';
 import { EmailOptions, EmailConfig } from 'email-templates';
 
 import type Tilmeld from '../Tilmeld';
+import Group, { GroupData } from '../Group';
+import User, { UserData } from '../User';
 
 /**
  * Tilmeld Config
@@ -236,7 +232,7 @@ export interface Config {
    */
   jwtBuilder: (
     config: Config,
-    user: UserInterface & UserData,
+    user: User & UserData,
     switchToken?: boolean
   ) => string;
   /**
@@ -268,7 +264,7 @@ export interface Config {
   configEmail: (
     tilmeld: Tilmeld,
     options: EmailOptions,
-    user: UserInterface & UserData
+    user: User & UserData
   ) => Promise<EmailConfig>;
   /**
    * Send an email to a user. Uses `email-templates` by default.
@@ -298,7 +294,7 @@ export interface Config {
   sendEmail: (
     tilmeld: Tilmeld,
     options: EmailOptions,
-    user: UserInterface & UserData
+    user: User & UserData
   ) => Promise<boolean>;
   /**
    * The address you'd like to receive a notification of registered users, if
@@ -308,9 +304,9 @@ export interface Config {
   /**
    * The validator used to check groups before saving.
    */
-  validatorGroup: (group: GroupInterface & GroupData) => void;
+  validatorGroup: (group: Group & GroupData) => void;
   /**
    * The validator used to check users before saving.
    */
-  validatorUser: (user: UserInterface & UserData) => void;
+  validatorUser: (user: User & UserData) => void;
 }
