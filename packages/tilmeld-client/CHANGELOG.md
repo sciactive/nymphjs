@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.18](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.17...v1.0.0-beta.18) (2023-04-27)
+
+### Features
+
+- add the ability to switch to a user without their password ([ca4466a](https://github.com/sciactive/nymphjs/commit/ca4466af1704d68905ac087350a8cf151c1072d9))
+
 # [1.0.0-beta.17](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.16...v1.0.0-beta.17) (2023-04-24)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-client
