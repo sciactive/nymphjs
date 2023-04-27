@@ -257,6 +257,29 @@ export default class User extends Entity<UserData> {
     return response;
   }
 
+  public async $switchUser(data?: {
+    additionalData?: { [k: string]: any };
+  }): Promise<{
+    result: boolean;
+    message: string;
+  }> {
+    const store = User.stores.get(this.$nymph);
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph'
+      );
+    }
+
+    const response = await this.$serverCall('$switchUser', [data]);
+    if (response.result) {
+      (this.constructor as typeof User).handleToken();
+      for (let i = 0; i < store.loginCallbacks.length; i++) {
+        store.loginCallbacks[i] && store.loginCallbacks[i](this);
+      }
+    }
+    return response;
+  }
+
   public async $logout(): Promise<{ result: boolean; message: string }> {
     const store = User.stores.get(this.$nymph);
     if (store == null) {
@@ -369,15 +392,20 @@ export default class User extends Entity<UserData> {
 
   private static handleToken(response?: Response) {
     let token: string | null = null;
+    let switchToken: string | null = null;
     const authCookiePattern =
       /(?:(?:^|.*;\s*)TILMELDAUTH\s*=\s*([^;]*).*$)|^.*$/;
+    const switchCookiePattern =
+      /(?:(?:^|.*;\s*)TILMELDSWITCH\s*=\s*([^;]*).*$)|^.*$/;
     if (response && response.headers.has('X-TILMELDAUTH')) {
       token = response.headers.get('X-TILMELDAUTH');
+      switchToken = response.headers.get('X-TILMELDSWITCH');
     } else if (
       typeof document !== 'undefined' &&
       document.cookie.match(authCookiePattern)
     ) {
       token = document.cookie.replace(authCookiePattern, '$1');
+      switchToken = document.cookie.replace(switchCookiePattern, '$1');
     } else {
       return;
     }
@@ -400,7 +428,7 @@ export default class User extends Entity<UserData> {
         const jwt = JSON.parse(json);
         this.nymph.setXsrfToken(jwt.xsrfToken);
         if (this.nymph.pubsub) {
-          this.nymph.pubsub.setToken(token);
+          this.nymph.pubsub.setToken(token, switchToken);
         }
         currentToken = token;
       }

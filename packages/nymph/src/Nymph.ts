@@ -898,7 +898,7 @@ export default class Nymph {
    * #  brackets ([]).
    * # Properties are stored like this:
    * # propname=JSON.stringify(value)
-   *     abilities=["system/all"]
+   *     abilities=["system/admin"]
    *     groups=[]
    *     inheritAbilities=false
    *     name="admin"

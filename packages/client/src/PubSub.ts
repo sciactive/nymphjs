@@ -14,10 +14,10 @@ import {
 } from './PubSub.types';
 import { entityConstructorsToClassNames } from './utils';
 
-let authToken: string | null = null;
-
 export default class PubSub {
   private nymph: Nymph;
+  private authToken: string | null = null;
+  private switchToken: string | null = null;
   private connection: WebSocket | undefined;
   private waitForConnectionTimeout: NodeJS.Timeout | undefined;
   private pubsubUrl: string | undefined;
@@ -292,10 +292,11 @@ export default class PubSub {
       }
     }
 
-    if (authToken != null) {
+    if (this.authToken != null) {
       this._send({
         action: 'authenticate',
-        token: authToken,
+        token: this.authToken,
+        switchToken: this.switchToken,
       });
     }
 
@@ -718,12 +719,14 @@ export default class PubSub {
     return true;
   }
 
-  public setToken(token: string | null) {
-    authToken = token;
+  public setToken(authToken: string | null, switchToken: string | null = null) {
+    this.authToken = authToken;
+    this.switchToken = switchToken;
     if (this.isConnectionOpen()) {
       this._send({
         action: 'authenticate',
-        token: authToken,
+        authToken: this.authToken,
+        switchToken: this.switchToken,
       });
     }
   }

@@ -531,12 +531,16 @@
       return;
     }
     failureMessage = undefined;
+    if (ability === 'system/admin') {
+      failureMessage = "Groups aren't allowed to be system admins.";
+      return;
+    }
     if (ability === 'tilmeld/admin') {
       failureMessage = "Groups aren't allowed to be Tilmeld admins.";
       return;
     }
-    if (ability === 'system/admin') {
-      failureMessage = "Groups aren't allowed to be system admins.";
+    if (ability === 'tilmeld/switch') {
+      failureMessage = "Groups aren't allowed to have switch user ability.";
       return;
     }
     entity.abilities?.push(ability);

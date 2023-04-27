@@ -52,8 +52,9 @@ export default {
   maxUsernameLength: 128,
   jwtSecret: '',
   jwtExpire: 60 * 60 * 24 * 7 * 8, // 8 weeks(ish)
+  jwtSwitchExpire: 60 * 60 * 6, // 6 hours
   jwtRenew: 60 * 60 * 24 * 7 * 2, // 2 weeks(ish)
-  jwtBuilder: (config, user) => {
+  jwtBuilder: (config, user, switchToken) => {
     const secret = config.jwtSecret;
     if (secret === '') {
       throw new Error('JWT secret is not configured.');
@@ -67,7 +68,7 @@ export default {
         xsrfToken: 'TILMELDXSRF-' + nanoid(),
       },
       secret,
-      { expiresIn: config.jwtExpire }
+      { expiresIn: switchToken ? config.jwtSwitchExpire : config.jwtExpire }
     );
   },
   jwtExtract: (config, token, xsrfToken?) => {

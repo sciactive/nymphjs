@@ -24,6 +24,10 @@
     server-side entities. The first user account registered in Tilmeld will be
     granted admin priveleges with the <code>system/admin</code> ability.
   </p>
+  <p>
+    If you create a user account through this setup app, it will not have a
+    generated primary group, so you may want to avoid that.
+  </p>
 
   <h3>Primary Groups</h3>
   <p>

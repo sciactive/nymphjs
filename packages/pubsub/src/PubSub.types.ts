@@ -17,7 +17,8 @@ export type QuerySubscriptionData = {
 
 export type AuthenticateMessageData = {
   action: 'authenticate';
-  token: string;
+  authToken: string;
+  switchToken?: string;
 };
 
 export type QuerySubscribeMessageData = {

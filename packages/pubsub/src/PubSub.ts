@@ -55,7 +55,10 @@ export default class PubSub {
    */
   public server: WebSocketServer;
 
-  private sessions = new Map<connection, string>();
+  private sessions = new Map<
+    connection,
+    { authToken: string; switchToken?: string }
+  >();
   protected querySubs: {
     [etype: string]: {
       [query: string]: Map<connection, QuerySubscriptionData>;
@@ -554,9 +557,10 @@ export default class PubSub {
     data: AuthenticateMessageData
   ) {
     // Save the user's auth token in session storage.
-    const token = data.token;
-    if (token != null) {
-      this.sessions.set(from, token);
+    const authToken = data.authToken;
+    const switchToken = data.switchToken;
+    if (authToken != null) {
+      this.sessions.set(from, { authToken, switchToken });
     } else if (this.sessions.has(from)) {
       this.sessions.delete(from);
     }
@@ -640,16 +644,27 @@ export default class PubSub {
       if (!(serialArgs in this.querySubs[etype])) {
         this.querySubs[etype][serialArgs] = new Map();
       }
-      let token = null;
+      let authToken = null;
+      let switchToken = null;
       if (this.sessions.has(from)) {
-        token = this.sessions.get(from);
+        const session = this.sessions.get(from);
+        authToken = session?.authToken;
+        switchToken = session?.switchToken;
       }
       const nymph = this.nymph.clone();
-      if (nymph.tilmeld != null && token != null) {
-        const user = await nymph.tilmeld.extractToken(token);
-        if (user) {
-          // Log in the user for access controls.
-          nymph.tilmeld.fillSession(user);
+      if (nymph.tilmeld != null && authToken != null) {
+        const user = await nymph.tilmeld.extractToken(authToken);
+        if (user && user.enabled) {
+          if (switchToken != null) {
+            const switchUser = await nymph.tilmeld.extractToken(switchToken);
+            if (switchUser) {
+              // Log in the switchUser for access controls.
+              nymph.tilmeld.fillSession(switchUser);
+            }
+          } else {
+            // Log in the user for access controls.
+            nymph.tilmeld.fillSession(user);
+          }
         }
       }
       const existingSub = this.querySubs[etype][serialArgs].get(from);
@@ -672,7 +687,7 @@ export default class PubSub {
           count: !!data.count,
         });
       }
-      if (nymph.tilmeld != null && token != null) {
+      if (nymph.tilmeld != null && authToken != null) {
         // Clear the user that was temporarily logged in.
         nymph.tilmeld.clearSession();
       }
@@ -1026,7 +1041,8 @@ export default class PubSub {
   ) {
     // Update currents list.
     let current: EntityInterface[];
-    let token: string | undefined;
+    let authToken: string | undefined;
+    let switchToken: string | undefined;
     const nymph = this.nymph.clone();
     try {
       const [clientOptions, ...clientSelectors] = JSON.parse(curData.query);
@@ -1039,13 +1055,23 @@ export default class PubSub {
       };
       const selectors = classNamesToEntityConstructors(nymph, clientSelectors);
       if (this.sessions.has(curClient)) {
-        token = this.sessions.get(curClient);
+        const session = this.sessions.get(curClient);
+        authToken = session?.authToken;
+        switchToken = session?.switchToken;
       }
-      if (nymph.tilmeld != null && token != null) {
-        const user = await nymph.tilmeld.extractToken(token);
-        if (user) {
-          // Log in the user for access controls.
-          nymph.tilmeld.fillSession(user);
+      if (nymph.tilmeld != null && authToken != null) {
+        const user = await nymph.tilmeld.extractToken(authToken);
+        if (user && user.enabled) {
+          if (switchToken != null) {
+            const switchUser = await nymph.tilmeld.extractToken(switchToken);
+            if (switchUser) {
+              // Log in the switchUser for access controls.
+              nymph.tilmeld.fillSession(switchUser);
+            }
+          } else {
+            // Log in the user for access controls.
+            nymph.tilmeld.fillSession(user);
+          }
         }
       }
       current = await nymph.getEntities(options, ...selectors);
@@ -1125,7 +1151,7 @@ export default class PubSub {
     // Update curData.
     curData.current = currentGuids;
 
-    if (nymph.tilmeld != null && token != null) {
+    if (nymph.tilmeld != null && authToken != null) {
       // Clear the user that was temporarily logged in.
       nymph.tilmeld.clearSession();
     }

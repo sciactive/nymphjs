@@ -249,13 +249,35 @@ export default class Group extends AbleObject<GroupData> {
     this.$referenceWake();
 
     if (
-      input.data.abilities?.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1 &&
-      tilmeld.gatekeeper('tilmeld/admin') &&
+      'abilities' in input.data &&
+      input.data.abilities?.includes('system/admin') !==
+        this.$data.abilities?.includes('system/admin') &&
       !tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
-        "You don't have the authority to make this group a system admin."
+        "You don't have the authority to grant or revoke system/admin."
+      );
+    }
+
+    if (
+      'abilities' in input.data &&
+      input.data.abilities?.includes('tilmeld/admin') !==
+        this.$data.abilities?.includes('tilmeld/admin') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/admin."
+      );
+    }
+
+    if (
+      'abilities' in input.data &&
+      input.data.abilities?.includes('tilmeld/switch') !==
+        this.$data.abilities?.includes('tilmeld/switch') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/switch."
       );
     }
 
@@ -267,13 +289,35 @@ export default class Group extends AbleObject<GroupData> {
     this.$referenceWake();
 
     if (
-      patch.set.abilities?.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1 &&
-      tilmeld.gatekeeper('tilmeld/admin') &&
+      'abilities' in patch.set &&
+      patch.set.abilities?.includes('system/admin') !==
+        this.$data.abilities?.includes('system/admin') &&
       !tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
-        "You don't have the authority to make this group a system admin."
+        "You don't have the authority to grant or revoke system/admin."
+      );
+    }
+
+    if (
+      'abilities' in patch.set &&
+      patch.set.abilities?.includes('tilmeld/admin') !==
+        this.$data.abilities?.includes('tilmeld/admin') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/admin."
+      );
+    }
+
+    if (
+      'abilities' in patch.set &&
+      patch.set.abilities?.includes('tilmeld/switch') !==
+        this.$data.abilities?.includes('tilmeld/switch') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/switch."
       );
     }
 
@@ -671,10 +715,12 @@ export default class Group extends AbleObject<GroupData> {
       delete this.$data.unverifiedSecondary;
     }
 
-    // Groups should never have 'system/admin' or 'tilmeld/admin' abilities.
+    // Groups should never have 'system/admin', 'tilmeld/admin', or
+    // 'tilmeld/switch' abilities.
     this.$data.abilities = difference(this.$data.abilities ?? [], [
       'system/admin',
       'tilmeld/admin',
+      'tilmeld/switch',
       null,
       undefined,
     ]) as string[];

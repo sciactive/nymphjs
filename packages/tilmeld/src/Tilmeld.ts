@@ -74,6 +74,11 @@ export default class Tilmeld implements TilmeldInterface {
   private skipAuthenticate = false;
 
   /**
+   * Used to avoid infinite loop.
+   */
+  private alreadyLoggedOutSwitch = false;
+
+  /**
    * Create a new instance of Tilmeld.
    *
    * @param config The Tilmeld configuration.
@@ -729,7 +734,7 @@ export default class Tilmeld implements TilmeldInterface {
       userOrEmpty = user;
     }
 
-    if (userOrEmpty.$gatekeeper('system/admin')) {
+    if (userOrEmpty.abilities?.includes('system/admin')) {
       return true;
     }
 
@@ -737,7 +742,7 @@ export default class Tilmeld implements TilmeldInterface {
     if (
       (entity instanceof User || entity instanceof Group) &&
       (type === TilmeldAccessLevels.READ_ACCESS ||
-        userOrEmpty.$gatekeeper('tilmeld/admin'))
+        userOrEmpty.abilities?.includes('tilmeld/admin'))
     ) {
       return true;
     }
@@ -862,7 +867,7 @@ export default class Tilmeld implements TilmeldInterface {
       userOrEmpty = user;
     }
 
-    if (userOrEmpty.$gatekeeper('system/admin')) {
+    if (userOrEmpty.abilities?.includes('system/admin')) {
       return true;
     }
 
@@ -950,7 +955,7 @@ export default class Tilmeld implements TilmeldInterface {
         guid: guid,
       }
     );
-    if (!user || !user.guid || !user.enabled) {
+    if (!user || !user.guid) {
       return null;
     }
 
@@ -958,7 +963,8 @@ export default class Tilmeld implements TilmeldInterface {
   }
 
   /**
-   * Check for a TILMELDAUTH token, and, if set, authenticate from it.
+   * Check for TILMELDAUTH and TILMELDSWITCH tokens, and, if set, authenticate
+   * from it/them.
    *
    * You can also call this function after setting `response.locals.user` to the
    * user you want to authenticate. You *should* check for `user.enabled` before
@@ -994,24 +1000,35 @@ export default class Tilmeld implements TilmeldInterface {
     // to provide the auth token.
     let fromAuthHeader = false;
     let authToken: string;
+    let switchToken: string | null;
     if (this.request.header('x-tilmeldauth') != null) {
       fromAuthHeader = true;
       authToken = this.request.header('x-tilmeldauth') as string;
+      switchToken =
+        (this.request.header('x-tilmeldswitch') as string) ||
+        'TILMELDSWITCH' in cookies
+          ? cookies.TILMELDSWITCH
+          : null;
     } else if ('TILMELDAUTH' in cookies) {
       fromAuthHeader = false;
       authToken = cookies.TILMELDAUTH;
+      switchToken = 'TILMELDSWITCH' in cookies ? cookies.TILMELDSWITCH : null;
     } else {
       return false;
     }
 
-    let extract: { guid: string; expire: Date } | null;
+    let authExtract: { guid: string; expire: Date } | null;
+    let switchExtract: { guid: string; expire: Date } | null;
     if (
       skipXsrfToken ||
       this.request.originalUrl.startsWith(this.config.setupPath)
     ) {
       // The request is for the setup app, or we were told to skip the XSRF
       // check, so don't check for the XSRF token.
-      extract = this.config.jwtExtract(this.config, authToken);
+      authExtract = this.config.jwtExtract(this.config, authToken);
+      switchExtract = switchToken
+        ? this.config.jwtExtract(this.config, switchToken)
+        : null;
     } else {
       // The request is for something else, so check for a valid XSRF token,
       // unless the auth token is provided by a header (instead of a cookie).
@@ -1020,19 +1037,42 @@ export default class Tilmeld implements TilmeldInterface {
         return false;
       }
 
-      extract = this.config.jwtExtract(this.config, authToken, xsrfToken);
+      authExtract = this.config.jwtExtract(this.config, authToken, xsrfToken);
+      switchExtract = switchToken
+        ? this.config.jwtExtract(this.config, switchToken)
+        : null;
     }
 
-    if (extract == null) {
+    if (authExtract == null) {
       this.logout();
       return false;
     }
-    const { guid, expire } = extract;
+    const { guid, expire } = authExtract;
+    const { guid: switchGuid, expire: switchExpire } = switchExtract || {
+      guid: null,
+      expire: null,
+    };
 
     const user = this.User.factorySync(guid);
-    if (user.guid == null || !user.enabled) {
+    if (user.guid == null || !user.enabled || expire.valueOf() <= Date.now()) {
       this.logout();
       return false;
+    }
+
+    if (switchGuid && switchExpire && switchExpire.valueOf() > Date.now()) {
+      // Load the switch user.
+      const switchUser = this.User.factorySync(switchGuid);
+      if (switchUser.guid == null) {
+        this.logoutSwitch();
+      } else {
+        this.fillSession(switchUser);
+
+        if (this.response) {
+          this.response.locals.user = switchUser;
+        }
+
+        return true;
+      }
     }
 
     if (expire.valueOf() < Date.now() + this.config.jwtRenew * 1000) {
@@ -1095,11 +1135,66 @@ export default class Tilmeld implements TilmeldInterface {
   }
 
   /**
+   * Adds a switch auth token for the given user.
+   *
+   * This effectively logs the current user in to the system as the given user.
+   *
+   * @param user The user.
+   * @param sendAuthHeader Send the auth token as a custom header.
+   * @param sendCookie Send the auth token as a cookie.
+   * @returns True on success, false on failure.
+   */
+  public loginSwitch(
+    user: User & UserData,
+    sendAuthHeader: boolean,
+    sendCookie = true
+  ) {
+    if (user.guid != null) {
+      if (this.response) {
+        if (!this.response.headersSent) {
+          const token = this.config.jwtBuilder(this.config, user, true);
+
+          if (sendCookie) {
+            const appUrl = new URL(this.config.appUrl);
+            this.response.cookie('TILMELDSWITCH', token, {
+              domain: this.config.cookieDomain,
+              path: this.config.cookiePath,
+              maxAge: this.config.jwtSwitchExpire * 1000,
+              secure: appUrl.protocol === 'https',
+              httpOnly: false, // Allow JS access (for PubSub auth token).
+              sameSite: appUrl.protocol === 'https' ? 'lax' : 'strict',
+            });
+          }
+
+          if (sendAuthHeader) {
+            this.response.set('X-TILMELDSWITCH', token);
+          }
+        }
+
+        this.response.locals.user = user;
+      }
+
+      this.fillSession(user);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Logs the current user out of the system.
    *
    * @param clearCookie Clear the auth cookie. (Also send a header.)
    */
   public logout(clearCookie = true) {
+    if (this.request && !this.alreadyLoggedOutSwitch) {
+      const cookies = this.request.cookies ?? {};
+
+      if ('TILMELDSWITCH' in cookies) {
+        this.alreadyLoggedOutSwitch = true;
+        return this.logoutSwitch(clearCookie);
+      }
+    }
+
     this.clearSession();
     if (this.response) {
       if (clearCookie && !this.response.headersSent) {
@@ -1110,6 +1205,27 @@ export default class Tilmeld implements TilmeldInterface {
         this.response.set('X-TILMELDAUTH', '');
       }
       this.response.locals.user = null;
+    }
+  }
+
+  /**
+   * Clears the switch user out of the system.
+   *
+   * @param clearCookie Clear the auth cookie. (Also send a header.)
+   */
+  public logoutSwitch(clearCookie = true) {
+    this.clearSession();
+    if (this.response) {
+      if (clearCookie && !this.response.headersSent) {
+        this.response.clearCookie('TILMELDSWITCH', {
+          domain: this.config.cookieDomain,
+          path: this.config.cookiePath,
+        });
+        this.response.set('X-TILMELDSWITCH', '');
+      }
+      this.response.locals.user = null;
+
+      this.authenticate();
     }
   }
 

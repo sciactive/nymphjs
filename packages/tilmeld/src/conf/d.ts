@@ -218,6 +218,11 @@ export interface Config {
    */
   jwtExpire: number;
   /**
+   * How long from current time, in seconds, the JWT token for a user switch
+   * expires.
+   */
+  jwtSwitchExpire: number;
+  /**
    * How long, in seconds, before the JWT token expires to give the user a new
    * one.
    */
@@ -225,7 +230,7 @@ export interface Config {
   /**
    * Function to build the JWT for user sessions.
    */
-  jwtBuilder: (config: Config, user: User) => string;
+  jwtBuilder: (config: Config, user: User, switchToken?: boolean) => string;
   /**
    * Function to verify that a JWT was signed with the secret key, vaildate its
    * data, validate the XSRF token, and extract the GUID.

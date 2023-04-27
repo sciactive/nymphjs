@@ -424,18 +424,24 @@
             <path fill="currentColor" d={mdiPlus} />
           </Icon>
         </IconButton>
-        <Button
-          on:click={addTilmeldAdminAbility}
-          title="Tilmeld Admins have the ability to modify, create, and delete users and groups, and grant and revoke abilities."
-        >
-          <Label>Tilmeld Admin</Label>
-        </Button>
         {#if sysAdmin}
           <Button
             on:click={addSystemAdminAbility}
             title="System Admins have all abilities. Gatekeeper checks always return true."
           >
             <Label>System Admin</Label>
+          </Button>
+          <Button
+            on:click={addTilmeldAdminAbility}
+            title="Tilmeld Admins have the ability to modify, create, and delete users and groups, and grant and revoke abilities."
+          >
+            <Label>Tilmeld Admin</Label>
+          </Button>
+          <Button
+            on:click={addTilmeldSwitchAbility}
+            title="The switch user ability lets a user log in as another non-admin user without needing their password."
+          >
+            <Label>Switch User</Label>
           </Button>
         {/if}
       </div>
@@ -554,21 +560,63 @@
       </div>
     {/if}
 
-    <div style="margin-top: 36px;">
-      <Button variant="raised" on:click={saveEntity} disabled={saving}>
-        <Label>Save User</Label>
-      </Button>
-      {#if entity.guid}
-        <Button on:click={deleteEntity} disabled={saving}>
-          <Label>Delete</Label>
+    <div
+      style="margin-top: 36px; display: flex; justify-content: space-between;"
+    >
+      <div>
+        <Button variant="raised" on:click={saveEntity} disabled={saving}>
+          <Label>Save User</Label>
         </Button>
-      {/if}
-      {#if success}
-        <span>Successfully saved!</span>
+        {#if entity.guid}
+          <Button on:click={deleteEntity} disabled={saving}>
+            <Label>Delete</Label>
+          </Button>
+        {/if}
+        {#if success}
+          <span>Successfully saved!</span>
+        {/if}
+      </div>
+      {#if tilmeldSwitchUser && !entity.$is(user)}
+        <div>
+          <Button
+            on:click={() => {
+              tilmeldSwitchUserDialogOpen = true;
+            }}
+            disabled={saving}
+          >
+            <Label>Login as User</Label>
+          </Button>
+        </div>
       {/if}
     </div>
   </section>
 {/if}
+
+<Dialog
+  bind:open={tilmeldSwitchUserDialogOpen}
+  aria-labelledby="switch-user-title"
+  aria-describedby="switch-user-content"
+  on:SMUIDialog:closed={switchUserDialogCloseHandler}
+>
+  <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
+  <Title id="switch-user-title">Switch User</Title>
+  <Content id="switch-user-content">
+    <p>
+      Switching users will let you use the app as this user, even if the user
+      account is disabled. You will remain logged in as this user until you log
+      out, at which time, you will go back to being logged in as yourself.
+    </p>
+    <p>Once you switch, you will be forwarded to the main app.</p>
+  </Content>
+  <Actions>
+    <Button action="cancel">
+      <Label>Cancel</Label>
+    </Button>
+    <Button action="switch" default>
+      <Label>Switch</Label>
+    </Button>
+  </Actions>
+</Dialog>
 
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -604,6 +652,7 @@
   import HelperText from '@smui/textfield/helper-text';
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
+  import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import { Icon, Label, Svg } from '@smui/common';
 
   import { User, Group } from '../nymph';
@@ -614,6 +663,8 @@
   let clientConfig: ClientConfig | undefined = undefined;
   let user: (UserClass & CurrentUserData) | undefined = undefined;
   let sysAdmin = false;
+  let tilmeldSwitchUser = false;
+  let tilmeldSwitchUserDialogOpen = false;
   let activeTab: 'General' | 'Groups' | 'Abilities' | 'Security' = 'General';
   let primaryGroupSearch = '';
   let secondaryGroupSearch = '';
@@ -639,6 +690,7 @@
   onMount(async () => {
     user = (await User.current()) ?? undefined;
     sysAdmin = (await user?.$gatekeeper('system/admin')) ?? false;
+    tilmeldSwitchUser = (await user?.$gatekeeper('tilmeld/switch')) ?? false;
   });
   onMount(async () => {
     clientConfig = await User.getClientConfig();
@@ -868,6 +920,13 @@
     if (event.key === 'Enter') addAbility();
   }
 
+  function addSystemAdminAbility() {
+    if (entity.abilities?.indexOf('system/admin') === -1) {
+      entity.abilities?.push('system/admin');
+      entity = entity;
+    }
+  }
+
   function addTilmeldAdminAbility() {
     if (entity.abilities?.indexOf('tilmeld/admin') === -1) {
       entity.abilities?.push('tilmeld/admin');
@@ -875,9 +934,9 @@
     }
   }
 
-  function addSystemAdminAbility() {
-    if (entity.abilities?.indexOf('system/admin') === -1) {
-      entity.abilities?.push('system/admin');
+  function addTilmeldSwitchAbility() {
+    if (entity.abilities?.indexOf('tilmeld/switch') === -1) {
+      entity.abilities?.push('tilmeld/switch');
       entity = entity;
     }
   }
@@ -924,6 +983,28 @@
           pop();
         } else {
           failureMessage = 'An error occurred.';
+        }
+      } catch (e: any) {
+        failureMessage = e?.message;
+      }
+      saving = false;
+    }
+  }
+
+  async function switchUserDialogCloseHandler(
+    e: CustomEvent<{ action: string }>
+  ) {
+    if (e.detail.action === 'switch') {
+      saving = true;
+      try {
+        const result = await entity.$switchUser();
+
+        if (result.result) {
+          window.location.href =
+            (window as unknown as { appUrl: string }).appUrl ||
+            window.location.href;
+        } else {
+          failureMessage = result.message;
         }
       } catch (e: any) {
         failureMessage = e?.message;

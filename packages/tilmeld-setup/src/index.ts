@@ -204,7 +204,8 @@ export function setup(
     response.type('text/javascript');
     response.send(
       `window.nymphOptions = ${JSON.stringify(options)};\n` +
-        `window.allowRegistration = ${JSON.stringify(allowRegistration)};`
+        `window.allowRegistration = ${JSON.stringify(allowRegistration)};\n` +
+        `window.appUrl = ${JSON.stringify(tilmeld.config.appUrl)};`
     );
   });
 

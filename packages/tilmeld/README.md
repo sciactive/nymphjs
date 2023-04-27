@@ -49,6 +49,19 @@ const { User, Group } = tilmeld;
 
 See the [config declaration file](src/conf/d.ts).
 
+## Abilities
+
+There are a few abilities that Tilmeld uses internally:
+
+- `system/admin` - A user with this ability has **all** abilities.
+- `tilmeld/admin` - Allow the user to manage and edit other user's account and group information and grant/revoke abilities.
+- `tilmeld/switch` - Allow the user to switch to other users (log in as them without their password).
+- `uid/get/[name]` - Allow the user to read the named UID.
+- `uid/new/[name]` - Allow the user to read, create, and increment the named UID.
+- `uid/set/[name]` - Allow the user to read, create, increment, set, and delete the named UID.
+
+The admin and switch abilities cannot be inherited from groups.
+
 # License
 
 Copyright 2021 SciActive Inc

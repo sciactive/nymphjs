@@ -556,6 +556,78 @@ export default class User extends AbleObject<UserData> {
     return { result: true, message: 'You are logged in.' };
   }
 
+  public async $switchUser(data?: { additionalData?: { [k: string]: any } }) {
+    const tilmeld = this.$nymph.tilmeld as Tilmeld;
+    if (this.guid == null) {
+      return { result: false, message: 'Incorrect login/password.' };
+    }
+
+    let user = tilmeld.User.current();
+
+    if (!user || user.guid == null) {
+      return { result: false, message: "You're not logged in." };
+    }
+
+    const isCurrentUser = user != null && user.$is(this);
+
+    if (isCurrentUser) {
+      return { result: false, message: "You can't switch to yourself." };
+    }
+
+    const toAbilities = this.$data.abilities || [];
+    const fromAbilities = user.abilities || [];
+
+    if (
+      fromAbilities.indexOf('tilmeld/switch') === -1 &&
+      fromAbilities.indexOf('system/admin') === -1
+    ) {
+      return {
+        result: false,
+        message: "You don't have permission to switch users.",
+      };
+    }
+
+    if (
+      toAbilities.indexOf('system/admin') !== -1 ||
+      toAbilities.indexOf('tilmeld/admin') !== -1
+    ) {
+      return { result: false, message: "You can't switch to an admin." };
+    }
+
+    try {
+      for (let callback of (this.constructor as typeof User)
+        .beforeLoginCallbacks) {
+        if (callback) {
+          await callback(this, {
+            username: this.$data.username || '',
+            password: '',
+            ...(data || {}),
+          });
+        }
+      }
+    } catch (e: any) {
+      return {
+        result: false,
+        message: e.message,
+      };
+    }
+
+    // Authentication was successful, attempt to login.
+    if (!tilmeld.loginSwitch(this, true)) {
+      return { result: false, message: 'Incorrect login/password.' };
+    }
+
+    for (let callback of (this.constructor as typeof User)
+      .afterLoginCallbacks) {
+      if (callback) {
+        await callback(this);
+      }
+    }
+
+    // Login was successful.
+    return { result: true, message: 'You are logged in.' };
+  }
+
   /**
    * Log a user out of the system.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
@@ -645,13 +717,34 @@ export default class User extends AbleObject<UserData> {
 
     if (
       'abilities' in input.data &&
-      input.data.abilities.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1 &&
-      tilmeld.gatekeeper('tilmeld/admin') &&
+      input.data.abilities?.includes('system/admin') !==
+        this.$data.abilities?.includes('system/admin') &&
       !tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
-        "You don't have the authority to make this user a system admin."
+        "You don't have the authority to grant or revoke system/admin."
+      );
+    }
+
+    if (
+      'abilities' in input.data &&
+      input.data.abilities?.includes('tilmeld/admin') !==
+        this.$data.abilities?.includes('tilmeld/admin') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/admin."
+      );
+    }
+
+    if (
+      'abilities' in input.data &&
+      input.data.abilities?.includes('tilmeld/switch') !==
+        this.$data.abilities?.includes('tilmeld/switch') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/switch."
       );
     }
 
@@ -665,13 +758,34 @@ export default class User extends AbleObject<UserData> {
 
     if (
       'abilities' in patch.set &&
-      patch.set.abilities.indexOf('system/admin') !== -1 &&
-      this.$data.abilities?.indexOf('system/admin') === -1 &&
-      tilmeld.gatekeeper('tilmeld/admin') &&
+      patch.set.abilities?.includes('system/admin') !==
+        this.$data.abilities?.includes('system/admin') &&
       !tilmeld.gatekeeper('system/admin')
     ) {
       throw new BadDataError(
-        "You don't have the authority to make this user a system admin."
+        "You don't have the authority to grant or revoke system/admin."
+      );
+    }
+
+    if (
+      'abilities' in patch.set &&
+      patch.set.abilities?.includes('tilmeld/admin') !==
+        this.$data.abilities?.includes('tilmeld/admin') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/admin."
+      );
+    }
+
+    if (
+      'abilities' in patch.set &&
+      patch.set.abilities?.includes('tilmeld/switch') !==
+        this.$data.abilities?.includes('tilmeld/switch') &&
+      !tilmeld.gatekeeper('system/admin')
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke tilmeld/switch."
       );
     }
 
@@ -756,6 +870,16 @@ export default class User extends AbleObject<UserData> {
         'salt',
       ];
     }
+
+    if (
+      user != null &&
+      !isCurrentUser &&
+      (abilities.indexOf('tilmeld/switch') !== -1 ||
+        abilities.indexOf('system/admin') !== -1)
+    ) {
+      // Users with this ability can switch to other users.
+      this.$clientEnabledMethods.push('$switchUser');
+    }
   }
 
   /**
@@ -800,7 +924,7 @@ export default class User extends AbleObject<UserData> {
     }
     return (
       (ability in this.$gatekeeperCache && !!this.$gatekeeperCache[ability]) ||
-      !!this.$gatekeeperCache['system/admin']
+      !!this.$data.abilities?.includes('system/admin')
     );
   }
 
@@ -1526,7 +1650,7 @@ export default class User extends AbleObject<UserData> {
     if (
       tilmeld.gatekeeper('tilmeld/admin') &&
       !tilmeld.gatekeeper('system/admin') &&
-      this.$gatekeeper('system/admin')
+      this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to modify system admins."
@@ -1801,7 +1925,7 @@ export default class User extends AbleObject<UserData> {
     }
     if (
       !tilmeld.gatekeeper('system/admin') &&
-      this.$gatekeeper('system/admin')
+      this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(
         "You don't have the authority to delete system admins."
