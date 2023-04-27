@@ -156,8 +156,20 @@ export default class Entity<T extends EntityData = EntityData>
    * be visible on the frontend, unlike $privateData, but any changes to them
    * that come from the frontend will be ignored.
    *
-   * In addition to what's listed here, the 'user' and 'group' properties will
-   * be filtered for non-admins when Tilmeld is being used.
+   * In addition to what's listed here, all of the access control properties
+   * will be included when Tilmeld is being used. These are:
+   *
+   * - acUser
+   * - acGroup
+   * - acOther
+   * - acRead
+   * - acWrite
+   * - acFull
+   * - user
+   * - group
+   *
+   * You should modify these through client enabled methods or the $save method
+   * instead, for safety.
    */
   protected $protectedData: string[] = [];
   /**
@@ -671,12 +683,21 @@ export default class Entity<T extends EntityData = EntityData>
 
     const protectedData: EntityData = {};
     const protectedProps = [...this.$protectedData];
-    if (
-      this.$nymph.tilmeld &&
-      !this.$nymph.tilmeld.gatekeeper('tilmeld/admin')
-    ) {
-      protectedProps.push('user');
-      protectedProps.push('group');
+    if (this.$nymph.tilmeld) {
+      protectedProps.push('acUser');
+      protectedProps.push('acGroup');
+      protectedProps.push('acOther');
+      protectedProps.push('acRead');
+      protectedProps.push('acWrite');
+      protectedProps.push('acFull');
+      if (
+        ((this.constructor as typeof Entity).class !== 'User' &&
+          (this.constructor as typeof Entity).class !== 'Group') ||
+        !this.$nymph.tilmeld.gatekeeper('tilmeld/admin')
+      ) {
+        protectedProps.push('user');
+        protectedProps.push('group');
+      }
     }
     for (const name of protectedProps) {
       if (name in this.$data) {
@@ -725,11 +746,29 @@ export default class Entity<T extends EntityData = EntityData>
     }
     this.mdate = patch.mdate;
 
+    const protectedProps = [...this.$protectedData];
+    if (this.$nymph.tilmeld) {
+      protectedProps.push('acUser');
+      protectedProps.push('acGroup');
+      protectedProps.push('acOther');
+      protectedProps.push('acRead');
+      protectedProps.push('acWrite');
+      protectedProps.push('acFull');
+      if (
+        ((this.constructor as typeof Entity).class !== 'User' &&
+          (this.constructor as typeof Entity).class !== 'Group') ||
+        !this.$nymph.tilmeld.gatekeeper('tilmeld/admin')
+      ) {
+        protectedProps.push('user');
+        protectedProps.push('group');
+      }
+    }
+
     for (const name in patch.set) {
       if (
         (this.$allowlistData != null &&
           this.$allowlistData.indexOf(name) === -1) ||
-        this.$protectedData.indexOf(name) !== -1 ||
+        protectedProps.indexOf(name) !== -1 ||
         this.$privateData.indexOf(name) !== -1
       ) {
         continue;
@@ -745,7 +784,7 @@ export default class Entity<T extends EntityData = EntityData>
       if (
         (this.$allowlistData != null &&
           this.$allowlistData.indexOf(name) === -1) ||
-        this.$protectedData.indexOf(name) !== -1 ||
+        protectedProps.indexOf(name) !== -1 ||
         this.$privateData.indexOf(name) !== -1
       ) {
         continue;

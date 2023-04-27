@@ -349,11 +349,10 @@ export default class Tilmeld implements TilmeldInterface {
           }
 
           if (
-            ((originalAc.user && !originalAc.user.$is(newAc.user)) ||
-              (!originalAc.user &&
-                newAc.user &&
-                !newAc.user.$is(tilmeld.currentUser))) &&
-            !tilmeld.gatekeeper('tilmeld/admin')
+            (originalAc.user && !originalAc.user.$is(newAc.user)) ||
+            (!originalAc.user &&
+              newAc.user &&
+              !newAc.user.$is(tilmeld.currentUser))
           ) {
             throw new AccessControlError(
               'No permission to assign to another user.'
@@ -366,8 +365,7 @@ export default class Tilmeld implements TilmeldInterface {
             !(
               newAc.group.$is(tilmeld.currentUser?.group) ||
               newAc.group.$inArray(tilmeld.currentUser?.groups ?? [])
-            ) &&
-            !tilmeld.gatekeeper('tilmeld/admin')
+            )
           ) {
             throw new AccessControlError(
               'No permission to assign to another group.'
