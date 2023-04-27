@@ -1,11 +1,14 @@
-import {
+import type {
   Nymph,
+  TilmeldInterface,
+  UserInterface,
+  UserData,
   EntityInterface,
+  AccessControlData,
   FormattedSelector,
   Options,
-  TilmeldInterface,
-  TilmeldAccessLevels,
 } from '@nymphjs/nymph';
+import { TilmeldAccessLevels } from '@nymphjs/nymph';
 import { URL } from 'url';
 import { Request, Response } from 'express';
 import { xor } from 'lodash';
@@ -13,8 +16,7 @@ import { xor } from 'lodash';
 import { Config, ConfigDefaults as defaults } from './conf';
 import { AccessControlError } from './errors';
 import Group from './Group';
-import User, { UserData } from './User';
-import { AccessControlData } from './Tilmeld.types';
+import User from './User';
 
 /**
  * A user and group system for Nymph.js.
@@ -39,7 +41,7 @@ export default class Tilmeld implements TilmeldInterface {
   /**
    * The currently logged in user.
    */
-  public currentUser: (User & UserData) | null = null;
+  public currentUser: (UserInterface & UserData) | null = null;
 
   /**
    * The user class for this instance of Tilmeld.
@@ -704,15 +706,15 @@ export default class Tilmeld implements TilmeldInterface {
   public checkPermissions(
     entity: EntityInterface & AccessControlData,
     type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
-    user?: (User & UserData) | false
+    user?: (UserInterface & UserData) | false
   ) {
     // Only works for entities.
     if (typeof entity !== 'object' || typeof entity.$is !== 'function') {
       return false;
     }
 
-    let userOrNull: (User & UserData) | null = null;
-    let userOrEmpty: User & UserData = this.User.factorySync();
+    let userOrNull: (UserInterface & UserData) | null = null;
+    let userOrEmpty: UserInterface & UserData = this.User.factorySync();
     // Calculate the user.
     if (user == null) {
       userOrNull = this.currentUser;
@@ -837,9 +839,9 @@ export default class Tilmeld implements TilmeldInterface {
   public checkClientUIDPermissions(
     name: string,
     type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
-    user?: (User & UserData) | false
+    user?: (UserInterface & UserData) | false
   ) {
-    let userOrEmpty: User & UserData = this.User.factorySync();
+    let userOrEmpty: UserInterface & UserData = this.User.factorySync();
     // Calculate the user.
     if (user == null) {
       userOrEmpty = this.User.current(true);
@@ -882,7 +884,7 @@ export default class Tilmeld implements TilmeldInterface {
    *
    * @param user The user.
    */
-  public fillSession(user: User & UserData) {
+  public fillSession(user: UserInterface & UserData) {
     // Read groups right now, since gatekeeper needs them, so
     // $udpateDataProtection will fail to read them (since it runs gatekeeper).
     const _group = user.group;
@@ -1079,7 +1081,7 @@ export default class Tilmeld implements TilmeldInterface {
    * @returns True on success, false on failure.
    */
   public login(
-    user: User & UserData,
+    user: UserInterface & UserData,
     sendAuthHeader: boolean,
     sendCookie = true
   ) {
@@ -1125,7 +1127,7 @@ export default class Tilmeld implements TilmeldInterface {
    * @returns True on success, false on failure.
    */
   public loginSwitch(
-    user: User & UserData,
+    user: UserInterface & UserData,
     sendAuthHeader: boolean,
     sendCookie = true
   ) {
