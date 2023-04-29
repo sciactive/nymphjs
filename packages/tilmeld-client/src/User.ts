@@ -76,6 +76,11 @@ export type CurrentUserData = UserData & {
    * Whether the user should inherit the abilities of his groups.
    */
   inheritAbilities?: boolean;
+  /**
+   * If the user has changed their email address, this is the new one, awaiting
+   * verification.
+   */
+  newEmailAddress?: string;
 };
 
 export type AdminUserData = CurrentUserData & {

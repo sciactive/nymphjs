@@ -146,7 +146,8 @@ export type UserData = {
    */
   newEmailSecret?: string;
   /**
-   * The new email address.
+   * If the user has changed their email address, this is the new one, awaiting
+   * verification.
    */
   newEmailAddress?: string;
   /**
@@ -892,7 +893,7 @@ export default class User extends AbleObject<UserData> {
         'recoverSecretDate',
         'salt',
         'password',
-        // 'passwordTemp',
+        'passwordTemp',
       ];
     }
 

@@ -1,15 +1,18 @@
 import { EntityConstructor, EntityInterface } from './Entity.types';
 
 export default class EntityWeakCache {
-  private references: WeakMap<EntityConstructor, { [k: string]: any }> =
-    new WeakMap();
+  private references: WeakMap<
+    EntityConstructor,
+    { [k: string]: WeakRef<EntityInterface> }
+  > = new WeakMap();
 
   get(EntityClass: EntityConstructor, guid: string): EntityInterface | null {
     const classMap = this.references.get(EntityClass);
     if (classMap && guid in classMap) {
       const weakRef = classMap[guid];
-      if (weakRef && weakRef.deref() != null) {
-        return weakRef.deref();
+      const deref = weakRef && weakRef.deref();
+      if (deref != null) {
+        return deref;
       } else {
         delete classMap[guid];
       }
@@ -22,7 +25,6 @@ export default class EntityWeakCache {
       return;
     }
 
-    // @ts-ignore TS doesn't know about WeakRef.
     const weakRef = new WeakRef(entity);
 
     const classMap = this.references.get(EntityClass) || {};
