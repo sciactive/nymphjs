@@ -236,19 +236,19 @@ export interface Config {
     switchToken?: boolean
   ) => string;
   /**
-   * Function to verify that a JWT was signed with the secret key, vaildate its
-   * data, validate the XSRF token, and extract the GUID.
+   * Function to verify that a JWT was signed with the secret key, validate its
+   * data, validate the XSRF token, and extract the GUID and dates.
    *
    * If no XSRF token is supplied, ignore it.
    *
-   * Return false if the JWT is not valid, or an array of GUID and expire
-   * timestamp otherwise.
+   * Return false if the JWT is not valid, or an object with GUID, issued date,
+   * and expire date otherwise.
    */
   jwtExtract: (
     config: Config,
     token: string,
     xsrfToken?: string
-  ) => { guid: string; expire: Date } | null;
+  ) => { guid: string; issued: Date; expire: Date } | null;
   /**
    * The absolute path to the email template directory. Used by the default
    * email sender.

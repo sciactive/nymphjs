@@ -13,9 +13,11 @@
       'nameLast$',
       'phone$',
       'changePasswordLink$',
+      'revokeSessionsLink$',
       'closeButton$',
       'saveButton$',
       'changePassword$',
+      'revokeSessions$',
       'progress$',
     ])}
   >
@@ -134,6 +136,19 @@
         </a>
       </div>
 
+      <div class="tilmeld-account-action">
+        <a
+          href={'javascript:void(0);'}
+          on:click={() => {
+            open = false;
+            revokeTokensOpen = true;
+          }}
+          {...prefixFilter($$restProps, 'revokeTokensLink$')}
+        >
+          Log out of other sessions.
+        </a>
+      </div>
+
       {#if failureMessage}
         <div class="tilmeld-account-failure">
           {failureMessage}
@@ -169,6 +184,12 @@
     bind:user
     {...prefixFilter($$restProps, 'changePassword$')}
   />
+  <RevokeTokens
+    {User}
+    bind:open={revokeTokensOpen}
+    bind:user
+    {...prefixFilter($$restProps, 'revokeTokens$')}
+  />
 {/if}
 
 <script lang="ts">
@@ -188,6 +209,7 @@
   import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
   import type { User as UserClass } from '@nymphjs/tilmeld-client';
   import ChangePassword from './ChangePassword.svelte';
+  import RevokeTokens from './RevokeTokens.svelte';
 
   const forwardEvents = forwardEventsBuilder(get_current_component());
 
@@ -210,6 +232,7 @@
   let emailVerified: boolean | undefined = undefined;
   let emailVerifiedMessage: string | undefined = undefined;
   let changePasswordOpen = false;
+  let revokeTokensOpen = false;
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
     user = currentUser;

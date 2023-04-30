@@ -179,6 +179,11 @@ export type UserData = {
    * database.
    */
   passwordTemp?: string;
+  /**
+   * If set, this timestamp is the cutoff point for JWT issue dates. Any token
+   * issued before this date will not authenticate the user.
+   */
+  revokeTokenDate?: number;
 };
 
 /**
@@ -838,6 +843,7 @@ export default class User extends AbleObject<UserData> {
       // Users can check to see what abilities they have.
       this.$clientEnabledMethods.push('$gatekeeper');
       this.$clientEnabledMethods.push('$changePassword');
+      this.$clientEnabledMethods.push('$revokeCurrentTokens');
       this.$clientEnabledMethods.push('$logout');
       this.$clientEnabledMethods.push('$sendEmailVerification');
     }
@@ -1169,6 +1175,7 @@ export default class User extends AbleObject<UserData> {
   public async $changePassword(data: {
     newPassword: string;
     currentPassword: string;
+    revokeCurrentTokens?: boolean;
   }): Promise<{ result: boolean; message: string }> {
     if (!('newPassword' in data) || !data.newPassword.length) {
       return { result: false, message: 'Please specify a password.' };
@@ -1177,7 +1184,14 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: 'Incorrect password.' };
     }
     this.$data.passwordTemp = data.newPassword;
+    if (data.revokeCurrentTokens) {
+      this.$data.revokeTokenDate = Date.now();
+    }
     if (await this.$save()) {
+      if (data.revokeCurrentTokens) {
+        const tilmeld = enforceTilmeld(this);
+        tilmeld.login(this, true);
+      }
       return { result: true, message: 'Your password has been changed.' };
     } else {
       return { result: false, message: "Couldn't save new password." };
@@ -1210,6 +1224,31 @@ export default class User extends AbleObject<UserData> {
         break;
     }
     return this.$data.password;
+  }
+
+  /**
+   * A frontend accessible method to revoke all currently issued tokens.
+   *
+   * @param data The input data from the client.
+   * @returns An object with a boolean 'result' entry and a 'message' entry.
+   */
+  public async $revokeCurrentTokens(data: {
+    password: string;
+  }): Promise<{ result: boolean; message: string }> {
+    if (!this.$checkPassword(data.password ?? '')) {
+      return { result: false, message: 'Incorrect password.' };
+    }
+    this.$data.revokeTokenDate = Date.now();
+    if (await this.$save()) {
+      const tilmeld = enforceTilmeld(this);
+      tilmeld.login(this, true);
+      return {
+        result: true,
+        message: 'You have logged out of all other sessions.',
+      };
+    } else {
+      return { result: false, message: "Couldn't save revocation date." };
+    }
   }
 
   /**

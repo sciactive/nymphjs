@@ -87,7 +87,7 @@ export default {
         return null;
       }
 
-      const { guid, xsrfToken: jwtXsrfToken, exp } = payload;
+      const { guid, xsrfToken: jwtXsrfToken, exp, nbf } = payload;
 
       if (xsrfToken != null && xsrfToken !== jwtXsrfToken) {
         return null;
@@ -97,13 +97,19 @@ export default {
         return null;
       }
 
+      if (nbf == null) {
+        return null;
+      }
+
+      const issued = new Date(nbf * 1000);
+
       if (exp == null) {
         return null;
       }
 
       const expire = new Date(exp * 1000);
 
-      return { guid, expire };
+      return { guid, issued, expire };
     } catch (e: any) {
       return null;
     }
@@ -309,6 +315,7 @@ export default {
         recoverSecretDate: Joi.number(),
         salt: Joi.string().trim(false),
         password: Joi.string().trim(false).required(),
+        revokeTokenDate: Joi.number(),
       }),
       'Invalid User: '
     );

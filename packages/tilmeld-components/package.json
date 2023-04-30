@@ -41,6 +41,7 @@
   "devDependencies": {
     "@nymphjs/tilmeld-client": "^1.0.0-beta.19",
     "@smui/button": "^7.0.0-beta.3",
+    "@smui/checkbox": "^7.0.0-beta.3",
     "@smui/circular-progress": "^7.0.0-beta.3",
     "@smui/dialog": "^7.0.0-beta.3",
     "@smui/form-field": "^7.0.0-beta.3",

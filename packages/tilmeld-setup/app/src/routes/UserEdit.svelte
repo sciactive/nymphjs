@@ -495,7 +495,14 @@
             type="number"
             style="width: 100%;"
             input$autocomplete="off"
-          />
+          >
+            <HelperText persistent slot="helper">
+              {entity.recoverSecretDate === 0 ||
+              entity.recoverSecretDate == null
+                ? 'Unset'
+                : new Date(entity.recoverSecretDate).toLocaleString()}
+            </HelperText>
+          </Textfield>
         </LayoutCell>
         <LayoutCell span={12}>
           An email change uses all of the following properties. The email change
@@ -513,7 +520,13 @@
             type="number"
             style="width: 100%;"
             input$autocomplete="off"
-          />
+          >
+            <HelperText persistent slot="helper">
+              {entity.emailChangeDate === 0 || entity.emailChangeDate == null
+                ? 'Unset'
+                : new Date(entity.emailChangeDate).toLocaleString()}
+            </HelperText>
+          </Textfield>
         </LayoutCell>
         <LayoutCell span={6}>
           <Textfield
@@ -550,6 +563,36 @@
             style="width: 100%;"
             input$autocomplete="off"
           />
+        </LayoutCell>
+        <LayoutCell span={12}>
+          The token revocation date is the date that all authentication tokens
+          must be issued after in order to work. Any token issued before this
+          date will be denied access. You can set this to now to log the user
+          out of all of their current sessions. The user will have to log in
+          again with their password.
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <div style="display: flex; gap: 1em; align-items: center;">
+            <div style="flex-grow: 1;">
+              <Textfield
+                bind:value={entity.revokeTokenDate}
+                label="Token Revocation Date (Timestamp)"
+                type="number"
+                style="width: 100%;"
+                input$autocomplete="off"
+              >
+                <HelperText persistent slot="helper">
+                  {entity.revokeTokenDate === 0 ||
+                  entity.revokeTokenDate == null
+                    ? 'Unset'
+                    : new Date(entity.revokeTokenDate).toLocaleString()}
+                </HelperText>
+              </Textfield>
+            </div>
+            <Button on:click={() => (entity.revokeTokenDate = Date.now())}>
+              <Label>Now</Label>
+            </Button>
+          </div>
         </LayoutCell>
       </LayoutGrid>
     {/if}
@@ -768,6 +811,9 @@
     }
     if (entity.recoverSecretDate == null) {
       entity.recoverSecretDate = 0;
+    }
+    if (entity.revokeTokenDate == null) {
+      entity.revokeTokenDate = 0;
     }
     avatar = await entity.$getAvatar();
     await entity.$readyAll(1);

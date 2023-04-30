@@ -21,7 +21,7 @@ describe('SQLite3Driver In-Memory', () => {
 });
 
 describe('SQLite3Driver DB File', () => {
-  const filename = resolve(tmpdir(), `nymph-test-${new Date().getTime()}.db`);
+  const filename = resolve(tmpdir(), `nymph-test-${Date.now()}.db`);
   const sqliteConfig = {
     filename,
   };

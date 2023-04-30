@@ -128,6 +128,11 @@ export type AdminUserData = CurrentUserData & {
    * Used by admins to change a user's password. Not saved to the database.
    */
   passwordTemp?: string;
+  /**
+   * If set, this timestamp is the cutoff point for JWT issue dates. Any token
+   * issued before this date will not authenticate the user.
+   */
+  revokeTokenDate?: number;
 };
 
 let currentToken: string | null = null;
@@ -310,8 +315,15 @@ export default class User extends Entity<UserData> {
   public async $changePassword(data: {
     newPassword: string;
     currentPassword: string;
+    revokeCurrentTokens?: boolean;
   }): Promise<{ result: boolean; message: string }> {
     return await this.$serverCall('$changePassword', [data]);
+  }
+
+  public async $revokeCurrentTokens(data: {
+    password: string;
+  }): Promise<{ result: boolean; message: string }> {
+    return await this.$serverCall('$revokeCurrentTokens', [data]);
   }
 
   public static async current(

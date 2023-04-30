@@ -998,7 +998,7 @@ export default class Tilmeld implements TilmeldInterface {
       return false;
     }
 
-    let authExtract: { guid: string; expire: Date } | null;
+    let authExtract: { guid: string; issued: Date; expire: Date } | null;
     let switchExtract: { guid: string; expire: Date } | null;
     if (
       skipXsrfToken ||
@@ -1028,19 +1028,25 @@ export default class Tilmeld implements TilmeldInterface {
       this.logout();
       return false;
     }
-    const { guid, expire } = authExtract;
+    const { guid, issued, expire } = authExtract;
     const { guid: switchGuid, expire: switchExpire } = switchExtract || {
       guid: null,
       expire: null,
     };
 
     const user = this.User.factorySync(guid);
-    if (user.guid == null || !user.enabled || expire.valueOf() <= Date.now()) {
+    if (
+      user.guid == null ||
+      !user.enabled ||
+      expire.getTime() <= Date.now() ||
+      issued.getTime() > Date.now() ||
+      (user.revokeTokenDate != null && issued.getTime() <= user.revokeTokenDate)
+    ) {
       this.logout();
       return false;
     }
 
-    if (switchGuid && switchExpire && switchExpire.valueOf() > Date.now()) {
+    if (switchGuid && switchExpire && switchExpire.getTime() > Date.now()) {
       // Load the switch user.
       const switchUser = this.User.factorySync(switchGuid);
       if (switchUser.guid == null) {
@@ -1056,7 +1062,7 @@ export default class Tilmeld implements TilmeldInterface {
       }
     }
 
-    if (expire.valueOf() < Date.now() + this.config.jwtRenew * 1000) {
+    if (expire.getTime() < Date.now() + this.config.jwtRenew * 1000) {
       // If the user is less than renew time from needing a new token, give them
       // a new one.
       this.login(user, fromAuthHeader);

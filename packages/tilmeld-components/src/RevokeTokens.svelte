@@ -2,26 +2,27 @@
   <Dialog
     use={usePass}
     bind:open
-    aria-labelledby="tilmeld-password-title"
-    aria-describedby="tilmeld-password-content"
-    surface$class="tilmeld-password-dialog-surface"
+    aria-labelledby="tilmeld-revoke-tokens-title"
+    aria-describedby="tilmeld-revoke-tokens-content"
+    surface$class="tilmeld-revoke-tokens-dialog-surface"
     {...exclude($$restProps, [
       'password$',
-      'newPassword$',
-      'newPassword2$',
-      'revokeTokens$',
       'closeButton$',
       'saveButton$',
       'progress$',
     ])}
   >
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
-    <Title id="tilmeld-password-title">{title}</Title>
-    <Content id="tilmeld-password-content">
+    <Title id="tilmeld-revoke-tokens-title">{title}</Title>
+    <Content id="tilmeld-revoke-tokens-content">
       <div>
+        {description}
+      </div>
+
+      <div style="margin-top: 1em;">
         <Textfield
-          bind:value={currentPassword}
-          label="Current Password"
+          bind:value={password}
+          label="Password"
           type="password"
           style="width: 100%;"
           input$autocomplete="current-password"
@@ -29,55 +30,16 @@
         />
       </div>
 
-      <div>
-        <Textfield
-          bind:value={newPassword}
-          label="New Password"
-          type="password"
-          style="width: 100%;"
-          input$autocomplete="new-password"
-          {...prefixFilter($$restProps, 'newPassword$')}
-        />
-      </div>
-
-      <div>
-        <Textfield
-          bind:value={newPassword2}
-          label="Re-enter New Password"
-          type="password"
-          style="width: 100%;"
-          input$autocomplete="new-password"
-          {...prefixFilter($$restProps, 'newPassword2$')}
-        />
-      </div>
-
-      <div style="margin: 1em 0;">
-        <FormField>
-          <Checkbox
-            bind:checked={revokeCurrentTokens}
-            {...prefixFilter($$restProps, 'revokeTokens$')}
-          />
-          <span slot="label">
-            Log out of all other sessions.
-            <span
-              style="display: block; font-size: 0.7em; height: 0; overflow: visible;"
-            >
-              Use this if you think you've been hacked.
-            </span>
-          </span>
-        </FormField>
-      </div>
-
       <slot name="additional" />
 
       {#if failureMessage}
-        <div class="tilmeld-password-failure">
+        <div class="tilmeld-revoke-tokens-failure">
           {failureMessage}
         </div>
       {/if}
 
       {#if changing}
-        <div class="tilmeld-password-loading">
+        <div class="tilmeld-revoke-tokens-loading">
           <CircularProgress
             style="height: 24px; width: 24px;"
             indeterminate
@@ -94,11 +56,11 @@
         <Label>Close</Label>
       </Button>
       <Button
-        on:click$preventDefault$stopPropagation={changePassword}
+        on:click$preventDefault$stopPropagation={revokeTokens}
         disabled={changing}
         {...prefixFilter($$restProps, 'saveButton$')}
       >
-        <Label>Change Password</Label>
+        <Label>Log Out Other Sessions</Label>
       </Button>
     </Actions>
   </Dialog>
@@ -110,8 +72,6 @@
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
-  import Checkbox from '@smui/checkbox';
-  import FormField from '@smui/form-field';
   import Button, { Label } from '@smui/button';
   import type { ActionArray } from '@smui/common/internal';
   import {
@@ -127,7 +87,9 @@
   export let use: ActionArray = [];
   $: usePass = [forwardEvents, ...use] as ActionArray;
   export let open = false;
-  export let title = 'Change Your Password';
+  export let title = 'Log Out of Other Sessions';
+  export let description =
+    'This will log you out of all other sessions. You can use this if you think your account has been compromised. You will need to log in again on your other devices.';
   export let User: typeof UserClass;
   export let user: (UserClass & CurrentUserData) | undefined = undefined;
 
@@ -135,22 +97,13 @@
   let failureMessage: string | undefined = undefined;
 
   /** User provided. You can bind to it if you need to. */
-  export let currentPassword = '';
-  /** User provided. You can bind to it if you need to. */
-  export let newPassword = '';
-  /** User provided. You can bind to it if you need to. */
-  export let newPassword2 = '';
-  /** User provided. You can bind to it if you need to. */
-  export let revokeCurrentTokens = false;
+  export let password = '';
 
   $: {
     if (!open) {
       changing = false;
       failureMessage = undefined;
-      currentPassword = '';
-      newPassword = '';
-      newPassword2 = '';
-      revokeCurrentTokens = false;
+      password = '';
     }
   }
 
@@ -174,17 +127,9 @@
     User.off('logout', onLogout);
   });
 
-  async function changePassword() {
-    if (currentPassword === '') {
-      failureMessage = 'You need to enter your current password';
-      return;
-    }
-    if (newPassword !== newPassword2) {
-      failureMessage = 'Your passwords do not match.';
-      return;
-    }
-    if (newPassword === '') {
-      failureMessage = 'You need to enter a new password';
+  async function revokeTokens() {
+    if (password === '') {
+      failureMessage = 'You need to enter your password';
       return;
     }
 
@@ -201,11 +146,9 @@
     }
 
     try {
-      // Change the user's password.
-      const data = await user.$changePassword({
-        currentPassword,
-        newPassword,
-        revokeCurrentTokens,
+      // Revoke the current tokens.
+      const data = await user.$revokeCurrentTokens({
+        password,
       });
 
       if (!data.result) {
@@ -221,15 +164,17 @@
 </script>
 
 <style>
-  :global(.mdc-dialog .mdc-dialog__surface.tilmeld-password-dialog-surface) {
+  :global(
+      .mdc-dialog .mdc-dialog__surface.tilmeld-revoke-tokens-dialog-surface
+    ) {
     width: 360px;
     max-width: calc(100vw - 32px);
   }
-  .tilmeld-password-failure {
+  .tilmeld-revoke-tokens-failure {
     margin-top: 1em;
     color: var(--mdc-theme-error, #f00);
   }
-  .tilmeld-password-loading {
+  .tilmeld-revoke-tokens-loading {
     display: flex;
     justify-content: center;
     align-items: center;
