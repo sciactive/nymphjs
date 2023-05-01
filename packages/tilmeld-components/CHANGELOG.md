@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.21](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.20...v1.0.0-beta.21) (2023-05-01)
+
+### Features
+
+- add totp two factor authentication ([cc9f8ed](https://github.com/sciactive/nymphjs/commit/cc9f8edb183271fa7f51e4b182b876efb8fa0f8d))
+
 # [1.0.0-beta.20](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.19...v1.0.0-beta.20) (2023-04-30)
 
 ### Features
