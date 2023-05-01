@@ -1,7 +1,8 @@
 import Account from './Account.svelte';
 import ChangePassword from './ChangePassword.svelte';
-import RevokeTokens from './RevokeTokens.svelte';
 import Login from './Login.svelte';
 import Recover from './Recover.svelte';
+import RevokeTokens from './RevokeTokens.svelte';
+import TwoFactor from './TwoFactor.svelte';
 
-export { Account, ChangePassword, RevokeTokens, Login, Recover };
+export { Account, ChangePassword, Login, Recover, RevokeTokens, TwoFactor };
