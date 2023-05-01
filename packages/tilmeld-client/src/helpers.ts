@@ -40,10 +40,13 @@ export type RegistrationDetails = {
   additionalData?: { [k: string]: any };
 };
 
+export class NeedTOTPError extends Error {}
+
 export async function login(
   User: typeof UserClass,
   username: string,
   password: string,
+  code?: string,
   additionalData?: { [k: string]: any }
 ) {
   if (username === '') {
@@ -54,16 +57,24 @@ export async function login(
   }
 
   try {
-    const { result, ...response } = await User.loginUser({
+    const { result, needTOTP, ...response } = await User.loginUser({
       username,
       password,
+      code,
       ...(additionalData ? { additionalData } : {}),
     });
     if (!result) {
+      if (needTOTP) {
+        throw new NeedTOTPError(response.message);
+      }
+
       throw new Error(response.message);
     }
     return response;
   } catch (e: any) {
+    if (e instanceof NeedTOTPError) {
+      throw e;
+    }
     throw new Error(e?.message ?? 'An error occurred.');
   }
 }

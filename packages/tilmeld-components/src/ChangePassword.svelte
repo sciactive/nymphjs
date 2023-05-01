@@ -76,7 +76,7 @@
         </div>
       {/if}
 
-      {#if changing}
+      {#if loading}
         <div class="tilmeld-password-loading">
           <CircularProgress
             style="height: 24px; width: 24px;"
@@ -87,15 +87,12 @@
       {/if}
     </Content>
     <Actions>
-      <Button
-        disabled={changing}
-        {...prefixFilter($$restProps, 'closeButton$')}
-      >
+      <Button disabled={loading} {...prefixFilter($$restProps, 'closeButton$')}>
         <Label>Close</Label>
       </Button>
       <Button
         on:click$preventDefault$stopPropagation={changePassword}
-        disabled={changing}
+        disabled={loading}
         {...prefixFilter($$restProps, 'saveButton$')}
       >
         <Label>Change Password</Label>
@@ -131,7 +128,7 @@
   export let User: typeof UserClass;
   export let user: (UserClass & CurrentUserData) | undefined = undefined;
 
-  let changing = false;
+  let loading = false;
   let failureMessage: string | undefined = undefined;
 
   /** User provided. You can bind to it if you need to. */
@@ -143,15 +140,13 @@
   /** User provided. You can bind to it if you need to. */
   export let revokeCurrentTokens = false;
 
-  $: {
-    if (!open) {
-      changing = false;
-      failureMessage = undefined;
-      currentPassword = '';
-      newPassword = '';
-      newPassword2 = '';
-      revokeCurrentTokens = false;
-    }
+  $: if (!open) {
+    loading = false;
+    failureMessage = undefined;
+    currentPassword = '';
+    newPassword = '';
+    newPassword2 = '';
+    revokeCurrentTokens = false;
   }
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
@@ -189,14 +184,14 @@
     }
 
     failureMessage = undefined;
-    changing = true;
+    loading = true;
 
     // Get the current user again, in case their data has changed.
     user = (await User.current()) ?? undefined;
 
     if (user == null) {
       failureMessage = 'You must be logged in.';
-      changing = false;
+      loading = false;
       return;
     }
 
@@ -216,7 +211,7 @@
     } catch (e: any) {
       failureMessage = e?.message;
     }
-    changing = false;
+    loading = false;
   }
 </script>
 

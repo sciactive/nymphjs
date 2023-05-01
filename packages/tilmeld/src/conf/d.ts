@@ -9,7 +9,7 @@ import User, { UserData } from '../User';
  */
 export interface Config {
   /**
-   * The name of the app. Used in emails sent to users.
+   * The name of the app. Used in emails sent to users and as the TOTP issuer.
    */
   appName: string;
   /**

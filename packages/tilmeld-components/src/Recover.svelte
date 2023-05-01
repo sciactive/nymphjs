@@ -170,7 +170,7 @@
           </div>
         {/if}
 
-        {#if recovering}
+        {#if loading}
           <div class="tilmeld-recover-loading">
             <CircularProgress
               style="height: 24px; width: 24px;"
@@ -182,14 +182,14 @@
       {/if}
     </Content>
     <Actions>
-      <Button on:click={() => (open = false)} disabled={recovering}>
+      <Button on:click={() => (open = false)} disabled={loading}>
         <Label>{successRecoveredMessage ? 'Close' : 'Cancel'}</Label>
       </Button>
       {#if !successRecoveredMessage}
         {#if !hasSentSecret}
           <Button
             on:click$preventDefault$stopPropagation={sendRecovery}
-            disabled={recovering}
+            disabled={loading}
             {...prefixFilter($$restProps, 'sendCodeButton$')}
           >
             <Label>Send Recovery</Label>
@@ -197,7 +197,7 @@
         {:else}
           <Button
             on:click$preventDefault$stopPropagation={recover}
-            disabled={recovering}
+            disabled={loading}
             {...prefixFilter($$restProps, 'resetPasswordButton$')}
           >
             <Label>Reset Password</Label>
@@ -250,16 +250,14 @@
   /** User provided. You can bind to it if you need to. */
   export let password2 = '';
 
-  let recovering = false;
+  let loading = false;
   let hasSentSecret: number | boolean = false;
   let accountElem: Textfield;
   let failureMessage: string | undefined = undefined;
   let successRecoveredMessage: string | undefined = undefined;
 
-  $: {
-    if (open && autofocus && accountElem) {
-      accountElem.focus();
-    }
+  $: if (open && autofocus && accountElem) {
+    accountElem.focus();
   }
 
   onMount(async () => {
@@ -280,7 +278,7 @@
     }
 
     failureMessage = undefined;
-    recovering = true;
+    loading = true;
 
     try {
       const data = await User.sendRecovery({
@@ -299,7 +297,7 @@
     } catch (e: any) {
       failureMessage = e?.message;
     }
-    recovering = false;
+    loading = false;
   }
 
   async function recover() {
@@ -322,7 +320,7 @@
     }
 
     failureMessage = undefined;
-    recovering = true;
+    loading = true;
     try {
       const data = await User.recover({
         username: account,
@@ -337,7 +335,7 @@
     } catch (e: any) {
       failureMessage = e?.message;
     }
-    recovering = false;
+    loading = false;
   }
 </script>
 

@@ -38,7 +38,7 @@
         </div>
       {/if}
 
-      {#if changing}
+      {#if loading}
         <div class="tilmeld-revoke-tokens-loading">
           <CircularProgress
             style="height: 24px; width: 24px;"
@@ -49,15 +49,12 @@
       {/if}
     </Content>
     <Actions>
-      <Button
-        disabled={changing}
-        {...prefixFilter($$restProps, 'closeButton$')}
-      >
+      <Button disabled={loading} {...prefixFilter($$restProps, 'closeButton$')}>
         <Label>Close</Label>
       </Button>
       <Button
         on:click$preventDefault$stopPropagation={revokeTokens}
-        disabled={changing}
+        disabled={loading}
         {...prefixFilter($$restProps, 'saveButton$')}
       >
         <Label>Log Out Other Sessions</Label>
@@ -93,18 +90,16 @@
   export let User: typeof UserClass;
   export let user: (UserClass & CurrentUserData) | undefined = undefined;
 
-  let changing = false;
+  let loading = false;
   let failureMessage: string | undefined = undefined;
 
   /** User provided. You can bind to it if you need to. */
   export let password = '';
 
-  $: {
-    if (!open) {
-      changing = false;
-      failureMessage = undefined;
-      password = '';
-    }
+  $: if (!open) {
+    loading = false;
+    failureMessage = undefined;
+    password = '';
   }
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
@@ -134,14 +129,14 @@
     }
 
     failureMessage = undefined;
-    changing = true;
+    loading = true;
 
     // Get the current user again, in case their data has changed.
     user = (await User.current()) ?? undefined;
 
     if (user == null) {
       failureMessage = 'You must be logged in.';
-      changing = false;
+      loading = false;
       return;
     }
 
@@ -159,7 +154,7 @@
     } catch (e: any) {
       failureMessage = e?.message;
     }
-    changing = false;
+    loading = false;
   }
 </script>
 

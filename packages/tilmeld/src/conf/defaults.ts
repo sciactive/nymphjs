@@ -316,6 +316,11 @@ export default {
         salt: Joi.string().trim(false),
         password: Joi.string().trim(false).required(),
         revokeTokenDate: Joi.number(),
+        totpSecret: Joi.string()
+          .trim(false)
+          .min(24)
+          .max(40)
+          .pattern(/^[A-Z234567]+$/, 'base32 encoded unpadded'),
       }),
       'Invalid User: '
     );

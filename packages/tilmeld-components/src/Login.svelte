@@ -11,6 +11,8 @@
     'name$',
     'email$',
     'phone$',
+    'code$',
+    'codeMessage$',
     'loginButton$',
     'registerButton$',
     'registerLink$',
@@ -20,7 +22,7 @@
     'progress$',
   ])}
 >
-  {#if clientConfig == null || registering || loggingIn}
+  {#if clientConfig == null || loading}
     <div style="display: flex; justify-content: center; align-items: center;">
       <CircularProgress
         style="height: 32px; width: 32px;"
@@ -36,6 +38,40 @@
     <div {...prefixFilter($$restProps, 'successLoginMessage$')}>
       {successLoginMessage}
     </div>
+  {:else if totp}
+    <form on:submit|preventDefault>
+      <div {...prefixFilter($$restProps, 'codeMessage$')}>
+        Enter the 6-digit 2FA code from your authenticator app.
+      </div>
+
+      <div>
+        <Textfield
+          bind:value={code}
+          label="2FA Code"
+          style="width: 100%;"
+          input$autocomplete="one-time-code"
+          input$name="one-time-code"
+          {...prefixFilter($$restProps, 'code$')}
+        />
+      </div>
+
+      {#if failureMessage}
+        <div class="tilmeld-login-failure">
+          {failureMessage}
+        </div>
+      {/if}
+
+      <div class="tilmeld-login-buttons">
+        <Button
+          variant="raised"
+          type="submit"
+          on:click={login}
+          {...prefixFilter($$restProps, 'loginButton$')}
+        >
+          <Label>Log In</Label>
+        </Button>
+      </div>
+    </form>
   {:else}
     <form on:submit|preventDefault>
       <div>
@@ -231,6 +267,7 @@
     login as loginAction,
     register as registerAction,
     checkUsername as checkUsernameAction,
+    NeedTOTPError,
   } from '@nymphjs/tilmeld-client';
   import Recover from './Recover.svelte';
 
@@ -265,6 +302,8 @@
   export let email = '';
   /** User provided. You can bind to it if you need to. */
   export let phone = '';
+  /** User provided. You can bind to it if you need to. */
+  export let code = '';
 
   /** Provide this for anything else that should go up to the server. You can look for it in the User events. */
   export let additionalData: { [k: string]: any } | undefined = undefined;
@@ -276,8 +315,8 @@
   let usernameTimer: NodeJS.Timeout | undefined = undefined;
   let usernameVerified: boolean | undefined = undefined;
   let usernameVerifiedMessage: string | undefined = undefined;
-  let registering = false;
-  let loggingIn = false;
+  let totp = false;
+  let loading = false;
   let recoverOpen = false;
 
   $: nameFirst = name?.match(/^(.*?)(?: ([^ ]+))?$/)?.[1] ?? '';
@@ -309,22 +348,32 @@
   async function login() {
     successLoginMessage = undefined;
     failureMessage = undefined;
-    loggingIn = true;
+    loading = true;
     try {
-      const data = await loginAction(User, username, password, additionalData);
+      const data = await loginAction(
+        User,
+        username,
+        password,
+        code,
+        additionalData
+      );
       successLoginMessage = data.message;
       dispatch('login', { user: data.user });
     } catch (e: any) {
-      failureMessage = e?.message;
+      if (e instanceof NeedTOTPError) {
+        totp = true;
+      } else {
+        failureMessage = e?.message;
+      }
     }
-    loggingIn = false;
+    loading = false;
   }
 
   async function register() {
     successRegisteredMessage = undefined;
     successLoginMessage = undefined;
     failureMessage = undefined;
-    registering = true;
+    loading = true;
     try {
       const data = await registerAction(User, {
         username,
@@ -346,7 +395,7 @@
     } catch (e: any) {
       failureMessage = e?.message;
     }
-    registering = false;
+    loading = false;
   }
 
   function checkUsername(newValue: string) {

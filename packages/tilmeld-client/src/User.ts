@@ -326,6 +326,33 @@ export default class User extends Entity<UserData> {
     return await this.$serverCall('$revokeCurrentTokens', [data]);
   }
 
+  public async $hasTOTPSecret(): Promise<boolean> {
+    return await this.$serverCall('$hasTOTPSecret', [], true);
+  }
+
+  public async $getNewTOTPSecret(): Promise<{
+    uri: string;
+    qrcode: string;
+    secret: string;
+  }> {
+    return await this.$serverCall('$getNewTOTPSecret', [], true);
+  }
+
+  public async $saveTOTPSecret(data: {
+    password: string;
+    secret: string;
+    code: string;
+  }): Promise<{ result: boolean; message: string }> {
+    return await this.$serverCall('$saveTOTPSecret', [data]);
+  }
+
+  public async $removeTOTPSecret(data: {
+    password: string;
+    code: string;
+  }): Promise<{ result: boolean; message: string }> {
+    return await this.$serverCall('$removeTOTPSecret', [data]);
+  }
+
   public static async current(
     returnObjectIfNotExist: true
   ): Promise<User & CurrentUserData>;
@@ -345,10 +372,12 @@ export default class User extends Entity<UserData> {
   public static async loginUser(data: {
     username: string;
     password: string;
+    code?: string;
     additionalData?: { [k: string]: any };
   }): Promise<{
     result: boolean;
     message: string;
+    needTOTP?: true;
     user?: User & CurrentUserData;
   }> {
     const store = User.stores.get(this.nymph);

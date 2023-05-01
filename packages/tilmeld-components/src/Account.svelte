@@ -18,6 +18,7 @@
       'saveButton$',
       'changePassword$',
       'revokeSessions$',
+      'twoFactor$',
       'progress$',
     ])}
   >
@@ -147,48 +148,75 @@
         >
           Log out of other sessions.
         </a>
+
+        <div class="tilmeld-account-action">
+          <a
+            href={'javascript:void(0);'}
+            on:click={() => {
+              open = false;
+              twoFactorOpen = true;
+            }}
+            {...prefixFilter($$restProps, 'twoFactor$')}
+          >
+            {#if hasTOTPSecret === false}
+              Enable two factor authentication (2FA).
+            {:else}
+              Manage two factor authentication (2FA).
+            {/if}
+          </a>
+        </div>
+
+        {#if failureMessage}
+          <div class="tilmeld-account-failure">
+            {failureMessage}
+          </div>
+        {/if}
+
+        {#if loading}
+          <div class="tilmeld-account-loading">
+            <CircularProgress
+              style="height: 24px; width: 24px;"
+              indeterminate
+              {...prefixFilter($$restProps, 'progress$')}
+            />
+          </div>
+        {/if}
       </div>
-
-      {#if failureMessage}
-        <div class="tilmeld-account-failure">
-          {failureMessage}
-        </div>
-      {/if}
-
-      {#if saving}
-        <div class="tilmeld-account-loading">
-          <CircularProgress
-            style="height: 24px; width: 24px;"
-            indeterminate
-            {...prefixFilter($$restProps, 'progress$')}
-          />
-        </div>
-      {/if}
     </Content>
     <Actions>
-      <Button disabled={saving} {...prefixFilter($$restProps, 'closeButton$')}>
+      <Button disabled={loading} {...prefixFilter($$restProps, 'closeButton$')}>
         <Label>Close</Label>
       </Button>
       <Button
         on:click$preventDefault$stopPropagation={save}
-        disabled={saving}
+        disabled={loading}
         {...prefixFilter($$restProps, 'saveButton$')}
       >
         <Label>Save Changes</Label>
       </Button>
     </Actions>
   </Dialog>
+
   <ChangePassword
     {User}
     bind:open={changePasswordOpen}
     bind:user
     {...prefixFilter($$restProps, 'changePassword$')}
   />
+
   <RevokeTokens
     {User}
     bind:open={revokeTokensOpen}
     bind:user
     {...prefixFilter($$restProps, 'revokeTokens$')}
+  />
+
+  <TwoFactor
+    {User}
+    bind:open={twoFactorOpen}
+    bind:user
+    bind:hasTOTPSecret
+    {...prefixFilter($$restProps, 'twoFactor$')}
   />
 {/if}
 
@@ -210,6 +238,7 @@
   import type { User as UserClass } from '@nymphjs/tilmeld-client';
   import ChangePassword from './ChangePassword.svelte';
   import RevokeTokens from './RevokeTokens.svelte';
+  import TwoFactor from './TwoFactor.svelte';
 
   const forwardEvents = forwardEventsBuilder(get_current_component());
 
@@ -221,7 +250,7 @@
   export let User: typeof UserClass;
   export let user: (UserClass & CurrentUserData) | undefined = undefined;
 
-  let saving = false;
+  let loading = false;
   let originalUsername: string | undefined = undefined;
   let originalEmail: string | undefined = undefined;
   let failureMessage: string | undefined = undefined;
@@ -231,8 +260,10 @@
   let emailTimer: NodeJS.Timeout | undefined = undefined;
   let emailVerified: boolean | undefined = undefined;
   let emailVerifiedMessage: string | undefined = undefined;
+  let hasTOTPSecret: boolean | null = null;
   let changePasswordOpen = false;
   let revokeTokensOpen = false;
+  let twoFactorOpen = false;
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
     user = currentUser;
@@ -291,7 +322,7 @@
     }
 
     failureMessage = undefined;
-    saving = true;
+    loading = true;
 
     if (clientConfig?.emailUsernames) {
       user.username = user.email;
@@ -309,7 +340,7 @@
     } catch (e: any) {
       failureMessage = e?.message;
     }
-    saving = false;
+    loading = false;
   }
 
   function checkUsername() {

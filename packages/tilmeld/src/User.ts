@@ -5,13 +5,15 @@ import {
   Selector,
   SerializedEntityData,
 } from '@nymphjs/nymph';
+import { humanSecret, nanoid } from '@nymphjs/guid';
 import { EmailOptions } from 'email-templates';
 import strtotime from 'locutus/php/datetime/strtotime';
 import Base64 from 'crypto-js/enc-base64';
 import sha256 from 'crypto-js/sha256';
 import md5 from 'crypto-js/md5';
 import { difference } from 'lodash';
-import { humanSecret, nanoid } from '@nymphjs/guid';
+import { TOTP, Secret } from 'otpauth';
+import { toDataURL } from 'qrcode';
 
 import type Tilmeld from './Tilmeld';
 import { enforceTilmeld } from './enforceTilmeld';
@@ -184,6 +186,10 @@ export type UserData = {
    * issued before this date will not authenticate the user.
    */
   revokeTokenDate?: number;
+  /**
+   * Two factor auth secret.
+   */
+  totpSecret?: string;
 };
 
 /**
@@ -243,6 +249,8 @@ export default class User extends AbleObject<UserData> {
     'salt',
     'password',
     'passwordTemp',
+    'revokeTokenDate',
+    'totpSecret',
   ];
   private static DEFAULT_ALLOWLIST_DATA: string[] = [];
 
@@ -507,6 +515,7 @@ export default class User extends AbleObject<UserData> {
   public static async loginUser(data: {
     username: string;
     password: string;
+    code?: string;
     additionalData?: { [k: string]: any };
   }) {
     if (!('username' in data) || !data.username.length) {
@@ -525,6 +534,7 @@ export default class User extends AbleObject<UserData> {
   public async $login(data: {
     username: string;
     password: string;
+    code?: string;
     additionalData?: { [k: string]: any };
   }) {
     const tilmeld = enforceTilmeld(this);
@@ -539,6 +549,24 @@ export default class User extends AbleObject<UserData> {
     }
     if (!this.$checkPassword(data.password)) {
       return { result: false, message: 'Incorrect login/password.' };
+    }
+
+    if (this.$data.totpSecret != null) {
+      if (
+        data.code == null ||
+        typeof data.code !== 'string' ||
+        data.code.length !== 6
+      ) {
+        return {
+          result: false,
+          needTOTP: true,
+          message: 'You need to provide a 2FA code.',
+        };
+      }
+
+      if (!this.$checkTOTPCode(data.code)) {
+        return { result: false, message: 'Incorrect 2FA code.' };
+      }
     }
 
     try {
@@ -846,6 +874,10 @@ export default class User extends AbleObject<UserData> {
       this.$clientEnabledMethods.push('$revokeCurrentTokens');
       this.$clientEnabledMethods.push('$logout');
       this.$clientEnabledMethods.push('$sendEmailVerification');
+      this.$clientEnabledMethods.push('$hasTOTPSecret');
+      this.$clientEnabledMethods.push('$getNewTOTPSecret');
+      this.$clientEnabledMethods.push('$saveTOTPSecret');
+      this.$clientEnabledMethods.push('$removeTOTPSecret');
     }
 
     if (
@@ -854,7 +886,7 @@ export default class User extends AbleObject<UserData> {
         abilities.indexOf('system/admin') !== -1)
     ) {
       // Users who can edit other users can see most of their data.
-      this.$privateData = ['password', 'salt'];
+      this.$privateData = ['password', 'salt', 'totpSecret'];
       this.$allowlistData = undefined;
     } else if (isCurrentUser || isNewUser) {
       // Users can see their own data, and edit some of it.
@@ -900,6 +932,8 @@ export default class User extends AbleObject<UserData> {
         'salt',
         'password',
         'passwordTemp',
+        // 'revokeTokenDate',
+        'totpSecret',
       ];
     }
 
@@ -1238,7 +1272,9 @@ export default class User extends AbleObject<UserData> {
     if (!this.$checkPassword(data.password ?? '')) {
       return { result: false, message: 'Incorrect password.' };
     }
+
     this.$data.revokeTokenDate = Date.now();
+
     if (await this.$save()) {
       const tilmeld = enforceTilmeld(this);
       tilmeld.login(this, true);
@@ -1248,6 +1284,182 @@ export default class User extends AbleObject<UserData> {
       };
     } else {
       return { result: false, message: "Couldn't save revocation date." };
+    }
+  }
+
+  public async $hasTOTPSecret() {
+    return this.$data.totpSecret != null;
+  }
+
+  /**
+   * Check the given code against the user's TOTP secret.
+   *
+   * @param code The code in question.
+   * @returns True if the code is valid, otherwise false.
+   */
+  public $checkTOTPCode(code: string) {
+    if (this.$data.totpSecret == null) {
+      return false;
+    }
+
+    const tilmeld = enforceTilmeld(this);
+
+    const totp = new TOTP({
+      issuer: tilmeld.config.appName,
+      label: this.$data.username,
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: this.$data.totpSecret,
+    });
+
+    return totp.validate({ token: code, window: 2 }) != null;
+  }
+
+  /**
+   * A frontend accessible method to generate a new TOTP secret.
+   *
+   * @returns An object with 'uri', 'qrcode', and 'secret'.
+   */
+  public async $getNewTOTPSecret() {
+    const tilmeld = enforceTilmeld(this);
+
+    if (this.$data.totpSecret != null) {
+      throw new BadDataError('You already have a 2FA secret.');
+    }
+
+    const secret = new Secret();
+
+    const totp = new TOTP({
+      issuer: tilmeld.config.appName,
+      label: this.$data.username,
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret,
+    });
+
+    const uri = totp.toString();
+
+    const qrcode = await toDataURL(uri);
+
+    return {
+      uri,
+      qrcode,
+      secret: secret.base32,
+    };
+  }
+
+  /**
+   * A frontend accessible method to save a TOTP secret into the user's account.
+   *
+   * @param data The input data from the client.
+   * @returns An object with a boolean 'result' entry and a 'message' entry.
+   */
+  public async $saveTOTPSecret(data: {
+    password: string;
+    secret: string;
+    code: string;
+  }): Promise<{ result: boolean; message: string }> {
+    if (!this.$checkPassword(data.password ?? '')) {
+      return { result: false, message: 'Incorrect password.' };
+    }
+
+    if (this.$data.totpSecret != null) {
+      return { result: false, message: 'You already have a 2FA secret.' };
+    }
+
+    if (
+      data.secret == null ||
+      typeof data.secret !== 'string' ||
+      data.secret === ''
+    ) {
+      return { result: false, message: '2FA secret is invalid.' };
+    }
+
+    if (
+      data.code == null ||
+      typeof data.code !== 'string' ||
+      data.code.length !== 6
+    ) {
+      return { result: false, message: '2FA code is invalid.' };
+    }
+
+    const tilmeld = enforceTilmeld(this);
+
+    const totp = new TOTP({
+      issuer: tilmeld.config.appName,
+      label: this.$data.username,
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: data.secret,
+    });
+
+    if (totp.validate({ token: data.code, window: 2 }) == null) {
+      return { result: false, message: '2FA code is incorrect.' };
+    }
+
+    this.$data.totpSecret = data.secret;
+
+    if (await this.$save()) {
+      return { result: true, message: 'Your two factor secret is now set.' };
+    } else {
+      return { result: false, message: "Couldn't save two factor secret." };
+    }
+  }
+
+  /**
+   * A frontend accessible method to remove the TOTP secret from the user's
+   * account.
+   *
+   * @param data The input data from the client.
+   * @returns An object with a boolean 'result' entry and a 'message' entry.
+   */
+  public async $removeTOTPSecret(data: {
+    password: string;
+    code: string;
+  }): Promise<{ result: boolean; message: string }> {
+    if (!this.$checkPassword(data.password ?? '')) {
+      return { result: false, message: 'Incorrect password.' };
+    }
+
+    if (this.$data.totpSecret == null) {
+      return { result: false, message: "You don't have a 2FA secret." };
+    }
+
+    if (
+      data.code == null ||
+      typeof data.code !== 'string' ||
+      data.code.length !== 6
+    ) {
+      return { result: false, message: '2FA code is invalid.' };
+    }
+
+    const tilmeld = enforceTilmeld(this);
+
+    const totp = new TOTP({
+      issuer: tilmeld.config.appName,
+      label: this.$data.username,
+      algorithm: 'SHA1',
+      digits: 6,
+      period: 30,
+      secret: this.$data.totpSecret,
+    });
+
+    if (totp.validate({ token: data.code, window: 2 }) == null) {
+      return { result: false, message: '2FA code is incorrect.' };
+    }
+
+    delete this.$data.totpSecret;
+
+    if (await this.$save()) {
+      return {
+        result: true,
+        message: 'Your two factor secret has been removed.',
+      };
+    } else {
+      return { result: false, message: "Couldn't remove two factor secret." };
     }
   }
 
