@@ -112,7 +112,6 @@ export default class Tilmeld implements TilmeldInterface {
    */
   public init(nymph: Nymph) {
     this.nymph = nymph;
-    const tilmeld = this;
 
     // Set up access control hooks when Nymph is called.
     if (this.nymph.driver == null) {
@@ -120,18 +119,32 @@ export default class Tilmeld implements TilmeldInterface {
     }
 
     // Configure the classes.
-    class NymphUser extends User {
-      static nymph: Nymph = nymph;
-      static tilmeld: Tilmeld = tilmeld;
+    if (nymph.parent) {
+      // This is a cloned Nymph, it should have classes already.
+      this.User = this.nymph.getEntityClass(User.class) as typeof User;
+      this.Group = this.nymph.getEntityClass(Group.class) as typeof Group;
+    } else {
+      // This is a new Nymph, add the classes.
+      this.User = this.nymph.addEntityClass(User) as typeof User;
+      this.Group = this.nymph.addEntityClass(Group) as typeof Group;
     }
-    (NymphUser as any).skipOnClone = true;
-    this.User = this.nymph.addEntityClass(NymphUser);
-    class NymphGroup extends Group {
-      static nymph: Nymph = nymph;
-      static tilmeld: Tilmeld = tilmeld;
+
+    // Clone the current user so its Nymph instance is correct.
+    if (this.currentUser) {
+      const currentUserGUID = this.currentUser.guid;
+      const currentUserCDate = this.currentUser.cdate;
+      const currentUserMDate = this.currentUser.mdate;
+      const currentUserTags = this.currentUser.tags;
+      const currentUserData = this.currentUser.$getData();
+      const currentUserSData = this.currentUser.$getSData();
+
+      this.currentUser = User.factorySync();
+      this.currentUser.guid = currentUserGUID;
+      this.currentUser.cdate = currentUserCDate;
+      this.currentUser.mdate = currentUserMDate;
+      this.currentUser.tags = currentUserTags;
+      this.currentUser.$putData(currentUserData, currentUserSData);
     }
-    (NymphUser as any).skipOnClone = true;
-    this.Group = this.nymph.addEntityClass(NymphGroup);
 
     this.initAccessControl();
     if (this.request != null && !this.skipAuthenticate) {

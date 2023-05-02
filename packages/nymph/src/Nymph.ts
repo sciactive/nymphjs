@@ -136,13 +136,73 @@ export default class Nymph {
   public constructor(
     config: Partial<Config>,
     driver: NymphDriver,
-    tilmeld?: TilmeldInterface
+    tilmeld?: TilmeldInterface,
+    parent?: Nymph
   ) {
     this.config = { ...defaults, ...config };
     this.driver = driver;
-    this.parent = null;
+    this.parent = parent ?? null;
 
     this.Entity = this.addEntityClass(Entity);
+
+    if (parent) {
+      for (const name in parent.entityClasses) {
+        if (
+          name === 'Entity' ||
+          (parent.entityClasses[name] as any).skipOnClone
+        ) {
+          continue;
+        }
+        this.addEntityClass(parent.entityClasses[name]);
+      }
+
+      const events = [
+        'connect',
+        'disconnect',
+        'query',
+        'beforeGetEntity',
+        'beforeGetEntities',
+        'beforeSaveEntity',
+        'afterSaveEntity',
+        'failedSaveEntity',
+        'beforeDeleteEntity',
+        'afterDeleteEntity',
+        'failedDeleteEntity',
+        'beforeDeleteEntityByID',
+        'afterDeleteEntityByID',
+        'failedDeleteEntityByID',
+        'beforeNewUID',
+        'afterNewUID',
+        'failedNewUID',
+        'beforeSetUID',
+        'afterSetUID',
+        'failedSetUID',
+        'beforeRenameUID',
+        'afterRenameUID',
+        'failedRenameUID',
+        'beforeDeleteUID',
+        'afterDeleteUID',
+        'failedDeleteUID',
+        'beforeStartTransaction',
+        'afterStartTransaction',
+        'beforeCommitTransaction',
+        'afterCommitTransaction',
+        'beforeRollbackTransaction',
+        'afterRollbackTransaction',
+      ];
+
+      for (let event of events) {
+        const prop = event + 'Callbacks';
+        // @ts-ignore: The callback should be the right type here.
+        const callbacks = parent[prop];
+        for (let callback of callbacks) {
+          if (callback.skipOnClone) {
+            continue;
+          }
+          this.on(event as NymphEventType, callback);
+        }
+      }
+    }
 
     if (tilmeld != null) {
       this.tilmeld = tilmeld;
@@ -196,64 +256,9 @@ export default class Nymph {
     const nymph = new Nymph(
       this.config,
       this.driver.clone(),
-      this.tilmeld?.clone()
+      this.tilmeld?.clone(),
+      this
     );
-
-    nymph.parent = this;
-
-    for (const name in this.entityClasses) {
-      if (name === 'Entity' || (this.entityClasses[name] as any).skipOnClone) {
-        continue;
-      }
-      nymph.addEntityClass(this.entityClasses[name]);
-    }
-
-    const events = [
-      'connect',
-      'disconnect',
-      'query',
-      'beforeGetEntity',
-      'beforeGetEntities',
-      'beforeSaveEntity',
-      'afterSaveEntity',
-      'failedSaveEntity',
-      'beforeDeleteEntity',
-      'afterDeleteEntity',
-      'failedDeleteEntity',
-      'beforeDeleteEntityByID',
-      'afterDeleteEntityByID',
-      'failedDeleteEntityByID',
-      'beforeNewUID',
-      'afterNewUID',
-      'failedNewUID',
-      'beforeSetUID',
-      'afterSetUID',
-      'failedSetUID',
-      'beforeRenameUID',
-      'afterRenameUID',
-      'failedRenameUID',
-      'beforeDeleteUID',
-      'afterDeleteUID',
-      'failedDeleteUID',
-      'beforeStartTransaction',
-      'afterStartTransaction',
-      'beforeCommitTransaction',
-      'afterCommitTransaction',
-      'beforeRollbackTransaction',
-      'afterRollbackTransaction',
-    ];
-
-    for (let event of events) {
-      const prop = event + 'Callbacks';
-      // @ts-ignore: The callback should be the right type here.
-      const callbacks = this[prop];
-      for (let callback of callbacks) {
-        if (callback.skipOnClone) {
-          continue;
-        }
-        nymph.on(event as NymphEventType, callback);
-      }
-    }
 
     return nymph;
   }

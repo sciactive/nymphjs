@@ -15,7 +15,6 @@ import { difference } from 'lodash';
 import { TOTP, Secret } from 'otpauth';
 import { toDataURL } from 'qrcode';
 
-import type Tilmeld from './Tilmeld';
 import { enforceTilmeld } from './enforceTilmeld';
 import AbleObject from './AbleObject';
 import Group, { GroupData } from './Group';
@@ -205,7 +204,6 @@ export default class User extends AbleObject<UserData> {
   /**
    * The instance of Tilmeld to use for queries.
    */
-  static tilmeld: Tilmeld;
   static ETYPE = 'tilmeld_user';
   static class = 'User';
   private static checkUsernameCallbacks: TilmeldCheckUsernameCallback[] = [];
@@ -338,10 +336,11 @@ export default class User extends AbleObject<UserData> {
   public static current(
     returnObjectIfNotExist?: boolean
   ): (User & UserData) | null {
-    if (this.tilmeld.currentUser == null) {
+    const tilmeld = enforceTilmeld(this);
+    if (tilmeld.currentUser == null) {
       return returnObjectIfNotExist ? this.factorySync() : null;
     }
-    return this.tilmeld.currentUser;
+    return tilmeld.currentUser;
   }
 
   /**
@@ -354,7 +353,8 @@ export default class User extends AbleObject<UserData> {
     recoveryType: 'username' | 'password';
     account: string;
   }): Promise<{ result: boolean; message: string }> {
-    if (!this.tilmeld.config.pwRecovery) {
+    const tilmeld = enforceTilmeld(this);
+    if (!tilmeld.config.pwRecovery) {
       return {
         result: false,
         message: 'Account recovery is not allowed.',
@@ -364,14 +364,11 @@ export default class User extends AbleObject<UserData> {
     let user: User & UserData;
     const options: EmailOptions = {};
 
-    if (
-      !this.tilmeld.config.emailUsernames &&
-      data.recoveryType === 'username'
-    ) {
+    if (!tilmeld.config.emailUsernames && data.recoveryType === 'username') {
       // Create a username recovery email.
 
       const getUser = await this.nymph.getEntity(
-        { class: this.tilmeld.User, skipAc: true },
+        { class: tilmeld.User, skipAc: true },
         {
           type: '&',
           ilike: ['email', data.account.replace(/([\\%_])/g, (s) => `\\${s}`)],
@@ -398,7 +395,7 @@ export default class User extends AbleObject<UserData> {
     } else if (data.recoveryType === 'password') {
       // Create a password recovery email.
 
-      const getUser = await this.tilmeld.User.factoryUsername(data.account);
+      const getUser = await tilmeld.User.factoryUsername(data.account);
 
       if (getUser.guid == null) {
         return {
@@ -425,14 +422,14 @@ export default class User extends AbleObject<UserData> {
       };
       options.locals = {
         recoverCode: getUser.recoverSecret,
-        timeLimit: this.tilmeld.config.pwRecoveryTimeLimit,
+        timeLimit: tilmeld.config.pwRecoveryTimeLimit,
       };
     } else {
       return { result: false, message: 'Invalid recovery type.' };
     }
 
     // Send the email.
-    if (await this.tilmeld.config.sendEmail(this.tilmeld, options, user)) {
+    if (await tilmeld.config.sendEmail(tilmeld, options, user)) {
       return {
         result: true,
         message:
@@ -455,21 +452,22 @@ export default class User extends AbleObject<UserData> {
     secret: string;
     password: string;
   }): Promise<{ result: boolean; message: string }> {
-    if (!this.tilmeld.config.pwRecovery) {
+    const tilmeld = enforceTilmeld(this);
+    if (!tilmeld.config.pwRecovery) {
       return {
         result: false,
         message: 'Account recovery is not allowed.',
       };
     }
 
-    const user = await this.tilmeld.User.factoryUsername(data.username);
+    const user = await tilmeld.User.factoryUsername(data.username);
 
     if (
       user.guid == null ||
       user.recoverSecret == null ||
       data.secret !== user.recoverSecret ||
       strtotime(
-        '+' + this.tilmeld.config.pwRecoveryTimeLimit,
+        '+' + tilmeld.config.pwRecoveryTimeLimit,
         Math.floor((user.recoverSecretDate ?? 0) / 1000)
       ) *
         1000 <
@@ -500,15 +498,16 @@ export default class User extends AbleObject<UserData> {
   }
 
   public static getClientConfig() {
+    const tilmeld = enforceTilmeld(this);
     return {
-      regFields: this.tilmeld.config.regFields,
-      userFields: this.tilmeld.config.userFields,
-      emailUsernames: this.tilmeld.config.emailUsernames,
-      allowRegistration: this.tilmeld.config.allowRegistration,
-      allowUsernameChange: this.tilmeld.config.allowUsernameChange,
-      pwRecovery: this.tilmeld.config.pwRecovery,
-      verifyEmail: this.tilmeld.config.verifyEmail,
-      unverifiedAccess: this.tilmeld.config.unverifiedAccess,
+      regFields: tilmeld.config.regFields,
+      userFields: tilmeld.config.userFields,
+      emailUsernames: tilmeld.config.emailUsernames,
+      allowRegistration: tilmeld.config.allowRegistration,
+      allowUsernameChange: tilmeld.config.allowUsernameChange,
+      pwRecovery: tilmeld.config.pwRecovery,
+      verifyEmail: tilmeld.config.verifyEmail,
+      unverifiedAccess: tilmeld.config.unverifiedAccess,
     };
   }
 
@@ -518,10 +517,11 @@ export default class User extends AbleObject<UserData> {
     code?: string;
     additionalData?: { [k: string]: any };
   }) {
+    const tilmeld = enforceTilmeld(this);
     if (!('username' in data) || !data.username.length) {
       return { result: false, message: 'Incorrect login/password.' };
     }
-    const user = await this.tilmeld.User.factoryUsername(data.username);
+    const user = await tilmeld.User.factoryUsername(data.username);
     const result: { result: boolean; message: string; user?: User & UserData } =
       await user.$login(data);
     if (result.result) {

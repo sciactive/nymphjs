@@ -10,7 +10,6 @@ import {
 import md5 from 'crypto-js/md5';
 import { difference } from 'lodash';
 
-import type Tilmeld from './Tilmeld';
 import { enforceTilmeld } from './enforceTilmeld';
 import AbleObject from './AbleObject';
 import {
@@ -86,7 +85,6 @@ export default class Group extends AbleObject<GroupData> {
   /**
    * The instance of Tilmeld to use for queries.
    */
-  static tilmeld: Tilmeld;
   static ETYPE = 'tilmeld_group';
   static class = 'Group';
 
@@ -168,13 +166,14 @@ export default class Group extends AbleObject<GroupData> {
     options?: Options,
     selectors?: Selector[]
   ) {
-    if (!this.tilmeld.gatekeeper('tilmeld/admin')) {
+    const tilmeld = enforceTilmeld(this);
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new Error("You don't have permission to do that.");
     }
 
     return await this.getAssignableGroups(
-      this.tilmeld.config.highestPrimary,
-      { ...options, class: this.tilmeld.Group, return: 'entity' },
+      tilmeld.config.highestPrimary,
+      { ...options, class: tilmeld.Group, return: 'entity' },
       [...(selectors ?? [])]
     );
   }
@@ -190,13 +189,14 @@ export default class Group extends AbleObject<GroupData> {
     options?: Options,
     selectors?: Selector[]
   ) {
-    if (!this.tilmeld.gatekeeper('tilmeld/admin')) {
+    const tilmeld = enforceTilmeld(this);
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new Error("You don't have permission to do that.");
     }
 
     return await this.getAssignableGroups(
-      this.tilmeld.config.highestSecondary,
-      { ...options, class: this.tilmeld.Group, return: 'entity' },
+      tilmeld.config.highestSecondary,
+      { ...options, class: tilmeld.Group, return: 'entity' },
       [...(selectors ?? [])]
     );
   }
@@ -206,6 +206,7 @@ export default class Group extends AbleObject<GroupData> {
     options: Options<typeof Group>,
     selectors: Selector[]
   ) {
+    const tilmeld = enforceTilmeld(this);
     let assignableGroups: (Group & GroupData)[] = [];
 
     if (highestParent === false) {
@@ -213,7 +214,7 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     assignableGroups = await this.nymph.getEntities(
-      { ...options, class: this.tilmeld.Group },
+      { ...options, class: tilmeld.Group },
       ...selectors
     );
     if (highestParent !== true) {
