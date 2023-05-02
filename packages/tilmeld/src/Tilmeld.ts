@@ -138,12 +138,13 @@ export default class Tilmeld implements TilmeldInterface {
       const currentUserData = this.currentUser.$getData();
       const currentUserSData = this.currentUser.$getSData();
 
-      this.currentUser = User.factorySync();
-      this.currentUser.guid = currentUserGUID;
-      this.currentUser.cdate = currentUserCDate;
-      this.currentUser.mdate = currentUserMDate;
-      this.currentUser.tags = currentUserTags;
-      this.currentUser.$putData(currentUserData, currentUserSData);
+      const user = User.factorySync();
+      user.guid = currentUserGUID;
+      user.cdate = currentUserCDate;
+      user.mdate = currentUserMDate;
+      user.tags = currentUserTags;
+      user.$putData(currentUserData, currentUserSData);
+      this.fillSession(user);
     }
 
     this.initAccessControl();
