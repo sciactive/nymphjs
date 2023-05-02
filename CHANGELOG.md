@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.24](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.23...v1.0.0-beta.24) (2023-05-02)
+
+### Bug Fixes
+
+- fill session after setting current user clone ([7bae7cf](https://github.com/sciactive/nymphjs/commit/7bae7cf1bf236b8efc00cb7b5ed53cd21f1370c7))
+
 # [1.0.0-beta.23](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.22...v1.0.0-beta.23) (2023-05-02)
 
 ### Bug Fixes
