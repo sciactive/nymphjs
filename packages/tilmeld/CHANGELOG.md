@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.25](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.24...v1.0.0-beta.25) (2023-05-04)
+
+### Bug Fixes
+
+- tilmeld uses wrong class when cloned with user ([059c2ce](https://github.com/sciactive/nymphjs/commit/059c2cedf1b07b9681e87c240eb36723a4581918))
+
 # [1.0.0-beta.24](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.23...v1.0.0-beta.24) (2023-05-02)
 
 ### Bug Fixes
