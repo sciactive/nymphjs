@@ -6,6 +6,7 @@ import {
 import { resolve } from 'node:path';
 import { Pool, PoolOptions, PoolConnection } from 'mysql2';
 import mysql from 'mysql2';
+import SqlString from 'sqlstring';
 import {
   NymphDriver,
   EntityConstructor,
@@ -48,7 +49,7 @@ export default class MySQLDriver extends NymphDriver {
   protected worker: Worker;
 
   static escape(input: string) {
-    return mysql.escapeId(input);
+    return SqlString.escapeId(input, true);
   }
 
   static escapeValue(input: string) {

@@ -210,8 +210,8 @@ This one's zip code is 92064.`;
 
     expect(testEntity.guid).toEqual(testGuid);
 
-    // Start a new transaction.
-    transaction = await nymph.startTransaction('test');
+    // Start a new transaction with a dot in the name.
+    transaction = await nymph.startTransaction('test.1');
     testEntity.$nymph = transaction;
 
     // Verify in a transaction.
@@ -222,7 +222,7 @@ This one's zip code is 92064.`;
     expect(await testEntity.$save()).toEqual(true);
 
     // Commit the transaction.
-    await transaction.commit('test');
+    await transaction.commit('test.1');
     testEntity.$nymph = nymph;
 
     // Verify not in a transaction.
