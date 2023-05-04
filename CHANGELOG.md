@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.27](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.26...v1.0.0-beta.27) (2023-05-04)
+
+### Bug Fixes
+
+- properly escape mysql ids with dots ([64bfaa5](https://github.com/sciactive/nymphjs/commit/64bfaa5d606f97a753ca7e6c5d2d86f7c0f7729a))
+
 # [1.0.0-beta.26](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.25...v1.0.0-beta.26) (2023-05-04)
 
 ### Bug Fixes
