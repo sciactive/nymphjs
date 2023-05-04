@@ -289,6 +289,18 @@ export type EntityConstructor = (new (...args: any[]) => EntityInterface) & {
    */
   class: string;
   /**
+   * Whether this entity should publish changes to PubSub servers.
+   */
+  pubSubEnabled: boolean;
+  /**
+   * Whether this entity should be accessible on the frontend through the REST
+   * server.
+   *
+   * If this is false, any request from the client that attempts to use this
+   * entity will fail.
+   */
+  restEnabled: boolean;
+  /**
    * Properties that will not be searchable from the frontend. If the frontend
    * includes any of these properties in any of their clauses, they will be
    * filtered out before the search is executed.

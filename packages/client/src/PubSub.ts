@@ -9,6 +9,7 @@ import {
   PubSubEventType,
   PubSubRejectCallback,
   PubSubResolveCallback,
+  PubSubErrorCallback,
   PubSubSubscribable,
   PubSubUpdate,
 } from './PubSub.types';
@@ -35,6 +36,7 @@ export default class PubSub {
   };
   private connectCallbacks: PubSubConnectCallback[] = [];
   private disconnectCallbacks: PubSubDisconnectCallback[] = [];
+  private errorCallbacks: PubSubErrorCallback[] = [];
   private noConsole = false;
 
   public constructor(nymphOptions: NymphOptions, nymph: Nymph) {
@@ -345,12 +347,13 @@ export default class PubSub {
     let data = JSON.parse(e.data);
     let subs: PubSubCallbacks<any>[] = [];
     let count = 'count' in data;
+    let error = 'error' in data;
     if (
       data.hasOwnProperty('query') &&
       this.subscriptions.queries.hasOwnProperty(data.query)
     ) {
       subs = [...this.subscriptions.queries[data.query]];
-      if (!count) {
+      if (!count && !error) {
         for (let i = 0; i < subs.length; i++) {
           const callback = subs[i][0];
           if (typeof callback === 'function') {
@@ -363,7 +366,7 @@ export default class PubSub {
       this.subscriptions.uids.hasOwnProperty(data.uid)
     ) {
       subs = [...this.subscriptions.uids[data.uid]];
-      if (!count) {
+      if (!count && !error) {
         for (let i = 0; i < subs.length; i++) {
           const callback = subs[i][0];
           if (typeof callback === 'function') {
@@ -371,12 +374,28 @@ export default class PubSub {
           }
         }
       }
+    } else if (error) {
+      for (let i = 0; i < this.errorCallbacks.length; i++) {
+        const callback = this.errorCallbacks[i];
+        if (callback) {
+          callback(data.error);
+        }
+      }
+      return;
     }
     if (count) {
       for (let i = 0; i < subs.length; i++) {
         const callback = subs[i][2];
         if (typeof callback === 'function') {
           callback(data.count);
+        }
+      }
+    }
+    if (error) {
+      for (let i = 0; i < subs.length; i++) {
+        const callback = subs[i][1];
+        if (typeof callback === 'function') {
+          callback(data.error);
         }
       }
     }
@@ -682,16 +701,21 @@ export default class PubSub {
       ? PubSubConnectCallback
       : T extends 'disconnect'
       ? PubSubDisconnectCallback
+      : T extends 'error'
+      ? PubSubErrorCallback
       : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
       : T extends 'disconnect'
       ? 'disconnectCallbacks'
+      : T extends 'error'
+      ? 'errorCallbacks'
       : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
+    // @ts-ignore: The callback should always be the right type here.
     this[prop].push(callback);
     return () => this.off(event, callback);
   }
@@ -702,16 +726,21 @@ export default class PubSub {
       ? PubSubConnectCallback
       : T extends 'disconnect'
       ? PubSubDisconnectCallback
+      : T extends 'error'
+      ? PubSubErrorCallback
       : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
       : T extends 'disconnect'
       ? 'disconnectCallbacks'
+      : T extends 'error'
+      ? 'errorCallbacks'
       : never;
     if (!(prop in this)) {
       return false;
     }
+    // @ts-ignore: The callback should always be the right type here.
     const i = this[prop].indexOf(callback);
     if (i > -1) {
       this[prop].splice(i, 1);

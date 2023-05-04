@@ -1,12 +1,18 @@
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import { Nymph as NymphServer } from '@nymphjs/nymph';
+import type { PubSubSubscription, PubSubUpdate } from '@nymphjs/client';
 import { Nymph, PubSub } from '@nymphjs/client-node';
 import createRestServer from '@nymphjs/server';
 import {
   EmployeeModel as EmployeeModelClass,
   Employee as EmployeeClass,
   EmployeeData,
+  RestrictedModel as RestrictedModelClass,
+  Restricted as RestrictedClass,
+  PubSubDisabledModel as PubSubDisabledModelClass,
+  PubSubDisabled as PubSubDisabledClass,
+  PubSubDisabledData,
 } from '@nymphjs/server/dist/testArtifacts.js';
 
 import createServer from './index';
@@ -24,6 +30,10 @@ const pubSubConfig = {
 
 const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
 const EmployeeModel = nymphServer.addEntityClass(EmployeeModelClass);
+const RestrictedModel = nymphServer.addEntityClass(RestrictedModelClass);
+const PubSubDisabledModel = nymphServer.addEntityClass(
+  PubSubDisabledModelClass
+);
 PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
 const app = express();
@@ -40,6 +50,8 @@ const nymphOptions = {
 const nymph = new Nymph(nymphOptions);
 const pubsub = new PubSub(nymphOptions, nymph);
 const Employee = nymph.addEntityClass(EmployeeClass);
+const Restricted = nymph.addEntityClass(RestrictedClass);
+const PubSubDisabled = nymph.addEntityClass(PubSubDisabledClass);
 
 describe('Nymph REST Server and Client', () => {
   async function createJane() {
@@ -586,6 +598,72 @@ describe('Nymph REST Server and Client', () => {
     });
 
     expect(jane.salary).toEqual(9000000);
+  });
+
+  it("doesn't allow subscription of a restricted entity class", async () => {
+    let receivedBadUpdate = false;
+    let error = null;
+
+    await new Promise<void>((resolve) => {
+      pubsub.subscribeEntities(
+        { class: Restricted },
+        {
+          type: '&',
+          equal: ['name', 'Jane Doe'],
+        }
+      )(
+        async () => {
+          receivedBadUpdate = true;
+          resolve();
+        },
+        (e: any) => {
+          error = e;
+          resolve();
+        }
+      );
+    });
+
+    expect(receivedBadUpdate).toEqual(false);
+    expect(error).toEqual('Not accessible.');
+  });
+
+  it("doesn't notify of new pubsub disabled entity class", async () => {
+    let receivedBadUpdate = false;
+
+    await new Promise(async (resolve) => {
+      const subscription = await new Promise<
+        PubSubSubscription<
+          PubSubUpdate<(PubSubDisabledClass & PubSubDisabledData)[]>
+        >
+      >(async (resolve) => {
+        let updated = false;
+        const subscription = pubsub.subscribeEntities({
+          class: PubSubDisabled,
+        })(async (update) => {
+          if (updated) {
+            receivedBadUpdate = true;
+          } else {
+            expect(update).toEqual([]);
+            updated = true;
+            try {
+              const entity = await PubSubDisabled.factory();
+              if (!(await entity.$save())) {
+                throw new Error("Couldn't save.");
+              }
+              resolve(subscription);
+            } catch (e: any) {
+              console.error('Error creating entity: ', e);
+              throw e;
+            }
+          }
+        });
+      });
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      subscription.unsubscribe();
+      resolve(true);
+    });
+
+    expect(receivedBadUpdate).toEqual(false);
   });
 
   it('new uid', async () => {

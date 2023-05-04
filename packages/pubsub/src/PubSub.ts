@@ -78,7 +78,12 @@ export default class PubSub {
 
     nymph.on('beforeSaveEntity', async (nymph, entity) => {
       const guid = entity.guid;
-      const etype = (entity.constructor as EntityConstructor).ETYPE;
+      const EntityClass = entity.constructor as EntityConstructor;
+      const etype = EntityClass.ETYPE;
+
+      if (!EntityClass.pubSubEnabled) {
+        return;
+      }
 
       const off = nymph.on('afterSaveEntity', async (curNymph, result) => {
         off();
@@ -108,7 +113,12 @@ export default class PubSub {
 
     nymph.on('beforeDeleteEntity', async (nymph, entity) => {
       const guid = entity.guid;
-      const etype = (entity.constructor as EntityConstructor).ETYPE;
+      const EntityClass = entity.constructor as EntityConstructor;
+      const etype = EntityClass.ETYPE;
+
+      if (!EntityClass.pubSubEnabled) {
+        return;
+      }
 
       const off = nymph.on('afterDeleteEntity', async (curNymph, result) => {
         off();
@@ -137,7 +147,12 @@ export default class PubSub {
 
     nymph.on('beforeDeleteEntityByID', async (nymph, guid, className) => {
       try {
-        const etype = nymph.getEntityClass(className ?? 'Entity').ETYPE;
+        const EntityClass = nymph.getEntityClass(className ?? 'Entity');
+        const etype = EntityClass.ETYPE;
+
+        if (!EntityClass.pubSubEnabled) {
+          return;
+        }
 
         const off = nymph.on(
           'afterDeleteEntityByID',
@@ -573,18 +588,28 @@ export default class PubSub {
     from: connection,
     data: SubscribeMessageData
   ) {
-    if ('query' in data && data.query != null) {
-      // Request is for a query.
+    try {
+      if ('query' in data && data.query != null) {
+        // Request is for a query.
 
-      await this.handleSubscriptionQuery(from, data);
-    } else if (
-      'uid' in data &&
-      data.uid != null &&
-      typeof data.uid == 'string'
-    ) {
-      // Request is for a UID.
+        await this.handleSubscriptionQuery(from, data);
+      } else if (
+        'uid' in data &&
+        data.uid != null &&
+        typeof data.uid == 'string'
+      ) {
+        // Request is for a UID.
 
-      await this.handleSubscriptionUid(from, data);
+        await this.handleSubscriptionUid(from, data);
+      }
+    } catch (e: any) {
+      if ('query' in data && data.query != null) {
+        from.sendUTF(JSON.stringify({ query: data.query, error: e.message }));
+      } else if ('uid' in data && data.uid != null) {
+        from.sendUTF(JSON.stringify({ uid: data.uid, error: e.message }));
+      } else {
+        from.sendUTF(JSON.stringify({ error: e.message }));
+      }
     }
   }
 
@@ -599,13 +624,10 @@ export default class PubSub {
       query: string;
     }
   ) {
-    let args: [MessageOptions, ...Selector[]];
-    let EntityClass: EntityConstructor;
-    try {
-      args = JSON.parse(data.query);
-      EntityClass = this.nymph.getEntityClass(args[0].class);
-    } catch (e: any) {
-      return;
+    let args: [MessageOptions, ...Selector[]] = JSON.parse(data.query);
+    let EntityClass = this.nymph.getEntityClass(args[0].class);
+    if (!EntityClass.restEnabled) {
+      throw new Error('Not accessible.');
     }
     const etype = EntityClass.ETYPE;
     const serialArgs = JSON.stringify(args);
@@ -618,6 +640,15 @@ export default class PubSub {
     };
     // Find qref queries.
     const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
+
+    // Check that all qref queries are accessible classes.
+    for (const qrefQuery of qrefQueries) {
+      const args = qrefQuery;
+      const EntityClass = this.nymph.getEntityClass(args[0].class);
+      if (!EntityClass.restEnabled) {
+        throw new Error('Not accessible.');
+      }
+    }
 
     if (data.action === 'subscribe') {
       // Client is subscribing to a query.
@@ -1053,7 +1084,11 @@ export default class PubSub {
         source: 'client',
         skipAc: false,
       };
-      const selectors = classNamesToEntityConstructors(nymph, clientSelectors);
+      const selectors = classNamesToEntityConstructors(
+        nymph,
+        clientSelectors,
+        true
+      );
       if (this.sessions.has(curClient)) {
         const session = this.sessions.get(curClient);
         authToken = session?.authToken;
@@ -1282,8 +1317,8 @@ export default class PubSub {
     }
   }
 
-  private findQRefQueries(options: Options, ...selectors: Selector[]) {
-    const qrefQueries: [Options, ...Selector[]][] = [];
+  private findQRefQueries(options: MessageOptions, ...selectors: Selector[]) {
+    const qrefQueries: [MessageOptions, ...Selector[]][] = [];
 
     for (const curSelector of selectors) {
       for (const k in curSelector) {
@@ -1303,7 +1338,7 @@ export default class PubSub {
             Array.isArray(((value as Selector['qref']) ?? [])[0])
               ? value
               : [value]
-          ) as [string, [Options, ...Selector[]]][];
+          ) as [string, [MessageOptions, ...Selector[]]][];
           for (let i = 0; i < tmpArr.length; i++) {
             qrefQueries.push(tmpArr[i][1]);
           }

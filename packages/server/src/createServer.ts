@@ -24,6 +24,14 @@ type NymphResponse = Response<any, { nymph: Nymph }>;
 
 const NOT_FOUND_ERROR = 'Entity is not found.';
 
+export class ForbiddenClassError extends Error {
+  constructor(message: string) {
+    super(message);
+
+    this.name = 'ForbiddenClassError';
+  }
+}
+
 /**
  * A REST server middleware creator for Nymph.
  *
@@ -140,6 +148,10 @@ export function createServer(
         let EntityClass;
         try {
           EntityClass = response.locals.nymph.getEntityClass(data[0].class);
+          if (!EntityClass.restEnabled) {
+            httpError(response, 403);
+            return;
+          }
         } catch (e: any) {
           httpError(response, 400, e);
           return;
@@ -147,10 +159,21 @@ export function createServer(
         options.class = EntityClass;
         options.source = 'client';
         options.skipAc = false;
-        selectors = classNamesToEntityConstructors(
-          response.locals.nymph,
-          selectors
-        );
+        try {
+          selectors = classNamesToEntityConstructors(
+            response.locals.nymph,
+            selectors,
+            true
+          );
+        } catch (e: any) {
+          if (e?.message === 'Not accessible.') {
+            httpError(response, 403);
+            return;
+          } else {
+            httpError(response, 500, e);
+            return;
+          }
+        }
         let result:
           | EntityInterface
           | EntityInterface[]
@@ -241,6 +264,7 @@ export function createServer(
         let invalidRequest = false;
         let conflict = false;
         let notfound = false;
+        let forbidden = false;
         let lastException = null;
         for (let entData of data) {
           if (entData.guid) {
@@ -254,6 +278,8 @@ export function createServer(
           } catch (e: any) {
             if (e instanceof EntityConflictError) {
               conflict = true;
+            } else if (e instanceof ForbiddenClassError) {
+              forbidden = true;
             } else if (e.message === NOT_FOUND_ERROR) {
               notfound = true;
             } else if (e instanceof InvalidParametersError) {
@@ -293,6 +319,9 @@ export function createServer(
           } else if (conflict) {
             httpError(response, 409);
             return;
+          } else if (forbidden) {
+            httpError(response, 403);
+            return;
           } else if (notfound) {
             httpError(response, 404);
             return;
@@ -313,92 +342,108 @@ export function createServer(
           httpError(response, 400);
           return;
         }
-        const params = referencesToEntities(
-          [...data.params],
-          response.locals.nymph
-        );
-        if (data.static) {
-          let EntityClass: EntityConstructor;
-          try {
-            EntityClass = response.locals.nymph.getEntityClass(data.class);
-          } catch (e: any) {
-            httpError(response, 400);
-            return;
-          }
-          if (
-            EntityClass.clientEnabledStaticMethods.indexOf(data.method) === -1
-          ) {
-            httpError(response, 403);
-            return;
-          }
-          if (!(data.method in EntityClass)) {
-            httpError(response, 400);
-            return;
-          }
-          // @ts-ignore Dynamic methods make TypeScript sad.
-          const method: Function = EntityClass[data.method];
-          if (typeof method !== 'function') {
-            httpError(response, 400);
-            return;
-          }
-          try {
-            const result = method.call(EntityClass, ...params);
-            let ret = result;
-            if (result instanceof Promise) {
-              ret = await result;
+        try {
+          const params = referencesToEntities(
+            [...data.params],
+            response.locals.nymph
+          );
+          if (data.static) {
+            let EntityClass: EntityConstructor;
+            try {
+              EntityClass = response.locals.nymph.getEntityClass(data.class);
+              if (!EntityClass.restEnabled) {
+                httpError(response, 403);
+                return;
+              }
+            } catch (e: any) {
+              httpError(response, 400);
+              return;
             }
-            response.status(200);
-            response.setHeader('Content-Type', 'application/json');
-            response.send({ return: ret });
-          } catch (e: any) {
-            httpError(response, 500, e);
-            return;
-          }
-        } else {
-          let entity: EntityInterface;
-          try {
-            entity = await loadEntity(data.entity, response.locals.nymph);
-          } catch (e: any) {
-            if (e instanceof EntityConflictError) {
-              httpError(response, 409);
-            } else if (e.message === NOT_FOUND_ERROR) {
-              httpError(response, 404, e);
-            } else if (e instanceof InvalidParametersError) {
-              httpError(response, 400, e);
-            } else {
-              httpError(response, 500, e);
+            if (
+              EntityClass.clientEnabledStaticMethods.indexOf(data.method) === -1
+            ) {
+              httpError(response, 403);
+              return;
             }
-            return;
-          }
-          if (data.entity.guid && !entity.guid) {
-            httpError(response, 400);
-            return;
-          }
-          if (entity.$getClientEnabledMethods().indexOf(data.method) === -1) {
-            httpError(response, 403);
-            return;
-          }
-          if (
-            !(data.method in entity) ||
-            typeof entity[data.method] !== 'function'
-          ) {
-            httpError(response, 400);
-            return;
-          }
-          try {
-            const result = entity[data.method](...params);
-            let ret = result;
-            if (result instanceof Promise) {
-              ret = await result;
+            if (!(data.method in EntityClass)) {
+              httpError(response, 400);
+              return;
             }
-            response.status(200);
-            response.setHeader('Content-Type', 'application/json');
-            if (data.stateless) {
+            // @ts-ignore Dynamic methods make TypeScript sad.
+            const method: Function = EntityClass[data.method];
+            if (typeof method !== 'function') {
+              httpError(response, 400);
+              return;
+            }
+            try {
+              const result = method.call(EntityClass, ...params);
+              let ret = result;
+              if (result instanceof Promise) {
+                ret = await result;
+              }
+              response.status(200);
+              response.setHeader('Content-Type', 'application/json');
               response.send({ return: ret });
-            } else {
-              response.send({ entity: entity, return: ret });
+            } catch (e: any) {
+              httpError(response, 500, e);
+              return;
             }
-          } catch (e: any) {
+          } else {
+            let entity: EntityInterface;
+            try {
+              entity = await loadEntity(data.entity, response.locals.nymph);
+            } catch (e: any) {
+              if (e instanceof EntityConflictError) {
+                httpError(response, 409);
+              } else if (e instanceof ForbiddenClassError) {
+                httpError(response, 403);
+              } else if (e.message === NOT_FOUND_ERROR) {
+                httpError(response, 404, e);
+              } else if (e instanceof InvalidParametersError) {
+                httpError(response, 400, e);
+              } else {
+                httpError(response, 500, e);
+              }
+              return;
+            }
+            if (data.entity.guid && !entity.guid) {
+              httpError(response, 400);
+              return;
+            }
+            if (entity.$getClientEnabledMethods().indexOf(data.method) === -1) {
+              httpError(response, 403);
+              return;
+            }
+            if (
+              !(data.method in entity) ||
+              typeof entity[data.method] !== 'function'
+            ) {
+              httpError(response, 400);
+              return;
+            }
+            try {
+              const result = entity[data.method](...params);
+              let ret = result;
+              if (result instanceof Promise) {
+                ret = await result;
+              }
+              response.status(200);
+              response.setHeader('Content-Type', 'application/json');
+              if (data.stateless) {
+                response.send({ return: ret });
+              } else {
+                response.send({ entity: entity, return: ret });
+              }
+            } catch (e: any) {
+              httpError(response, 500, e);
+              return;
+            }
+          }
+        } catch (e: any) {
+          if (e instanceof ForbiddenClassError) {
+            httpError(response, 403);
+            return;
+          } else {
             httpError(response, 500, e);
             return;
           }
@@ -512,6 +557,7 @@ export function createServer(
       let hadSuccess = false;
       let invalidRequest = false;
       let conflict = false;
+      let forbidden = false;
       let notfound = false;
       let lastException = null;
       for (let entData of data) {
@@ -526,6 +572,8 @@ export function createServer(
         } catch (e: any) {
           if (e instanceof EntityConflictError) {
             conflict = true;
+          } else if (e instanceof ForbiddenClassError) {
+            forbidden = true;
           } else if (e.message === NOT_FOUND_ERROR) {
             notfound = true;
           } else if (e instanceof InvalidParametersError) {
@@ -561,6 +609,8 @@ export function createServer(
       if (!hadSuccess) {
         if (invalidRequest) {
           httpError(response, 400, lastException);
+        } else if (forbidden) {
+          httpError(response, 403);
         } else if (conflict) {
           httpError(response, 409);
         } else if (notfound) {
@@ -605,6 +655,10 @@ export function createServer(
           let EntityClass: EntityConstructor;
           try {
             EntityClass = response.locals.nymph.getEntityClass(entData.class);
+            if (!EntityClass.restEnabled) {
+              httpError(response, 403);
+              return;
+            }
           } catch (e: any) {
             invalidRequest = true;
             failures = true;
@@ -707,6 +761,9 @@ export function createServer(
       );
     }
     let EntityClass = nymph.getEntityClass(entityData.class);
+    if (!EntityClass.restEnabled) {
+      throw new ForbiddenClassError('Not accessible.');
+    }
     let entity: EntityInterface | null;
     if (entityData.guid) {
       entity = await nymph.getEntity(
@@ -743,6 +800,9 @@ export function createServer(
       if (item.length === 3 && item[0] === 'nymph_entity_reference') {
         try {
           const EntityClass = nymph.getEntityClass(item[1]);
+          if (!EntityClass.restEnabled) {
+            throw new ForbiddenClassError('Not accessible.');
+          }
           return EntityClass.factoryReference(item as EntityReference);
         } catch (e: any) {
           return item;

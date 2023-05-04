@@ -9,9 +9,14 @@ export type PubSubCallbacks<T> = [
   PubSubRejectCallback | undefined,
   PubSubCountCallback | undefined
 ];
-export type PubSubEventType = 'connect' | 'disconnect';
+export type PubSubEventType = 'connect' | 'disconnect' | 'error';
 export type PubSubConnectCallback = () => void;
 export type PubSubDisconnectCallback = () => void;
+/**
+ * The error event is for unknown errors. Query errors fire their own reject
+ * callbacks.
+ */
+export type PubSubErrorCallback = (err: any) => void;
 export type PubSubUpdate<T> =
   | T
   | {

@@ -17,7 +17,8 @@ export function uniqueStrings(array: string[]) {
 
 export function classNamesToEntityConstructors(
   nymph: Nymph,
-  selectors: Selector[]
+  selectors: Selector[],
+  enforceRestEnabledFlag = false
 ): Selector[] {
   const newSelectors: Selector[] = [];
 
@@ -49,18 +50,32 @@ export function classNamesToEntityConstructors(
             typeof qrefOptions.class === 'string'
               ? nymph.getEntityClass(qrefOptions.class)
               : qrefOptions.class ?? nymph.getEntityClass('Entity');
+          if (enforceRestEnabledFlag && !QrefEntityClass.restEnabled) {
+            throw new Error('Not accessible.');
+          }
           const options = { ...qrefOptions, class: QrefEntityClass };
           if (!newSelector[key]) {
             newSelector[key] = [];
           }
           (newSelector[key] as [string, [Options, ...Selector[]]][]).push([
             name,
-            [options, ...classNamesToEntityConstructors(nymph, selectors)],
+            [
+              options,
+              ...classNamesToEntityConstructors(
+                nymph,
+                selectors,
+                enforceRestEnabledFlag
+              ),
+            ],
           ]);
         }
       } else if (key === 'selector' || key === '!selector') {
         const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-        newSelector[key] = classNamesToEntityConstructors(nymph, tmpArr);
+        newSelector[key] = classNamesToEntityConstructors(
+          nymph,
+          tmpArr,
+          enforceRestEnabledFlag
+        );
       } else {
         // @ts-ignore: ts doesn't know what value is here.
         newSelector[key] = value;

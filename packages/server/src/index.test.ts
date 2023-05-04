@@ -2,12 +2,14 @@ import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import { Nymph as NymphServer } from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
-import { Entity } from '@nymphjs/client';
+import { Entity, HttpError } from '@nymphjs/client';
 
 import createServer from './index';
 import {
   EmployeeModel as EmployeeModelClass,
   Employee as EmployeeClass,
+  RestrictedModel as RestrictedModelClass,
+  Restricted as RestrictedClass,
 } from './testArtifacts';
 
 const sqliteConfig = {
@@ -16,6 +18,7 @@ const sqliteConfig = {
 
 const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
 const EmployeeModel = nymphServer.addEntityClass(EmployeeModelClass);
+const RestrictedModel = nymphServer.addEntityClass(RestrictedModelClass);
 
 const app = express();
 app.use('/test', createServer(nymphServer));
@@ -25,6 +28,7 @@ const nymph = new Nymph({
   restUrl: 'http://localhost:5080/test/',
 });
 const Employee = nymph.addEntityClass(EmployeeClass);
+const Restricted = nymph.addEntityClass(RestrictedClass);
 
 describe('Nymph REST Server and Client', () => {
   async function createJane() {
@@ -666,6 +670,66 @@ describe('Nymph REST Server and Client', () => {
     }
 
     expect(first.$is(third)).toEqual(false);
+  });
+
+  it("doesn't allow creation of a restricted entity class", async () => {
+    const attempt = await Restricted.factory();
+    attempt.name = 'Jane Doe';
+
+    let error = null;
+
+    try {
+      await attempt.$save();
+    } catch (e: any) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(HttpError);
+    expect(error.status).toEqual(403);
+  });
+
+  it("doesn't allow search of a restricted entity class", async () => {
+    let error = null;
+
+    try {
+      await nymph.getEntity({
+        class: Restricted,
+      });
+    } catch (e: any) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(HttpError);
+    expect(error.status).toEqual(403);
+  });
+
+  it("doesn't allow methods of a restricted entity class", async () => {
+    const attempt = await Restricted.factory();
+    attempt.name = 'Jane Doe';
+
+    let error = null;
+
+    try {
+      await attempt.$testMethod(1);
+    } catch (e: any) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(HttpError);
+    expect(error.status).toEqual(403);
+  });
+
+  it("doesn't allow static methods of a restricted entity class", async () => {
+    let error = null;
+
+    try {
+      await Restricted.testStatic(1);
+    } catch (e: any) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(HttpError);
+    expect(error.status).toEqual(403);
   });
 
   it('get a new UID', async () => {
