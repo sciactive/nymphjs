@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.26](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.25...v1.0.0-beta.26) (2023-05-04)
+
+### Features
+
+- update packages and migrate to mysql2 ([72ad611](https://github.com/sciactive/nymphjs/commit/72ad611bd2bf7bf85c3ba8a3486503d9b50c49d6))
+
 # [1.0.0-beta.25](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.24...v1.0.0-beta.25) (2023-05-04)
 
 **Note:** Version bump only for package @nymphjs/guid
