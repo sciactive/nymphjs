@@ -4,10 +4,8 @@ import {
   receiveMessageOnPort,
 } from 'node:worker_threads';
 import { resolve } from 'node:path';
-// @ts-ignore: types are wonky with @vlasky/mysql.
-import { default as MySQLType } from '@types/mysql';
-// @ts-ignore: replace with mysql once https://github.com/mysqljs/mysql/pull/2233 is merged.
-import vlaskyMysql from '@vlasky/mysql';
+import { Pool, PoolOptions, PoolConnection } from 'mysql2';
+import mysql from 'mysql2';
 import {
   NymphDriver,
   EntityConstructor,
@@ -31,22 +29,20 @@ import {
 } from './conf';
 
 type MySQLDriverTransaction = {
-  connection: MySQLType.PoolConnection | null;
+  connection: PoolConnection | null;
   count: number;
 };
-
-const mysql = vlaskyMysql as typeof MySQLType;
 
 /**
  * The MySQL Nymph database driver.
  */
 export default class MySQLDriver extends NymphDriver {
   public config: MySQLDriverConfig;
-  private mysqlConfig: MySQLType.PoolConfig;
+  private mysqlConfig: PoolOptions;
   protected prefix: string;
   protected connected: boolean = false;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
-  protected link: MySQLType.Pool;
+  protected link: Pool;
   protected transaction: MySQLDriverTransaction | null = null;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected worker: Worker;
@@ -61,7 +57,7 @@ export default class MySQLDriver extends NymphDriver {
 
   constructor(
     config: Partial<MySQLDriverConfig>,
-    link?: MySQLType.Pool,
+    link?: Pool,
     transaction?: MySQLDriverTransaction,
     worker?: Worker
   ) {
@@ -106,7 +102,7 @@ export default class MySQLDriver extends NymphDriver {
     );
   }
 
-  private getConnection(): Promise<MySQLType.PoolConnection> {
+  private getConnection(): Promise<PoolConnection> {
     if (this.transaction != null && this.transaction.connection != null) {
       return Promise.resolve(this.transaction.connection);
     }
@@ -124,16 +120,11 @@ export default class MySQLDriver extends NymphDriver {
     // If we think we're connected, try pinging the server.
     try {
       if (this.connected) {
-        const connection: MySQLType.PoolConnection = await new Promise(
+        const connection: PoolConnection = await new Promise(
           (resolve, reject) =>
             this.link.getConnection((err, con) =>
               err ? reject(err) : resolve(con)
             )
-        );
-        await new Promise((resolve) =>
-          connection.ping(() => {
-            resolve(0);
-          })
         );
         connection.release();
         this.worker.postMessage('halt');

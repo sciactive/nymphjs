@@ -1,5 +1,4 @@
-// @ts-ignore: types are wonky with @vlasky/mysql.
-import { default as MySQLType } from '@types/mysql';
+import type { PoolOptions } from 'mysql2';
 
 /**
  * MySQL Driver Config
@@ -30,7 +29,7 @@ export interface MySQLDriverConfig {
    * If you need to use custom options, like SSL, you can provide them here in
    * place of the above options.
    */
-  customPoolConfig: MySQLType.PoolConfig | null;
+  customPoolConfig: PoolOptions | null;
   /**
    * The MySQL table name prefix.
    */

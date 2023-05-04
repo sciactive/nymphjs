@@ -7,7 +7,7 @@ const {
   MessageChannel,
   receiveMessageOnPort,
 } = require('node:worker_threads');
-const mysql = require('@vlasky/mysql');
+const mysql = require('mysql2');
 
 const mysqlConfig = {
   host: 'localhost',

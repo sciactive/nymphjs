@@ -1,5 +1,5 @@
 const { isMainThread, workerData, parentPort } = require('node:worker_threads');
-const mysql = require('@vlasky/mysql');
+const mysql = require('mysql2');
 
 if (isMainThread) {
   throw new Error("Don't load this file as main thread.");

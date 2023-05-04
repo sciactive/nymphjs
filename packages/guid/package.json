@@ -44,7 +44,7 @@
     "luxon": "^3.3.0",
     "nanoid": "^4.0.2",
     "nanoid-dictionary": "^4.3.0",
-    "rollup": "^3.21.0",
+    "rollup": "^3.21.4",
     "sha1": "^1.1.1",
     "ts-jest": "^29.1.0",
     "tslib": "^2.5.0",
