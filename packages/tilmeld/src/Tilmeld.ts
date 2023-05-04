@@ -113,7 +113,6 @@ export default class Tilmeld implements TilmeldInterface {
   public init(nymph: Nymph) {
     this.nymph = nymph;
 
-    // Set up access control hooks when Nymph is called.
     if (this.nymph.driver == null) {
       throw new Error("Tilmeld can't be configured before Nymph.");
     }
@@ -138,7 +137,7 @@ export default class Tilmeld implements TilmeldInterface {
       const currentUserData = this.currentUser.$getData();
       const currentUserSData = this.currentUser.$getSData();
 
-      const user = User.factorySync();
+      const user = this.User.factorySync();
       user.guid = currentUserGUID;
       user.cdate = currentUserCDate;
       user.mdate = currentUserMDate;
@@ -147,6 +146,7 @@ export default class Tilmeld implements TilmeldInterface {
       this.fillSession(user);
     }
 
+    // Set up access control hooks when Nymph is called.
     this.initAccessControl();
     if (this.request != null && !this.skipAuthenticate) {
       this.authenticate();

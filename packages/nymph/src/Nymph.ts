@@ -253,14 +253,12 @@ export default class Nymph {
    * @returns A clone of this instance.
    */
   public clone() {
-    const nymph = new Nymph(
+    return new Nymph(
       this.config,
       this.driver.clone(),
       this.tilmeld?.clone(),
       this
     );
-
-    return nymph;
   }
 
   /**
