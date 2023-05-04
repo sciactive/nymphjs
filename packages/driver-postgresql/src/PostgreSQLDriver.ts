@@ -2510,6 +2510,12 @@ export default class PostgreSQLDriver extends NymphDriver {
       const result = await this.saveEntityRowLike(
         entity,
         async (_entity, guid, tags, data, sdata, cdate, etype) => {
+          if (
+            Object.keys(data).length === 0 &&
+            Object.keys(sdata).length === 0
+          ) {
+            return false;
+          }
           await this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`
@@ -2527,6 +2533,12 @@ export default class PostgreSQLDriver extends NymphDriver {
           return true;
         },
         async (entity, guid, tags, data, sdata, mdate, etype) => {
+          if (
+            Object.keys(data).length === 0 &&
+            Object.keys(sdata).length === 0
+          ) {
+            return false;
+          }
           const promises = [];
           promises.push(
             this.queryRun(

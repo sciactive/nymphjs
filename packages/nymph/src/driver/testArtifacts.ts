@@ -7,6 +7,7 @@ import {
   TestBModel as TestBModelClass,
   TestModel as TestModelClass,
   TestModelData,
+  TestEmptyModel as TestEmptyModelClass,
 } from '../testArtifacts';
 
 export function QueriesTest(
@@ -15,6 +16,7 @@ export function QueriesTest(
 ) {
   const TestModel = nymph.addEntityClass(TestModelClass);
   const TestBModel = nymph.addEntityClass(TestBModelClass);
+  const TestEmptyModel = nymph.addEntityClass(TestEmptyModelClass);
 
   let testEntity: TestModelClass & TestModelData;
   let testGuid: string;
@@ -108,6 +110,13 @@ This one's zip code is 92064.`;
 
   it('create entity', async () => {
     await createTestEntities();
+  });
+
+  it("doesn't create empty entity", async () => {
+    const testEntity = await TestEmptyModel.factory();
+
+    expect(await testEntity.$save()).toBeFalsy();
+    expect(testEntity.guid).toBeNull();
   });
 
   it('update mdate on save', async () => {

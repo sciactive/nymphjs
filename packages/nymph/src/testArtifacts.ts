@@ -86,3 +86,23 @@ export class TestBModel extends TestModel {
     return super.factorySync(guid) as TestBModel & TestModelData;
   }
 }
+
+export type TestEmptyModelData = {};
+
+/**
+ * This class is a test class that extends the Entity class.
+ */
+export class TestEmptyModel extends Entity<TestEmptyModelData> {
+  static ETYPE = 'test_empty_model';
+  static class = 'TestEmptyModel';
+
+  static async factory(
+    guid?: string
+  ): Promise<TestEmptyModel & TestEmptyModelData> {
+    return (await super.factory(guid)) as TestEmptyModel & TestEmptyModelData;
+  }
+
+  static factorySync(guid?: string): TestEmptyModel & TestEmptyModelData {
+    return super.factorySync(guid) as TestEmptyModel & TestEmptyModelData;
+  }
+}

@@ -2051,6 +2051,12 @@ export default class SQLite3Driver extends NymphDriver {
       return this.saveEntityRowLike(
         entity,
         async (_entity, guid, tags, data, sdata, cdate, etype) => {
+          if (
+            Object.keys(data).length === 0 &&
+            Object.keys(sdata).length === 0
+          ) {
+            return false;
+          }
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
               `${this.prefix}entities_${etype}`
@@ -2068,6 +2074,12 @@ export default class SQLite3Driver extends NymphDriver {
           return true;
         },
         async (entity, guid, tags, data, sdata, mdate, etype) => {
+          if (
+            Object.keys(data).length === 0 &&
+            Object.keys(sdata).length === 0
+          ) {
+            return false;
+          }
           const info = this.queryRun(
             `UPDATE ${SQLite3Driver.escape(
               `${this.prefix}entities_${etype}`
