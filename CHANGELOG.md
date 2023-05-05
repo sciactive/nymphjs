@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.28](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.27...v1.0.0-beta.28) (2023-05-05)
+
+### Bug Fixes
+
+- pubsub client auth ([979d913](https://github.com/sciactive/nymphjs/commit/979d9138abc86c7cef8b80b4f63c519b7b7ded78))
+
 # [1.0.0-beta.27](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.26...v1.0.0-beta.27) (2023-05-04)
 
 ### Bug Fixes
