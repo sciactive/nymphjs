@@ -297,7 +297,7 @@ export default class PubSub {
     if (this.authToken != null) {
       this._send({
         action: 'authenticate',
-        token: this.authToken,
+        authToken: this.authToken,
         switchToken: this.switchToken,
       });
     }
