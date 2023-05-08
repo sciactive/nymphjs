@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.29](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.28...v1.0.0-beta.29) (2023-05-08)
+
+### Bug Fixes
+
+- use 4 byte utf8 encoding in mysql ([c335b6e](https://github.com/sciactive/nymphjs/commit/c335b6e8416f935c9116e7f54de753d4b2255a73))
+
 # [1.0.0-beta.28](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.27...v1.0.0-beta.28) (2023-05-05)
 
 ### Bug Fixes
