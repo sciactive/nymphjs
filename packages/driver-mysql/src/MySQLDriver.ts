@@ -137,7 +137,10 @@ export default class MySQLDriver extends NymphDriver {
     // Connecting, selecting database
     if (!this.connected) {
       try {
-        this.link = mysql.createPool(this.mysqlConfig);
+        this.link = mysql.createPool({
+          ...this.mysqlConfig,
+          charset: 'utf8mb4_bin',
+        });
         const worker = new Worker(resolve(__dirname, 'runMysqlSync.js'), {
           workerData: this.mysqlConfig,
         });
@@ -232,7 +235,7 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_mdate\` USING BTREE (\`mdate\`),
           FULLTEXT \`id_tags\` (\`tags\`)
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
       // Create the data table.
       this.queryRunSync(
@@ -246,7 +249,7 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_name\` USING HASH (\`name\`(255)),
           INDEX \`id_name_value\` USING BTREE (\`name\`(255), \`value\`(512))
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
       // Create the data comparisons table.
       this.queryRunSync(
@@ -261,7 +264,7 @@ export default class MySQLDriver extends NymphDriver {
           PRIMARY KEY (\`guid\`, \`name\`(255)),
           INDEX \`id_name\` USING HASH (\`name\`(255))
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
       // Create the references table.
       this.queryRunSync(
@@ -274,7 +277,7 @@ export default class MySQLDriver extends NymphDriver {
           PRIMARY KEY (\`guid\`, \`name\`(255), \`reference\`),
           INDEX \`id_name_reference\` USING BTREE (\`name\`(255), \`reference\`)
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
     } else {
       // Create the UID table.
@@ -286,7 +289,7 @@ export default class MySQLDriver extends NymphDriver {
           \`cur_uid\` BIGINT(20) UNSIGNED NOT NULL,
           PRIMARY KEY (\`name\`(100))
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8 COLLATE utf8_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
     }
     return true;

@@ -41,7 +41,10 @@ export function QueriesTest(
 
 This one's email address is nice_hat-wednesday+newyork@im-a-hat.hat.
 This one's phone number is (555) 555-1818.
-This one's zip code is 92064.`;
+This one's zip code is 92064.
+This one's favorite emojis are 🔥❤️😊😂⭐🤔
+
+These hats are absolutely fantastic.`;
     testEntity.number = 30;
     testEntity.numberString = '30';
     testEntity.timestamp = Date.now();
