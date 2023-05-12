@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.30](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.29...v1.0.0-beta.30) (2023-05-12)
+
+### Features
+
+- allow providing getEntityClass with a class instead of string ([ecd64c1](https://github.com/sciactive/nymphjs/commit/ecd64c1bf92e3657889613b76bcc46652f371ead))
+
 # [1.0.0-beta.29](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.28...v1.0.0-beta.29) (2023-05-08)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
