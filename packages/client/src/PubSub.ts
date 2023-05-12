@@ -250,28 +250,25 @@ export default class PubSub {
     this.connection.close(4200, 'Closure requested by application.');
   }
 
-  private _waitForConnection(attempts = 0) {
-    // Wait 5 seconds, then check and attempt connection again if
-    // unsuccessful. Keep repeating until successful.
+  private _waitForConnection(attempts = 1) {
+    // Wait 5 seconds, then check and attempt connection again if unsuccessful.
+    // Keep repeating, adding attempts^2*5 seconds each time to a max of ten
+    // minutes, until successful.
     this.waitForConnectionTimeout = setTimeout(() => {
-      if (
-        this.connection &&
-        this.connection.readyState !== this.WebSocket.OPEN
-      ) {
-        if (
-          this.connection.readyState !== this.WebSocket.CONNECTING ||
-          attempts >= 5
-        ) {
-          this.connection.close();
-          this._waitForConnection();
-          this._attemptConnect();
-        } else {
-          this._waitForConnection(attempts + 1);
+      if (this.connection) {
+        if (this.connection.readyState !== this.WebSocket.OPEN) {
+          if (this.connection.readyState !== this.WebSocket.CONNECTING) {
+            this.connection.close();
+            this._waitForConnection(attempts + 1);
+            this._attemptConnect();
+          } else {
+            this._waitForConnection(attempts + 1);
+          }
         }
       } else {
         this._attemptConnect();
       }
-    }, 5000);
+    }, Math.max(Math.pow(attempts, 2) * 5000, 1000 * 60 * 10));
   }
 
   private _attemptConnect() {
@@ -287,6 +284,11 @@ export default class PubSub {
     if (typeof console !== 'undefined' && !this.noConsole) {
       console.log('Nymph-PubSub connection established!');
     }
+
+    if (this.waitForConnectionTimeout) {
+      clearTimeout(this.waitForConnectionTimeout);
+    }
+
     for (let i = 0; i < this.connectCallbacks.length; i++) {
       const callback = this.connectCallbacks[i];
       if (callback) {
