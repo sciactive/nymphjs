@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.31](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.30...v1.0.0-beta.31) (2023-05-12)
+
+### Bug Fixes
+
+- pubsub client reconnect multiple times issue ([bba0897](https://github.com/sciactive/nymphjs/commit/bba08974fadf318d040f8844a2d583f6bc15b486))
+
 # [1.0.0-beta.30](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.29...v1.0.0-beta.30) (2023-05-12)
 
 ### Features
