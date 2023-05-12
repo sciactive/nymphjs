@@ -625,10 +625,9 @@ export default abstract class NymphDriver {
           for (let i = 0; i < tmpArr.length; i++) {
             const name = tmpArr[i][0];
             const [qrefOptions, ...qrefSelectors] = tmpArr[i][1];
-            const QrefEntityClass =
-              typeof qrefOptions.class === 'string'
-                ? this.nymph.getEntityClass(qrefOptions.class)
-                : qrefOptions.class ?? this.nymph.getEntityClass('Entity');
+            const QrefEntityClass = qrefOptions.class
+              ? this.nymph.getEntityClass(qrefOptions.class)
+              : this.nymph.getEntityClass('Entity');
             const newOptions = {
               ...qrefOptions,
               class: QrefEntityClass,

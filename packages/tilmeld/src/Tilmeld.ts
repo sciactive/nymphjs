@@ -120,12 +120,12 @@ export default class Tilmeld implements TilmeldInterface {
     // Configure the classes.
     if (nymph.parent) {
       // This is a cloned Nymph, it should have classes already.
-      this.User = this.nymph.getEntityClass(User.class) as typeof User;
-      this.Group = this.nymph.getEntityClass(Group.class) as typeof Group;
+      this.User = this.nymph.getEntityClass(User);
+      this.Group = this.nymph.getEntityClass(Group);
     } else {
       // This is a new Nymph, add the classes.
-      this.User = this.nymph.addEntityClass(User) as typeof User;
-      this.Group = this.nymph.addEntityClass(Group) as typeof Group;
+      this.User = this.nymph.addEntityClass(User);
+      this.Group = this.nymph.addEntityClass(Group);
     }
 
     // Clone the current user so its Nymph instance is correct.

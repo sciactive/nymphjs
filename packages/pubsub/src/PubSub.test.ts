@@ -156,9 +156,7 @@ describe('Nymph REST Server and Client', () => {
           expect(update).toEqual([]);
           updated = true;
           const tnymph = await nymphServer.startTransaction('steve');
-          const Employee = tnymph.getEntityClass(
-            EmployeeModel.class
-          ) as typeof EmployeeModel;
+          const Employee = tnymph.getEntityClass(EmployeeModel);
           const steve = await Employee.factory();
           steve.name = 'Steve Transaction';
           steve.current = true;
@@ -202,9 +200,7 @@ describe('Nymph REST Server and Client', () => {
           expect(update).toEqual([]);
           updated = true;
           const tnymph = await nymphServer.startTransaction('steve');
-          const Employee = tnymph.getEntityClass(
-            EmployeeModel.class
-          ) as typeof EmployeeModel;
+          const Employee = tnymph.getEntityClass(EmployeeModel);
           const steve = await Employee.factory();
           steve.name = 'Steve Rollback';
           steve.current = true;
@@ -258,9 +254,7 @@ describe('Nymph REST Server and Client', () => {
 
           // Start a transaction that ultimately gets rolled back.
           const tnymphB = await tnymphTop.startTransaction('steve-b');
-          const EmployeeB = tnymphB.getEntityClass(
-            EmployeeModel.class
-          ) as typeof EmployeeModel;
+          const EmployeeB = tnymphB.getEntityClass(EmployeeModel);
           const badSteve = await EmployeeB.factory();
           badSteve.name = 'Steve Complex';
           badSteve.current = true;
@@ -280,9 +274,7 @@ describe('Nymph REST Server and Client', () => {
 
           // Start a transaction that ultimately gets committed.
           const tnymphA = await tnymphTop.startTransaction('steve-a');
-          const EmployeeA = tnymphA.getEntityClass(
-            EmployeeModel.class
-          ) as typeof EmployeeModel;
+          const EmployeeA = tnymphA.getEntityClass(EmployeeModel);
           const goodSteve = await EmployeeA.factory();
           goodSteve.name = 'Steve Complex';
           goodSteve.current = true;

@@ -1385,10 +1385,9 @@ export default class PubSub {
             const name = tmpArr[i][0];
             const [qrefOptions, ...qrefSelectors] = tmpArr[i][1];
             const query = JSON.stringify(tmpArr[i][1]);
-            const QrefEntityClass =
-              typeof qrefOptions.class === 'string'
-                ? this.nymph.getEntityClass(qrefOptions.class)
-                : qrefOptions.class ?? this.nymph.getEntityClass('Entity');
+            const QrefEntityClass = qrefOptions.class
+              ? this.nymph.getEntityClass(qrefOptions.class)
+              : this.nymph.getEntityClass('Entity');
             const data =
               this.querySubs[QrefEntityClass.ETYPE][query].get(client);
             if (data) {

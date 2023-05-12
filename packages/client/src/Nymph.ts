@@ -90,13 +90,21 @@ export default class Nymph {
     return NymphEntity;
   }
 
-  public getEntityClass(className: string) {
-    if (className in this.entityClasses) {
-      return this.entityClasses[className];
+  public getEntityClass<T extends EntityConstructor>(className: T): T;
+  public getEntityClass(className: string): EntityConstructor;
+  public getEntityClass<T extends EntityConstructor = EntityConstructor>(
+    className: T | string
+  ): T | EntityConstructor {
+    let key: string | null = null;
+    if (typeof className === 'string') {
+      key = className;
+    } else {
+      key = className.class;
     }
-    throw new ClassNotAvailableError(
-      "Tried to get class that's not available: " + className
-    );
+    if (key in this.entityClasses) {
+      return this.entityClasses[key];
+    }
+    throw new ClassNotAvailableError('Tried to use class: ' + key);
   }
 
   public async newUID(name: string) {
@@ -303,7 +311,7 @@ export default class Nymph {
     options: Options<T>,
     ...selectors: Selector[] | string[]
   ): Promise<EntityJson<T> | string | number | null> {
-    if (options.class === this.getEntityClass('Entity')) {
+    if (options.class instanceof Entity) {
       throw new InvalidRequestError(
         "You can't make REST requests with the base Entity class."
       );
@@ -416,10 +424,7 @@ export default class Nymph {
     if (Array.isArray(item)) {
       // Recurse into lower arrays.
       return item.map((entry) => this.initEntitiesFromData(entry)) as T;
-    } else if (
-      item instanceof Object &&
-      !(item instanceof this.getEntityClass('Entity'))
-    ) {
+    } else if (item instanceof Object && !(item instanceof Entity)) {
       if (
         item.hasOwnProperty('class') &&
         item.hasOwnProperty('guid') &&

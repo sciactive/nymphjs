@@ -81,11 +81,21 @@ export class MockNymph {
     return NymphEntity;
   }
 
-  public getEntityClass(className: string): EntityConstructor {
-    if (className in this.entityClasses) {
-      return this.entityClasses[className];
+  public getEntityClass<T extends EntityConstructor>(className: T): T;
+  public getEntityClass(className: string): EntityConstructor;
+  public getEntityClass<T extends EntityConstructor = EntityConstructor>(
+    className: T | string
+  ): T | EntityConstructor {
+    let key: string | null = null;
+    if (typeof className === 'string') {
+      key = className;
+    } else {
+      key = className.class;
     }
-    throw new ClassNotAvailableError('Tried to use class: ' + className);
+    if (key in this.entityClasses) {
+      return this.entityClasses[key];
+    }
+    throw new ClassNotAvailableError('Tried to use class: ' + key);
   }
 
   public async getEntity<T extends EntityConstructor = EntityConstructor>(

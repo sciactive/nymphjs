@@ -46,10 +46,9 @@ export function classNamesToEntityConstructors(
         for (let i = 0; i < tmpArr.length; i++) {
           const name = tmpArr[i][0];
           const [qrefOptions, ...selectors] = tmpArr[i][1];
-          const QrefEntityClass =
-            typeof qrefOptions.class === 'string'
-              ? nymph.getEntityClass(qrefOptions.class)
-              : qrefOptions.class ?? nymph.getEntityClass('Entity');
+          const QrefEntityClass = qrefOptions.class
+            ? nymph.getEntityClass(qrefOptions.class)
+            : nymph.getEntityClass('Entity');
           if (enforceRestEnabledFlag && !QrefEntityClass.restEnabled) {
             throw new Error('Not accessible.');
           }
