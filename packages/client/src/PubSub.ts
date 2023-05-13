@@ -217,8 +217,8 @@ export default class PubSub {
 
     const newResolve = (args: any) => {
       if (Array.isArray(args)) {
-        if (args[0].length) {
-          entity.$init(args[0]);
+        if (args.length) {
+          entity.$init(args[0].toJSON());
         } else {
           entity.guid = null;
         }

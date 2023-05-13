@@ -566,6 +566,7 @@ describe('Nymph REST Server and Client', () => {
     await new Promise(async (resolve) => {
       let mdate = 0;
       const subscription = pubsub.subscribeWith(jane, async () => {
+        expect(jane.guid).not.toBeNull();
         if (mdate > 0 && (jane.mdate ?? -1) === mdate) {
           subscription.unsubscribe();
           resolve(true);
