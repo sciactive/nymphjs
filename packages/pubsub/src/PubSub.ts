@@ -701,6 +701,7 @@ export default class PubSub {
       }
 
       let entities: EntityInterface[] = [];
+      let sendEntities = false;
       const existingSub = this.querySubs[etype][serialArgs].get(from);
       if (existingSub) {
         if (qrefParent) {
@@ -712,15 +713,18 @@ export default class PubSub {
         if (data.count && !existingSub.count) {
           existingSub.count = true;
         }
-        entities = existingSub.current.length
-          ? await nymph.getEntities(
-              {
-                class: EntityClass,
-                source: 'client',
-              },
-              { type: '|', guid: existingSub.current }
-            )
-          : [];
+        sendEntities = existingSub.direct;
+        if (sendEntities) {
+          entities = existingSub.current.length
+            ? await nymph.getEntities(
+                {
+                  class: EntityClass,
+                  source: 'client',
+                },
+                { type: '|', guid: existingSub.current }
+              )
+            : [];
+        }
       } else {
         entities = await nymph.getEntities(options, ...selectors);
         this.querySubs[etype][serialArgs].set(from, {
@@ -730,16 +734,19 @@ export default class PubSub {
           direct: !qrefParent,
           count: !!data.count,
         });
+        sendEntities = !qrefParent;
       }
 
-      // Notify the client of the current value.
-      from.sendUTF(
-        JSON.stringify({
-          query: data.query,
-          set: true,
-          data: entities,
-        })
-      );
+      if (sendEntities) {
+        // Notify the client of the current value.
+        from.sendUTF(
+          JSON.stringify({
+            query: data.query,
+            set: true,
+            data: entities,
+          })
+        );
+      }
 
       if (nymph.tilmeld != null && authToken != null) {
         // Clear the user that was temporarily logged in.
