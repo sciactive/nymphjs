@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.32](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.31...v1.0.0-beta.32) (2023-05-13)
+
+### Features
+
+- issue initial request with pubsub instead of rest on subscribe ([8a232d2](https://github.com/sciactive/nymphjs/commit/8a232d2faeb8622924f9c35a01a8f71a70659bb3))
+
 # [1.0.0-beta.31](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.30...v1.0.0-beta.31) (2023-05-12)
 
 **Note:** Version bump only for package @nymphjs/nymph
