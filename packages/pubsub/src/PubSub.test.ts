@@ -486,18 +486,11 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('notified of entity delete', async () => {
-    let jane = await createJane();
+    let jane: EmployeeClass & EmployeeData;
     let entities: (EmployeeClass & EmployeeData)[] = [];
 
-    // Wait for change to propagate. (Only needed since we're not going across network.)
-    await new Promise((resolve) => setTimeout(() => resolve(true), 10));
-
-    let length: number = -1;
+    let removed = false;
     await new Promise((resolve) => {
-      let updated = false;
-      if (jane.guid == null) {
-        throw new Error('Entity is null.');
-      }
       const subscription = pubsub.subscribeEntities(
         { class: Employee },
         {
@@ -507,19 +500,22 @@ describe('Nymph REST Server and Client', () => {
       )(async (update) => {
         pubsub.updateArray(entities, update);
 
-        if (updated) {
+        if (Array.isArray(update)) {
+          jane = await createJane();
+          if (jane.guid == null) {
+            throw new Error('Entity is null.');
+          }
+        } else if ('added' in update) {
+          await entities.find((e) => e.guid === update.added)?.$delete();
+        } else if ('removed' in update && update.removed === jane.guid) {
           subscription.unsubscribe();
+          removed = true;
           resolve(true);
-        } else if (Array.isArray(update)) {
-          expect(update.length).toBeGreaterThan(0);
-          updated = true;
-          length = update.length;
-          await jane.$delete();
         }
       });
     });
 
-    expect(entities.length).toEqual(length - 1);
+    expect(removed).toBeTruthy();
   });
 
   it('entire match is updated', async () => {

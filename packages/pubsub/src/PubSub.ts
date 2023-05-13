@@ -632,10 +632,10 @@ export default class PubSub {
     const etype = EntityClass.ETYPE;
     const serialArgs = JSON.stringify(args);
     const [clientOptions, ...selectors] = args;
-    const options: Options & { return: 'guid' } = {
+    const options: Options & { return: 'entity' } = {
       ...clientOptions,
       class: EntityClass,
-      return: 'guid',
+      return: 'entity',
       source: 'client',
     };
     // Find qref queries.
@@ -675,6 +675,7 @@ export default class PubSub {
       if (!(serialArgs in this.querySubs[etype])) {
         this.querySubs[etype][serialArgs] = new Map();
       }
+
       let authToken = null;
       let switchToken = null;
       if (this.sessions.has(from)) {
@@ -698,6 +699,8 @@ export default class PubSub {
           }
         }
       }
+
+      let entities: EntityInterface[] = [];
       const existingSub = this.querySubs[etype][serialArgs].get(from);
       if (existingSub) {
         if (qrefParent) {
@@ -709,15 +712,35 @@ export default class PubSub {
         if (data.count && !existingSub.count) {
           existingSub.count = true;
         }
+        entities = existingSub.current.length
+          ? await nymph.getEntities(
+              {
+                class: EntityClass,
+                source: 'client',
+              },
+              { type: '|', guid: existingSub.current }
+            )
+          : [];
       } else {
+        entities = await nymph.getEntities(options, ...selectors);
         this.querySubs[etype][serialArgs].set(from, {
-          current: await nymph.getEntities(options, ...selectors),
+          current: entities.map((e) => e.guid as string),
           query: data.query,
           qrefParents: qrefParent ? [qrefParent] : [],
           direct: !qrefParent,
           count: !!data.count,
         });
       }
+
+      // Notify the client of the current value.
+      from.sendUTF(
+        JSON.stringify({
+          query: data.query,
+          set: true,
+          data: entities,
+        })
+      );
+
       if (nymph.tilmeld != null && authToken != null) {
         // Clear the user that was temporarily logged in.
         nymph.tilmeld.clearSession();
@@ -840,6 +863,45 @@ export default class PubSub {
       this.uidSubs[data['uid']].set(from, {
         count: !!data.count,
       });
+
+      let authToken = null;
+      let switchToken = null;
+      if (this.sessions.has(from)) {
+        const session = this.sessions.get(from);
+        authToken = session?.authToken;
+        switchToken = session?.switchToken;
+      }
+      const nymph = this.nymph.clone();
+      if (nymph.tilmeld != null && authToken != null) {
+        const user = await nymph.tilmeld.extractToken(authToken);
+        if (user && user.enabled) {
+          if (switchToken != null) {
+            const switchUser = await nymph.tilmeld.extractToken(switchToken);
+            if (switchUser) {
+              // Log in the switchUser for access controls.
+              nymph.tilmeld.fillSession(switchUser);
+            }
+          } else {
+            // Log in the user for access controls.
+            nymph.tilmeld.fillSession(user);
+          }
+        }
+      }
+
+      // Notify the client of the current value.
+      from.sendUTF(
+        JSON.stringify({
+          uid: data.uid,
+          set: true,
+          data: await this.nymph.getUID(data.uid),
+        })
+      );
+
+      if (nymph.tilmeld != null && authToken != null) {
+        // Clear the user that was temporarily logged in.
+        nymph.tilmeld.clearSession();
+      }
+
       this.config.logger(
         'log',
         new Date().toISOString(),

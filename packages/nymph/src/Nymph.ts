@@ -132,6 +132,7 @@ export default class Nymph {
    * @param config The Nymph configuration.
    * @param driver The Nymph database driver.
    * @param tilmeld The Tilmeld user/group manager instance, if you want to use it.
+   * @param parent Used internally by Nymph. Don't set this.
    */
   public constructor(
     config: Partial<Config>,
@@ -258,7 +259,7 @@ export default class Nymph {
   }
 
   /**
-   * Get a clone of this instance with duplicate classes and event listeners.
+   * Get a clone of this instance with cloned classes and event listeners.
    *
    * @returns A clone of this instance.
    */

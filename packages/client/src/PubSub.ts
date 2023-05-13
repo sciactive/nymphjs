@@ -1,7 +1,11 @@
 import Nymph, { InvalidRequestError } from './Nymph';
-import { NymphOptions, Options, Selector } from './Nymph.types';
-import { EntityConstructor, EntityInterface } from './Entity.types';
-import {
+import type { NymphOptions, Options, Selector } from './Nymph.types';
+import type {
+  EntityConstructor,
+  EntityInterface,
+  EntityJson,
+} from './Entity.types';
+import type {
   PubSubCallbacks,
   PubSubConnectCallback,
   PubSubCountCallback,
@@ -14,6 +18,7 @@ import {
   PubSubUpdate,
 } from './PubSub.types';
 import { entityConstructorsToClassNames } from './utils';
+import { ClientError } from './HttpRequester';
 
 export default class PubSub {
   private nymph: Nymph;
@@ -61,6 +66,8 @@ export default class PubSub {
     }
   }
 
+  // TODO: return: 'guid' doesn't work here because the server always returns
+  // entities.
   public subscribeEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -75,7 +82,6 @@ export default class PubSub {
   ): PubSubSubscribable<
     PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
   > {
-    const promise = this.nymph.getEntities(options, ...selectors);
     const query = [
       entityConstructorsToClassNames(options),
       ...entityConstructorsToClassNames(selectors),
@@ -95,7 +101,10 @@ export default class PubSub {
         PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
       > = [resolve, reject, count];
 
-      promise.then(resolve, reject);
+      if (!this.isConnection()) {
+        // Fall back to a regular query if we're not connected.
+        this.nymph.getEntities(options, ...selectors).then(resolve, reject);
+      }
 
       this._subscribeQuery(jsonQuery, callbacks);
       return new PubSubSubscription(jsonQuery, callbacks, () => {
@@ -105,6 +114,8 @@ export default class PubSub {
     return subscribe;
   }
 
+  // TODO: return: 'guid' doesn't work here because the server always returns
+  // entities.
   public subscribeEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
@@ -120,7 +131,6 @@ export default class PubSub {
     | PubSubUpdate<ReturnType<T['factorySync']> | null>
     | PubSubUpdate<string | null>
   > {
-    const promise = this.nymph.getEntity(options, ...selectors);
     const query = [
       { ...entityConstructorsToClassNames(options), limit: 1 },
       ...entityConstructorsToClassNames(selectors),
@@ -152,7 +162,10 @@ export default class PubSub {
         | PubSubUpdate<string | null>
       > = [newResolve, reject, count];
 
-      promise.then(resolve, reject);
+      if (!this.isConnection()) {
+        // Fall back to a regular query if we're not connected.
+        this.nymph.getEntity(options, ...selectors).then(resolve, reject);
+      }
 
       this._subscribeQuery(jsonQuery, callbacks);
       return new PubSubSubscription(jsonQuery, callbacks, () => {
@@ -163,7 +176,6 @@ export default class PubSub {
   }
 
   public subscribeUID(name: string) {
-    const promise = this.nymph.getUID(name);
     const subscribe = (
       resolve?: PubSubResolveCallback<number> | undefined,
       reject?: PubSubRejectCallback | undefined,
@@ -171,7 +183,10 @@ export default class PubSub {
     ) => {
       const callbacks: PubSubCallbacks<number> = [resolve, reject, count];
 
-      promise.then(resolve, reject);
+      if (!this.isConnection()) {
+        // Fall back to a regular query if we're not connected.
+        this.nymph.getUID(name).then(resolve, reject);
+      }
 
       this._subscribeUID(name, callbacks);
       return {
@@ -348,6 +363,7 @@ export default class PubSub {
   private _onmessage(e: WebSocketEventMap['message']) {
     let data = JSON.parse(e.data);
     let subs: PubSubCallbacks<any>[] = [];
+    let set = 'set' in data && data.set;
     let count = 'count' in data;
     let error = 'error' in data;
     if (
@@ -359,7 +375,11 @@ export default class PubSub {
         for (let i = 0; i < subs.length; i++) {
           const callback = subs[i][0];
           if (typeof callback === 'function') {
-            callback(data);
+            callback(
+              set
+                ? data.data.map((e: EntityJson) => this.nymph.initEntity(e))
+                : data
+            );
           }
         }
       }
@@ -371,8 +391,22 @@ export default class PubSub {
       if (!count && !error) {
         for (let i = 0; i < subs.length; i++) {
           const callback = subs[i][0];
-          if (typeof callback === 'function') {
-            callback(data.value ?? null, data.event);
+          const errCallback = subs[i][1];
+          if (set && data.data == null) {
+            if (typeof errCallback === 'function') {
+              errCallback(
+                new ClientError(
+                  { status: 404, statusText: 'Not Found' } as Response,
+                  { textStatus: 'Not Found' }
+                )
+              );
+            }
+          } else if (typeof callback === 'function') {
+            if (set) {
+              callback(data.data);
+            } else {
+              callback(data.value ?? null, data.event);
+            }
           }
         }
       }
@@ -435,6 +469,17 @@ export default class PubSub {
     return !!(
       this.connection && this.connection.readyState === this.WebSocket.OPEN
     );
+  }
+
+  public isConnectionConnecting() {
+    return !!(
+      this.connection &&
+      this.connection.readyState === this.WebSocket.CONNECTING
+    );
+  }
+
+  public isConnection() {
+    return this.isConnectionOpen() || this.isConnectionConnecting();
   }
 
   private _subscribeQuery(query: string, callbacks: PubSubCallbacks<any>) {
@@ -622,7 +667,7 @@ export default class PubSub {
       // Now we must remove the deleted ones.
       remove.sort(function (a, b) {
         // Sort backwards so we can remove in reverse order. (Preserves
-        // indices.)
+        // indexes.)
         if (a > b) return -1;
         if (a < b) return 1;
         return 0;
