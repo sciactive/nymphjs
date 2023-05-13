@@ -1,23 +1,7 @@
 {
-  "entryPoints": [
-    "./packages/client/",
-    "./packages/client-node/",
-    "./packages/driver-mysql/",
-    "./packages/driver-postgresql/",
-    "./packages/driver-sqlite3/",
-    "./packages/nymph/",
-    "./packages/pubsub/",
-    "./packages/query-parser/",
-    "./packages/server/",
-    "./packages/sorter/",
-    "./packages/tilmeld/",
-    "./packages/tilmeld-client/",
-    "./packages/tilmeld-components/src/index.ts",
-    "./packages/tilmeld-setup/src/index.ts"
-  ],
+  "entryPoints": ["packages/*"],
   "entryPointStrategy": "packages",
   "out": "docs",
   "name": "Nymph.js",
-  "includeVersion": true,
-  "readme": "none"
+  "includeVersion": false
 }
