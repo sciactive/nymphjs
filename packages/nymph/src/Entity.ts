@@ -316,7 +316,11 @@ export default class Entity<T extends EntityData = EntityData>
 
     if (guid != null) {
       const entity = this.$nymph.driver.getEntitySync(
-        { class: this.constructor as EntityConstructor },
+        {
+          class: this.$nymph.getEntityClass(
+            this.constructor as EntityConstructor
+          ),
+        },
         { type: '&', guid }
       );
       if (entity) {
@@ -917,7 +921,9 @@ export default class Entity<T extends EntityData = EntityData>
     }
     const refresh = await this.$nymph.getEntity(
       {
-        class: this.constructor as EntityConstructor,
+        class: this.$nymph.getEntityClass(
+          this.constructor as EntityConstructor
+        ),
         skipCache: true,
         skipAc: this.$skipAc,
       },
