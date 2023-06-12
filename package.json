@@ -7,8 +7,9 @@
     "lint": "prettier --check .",
     "clean": "lerna run clean",
     "docs": "typedoc",
-    "prepare": "husky install && npm run bootstrap && npm run lint",
-    "bootstrap": "lerna bootstrap",
+    "prepare": "husky install && npm run lint",
+    "postinstall": "npm run build",
+    "build": "lerna run build",
     "test": "lerna run test --concurrency=1 --stream --no-prefix --no-bail -- --passWithNoTests",
     "test:db:start": "lerna run test:db:start --stream --parallel",
     "test:db:stop": "lerna run test:db:stop"
@@ -28,16 +29,19 @@
     "url": "https://github.com/sciactive/nymphjs/issues"
   },
   "homepage": "https://github.com/sciactive/nymphjs#readme",
+  "workspaces": [
+    "packages/*"
+  ],
   "devDependencies": {
-    "@commitlint/cli": "^17.6.3",
-    "@commitlint/config-conventional": "^17.6.3",
+    "@commitlint/cli": "^17.6.5",
+    "@commitlint/config-conventional": "^17.6.5",
     "husky": "^8.0.3",
-    "lerna": "^6.6.2",
+    "lerna": "^7.0.0",
     "lint-staged": "^13.2.2",
     "prettier": "2.8.8",
-    "prettier-plugin-svelte": "^2.10.0",
-    "typedoc": "^0.24.7",
-    "typescript": "^5.0.4"
+    "prettier-plugin-svelte": "^2.10.1",
+    "typedoc": "^0.24.8",
+    "typescript": "^5.1.3"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"

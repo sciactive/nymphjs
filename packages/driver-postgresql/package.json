@@ -14,7 +14,7 @@
     "clean": "test -d dist && rm -r dist || true",
     "build": "tsc; cp src/runPostgresqlSync.js dist/runPostgresqlSync.js",
     "watch": "tsc --watch",
-    "prepare": "npm run clean && npm run build",
+    "prepublish": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:db:start": "docker run --rm --name nymph-postgresql -e POSTGRES_USER=nymph -e POSTGRES_PASSWORD=nymph -p 5432:5432 postgres",
@@ -35,16 +35,16 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.34",
     "@nymphjs/nymph": "^1.0.0-beta.34",
-    "pg": "^8.10.0",
+    "pg": "^8.11.0",
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.2",
-    "@types/jest": "^29.5.1",
-    "@types/pg": "^8.6.6",
+    "@types/jest": "^29.5.2",
+    "@types/pg": "^8.10.2",
     "@types/pg-format": "^1.0.2",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.1.3"
   }
 }

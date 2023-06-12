@@ -14,7 +14,7 @@
     "clean": "test -d dist && rm -r dist || true",
     "build": "tsc; cp src/runMysqlSync.js dist/runMysqlSync.js",
     "watch": "tsc --watch",
-    "prepare": "npm run clean && npm run build",
+    "prepublish": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:db:start": "docker run --rm --name nymph-mysql -e MYSQL_ROOT_PASSWORD=123nymphroot -e MYSQL_DATABASE=nymph -e MYSQL_USER=nymph -e MYSQL_PASSWORD=nymph -p 3306:3306 mysql",
@@ -35,15 +35,15 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.34",
     "@nymphjs/nymph": "^1.0.0-beta.34",
-    "mysql2": "^3.2.4",
+    "mysql2": "^3.3.4",
     "sqlstring": "^2.3.3"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.2",
-    "@types/jest": "^29.5.1",
+    "@types/jest": "^29.5.2",
     "@types/sqlstring": "^2.3.0",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.1.3"
   }
 }

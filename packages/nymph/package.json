@@ -14,7 +14,7 @@
     "clean": "test -d dist && rm -r dist || true",
     "build": "tsc",
     "watch": "tsc --watch",
-    "prepare": "npm run clean && npm run build",
+    "prepublish": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch"
   },
@@ -39,12 +39,12 @@
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.2",
-    "@types/jest": "^29.5.1",
+    "@types/jest": "^29.5.2",
     "@types/locutus": "^0.0.6",
-    "@types/lodash": "^4.14.194",
+    "@types/lodash": "^4.14.195",
     "@types/n-readlines": "^1.0.3",
     "jest": "^29.5.0",
     "ts-jest": "^29.1.0",
-    "typescript": "^5.0.4"
+    "typescript": "^5.1.3"
   }
 }
