@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.35](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.34...v1.0.0-beta.35) (2023-06-14)
+
+### Bug Fixes
+
+- get class from nymph instead of using constructor ([fc8538e](https://github.com/sciactive/nymphjs/commit/fc8538ea24be79b845ab1e00f930542f34517bfb))
+
+### Features
+
+- add iteratable server call support using event streams ([fa7c1ec](https://github.com/sciactive/nymphjs/commit/fa7c1ec869e1fb52db20c8245e98a681f73dbf83))
+
 # [1.0.0-beta.34](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.33...v1.0.0-beta.34) (2023-05-13)
 
 ### Bug Fixes

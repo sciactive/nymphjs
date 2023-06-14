@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/driver-sqlite3",
-  "version": "1.0.0-beta.34",
+  "version": "1.0.0-beta.35",
   "description": "NymphJS - SQLite3 DB Driver",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -31,8 +31,8 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.34",
-    "@nymphjs/nymph": "^1.0.0-beta.34",
+    "@nymphjs/guid": "^1.0.0-beta.35",
+    "@nymphjs/nymph": "^1.0.0-beta.35",
     "better-sqlite3": "^8.4.0"
   },
   "devDependencies": {
