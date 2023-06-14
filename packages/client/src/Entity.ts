@@ -320,6 +320,19 @@ export default class Entity<T extends EntityData = EntityData>
     return data.return;
   }
 
+  public static async serverCallStaticIterator(
+    method: string,
+    params: Iterable<any>
+  ) {
+    return await this.nymph.serverCallStaticIterator(
+      this.class,
+      method,
+      // Turn the params into a real array, in case an arguments object was
+      // passed.
+      Array.prototype.slice.call(params)
+    );
+  }
+
   public toJSON() {
     if (this.$isASleepingReference) {
       throw new EntityIsSleepingReferenceError(sleepErr);

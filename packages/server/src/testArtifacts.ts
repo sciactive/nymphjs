@@ -39,7 +39,13 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     '$throwHttpError',
     '$throwHttpErrorWithDescription',
   ];
-  public static clientEnabledStaticMethods = ['testStatic', 'throwErrorStatic'];
+  public static clientEnabledStaticMethods = [
+    'testStatic',
+    'testStaticIterable',
+    'testStaticIterableAbort',
+    'throwErrorStatic',
+    'throwErrorStaticIterable',
+  ];
   protected $protectedTags = ['employee'];
   protected $allowlistTags? = ['boss', 'bigcheese'];
   protected $allowlistData? = [
@@ -117,8 +123,31 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     return value * 2;
   }
 
+  public static *testStaticIterable(value: number) {
+    yield value + 1;
+    yield value + 2;
+    yield value + 3;
+  }
+
+  public static *testStaticIterableAbort(): Iterator<number, void, boolean> {
+    let aborted = yield 1;
+
+    if (!aborted) {
+      throw new Error(
+        "testStaticIterableAbort wasn't aborted after the first iteration."
+      );
+    }
+  }
+
   public static throwErrorStatic() {
     throw new BadFunctionCallError('This function only throws errors.');
+  }
+
+  public static *throwErrorStaticIterable() {
+    yield 1;
+    throw new BadFunctionCallError(
+      'This function throws errors after the first iteration.'
+    );
   }
 
   public $throwError() {
@@ -193,8 +222,20 @@ export class Employee extends Entity<EmployeeData> {
     return this.serverCallStatic('testStatic', [value]);
   }
 
+  static testStaticIterable(value: number) {
+    return this.serverCallStaticIterator('testStaticIterable', [value]);
+  }
+
+  static testStaticIterableAbort() {
+    return this.serverCallStaticIterator('testStaticIterableAbort', []);
+  }
+
   static throwErrorStatic() {
     return this.serverCallStatic('throwErrorStatic', []);
+  }
+
+  static throwErrorStaticIterable() {
+    return this.serverCallStaticIterator('throwErrorStaticIterable', []);
   }
 
   static inaccessibleMethod() {

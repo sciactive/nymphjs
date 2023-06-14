@@ -507,6 +507,25 @@ describe('Nymph REST Server and Client', () => {
     expect(error.error.name).toEqual('BadFunctionCallError');
   });
 
+  it('handle server side static iterator error', async () => {
+    let error: any = { status: 0, error: { name: '' } };
+    const data = await Employee.throwErrorStaticIterable();
+
+    let count = 0;
+    for await (let value of data) {
+      count++;
+      if (value instanceof Error) {
+        error = value;
+      } else {
+        expect(value).toEqual(count);
+      }
+    }
+
+    expect(count).toEqual(2);
+    expect(error.status).toEqual(500);
+    expect(error.error.name).toEqual('BadFunctionCallError');
+  });
+
   it('handle server side error', async () => {
     const jane = await createJane();
 
@@ -551,6 +570,28 @@ describe('Nymph REST Server and Client', () => {
   it('call a server side static method', async () => {
     const data = await Employee.testStatic(5);
     expect(data).toEqual(10);
+  });
+
+  it('call a server side static iterator method', async () => {
+    const data = await Employee.testStaticIterable(5);
+
+    let count = 0;
+    for await (let value of data) {
+      count++;
+      expect(value).toEqual(5 + count);
+    }
+
+    expect(count).toEqual(3);
+  });
+
+  it('aborts a server side static iterator method', async () => {
+    const data = await Employee.testStaticIterableAbort();
+    data.abortController.abort();
+
+    // Wait 1 second to ensure server receives abort signal.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    expect(true).toBeTruthy();
   });
 
   it('call a stateless server side method', async () => {

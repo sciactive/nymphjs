@@ -7,6 +7,7 @@ import type {
   ServerCallStaticResponse,
 } from './Entity.types';
 import EntityWeakCache from './EntityWeakCache';
+import type { AbortableAsyncIterator } from './HttpRequester';
 import HttpRequester from './HttpRequester';
 import type {
   EventType,
@@ -519,6 +520,43 @@ export default class Nymph {
     });
 
     return this.initEntitiesFromData(data);
+  }
+
+  public async serverCallStaticIterator(
+    className: string,
+    method: string,
+    params: any[]
+  ): Promise<AbortableAsyncIterator<ServerCallStaticResponse>> {
+    const iterable = await requester.POST_ITERATOR({
+      url: this.restUrl,
+      dataType: 'json',
+      data: {
+        action: 'method',
+        data: {
+          class: className,
+          static: true,
+          method: method,
+          iterator: true,
+          params: entitiesToReferences(entityConstructorsToClassNames(params)),
+        },
+      },
+    });
+
+    const that = this;
+    const iterator: AbortableAsyncIterator = {
+      abortController: iterable.abortController,
+      async *[Symbol.asyncIterator]() {
+        for await (let response of iterable) {
+          if (response instanceof Error) {
+            yield response;
+          } else {
+            yield that.initEntitiesFromData(response);
+          }
+        }
+      },
+    };
+
+    return iterator;
   }
 
   public on<T extends EventType>(

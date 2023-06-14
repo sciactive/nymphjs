@@ -375,18 +375,66 @@ export function createServer(
               httpError(response, 400);
               return;
             }
-            try {
-              const result = method.call(EntityClass, ...params);
-              let ret = result;
-              if (result instanceof Promise) {
-                ret = await result;
+            if (data.iterator) {
+              // Ping every 15 seconds to keep connection alive.
+              const interval = setInterval(() => {
+                if (response.headersSent) {
+                  response.write('event: ping\n');
+                  response.write(`data: ${new Date().toISOString()}\n\n`);
+                }
+              }, 15000);
+
+              try {
+                response.set({
+                  'Cache-Control': 'no-cache',
+                  'Content-Type': 'text/event-stream',
+                  Connection: 'keep-alive',
+                });
+                response.flushHeaders();
+
+                const result:
+                  | Iterator<any, any, boolean>
+                  | AsyncIterator<any, any, boolean> = method.call(
+                  EntityClass,
+                  ...params
+                );
+                let sequence = result;
+                if (result instanceof Promise) {
+                  sequence = await result;
+                }
+
+                let { value, done } = await sequence.next(response.destroyed);
+                while (!done) {
+                  response.write('event: next\n');
+                  response.write(`data: ${JSON.stringify(value)}\n\n`);
+
+                  ({ value, done } = await sequence.next(response.destroyed));
+                }
+
+                clearInterval(interval);
+
+                response.write('event: finished\n');
+                response.write('data: \n\n');
+                response.end();
+              } catch (e: any) {
+                clearInterval(interval);
+                eventStreamError(response, 500, e);
+                return;
               }
-              response.status(200);
-              response.setHeader('Content-Type', 'application/json');
-              response.send({ return: ret });
-            } catch (e: any) {
-              httpError(response, 500, e);
-              return;
+            } else {
+              try {
+                const result = method.call(EntityClass, ...params);
+                let ret = result;
+                if (result instanceof Promise) {
+                  ret = await result;
+                }
+                response.status(200);
+                response.setHeader('Content-Type', 'application/json');
+                response.send({ return: ret });
+              } catch (e: any) {
+                httpError(response, 500, e);
+                return;
+              }
             }
           } else {
             let entity: EntityInterface;
@@ -840,26 +888,82 @@ export function createServer(
         : error.status in statusDescriptions &&
           statusDescriptions[error.status]) ||
       'Internal Server Error';
+
+    const errorResponse = error
+      ? {
+          textStatus: `${status} ${statusText}`,
+          statusText,
+          message: error.message,
+          error,
+          ...(process.env.NODE_ENV !== 'production'
+            ? { stack: error.stack }
+            : {}),
+        }
+      : {
+          textStatus: `${status} ${statusText}`,
+          statusText,
+          message: statusText,
+        };
+
     if (!res.headersSent) {
       res.status(status);
       res.setHeader('Content-Type', 'application/json');
     }
-    if (error) {
-      res.send({
-        textStatus: `${status} ${statusText}`,
-        statusText,
-        message: error.message,
-        error,
-        ...(process.env.NODE_ENV !== 'production'
-          ? { stack: error.stack }
-          : {}),
-      });
+
+    res.send(errorResponse);
+  }
+
+  /**
+   * End the event stream with an HTTP error response.
+   *
+   * @param res The server response object.
+   * @param defaultStatusCode The HTTP status code to use if none is given in the error object.
+   * @param error An optional error object to report.
+   */
+  function eventStreamError(
+    res: NymphResponse,
+    defaultStatusCode: number,
+    error?: Error & { status?: number; statusText?: string }
+  ) {
+    const status = error?.status || defaultStatusCode;
+    const statusText =
+      error?.statusText ||
+      (error?.status == null
+        ? statusDescriptions[defaultStatusCode]
+        : error.status in statusDescriptions &&
+          statusDescriptions[error.status]) ||
+      'Internal Server Error';
+
+    const errorResponse = error
+      ? {
+          status,
+          textStatus: `${status} ${statusText}`,
+          statusText,
+          message: error.message,
+          error,
+          ...(process.env.NODE_ENV !== 'production'
+            ? { stack: error.stack }
+            : {}),
+        }
+      : {
+          status,
+          textStatus: `${status} ${statusText}`,
+          statusText,
+          message: statusText,
+        };
+
+    if (!res.headersSent) {
+      res.status(status);
+      res.setHeader('Content-Type', 'application/json');
+
+      res.send(errorResponse);
     } else {
-      res.send({
-        textStatus: `${status} ${statusText}`,
-        statusText,
-        message: statusText,
-      });
+      res.write('event: error\n');
+      res.write(`data: ${JSON.stringify(errorResponse)}\n\n`);
+
+      res.write('event: finished\n');
+      res.write('data: \n\n');
+      res.end();
     }
   }
 

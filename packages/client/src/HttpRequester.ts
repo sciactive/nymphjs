@@ -1,3 +1,8 @@
+import {
+  fetchEventSource,
+  EventStreamContentType,
+} from 'fetch-event-source-hperrin';
+
 export type HttpRequesterEventType = 'request' | 'response';
 export type HttpRequesterRequestCallback = (
   requester: HttpRequester,
@@ -9,17 +14,28 @@ export type HttpRequesterResponseCallback = (
   response: Response,
   text: string
 ) => void;
+export type HttpRequesterIteratorCallback = (
+  requester: HttpRequester,
+  url: string,
+  headers: Record<string, string>
+) => void;
 export type HttpRequesterRequestOptions = {
   url: string;
   data: { [k: string]: any };
   dataType: string;
 };
 
+export interface AbortableAsyncIterator<T extends any = any>
+  extends AsyncIterable<T> {
+  abortController: AbortController;
+}
+
 export default class HttpRequester {
   private fetch: WindowOrWorkerGlobalScope['fetch'];
   private xsrfToken: string | null = null;
   private requestCallbacks: HttpRequesterRequestCallback[] = [];
   private responseCallbacks: HttpRequesterResponseCallback[] = [];
+  private iteratorCallbacks: HttpRequesterIteratorCallback[] = [];
 
   static makeUrl(url: string, data: { [k: string]: any }) {
     if (!data) {
@@ -46,12 +62,16 @@ export default class HttpRequester {
       ? HttpRequesterRequestCallback
       : T extends 'response'
       ? HttpRequesterResponseCallback
+      : T extends 'iterator'
+      ? HttpRequesterIteratorCallback
       : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
       : T extends 'response'
       ? 'responseCallbacks'
+      : T extends 'iterator'
+      ? 'iteratorCallbacks'
       : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
@@ -67,12 +87,16 @@ export default class HttpRequester {
       ? HttpRequesterRequestCallback
       : T extends 'response'
       ? HttpRequesterResponseCallback
+      : T extends 'iterator'
+      ? HttpRequesterIteratorCallback
       : never
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
       : T extends 'response'
       ? 'responseCallbacks'
+      : T extends 'iterator'
+      ? 'iteratorCallbacks'
       : never;
     if (!(prop in this)) {
       return false;
@@ -96,6 +120,10 @@ export default class HttpRequester {
 
   async POST(opt: HttpRequesterRequestOptions) {
     return await this._httpRequest('POST', opt);
+  }
+
+  async POST_ITERATOR(opt: HttpRequesterRequestOptions) {
+    return await this._iteratorRequest('POST', opt);
   }
 
   async PUT(opt: HttpRequesterRequestOptions) {
@@ -199,12 +227,233 @@ export default class HttpRequester {
       return text;
     }
   }
+
+  async _iteratorRequest(
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
+    opt: HttpRequesterRequestOptions
+  ): Promise<AbortableAsyncIterator> {
+    const dataString = JSON.stringify(opt.data);
+    let url = opt.url;
+    if (method === 'GET') {
+      // TODO: what should this size be?
+      // && dataString.length < 1) {
+      url = HttpRequester.makeUrl(opt.url, opt.data);
+    }
+    const hasBody = method !== 'GET' && opt.data;
+    const headers: Record<string, string> = {};
+
+    if (hasBody) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    for (let i = 0; i < this.iteratorCallbacks.length; i++) {
+      this.iteratorCallbacks[i] &&
+        this.iteratorCallbacks[i](this, url, headers);
+    }
+
+    if (this.xsrfToken !== null) {
+      headers['X-Xsrf-Token'] = this.xsrfToken;
+    }
+
+    const responses: any[] = [];
+    let nextResponseResolve: (value: void) => void;
+    let nextResponseReadyPromise = new Promise<void>((res) => {
+      nextResponseResolve = res;
+    });
+    let responsesDone = false;
+    let serverResponse: Response;
+
+    const ctrl = new AbortController();
+
+    fetchEventSource(url, {
+      openWhenHidden: true,
+      fetch: this.fetch,
+
+      method,
+      headers,
+      credentials: 'include',
+      body: hasBody ? dataString : undefined,
+      signal: ctrl.signal,
+
+      async onopen(response) {
+        serverResponse = response;
+        if (response.ok) {
+          if (response.headers.get('content-type') === EventStreamContentType) {
+            throw new InvalidResponseError(
+              'Server response is not an event stream.'
+            );
+          }
+
+          // Response is ok, wait for messages.
+          return;
+        }
+
+        let text: string = '';
+        try {
+          text = await response.text();
+        } catch (e: any) {
+          // Ignore error here.
+        }
+
+        let errObj;
+        try {
+          errObj = JSON.parse(text);
+        } catch (e: any) {
+          if (!(e instanceof SyntaxError)) {
+            throw e;
+          }
+        }
+
+        if (typeof errObj !== 'object') {
+          errObj = {
+            textStatus: response.statusText,
+          };
+        }
+        errObj.status = response.status;
+        throw response.status < 200
+          ? new InformationalError(response, errObj)
+          : response.status < 300
+          ? new SuccessError(response, errObj)
+          : response.status < 400
+          ? new RedirectError(response, errObj)
+          : response.status < 500
+          ? new ClientError(response, errObj)
+          : new ServerError(response, errObj);
+      },
+
+      onmessage(event) {
+        if (event.event === 'next') {
+          let text = event.data;
+
+          if (opt.dataType === 'json') {
+            if (!text.length) {
+              responses.push(
+                new InvalidResponseError('Server response was empty.')
+              );
+            } else {
+              try {
+                responses.push(JSON.parse(text));
+              } catch (e: any) {
+                if (!(e instanceof SyntaxError)) {
+                  responses.push(e);
+                } else {
+                  responses.push(
+                    new InvalidResponseError(
+                      'Server response was invalid: ' + JSON.stringify(text)
+                    )
+                  );
+                }
+              }
+            }
+          } else {
+            responses.push(text);
+          }
+        } else if (event.event === 'error') {
+          let text = event.data;
+
+          let errObj;
+          try {
+            errObj = JSON.parse(text);
+          } catch (e: any) {
+            if (!(e instanceof SyntaxError)) {
+              throw e;
+            }
+          }
+
+          if (typeof errObj !== 'object') {
+            errObj = {
+              status: 500,
+              textStatus: 'Iterator Error',
+            };
+          }
+          responses.push(
+            errObj.status < 200
+              ? new InformationalError(serverResponse, errObj)
+              : errObj.status < 300
+              ? new SuccessError(serverResponse, errObj)
+              : errObj.status < 400
+              ? new RedirectError(serverResponse, errObj)
+              : errObj.status < 500
+              ? new ClientError(serverResponse, errObj)
+              : new ServerError(serverResponse, errObj)
+          );
+        } else if (event.event === 'finished') {
+          responsesDone = true;
+        } else if (event.event === 'ping') {
+          // Ignore keep-alive pings.
+          return;
+        }
+
+        const resolve = nextResponseResolve;
+        if (!responsesDone) {
+          nextResponseReadyPromise = new Promise<void>((res) => {
+            nextResponseResolve = res;
+          });
+        }
+
+        // Resolve the promise to continue any waiting iterator.
+        resolve();
+      },
+
+      onclose() {
+        responses.push(
+          new ConnectionClosedUnexpectedlyError(
+            'The connection to the server was closed unexpectedly.'
+          )
+        );
+
+        responsesDone = true;
+        nextResponseResolve();
+      },
+
+      onerror(err) {
+        // Rethrow to stop the operation.
+        throw err;
+      },
+    }).catch((err) => {
+      responses.push(
+        new ConnectionError('The connection could not be established: ' + err)
+      );
+
+      responsesDone = true;
+      nextResponseResolve();
+    });
+
+    const iterator: AbortableAsyncIterator = {
+      abortController: ctrl,
+      async *[Symbol.asyncIterator]() {
+        do {
+          await nextResponseReadyPromise;
+
+          while (responses.length) {
+            yield responses.shift();
+          }
+        } while (!responsesDone);
+      },
+    };
+
+    return iterator;
+  }
 }
 
 export class InvalidResponseError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'InvalidResponseError';
+  }
+}
+
+export class ConnectionClosedUnexpectedlyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConnectionClosedUnexpectedlyError';
+  }
+}
+
+export class ConnectionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ConnectionError';
   }
 }
 
