@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.37](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.36...v1.0.0-beta.37) (2023-07-09)
+
+### Bug Fixes
+
+- correctly iterate through new arrays on updateArray pubsub method ([27d7cc8](https://github.com/sciactive/nymphjs/commit/27d7cc847d93300e3d76cf6fa528176c3d06ae67))
+
 # [1.0.0-beta.36](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.35...v1.0.0-beta.36) (2023-07-09)
 
 ### Bug Fixes
