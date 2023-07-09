@@ -262,7 +262,7 @@ export default class PubSub {
       return;
     }
 
-    this.connection.close(4200, 'Closure requested by application.');
+    this.connection.close(1000, 'Closure requested by application.');
   }
 
   private _waitForConnection(attempts = 1) {
@@ -448,7 +448,7 @@ export default class PubSub {
       }
     }
     if (
-      e.code !== 4200 &&
+      e.code !== 1000 &&
       (typeof navigator === 'undefined' || navigator.onLine)
     ) {
       if (this.connection) {
