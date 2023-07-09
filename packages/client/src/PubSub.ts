@@ -640,24 +640,19 @@ export default class PubSub {
         }
       }
       const remove: number[] = [];
-      Array.prototype.forEach.call(oldArr, (value, index) => {
-        if (
-          // This handles sparse arrays.
-          oldArr.hasOwnProperty(index)
-        ) {
-          const guid = value.guid;
-          if (guid != null) {
-            if (!idMap.hasOwnProperty(guid)) {
-              // It was deleted.
-              remove.push(index);
-            } else if (newArr[idMap[guid]].mdate !== value.mdate) {
-              // It was modified.
-              value.$init(newArr[idMap[guid]].toJSON());
-              delete idMap[guid];
-            } else {
-              // Item wasn't modified.
-              delete idMap[guid];
-            }
+      oldArr.forEach((value, index) => {
+        const guid = value.guid;
+        if (guid != null) {
+          if (!idMap.hasOwnProperty(guid)) {
+            // It was deleted.
+            remove.push(index);
+          } else if (newArr[idMap[guid]].mdate !== value.mdate) {
+            // It was modified.
+            value.$init(newArr[idMap[guid]].toJSON());
+            delete idMap[guid];
+          } else {
+            // Item wasn't modified.
+            delete idMap[guid];
           }
         }
       });
