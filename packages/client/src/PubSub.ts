@@ -640,23 +640,30 @@ export default class PubSub {
         }
       }
       const remove: number[] = [];
-      oldArr.forEach((_val, index) => {
-        const value = oldArr[index];
-        const guid = value.guid;
-        if (guid != null) {
-          if (!idMap.hasOwnProperty(guid)) {
-            // It was deleted.
-            remove.push(index);
-          } else if (newArr[idMap[guid]].mdate !== value.mdate) {
-            // It was modified.
-            value.$init(newArr[idMap[guid]].toJSON());
-            delete idMap[guid];
-          } else {
-            // Item wasn't modified.
-            delete idMap[guid];
+      for (let k in oldArr) {
+        if (
+          // This handles sparse arrays.
+          typeof k === 'number' &&
+          k <= 4294967294 &&
+          k !== -Infinity &&
+          oldArr.hasOwnProperty(k)
+        ) {
+          const guid = oldArr[k].guid;
+          if (guid != null) {
+            if (!idMap.hasOwnProperty(guid)) {
+              // It was deleted.
+              remove.push(k);
+            } else if (newArr[idMap[guid]].mdate !== oldArr[k].mdate) {
+              // It was modified.
+              oldArr[k].$init(newArr[idMap[guid]].toJSON());
+              delete idMap[guid];
+            } else {
+              // Item wasn't modified.
+              delete idMap[guid];
+            }
           }
         }
-      });
+      }
       // Now we must remove the deleted ones.
       remove.sort(function (a, b) {
         // Sort backwards so we can remove in reverse order. (Preserves
