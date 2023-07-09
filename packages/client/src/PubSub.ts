@@ -640,7 +640,8 @@ export default class PubSub {
         }
       }
       const remove: number[] = [];
-      oldArr.forEach((value, index) => {
+      oldArr.forEach((_val, index) => {
+        const value = oldArr[index];
         const guid = value.guid;
         if (guid != null) {
           if (!idMap.hasOwnProperty(guid)) {
