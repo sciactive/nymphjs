@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.36](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.35...v1.0.0-beta.36) (2023-07-09)
+
+### Bug Fixes
+
+- use code 1000 for closing pubsub connection ([cbd56af](https://github.com/sciactive/nymphjs/commit/cbd56af98d0775dee36025d909a82a0af0633d72))
+
 # [1.0.0-beta.35](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.34...v1.0.0-beta.35) (2023-06-14)
 
 ### Features
