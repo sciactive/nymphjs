@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/tilmeld-components",
-  "version": "1.0.0-beta.38",
+  "version": "1.0.0-beta.39",
   "description": "NymphJS - Tilmeld Front End Components",
   "type": "module",
   "main": "dist/index.cjs",
@@ -39,7 +39,7 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "@nymphjs/tilmeld-client": "^1.0.0-beta.38",
+    "@nymphjs/tilmeld-client": "^1.0.0-beta.39",
     "@smui/button": "^7.0.0-beta.8",
     "@smui/checkbox": "^7.0.0-beta.8",
     "@smui/circular-progress": "^7.0.0-beta.8",
