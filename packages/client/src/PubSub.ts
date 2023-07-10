@@ -619,71 +619,59 @@ export default class PubSub {
   }
 
   public updateArray(
-    oldArr: EntityInterface[],
+    current: EntityInterface[],
     update: PubSubUpdate<EntityInterface[]>
   ) {
     if (Array.isArray(update)) {
       const newArr = [...update];
 
-      if (oldArr.length === 0) {
+      if (current.length === 0) {
         // This will happen on the first update from a subscribe.
-        oldArr.splice(0, 0, ...newArr);
+        current.splice(0, 0, ...newArr);
         return;
       }
 
-      const idMap: { [k: string]: number } = {};
-      const Entity = this.nymph.getEntityClass('Entity');
+      const idMap: { [k: string]: EntityInterface } = {};
+      const newEntities: EntityInterface[] = [];
+      while (current.length) {
+        const first = current.shift();
+        if (!first) {
+          continue;
+        }
+        const guid = first.guid;
+        if (!guid) {
+          newEntities.push(first);
+          continue;
+        }
+        idMap[guid] = first;
+      }
+
       for (let i = 0; i < newArr.length; i++) {
         const entity = newArr[i];
-        if (entity instanceof Entity && entity.guid != null) {
-          idMap[entity.guid] = i;
+        const guid = entity.guid;
+        if (guid == null) {
+          continue;
+        }
+
+        if (!idMap.hasOwnProperty(guid)) {
+          // It was added.
+          current.push(entity);
+        } else if (idMap[guid].mdate !== entity.mdate) {
+          // It was modified.
+          idMap[guid].$init(entity.toJSON());
+          current.push(idMap[guid]);
+        } else {
+          // Item wasn't modified.
+          current.push(idMap[guid]);
         }
       }
-      const remove: number[] = [];
-      for (let k in oldArr) {
-        if (
-          // This handles sparse arrays.
-          typeof k === 'number' &&
-          k <= 4294967294 &&
-          k !== -Infinity &&
-          oldArr.hasOwnProperty(k)
-        ) {
-          const guid = oldArr[k].guid;
-          if (guid != null) {
-            if (!idMap.hasOwnProperty(guid)) {
-              // It was deleted.
-              remove.push(k);
-            } else if (newArr[idMap[guid]].mdate !== oldArr[k].mdate) {
-              // It was modified.
-              oldArr[k].$init(newArr[idMap[guid]].toJSON());
-              delete idMap[guid];
-            } else {
-              // Item wasn't modified.
-              delete idMap[guid];
-            }
-          }
-        }
-      }
-      // Now we must remove the deleted ones.
-      remove.sort(function (a, b) {
-        // Sort backwards so we can remove in reverse order. (Preserves
-        // indexes.)
-        if (a > b) return -1;
-        if (a < b) return 1;
-        return 0;
-      });
-      for (let n = 0; n < remove.length; n++) {
-        oldArr.splice(remove[n], 1);
-      }
-      // And add the new ones.
-      for (let value of Object.values(idMap)) {
-        oldArr.splice(oldArr.length, 0, newArr[value]);
-      }
+
+      current.splice(current.length, 0, ...newEntities);
     } else if (update != null && update.hasOwnProperty('query')) {
       if ('removed' in update) {
-        for (let i = 0; i < oldArr.length; i++) {
-          if (oldArr[i] != null && oldArr[i].guid === update.removed) {
-            oldArr.splice(i, 1);
+        for (let i = 0; i < current.length; i++) {
+          if (current[i] != null && current[i].guid === update.removed) {
+            current.splice(i, 1);
             return;
           }
         }
@@ -693,9 +681,9 @@ export default class PubSub {
       let entity: EntityInterface | null = null;
       if ('added' in update) {
         // Check for it in the array already.
-        for (let i = 0; i < oldArr.length; i++) {
-          if (oldArr[i] != null && oldArr[i].guid === update.added) {
-            entity = oldArr.splice(i, 1)[0].$init(update.data);
+        for (let i = 0; i < current.length; i++) {
+          if (current[i] != null && current[i].guid === update.added) {
+            entity = current.splice(i, 1)[0].$init(update.data);
           }
         }
         if (entity == null) {
@@ -705,9 +693,9 @@ export default class PubSub {
       }
       if ('updated' in update) {
         // Extract it from the array.
-        for (let i = 0; i < oldArr.length; i++) {
-          if (oldArr[i] != null && oldArr[i].guid === update.updated) {
-            entity = oldArr.splice(i, 1)[0].$init(update.data);
+        for (let i = 0; i < current.length; i++) {
+          if (current[i] != null && current[i].guid === update.updated) {
+            entity = current.splice(i, 1)[0].$init(update.data);
           }
         }
       }
@@ -724,20 +712,20 @@ export default class PubSub {
         if (reverse) {
           for (
             i = 0;
-            ((oldArr[i] ?? {})[sort] ?? 0) >= (entity[sort] ?? 0) &&
-            i < oldArr.length;
+            ((current[i] ?? {})[sort] ?? 0) >= (entity[sort] ?? 0) &&
+            i < current.length;
             i++
           );
         } else {
           for (
             i = 0;
-            ((oldArr[i] ?? {})[sort] ?? 0) < (entity[sort] ?? 0) &&
-            i < oldArr.length;
+            ((current[i] ?? {})[sort] ?? 0) < (entity[sort] ?? 0) &&
+            i < current.length;
             i++
           );
         }
 
-        oldArr.splice(i, 0, entity);
+        current.splice(i, 0, entity);
       }
     }
   }
