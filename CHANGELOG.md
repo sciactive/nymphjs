@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.40](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.39...v1.0.0-beta.40) (2023-07-10)
+
+### Bug Fixes
+
+- rewrite updateArray function to fix it ([22185c7](https://github.com/sciactive/nymphjs/commit/22185c7627f6dc616f9d3187ee8c9a383ca71441))
+
 # [1.0.0-beta.39](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.38...v1.0.0-beta.39) (2023-07-09)
 
 ### Bug Fixes
