@@ -228,10 +228,8 @@ export type EntityConstructor = (new (...args: any[]) => EntityInterface) & {
   factory(guid?: string): Promise<EntityInterface>;
   /**
    * Create a new entity instance.
-   *
-   * @param guid An optional GUID to retrieve.
    */
-  factorySync(guid?: string): EntityInterface;
+  factorySync(): EntityInterface;
   /**
    * Create a new sleeping reference instance.
    *

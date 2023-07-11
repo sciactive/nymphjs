@@ -376,10 +376,13 @@ export interface TilmeldInterface {
   response: any;
   init(nymph: Nymph): void;
   clone(): TilmeldInterface;
-  gatekeeper(ability?: string): boolean;
-  authenticate(): void;
+  gatekeeper(ability?: string): Promise<boolean>;
+  authenticate(): Promise<boolean>;
   clearSession(): void;
   extractToken(token: string): Promise<any>;
   fillSession(user: any): void;
-  checkClientUIDPermissions(name: string, type?: TilmeldAccessLevels): boolean;
+  checkClientUIDPermissions(
+    name: string,
+    type?: TilmeldAccessLevels
+  ): Promise<boolean>;
 }

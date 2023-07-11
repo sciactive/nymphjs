@@ -1,9 +1,3 @@
-import {
-  Worker,
-  MessageChannel,
-  receiveMessageOnPort,
-} from 'node:worker_threads';
-import { resolve } from 'node:path';
 import { Pool, PoolOptions, PoolConnection } from 'mysql2';
 import mysql from 'mysql2';
 import SqlString from 'sqlstring';
@@ -45,8 +39,6 @@ export default class MySQLDriver extends NymphDriver {
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: Pool;
   protected transaction: MySQLDriverTransaction | null = null;
-  // @ts-ignore: this is assigned in connect(), which is called by the constructor.
-  protected worker: Worker;
 
   static escape(input: string) {
     return SqlString.escapeId(input, true);
@@ -59,8 +51,7 @@ export default class MySQLDriver extends NymphDriver {
   constructor(
     config: Partial<MySQLDriverConfig>,
     link?: Pool,
-    transaction?: MySQLDriverTransaction,
-    worker?: Worker
+    transaction?: MySQLDriverTransaction
   ) {
     super();
     this.config = { ...defaults, ...config };
@@ -81,9 +72,6 @@ export default class MySQLDriver extends NymphDriver {
     if (transaction != null) {
       this.transaction = transaction;
     }
-    if (worker != null) {
-      this.worker = worker;
-    }
     if (link == null) {
       this.connect();
     }
@@ -98,8 +86,7 @@ export default class MySQLDriver extends NymphDriver {
     return new MySQLDriver(
       this.config,
       this.link,
-      this.transaction ?? undefined,
-      this.worker ?? undefined
+      this.transaction ?? undefined
     );
   }
 
@@ -128,7 +115,6 @@ export default class MySQLDriver extends NymphDriver {
             )
         );
         connection.release();
-        this.worker.postMessage('halt');
       }
     } catch (e: any) {
       this.connected = false;
@@ -141,17 +127,6 @@ export default class MySQLDriver extends NymphDriver {
           ...this.mysqlConfig,
           charset: 'utf8mb4_bin',
         });
-        const worker = new Worker(resolve(__dirname, 'runMysqlSync.js'), {
-          workerData: this.mysqlConfig,
-        });
-        worker.on('message', (message) => {
-          if (message === 'halted') {
-            worker.terminate();
-          } else if (typeof message === 'object' && 'error' in message) {
-            console.error('Worker Thread Error', message.error);
-          }
-        });
-        this.worker = worker;
         this.connected = true;
       } catch (e: any) {
         if (
@@ -179,7 +154,6 @@ export default class MySQLDriver extends NymphDriver {
   public async disconnect() {
     if (this.connected) {
       await new Promise((resolve) => this.link.end(() => resolve(0)));
-      this.worker.postMessage('halt');
       this.connected = false;
     }
     return this.connected;
@@ -204,8 +178,8 @@ export default class MySQLDriver extends NymphDriver {
    * @param etype The entity type to create a table for. If this is blank, the default tables are created.
    * @returns True on success, false on failure.
    */
-  private createTables(etype: string | null = null) {
-    this.queryRunSync('SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";');
+  private async createTables(etype: string | null = null) {
+    await this.queryRun('SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";');
     let foreignKeyDataTableGuid = '';
     let foreignKeyDataComparisonsTableGuid = '';
     let foreignKeyReferencesTableGuid = '';
@@ -222,7 +196,7 @@ export default class MySQLDriver extends NymphDriver {
     }
     if (etype != null) {
       // Create the entity table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
           `${this.prefix}entities_${etype}`
         )} (
@@ -238,7 +212,7 @@ export default class MySQLDriver extends NymphDriver {
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
       // Create the data table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} (
@@ -252,7 +226,7 @@ export default class MySQLDriver extends NymphDriver {
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
       // Create the data comparisons table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
         )} (
@@ -267,7 +241,7 @@ export default class MySQLDriver extends NymphDriver {
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
       );
       // Create the references table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
           `${this.prefix}references_${etype}`
         )} (
@@ -281,7 +255,7 @@ export default class MySQLDriver extends NymphDriver {
       );
     } else {
       // Create the UID table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
           `${this.prefix}uids`
         )} (
@@ -323,10 +297,10 @@ export default class MySQLDriver extends NymphDriver {
       return await runQuery();
     } catch (e: any) {
       const errorCode = e?.errno;
-      if (errorCode === 1146 && this.createTables()) {
+      if (errorCode === 1146 && (await this.createTables())) {
         // If the tables don't exist yet, create them.
         for (let etype of etypes) {
-          this.createTables(etype);
+          await this.createTables(etype);
         }
         try {
           return await runQuery();
@@ -346,50 +320,6 @@ export default class MySQLDriver extends NymphDriver {
         }
         try {
           return await runQuery();
-        } catch (e2: any) {
-          throw new QueryFailedError(
-            'Query failed: ' + e2?.errno + ' - ' + e2?.message,
-            query
-          );
-        }
-      } else {
-        throw e;
-      }
-    }
-  }
-
-  private querySync<T extends () => any>(
-    runQuery: T,
-    query: string,
-    etypes: string[] = []
-  ): ReturnType<T> {
-    try {
-      return runQuery();
-    } catch (e: any) {
-      const errorCode = e?.errno;
-      if (errorCode === 1146 && this.createTables()) {
-        // If the tables don't exist yet, create them.
-        for (let etype of etypes) {
-          this.createTables(etype);
-        }
-        try {
-          return runQuery();
-        } catch (e2: any) {
-          throw new QueryFailedError(
-            'Query failed: ' + e2?.errno + ' - ' + e2?.message,
-            query
-          );
-        }
-      } else if (errorCode === 2006) {
-        // If the MySQL server disconnected, reconnect to it.
-        if (!this.connect()) {
-          throw new QueryFailedError(
-            'Query failed: ' + e?.errno + ' - ' + e?.message,
-            query
-          );
-        }
-        try {
-          return runQuery();
         } catch (e2: any) {
           throw new QueryFailedError(
             'Query failed: ' + e2?.errno + ' - ' + e2?.message,
@@ -434,43 +364,6 @@ export default class MySQLDriver extends NymphDriver {
             reject(e);
           }
         });
-        return results;
-      },
-      `${query} -- ${JSON.stringify(params)}`,
-      etypes
-    );
-  }
-
-  private queryIterSync(
-    query: string,
-    {
-      etypes = [],
-      params = {},
-    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
-  ) {
-    const { query: newQuery, params: newParams } = this.translateQuery(
-      query,
-      params
-    );
-    return this.querySync(
-      () => {
-        const channel = new MessageChannel();
-
-        this.worker.postMessage(
-          { query: newQuery, params: newParams, port: channel.port2 },
-          [channel.port2]
-        );
-
-        let output = undefined;
-        while (!output) {
-          output = receiveMessageOnPort(channel.port1);
-        }
-
-        if (output.message.error) {
-          throw new Error(output.message.error);
-        }
-
-        const { results } = output.message;
         return results;
       },
       `${query} -- ${JSON.stringify(params)}`,
@@ -549,43 +442,6 @@ export default class MySQLDriver extends NymphDriver {
             reject(e);
           }
         });
-        return { changes: results.changedRows ?? 0 };
-      },
-      `${query} -- ${JSON.stringify(params)}`,
-      etypes
-    );
-  }
-
-  private queryRunSync(
-    query: string,
-    {
-      etypes = [],
-      params = {},
-    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
-  ) {
-    const { query: newQuery, params: newParams } = this.translateQuery(
-      query,
-      params
-    );
-    return this.querySync(
-      () => {
-        const channel = new MessageChannel();
-
-        this.worker.postMessage(
-          { query: newQuery, params: newParams, port: channel.port2 },
-          [channel.port2]
-        );
-
-        let output = undefined;
-        while (!output) {
-          output = receiveMessageOnPort(channel.port1);
-        }
-
-        if (output.message.error) {
-          throw new Error(output.message.error);
-        }
-
-        const { results } = output.message;
         return { changes: results.changedRows ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
@@ -1849,26 +1705,6 @@ export default class MySQLDriver extends NymphDriver {
     };
   }
 
-  protected performQuerySync(
-    options: Options,
-    formattedSelectors: FormattedSelector[],
-    etype: string
-  ): {
-    result: any;
-  } {
-    const { query, params, etypes } = this.makeEntityQuery(
-      options,
-      formattedSelectors,
-      etype
-    );
-    const result = (this.queryIterSync(query, { etypes, params }) || [])[
-      Symbol.iterator
-    ]();
-    return {
-      result,
-    };
-  }
-
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
     ...selectors: Selector[]
@@ -1915,57 +1751,6 @@ export default class MySQLDriver extends NymphDriver {
     );
 
     const result = await resultPromise;
-    const value = process();
-    if (value instanceof Error) {
-      throw value;
-    }
-    return value;
-  }
-
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'count' },
-    ...selectors: Selector[]
-  ): number;
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'guid' },
-    ...selectors: Selector[]
-  ): string[];
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options?: Options<T>,
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[];
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> = {},
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[] | string[] | number {
-    const { result, process } = this.getEntitesRowLike<T>(
-      // @ts-ignore: options is correct here.
-      options,
-      selectors,
-      (options, formattedSelectors, etype) =>
-        this.performQuerySync(options, formattedSelectors, etype),
-      () => {
-        const next: any = result.next();
-        return next.done ? null : next.value;
-      },
-      () => undefined,
-      (row) => Number(row.count),
-      (row) => row.guid,
-      (row) => ({
-        tags: row.tags.length > 2 ? row.tags.slice(1, -1).split(',') : [],
-        cdate: isNaN(Number(row.cdate)) ? null : Number(row.cdate),
-        mdate: isNaN(Number(row.mdate)) ? null : Number(row.mdate),
-      }),
-      (row) => ({
-        name: row.name,
-        svalue:
-          row.value === 'N'
-            ? JSON.stringify(row.number)
-            : row.value === 'S'
-            ? JSON.stringify(row.string)
-            : row.value,
-      })
-    );
     const value = process();
     if (value instanceof Error) {
       throw value;

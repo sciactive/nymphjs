@@ -186,24 +186,27 @@ describe('Entity', () => {
   it('references works', async () => {
     await testEntity.$refresh();
 
-    expect(testEntity.reference?.guid).toEqual(entityReferenceGuid);
-    expect(testEntity.refArray?.[0].guid).toEqual(entityReferenceGuid);
+    expect((await testEntity.reference)?.guid).toEqual(entityReferenceGuid);
+    expect((await testEntity.refArray)?.[0].guid).toEqual(entityReferenceGuid);
+    await testEntity.refObject?.entity.$wake();
     expect(testEntity.refObject?.entity.guid).toEqual(entityReferenceGuid);
 
     const entity = await TestModel.factory(testEntity.guid as string);
 
-    expect(entity.reference?.guid).toEqual(entityReferenceGuid);
-    expect(entity.refArray?.[0].guid).toEqual(entityReferenceGuid);
+    expect((await entity.reference)?.guid).toEqual(entityReferenceGuid);
+    expect((await entity.refArray)?.[0].guid).toEqual(entityReferenceGuid);
+    entity.refObject?.entity.$wake();
     expect(entity.refObject?.entity.guid).toEqual(entityReferenceGuid);
   });
 
-  it('sleeping references wake up', () => {
+  it('sleeping references wake up', async () => {
     const entity = TestModel.factoryReference([
       'nymph_entity_reference',
       testEntity.guid as string,
       'TestModel',
     ]) as TestModelClass & TestModelData;
 
+    await entity.$wake();
     expect(entity.guid).toEqual(testEntity.guid);
     expect(entity.cdate).toEqual(testEntity.cdate);
     expect(entity.mdate).toEqual(testEntity.mdate);
@@ -213,8 +216,9 @@ describe('Entity', () => {
     expect(entity.string).toEqual('test');
     expect(entity.array).toEqual(['full', 'of', 'values', 500]);
     expect(entity.number).toEqual(30);
-    expect(entity.reference?.guid).toEqual(entityReferenceGuid);
-    expect(entity.refArray?.[0].guid).toEqual(entityReferenceGuid);
+    expect((await entity.reference)?.guid).toEqual(entityReferenceGuid);
+    expect((await entity.refArray)?.[0].guid).toEqual(entityReferenceGuid);
+    entity.refObject?.entity.$wake();
     expect(entity.refObject?.entity.guid).toEqual(entityReferenceGuid);
   });
 
@@ -288,8 +292,9 @@ describe('Entity', () => {
     expect(testEntity.string).toEqual('good');
     expect(testEntity.array).toEqual(['imanarray']);
     expect(testEntity.number).toEqual(30);
-    expect(testEntity.reference?.guid).toEqual(entityReferenceGuid);
-    expect(testEntity.refArray?.[0].guid).toEqual(entityReferenceGuid);
+    expect((await testEntity.reference)?.guid).toEqual(entityReferenceGuid);
+    expect((await testEntity.refArray)?.[0].guid).toEqual(entityReferenceGuid);
+    testEntity.refObject?.entity.$wake();
     expect(testEntity.refObject?.entity.guid).toEqual(entityReferenceGuid);
 
     expect(await testEntity.$refresh()).toEqual(true);
@@ -311,8 +316,8 @@ describe('Entity', () => {
     expect(testEntity.$hasTag('notag')).toEqual(false);
     expect(testEntity.$hasTag('test')).toEqual(true);
     expect(testEntity.$hasTag('newtag')).toEqual(true);
-    expect(testEntity.reference?.guid).toEqual(entityReferenceGuid);
-    expect(testEntity.refArray?.[0].guid).toEqual(entityReferenceGuid);
+    expect((await testEntity.reference)?.guid).toEqual(entityReferenceGuid);
+    expect((await testEntity.refArray)?.[0].guid).toEqual(entityReferenceGuid);
 
     expect(await testEntity.$refresh()).toEqual(true);
 

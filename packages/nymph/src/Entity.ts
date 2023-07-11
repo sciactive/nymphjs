@@ -11,7 +11,11 @@ import {
   EntityReference,
   SerializedEntityData,
 } from './Entity.types';
-import { EntityConflictError, InvalidParametersError } from './errors';
+import {
+  EntityConflictError,
+  EntityIsSleepingReferenceError,
+  InvalidParametersError,
+} from './errors';
 import {
   entitiesToReferences,
   referencesToEntities,
@@ -222,20 +226,19 @@ export default class Entity<T extends EntityData = EntityData>
   private $originalAcValues: ACProperties | null = null;
 
   /**
-   * Load an entity.
-   * @param guid The ID of the entity to load, undefined for a new entity.
+   * Initialize an entity.
    */
-  public constructor(guid?: string) {
+  public constructor() {
     this.$nymph = (this.constructor as EntityConstructor).nymph;
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
-        this.$referenceWake();
+        this.$check();
 
         return name in data || name in this.$sdata;
       },
 
       get: (data: EntityData, name: string) => {
-        this.$referenceWake();
+        this.$check();
 
         if (this.$sdata.hasOwnProperty(name)) {
           data[name] = referencesToEntities(
@@ -246,13 +249,51 @@ export default class Entity<T extends EntityData = EntityData>
           delete this.$sdata[name];
         }
         if (data.hasOwnProperty(name)) {
+          const value = data[name];
+          if (value instanceof Entity) {
+            if (value.$asleep()) {
+              return new Promise(async (resolve, reject) => {
+                try {
+                  await value.$wake();
+                  resolve(value);
+                } catch (e: any) {
+                  reject(e);
+                }
+              });
+            } else {
+              return Promise.resolve(value);
+            }
+          } else if (
+            Array.isArray(value) &&
+            value.find((value: any) => value instanceof Entity)
+          ) {
+            return Promise.all(
+              value.map((value: any) => {
+                if (value instanceof Entity) {
+                  if (value.$asleep()) {
+                    return new Promise(async (resolve, reject) => {
+                      try {
+                        await value.$wake();
+                        resolve(value);
+                      } catch (e: any) {
+                        reject(e);
+                      }
+                    });
+                  } else {
+                    return Promise.resolve(value);
+                  }
+                }
+                return Promise.resolve(value);
+              })
+            );
+          }
           return data[name];
         }
         return undefined;
       },
 
       set: (data: EntityData, name: string, value: any) => {
-        this.$referenceWake();
+        this.$check();
 
         if (this.$sdata.hasOwnProperty(name)) {
           delete this.$sdata[name];
@@ -262,7 +303,7 @@ export default class Entity<T extends EntityData = EntityData>
       },
 
       deleteProperty: (data: EntityData, name: string) => {
-        this.$referenceWake();
+        this.$check();
 
         if (this.$sdata.hasOwnProperty(name)) {
           return delete this.$sdata[name];
@@ -278,7 +319,7 @@ export default class Entity<T extends EntityData = EntityData>
         name: string,
         descriptor: PropertyDescriptor
       ) => {
-        this.$referenceWake();
+        this.$check();
 
         if (this.$sdata.hasOwnProperty(name)) {
           delete this.$sdata[name];
@@ -288,7 +329,7 @@ export default class Entity<T extends EntityData = EntityData>
       },
 
       getOwnPropertyDescriptor: (data: EntityData, name: string) => {
-        this.$referenceWake();
+        this.$check();
 
         if (this.$sdata.hasOwnProperty(name)) {
           data[name] = referencesToEntities(
@@ -302,7 +343,7 @@ export default class Entity<T extends EntityData = EntityData>
       },
 
       ownKeys: (data: EntityData) => {
-        this.$referenceWake();
+        this.$check();
 
         return Object.getOwnPropertyNames(data).concat(
           Object.getOwnPropertyNames(this.$sdata)
@@ -314,24 +355,6 @@ export default class Entity<T extends EntityData = EntityData>
 
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
-    if (guid != null) {
-      const entity = this.$nymph.driver.getEntitySync(
-        {
-          class: this.$nymph.getEntityClass(
-            this.constructor as EntityConstructor
-          ),
-        },
-        { type: '&', guid }
-      );
-      if (entity) {
-        this.guid = entity.guid;
-        this.tags = entity.tags;
-        this.cdate = entity.cdate;
-        this.mdate = entity.mdate;
-        this.$putData(entity.$getData(), entity.$getSData());
-      }
-    }
-
     return new Proxy(this, {
       has: (entity: Entity, name: string) => {
         if (
@@ -342,7 +365,7 @@ export default class Entity<T extends EntityData = EntityData>
           return name in entity;
         }
 
-        this.$referenceWake();
+        this.$check();
         return name in entity.$data;
       },
 
@@ -353,12 +376,12 @@ export default class Entity<T extends EntityData = EntityData>
           name.substring(0, 1) === '$'
         ) {
           if (name === 'tags' || name === 'cdate' || name === 'mdate') {
-            this.$referenceWake();
+            this.$check();
           }
           return (entity as any)[name];
         }
 
-        this.$referenceWake();
+        this.$check();
         if (name in entity.$data) {
           return entity.$data[name];
         }
@@ -372,11 +395,11 @@ export default class Entity<T extends EntityData = EntityData>
           name.substring(0, 1) === '$'
         ) {
           if (name === 'tags' || name === 'cdate' || name === 'mdate') {
-            this.$referenceWake();
+            this.$check();
           }
           (entity as any)[name] = value;
         } else {
-          this.$referenceWake();
+          this.$check();
           (entity.$data as any)[name] = value;
         }
         return true;
@@ -386,7 +409,7 @@ export default class Entity<T extends EntityData = EntityData>
         if (name in entity) {
           return delete (entity as any)[name];
         } else if (name in entity.$data) {
-          this.$referenceWake();
+          this.$check();
           return delete entity.$data[name];
         }
         return true;
@@ -407,11 +430,11 @@ export default class Entity<T extends EntityData = EntityData>
           name.substring(0, 1) === '$'
         ) {
           if (name === 'tags' || name === 'cdate' || name === 'mdate') {
-            this.$referenceWake();
+            this.$check();
           }
           Object.defineProperty(entity, name, descriptor);
         } else {
-          this.$referenceWake();
+          this.$check();
           Object.defineProperty(entity.$data, name, descriptor);
         }
         return true;
@@ -424,17 +447,17 @@ export default class Entity<T extends EntityData = EntityData>
           name.substring(0, 1) === '$'
         ) {
           if (name === 'tags' || name === 'cdate' || name === 'mdate') {
-            this.$referenceWake();
+            this.$check();
           }
           return Object.getOwnPropertyDescriptor(entity, name);
         } else {
-          this.$referenceWake();
+          this.$check();
           return Object.getOwnPropertyDescriptor(entity.$data, name);
         }
       },
 
       ownKeys: (entity: Entity) => {
-        this.$referenceWake();
+        this.$check();
         return Object.getOwnPropertyNames(entity).concat(
           Object.getOwnPropertyNames(entity.$data)
         );
@@ -458,8 +481,8 @@ export default class Entity<T extends EntityData = EntityData>
     return entity;
   }
 
-  public static factorySync(guid?: string) {
-    return new this(guid);
+  public static factorySync() {
+    return new this();
   }
 
   public static factoryReference(reference: EntityReference) {
@@ -490,7 +513,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $addTag(...tags: string[]) {
-    this.$referenceWake();
+    this.$check();
 
     if (tags.length < 1) {
       return;
@@ -499,7 +522,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $arraySearch(array: any[], strict = false) {
-    this.$referenceWake();
+    this.$check();
 
     if (!Array.isArray(array)) {
       return -1;
@@ -514,7 +537,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $clearCache() {
-    this.$referenceWake();
+    this.$check();
 
     this.$putData(this.$getData(), this.$getSData());
   }
@@ -524,13 +547,13 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public async $delete(): Promise<boolean> {
-    this.$referenceWake();
+    this.$check();
 
     return await this.$nymph.deleteEntity(this);
   }
 
   public $equals(object: any) {
-    this.$referenceWake();
+    this.$check();
 
     if (!(object instanceof Entity)) {
       return false;
@@ -557,7 +580,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $getData(includeSData = false) {
-    this.$referenceWake();
+    this.$check();
 
     if (includeSData) {
       // Access all the serialized properties to initialize them.
@@ -569,30 +592,56 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $getSData() {
-    this.$referenceWake();
+    this.$check();
 
     return this.$sdata;
   }
 
   public $getOriginalAcValues() {
-    this.$referenceWake();
+    this.$check();
 
-    return (
-      this.$originalAcValues ?? {
-        user: this.$data.user,
-        group: this.$data.group,
-        acUser: this.$data.acUser,
-        acGroup: this.$data.acGroup,
-        acOther: this.$data.acOther,
-        acRead: this.$data.acRead,
-        acWrite: this.$data.acWrite,
-        acFull: this.$data.acFull,
-      }
-    );
+    return this.$originalAcValues ?? this.$getCurrentAcValues();
+  }
+
+  public $getCurrentAcValues() {
+    this.$check();
+
+    return {
+      user: this.$getAcUid(),
+      group: this.$getAcGid(),
+      acUser: this.$data.acUser,
+      acGroup: this.$data.acGroup,
+      acOther: this.$data.acOther,
+      acRead: this.$getAcReadIds(),
+      acWrite: this.$getAcWriteIds(),
+      acFull: this.$getAcFullIds(),
+    };
+  }
+
+  public $getAcUid() {
+    return this.$dataStore.user?.guid as string | null;
+  }
+  public $getAcGid() {
+    return this.$dataStore.group?.guid as string | null;
+  }
+  public $getAcReadIds() {
+    return this.$data.acRead?.map((entity: EntityInterface) => entity.guid) as
+      | string[]
+      | null;
+  }
+  public $getAcWriteIds() {
+    return this.$data.acWrite?.map((entity: EntityInterface) => entity.guid) as
+      | string[]
+      | null;
+  }
+  public $getAcFullIds() {
+    return this.$data.acFull?.map((entity: EntityInterface) => entity.guid) as
+      | string[]
+      | null;
   }
 
   public $getValidatable() {
-    this.$referenceWake();
+    this.$check();
 
     // Access all the serialized properties to initialize them.
     for (const key in this.$sdata) {
@@ -608,13 +657,13 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $getTags() {
-    this.$referenceWake();
+    this.$check();
 
     return this.tags;
   }
 
   public $hasTag(...tags: string[]) {
-    this.$referenceWake();
+    this.$check();
 
     if (!tags.length) {
       return false;
@@ -640,7 +689,7 @@ export default class Entity<T extends EntityData = EntityData>
       return this.guid === object.guid;
     }
 
-    this.$referenceWake();
+    this.$check();
     if (typeof object.$getData !== 'function') {
       return false;
     } else {
@@ -656,8 +705,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
-    // TODO: Do this without causing everything to become unserialized.
-    this.$referenceWake();
+    this.$check();
 
     if (this.guid != input.guid) {
       throw new EntityConflictError(
@@ -709,7 +757,13 @@ export default class Entity<T extends EntityData = EntityData>
       if (
         ((this.constructor as typeof Entity).class !== 'User' &&
           (this.constructor as typeof Entity).class !== 'Group') ||
-        !this.$nymph.tilmeld.gatekeeper('tilmeld/admin')
+        !(this.$nymph.tilmeld as any).currentUser ||
+        (!(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
+          'tilmeld/admin'
+        ) &&
+          !(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
+            'system/admin'
+          ))
       ) {
         protectedProps.push('user');
         protectedProps.push('group');
@@ -746,7 +800,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
-    this.$referenceWake();
+    this.$check();
 
     if (this.guid != patch.guid) {
       throw new EntityConflictError(
@@ -773,7 +827,13 @@ export default class Entity<T extends EntityData = EntityData>
       if (
         ((this.constructor as typeof Entity).class !== 'User' &&
           (this.constructor as typeof Entity).class !== 'Group') ||
-        !this.$nymph.tilmeld.gatekeeper('tilmeld/admin')
+        !(this.$nymph.tilmeld as any).currentUser ||
+        (!(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
+          'tilmeld/admin'
+        ) &&
+          !(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
+            'system/admin'
+          ))
       ) {
         protectedProps.push('user');
         protectedProps.push('group');
@@ -832,7 +892,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $putData(data: EntityData, sdata?: SerializedEntityData) {
-    this.$referenceWake();
+    this.$check();
 
     const mySdata = sdata ?? this.$getSData();
     for (const name in data) {
@@ -851,7 +911,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.$sdata = mySdata;
     // Set original AC values if not set..
     if (this.$originalAcValues == null) {
-      this.$originalAcValues = this.$getOriginalAcValues();
+      this.$originalAcValues = this.$getCurrentAcValues();
     }
   }
 
@@ -888,19 +948,19 @@ export default class Entity<T extends EntityData = EntityData>
    *
    * @returns True on success, false on failure.
    */
-  protected $referenceWake() {
+  async $wake() {
     if (!this.$isASleepingReference || this.$sleepingReference == null) {
       return true;
     }
     const EntityClass = this.$nymph.getEntityClass(this.$sleepingReference[2]);
-    const entity = this.$nymph.driver.getEntitySync(
+    const entity = await this.$nymph.getEntity(
       {
         class: EntityClass,
         skipAc: this.$skipAc,
       },
       { type: '&', guid: this.$sleepingReference[1] }
     );
-    if (entity == null) {
+    if (entity == null || entity.guid == null) {
       return false;
     }
     this.$isASleepingReference = false;
@@ -913,8 +973,24 @@ export default class Entity<T extends EntityData = EntityData>
     return true;
   }
 
+  /**
+   * Check if this is a sleeping reference and throw an error if so.
+   */
+  protected $check() {
+    if (this.$isASleepingReference || this.$sleepingReference != null) {
+      throw new EntityIsSleepingReferenceError('This entity is still asleep.');
+    }
+  }
+
+  /**
+   * Check if this is a sleeping reference.
+   */
+  public $asleep() {
+    return this.$isASleepingReference || this.$sleepingReference != null;
+  }
+
   public async $refresh() {
-    this.$referenceWake();
+    await this.$wake();
 
     if (this.guid == null) {
       return false;
@@ -940,13 +1016,13 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $removeTag(...tags: string[]) {
-    this.$referenceWake();
+    this.$check();
 
     this.tags = difference(this.tags, tags);
   }
 
   public async $save(): Promise<boolean> {
-    this.$referenceWake();
+    await this.$wake();
 
     return await this.$nymph.saveEntity(this);
   }

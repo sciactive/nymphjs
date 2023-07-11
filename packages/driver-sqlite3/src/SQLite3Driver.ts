@@ -1650,25 +1650,6 @@ export default class SQLite3Driver extends NymphDriver {
     options: Options<T> = {},
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
-    return this.getEntitiesSync(options, ...selectors);
-  }
-
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'count' },
-    ...selectors: Selector[]
-  ): number;
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'guid' },
-    ...selectors: Selector[]
-  ): string[];
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options?: Options<T>,
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[];
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> = {},
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[] | string[] | number {
     const { result, process } = this.getEntitesRowLike<T>(
       options,
       selectors,

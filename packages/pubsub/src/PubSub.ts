@@ -76,7 +76,7 @@ export default class PubSub {
   public static initPublisher(config: Partial<Config>, nymph: Nymph) {
     const configWithDefaults: Config = { ...defaults, ...config };
 
-    nymph.on('beforeSaveEntity', async (nymph, entity) => {
+    nymph.on('beforeSaveEntity', async (enymph, entity) => {
       const guid = entity.guid;
       const EntityClass = entity.constructor as EntityConstructor;
       const etype = EntityClass.ETYPE;
@@ -85,7 +85,7 @@ export default class PubSub {
         return;
       }
 
-      const off = nymph.on('afterSaveEntity', async (curNymph, result) => {
+      const off = enymph.on('afterSaveEntity', async (curNymph, result) => {
         off();
         off2();
         if (!(await result)) {
@@ -105,13 +105,13 @@ export default class PubSub {
         });
         await this.publishTransactionPublishes(curNymph);
       });
-      const off2 = nymph.on('failedSaveEntity', async () => {
+      const off2 = enymph.on('failedSaveEntity', async () => {
         off();
         off2();
       });
     });
 
-    nymph.on('beforeDeleteEntity', async (nymph, entity) => {
+    nymph.on('beforeDeleteEntity', async (enymph, entity) => {
       const guid = entity.guid;
       const EntityClass = entity.constructor as EntityConstructor;
       const etype = EntityClass.ETYPE;
@@ -120,7 +120,7 @@ export default class PubSub {
         return;
       }
 
-      const off = nymph.on('afterDeleteEntity', async (curNymph, result) => {
+      const off = enymph.on('afterDeleteEntity', async (curNymph, result) => {
         off();
         off2();
         if (!(await result)) {
@@ -139,22 +139,22 @@ export default class PubSub {
         });
         await this.publishTransactionPublishes(curNymph);
       });
-      const off2 = nymph.on('failedDeleteEntity', async () => {
+      const off2 = enymph.on('failedDeleteEntity', async () => {
         off();
         off2();
       });
     });
 
-    nymph.on('beforeDeleteEntityByID', async (nymph, guid, className) => {
+    nymph.on('beforeDeleteEntityByID', async (enymph, guid, className) => {
       try {
-        const EntityClass = nymph.getEntityClass(className ?? 'Entity');
+        const EntityClass = enymph.getEntityClass(className ?? 'Entity');
         const etype = EntityClass.ETYPE;
 
         if (!EntityClass.pubSubEnabled) {
           return;
         }
 
-        const off = nymph.on(
+        const off = enymph.on(
           'afterDeleteEntityByID',
           async (curNymph, result) => {
             off();
@@ -176,7 +176,7 @@ export default class PubSub {
             await this.publishTransactionPublishes(curNymph);
           }
         );
-        const off2 = nymph.on('failedDeleteEntityByID', async () => {
+        const off2 = enymph.on('failedDeleteEntityByID', async () => {
           off();
           off2();
         });
@@ -185,8 +185,8 @@ export default class PubSub {
       }
     });
 
-    nymph.on('beforeNewUID', async (nymph, name) => {
-      const off = nymph.on('afterNewUID', async (curNymph, result) => {
+    nymph.on('beforeNewUID', async (enymph, name) => {
+      const off = enymph.on('afterNewUID', async (curNymph, result) => {
         off();
         off2();
         const value = await result;
@@ -206,14 +206,14 @@ export default class PubSub {
         });
         await this.publishTransactionPublishes(curNymph);
       });
-      const off2 = nymph.on('failedNewUID', async () => {
+      const off2 = enymph.on('failedNewUID', async () => {
         off();
         off2();
       });
     });
 
-    nymph.on('beforeSetUID', async (nymph, name, value) => {
-      const off = nymph.on('afterSetUID', async (curNymph, result) => {
+    nymph.on('beforeSetUID', async (enymph, name, value) => {
+      const off = enymph.on('afterSetUID', async (curNymph, result) => {
         off();
         off2();
         if (!(await result)) {
@@ -232,14 +232,14 @@ export default class PubSub {
         });
         await this.publishTransactionPublishes(curNymph);
       });
-      const off2 = nymph.on('failedSetUID', async () => {
+      const off2 = enymph.on('failedSetUID', async () => {
         off();
         off2();
       });
     });
 
-    nymph.on('beforeRenameUID', async (nymph, oldName, newName) => {
-      const off = nymph.on('afterRenameUID', async (curNymph, result) => {
+    nymph.on('beforeRenameUID', async (enymph, oldName, newName) => {
+      const off = enymph.on('afterRenameUID', async (curNymph, result) => {
         off();
         off2();
         if (!(await result)) {
@@ -258,14 +258,14 @@ export default class PubSub {
         });
         await this.publishTransactionPublishes(curNymph);
       });
-      const off2 = nymph.on('failedRenameUID', async () => {
+      const off2 = enymph.on('failedRenameUID', async () => {
         off();
         off2();
       });
     });
 
-    nymph.on('beforeDeleteUID', async (nymph, name) => {
-      const off = nymph.on('afterDeleteUID', async (curNymph, result) => {
+    nymph.on('beforeDeleteUID', async (enymph, name) => {
+      const off = enymph.on('afterDeleteUID', async (curNymph, result) => {
         off();
         off2();
         if (!(await result)) {
@@ -283,20 +283,20 @@ export default class PubSub {
         });
         await this.publishTransactionPublishes(curNymph);
       });
-      const off2 = nymph.on('failedDeleteUID', async () => {
+      const off2 = enymph.on('failedDeleteUID', async () => {
         off();
         off2();
       });
     });
 
-    nymph.on('afterCommitTransaction', async (nymph, _name, result) => {
+    nymph.on('afterCommitTransaction', async (enymph, _name, result) => {
       if (result) {
-        await this.publishTransactionPublishes(nymph);
+        await this.publishTransactionPublishes(enymph);
       }
     });
 
-    nymph.on('afterRollbackTransaction', async (nymph) => {
-      this.removeTransactionPublishes(nymph);
+    nymph.on('afterRollbackTransaction', async (enymph) => {
+      this.removeTransactionPublishes(enymph);
     });
   }
 

@@ -1,8 +1,8 @@
 import {
   EntityData,
-  EntityInterface,
   EntityJson,
   EntityPatch,
+  EntityPromise,
   Options,
   Selector,
   SerializedEntityData,
@@ -48,11 +48,11 @@ export type GroupData = {
   /**
    * The group's parent.
    */
-  parent?: Group & GroupData;
+  parent?: EntityPromise<Group & GroupData>;
   /**
    * If generatePrimary is on, this will be the user who generated this group.
    */
-  user?: (User & UserData) | null;
+  user?: EntityPromise<User & UserData> | null;
 
   /**
    * Whether the group can be used.
@@ -140,19 +140,17 @@ export default class Group extends AbleObject<GroupData> {
     return entity;
   }
 
-  static factorySync(guid?: string): Group & GroupData {
-    return super.factorySync(guid) as Group & GroupData;
+  static factorySync(): Group & GroupData {
+    return super.factorySync() as Group & GroupData;
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (this.guid == null) {
-      // Defaults.
-      this.$data.enabled = true;
-      this.$data.abilities = [];
-      this.$updateDataProtection();
-    }
+    // Defaults.
+    this.$data.enabled = true;
+    this.$data.abilities = [];
+    this.$updateDataProtection();
   }
 
   /**
@@ -167,7 +165,7 @@ export default class Group extends AbleObject<GroupData> {
     selectors?: Selector[]
   ) {
     const tilmeld = enforceTilmeld(this);
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
       throw new Error("You don't have permission to do that.");
     }
 
@@ -190,7 +188,7 @@ export default class Group extends AbleObject<GroupData> {
     selectors?: Selector[]
   ) {
     const tilmeld = enforceTilmeld(this);
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
       throw new Error("You don't have permission to do that.");
     }
 
@@ -218,16 +216,22 @@ export default class Group extends AbleObject<GroupData> {
       ...selectors
     );
     if (highestParent !== true) {
-      assignableGroups = assignableGroups.filter((group) => {
-        let curGroup = group;
-        while (curGroup.parent != null && curGroup.parent.cdate != null) {
-          if (curGroup.parent.guid === highestParent) {
-            return true;
-          }
-          curGroup = curGroup.parent;
-        }
-        return false;
-      });
+      assignableGroups = (
+        await Promise.all(
+          assignableGroups.map(async (group) => {
+            let curGroup = group;
+            let parent = await curGroup.parent;
+            while (parent != null && parent?.cdate != null) {
+              if (parent?.guid === highestParent) {
+                return group;
+              }
+              curGroup = parent;
+              parent = await curGroup.parent;
+            }
+            return null;
+          })
+        )
+      ).filter((group) => group != null) as (Group & GroupData)[];
     }
     return assignableGroups;
   }
@@ -248,13 +252,14 @@ export default class Group extends AbleObject<GroupData> {
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
     const tilmeld = enforceTilmeld(this);
-    this.$referenceWake();
+    this.$check();
 
     if (
       'abilities' in input.data &&
       input.data.abilities?.includes('system/admin') !==
         this.$data.abilities?.includes('system/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke system/admin."
@@ -265,7 +270,8 @@ export default class Group extends AbleObject<GroupData> {
       'abilities' in input.data &&
       input.data.abilities?.includes('tilmeld/admin') !==
         this.$data.abilities?.includes('tilmeld/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/admin."
@@ -276,7 +282,8 @@ export default class Group extends AbleObject<GroupData> {
       'abilities' in input.data &&
       input.data.abilities?.includes('tilmeld/switch') !==
         this.$data.abilities?.includes('tilmeld/switch') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/switch."
@@ -288,13 +295,14 @@ export default class Group extends AbleObject<GroupData> {
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
     const tilmeld = enforceTilmeld(this);
-    this.$referenceWake();
+    this.$check();
 
     if (
       'abilities' in patch.set &&
       patch.set.abilities?.includes('system/admin') !==
         this.$data.abilities?.includes('system/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke system/admin."
@@ -305,7 +313,8 @@ export default class Group extends AbleObject<GroupData> {
       'abilities' in patch.set &&
       patch.set.abilities?.includes('tilmeld/admin') !==
         this.$data.abilities?.includes('tilmeld/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/admin."
@@ -316,7 +325,8 @@ export default class Group extends AbleObject<GroupData> {
       'abilities' in patch.set &&
       patch.set.abilities?.includes('tilmeld/switch') !==
         this.$data.abilities?.includes('tilmeld/switch') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/switch."
@@ -356,9 +366,9 @@ export default class Group extends AbleObject<GroupData> {
       this.$privateData = [];
       this.$allowlistData = undefined;
     } else if (
-      this.$data.user != null &&
+      this.$dataStore.user != null &&
       user != null &&
-      this.$data.user.$is(user)
+      (this.$dataStore.user as User & UserData).guid === user.guid
     ) {
       // Users can see their group's data.
       this.$privateData = [];
@@ -371,11 +381,13 @@ export default class Group extends AbleObject<GroupData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public $isDescendant(givenGroup: (Group & GroupData) | string): boolean {
+  public async $isDescendant(
+    givenGroup: (Group & GroupData) | string
+  ): Promise<boolean> {
     const tilmeld = enforceTilmeld(this);
     let group: Group & GroupData;
     if (typeof givenGroup === 'string') {
-      group = tilmeld.Group.factorySync(givenGroup);
+      group = await tilmeld.Group.factory(givenGroup);
     } else {
       group = givenGroup;
     }
@@ -383,13 +395,14 @@ export default class Group extends AbleObject<GroupData> {
       return false;
     }
     // Check to see if the group is a descendant of the given group.
-    if (this.$data.parent == null) {
+    const parent = await this.$data.parent;
+    if (parent == null) {
       return false;
     }
-    if (this.$data.parent.$is(group)) {
+    if (parent.$is(group)) {
       return true;
     }
-    if (this.$data.parent.$isDescendant(group)) {
+    if (await parent.$isDescendant(group)) {
       return true;
     }
     return false;
@@ -441,37 +454,6 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   /**
-   * Gets an array of the group's descendant groups.
-   *
-   * @param andSelf Include this group in the returned array.
-   * @returns An array of groups.
-   */
-  public $getDescendantsSync(andSelf = false): (Group & GroupData)[] {
-    const tilmeld = enforceTilmeld(this);
-    let groups: (Group & GroupData)[] = [];
-    let entity: EntityInterface | null;
-    let offset = 0;
-    do {
-      entity = this.$nymph.driver.getEntitySync(
-        { class: tilmeld.Group, offset },
-        {
-          type: '&',
-          equal: ['enabled', true],
-          ref: ['parent', this],
-        }
-      );
-      if (entity != null) {
-        groups = entity.$getDescendantsSync(true).concat(groups);
-      }
-      offset++;
-    } while (entity != null);
-    if (andSelf) {
-      groups.push(this);
-    }
-    return groups;
-  }
-
-  /**
    * Get the number of parents the group has.
    *
    * If the group is a top level group, this will return 0. If it is a child of
@@ -482,13 +464,15 @@ export default class Group extends AbleObject<GroupData> {
    *
    * @returns The level of the group.
    */
-  public $getLevel() {
+  public async $getLevel() {
     const tilmeld = enforceTilmeld(this);
-    let group = tilmeld.Group.factorySync(this.guid ?? undefined);
+    let group = await tilmeld.Group.factory(this.guid ?? undefined);
+    let parent = await group.parent;
     let level = 0;
-    while (group.parent != null && group.parent.cdate != null && level < 1024) {
+    while (parent != null && parent.cdate != null && level < 1024) {
       level++;
-      group = group.parent;
+      group = parent;
+      parent = await group.parent;
     }
     return level;
   }
@@ -740,11 +724,12 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     // Validate group parent. Make sure it's not a descendant of this group.
+    const parent = await this.$data.parent;
     if (
-      this.$data.parent &&
-      (this.$data.parent.cdate == null ||
-        this.$is(this.$data.parent) ||
-        this.$data.parent.$isDescendant(this))
+      parent &&
+      (parent.cdate == null ||
+        this.$is(parent) ||
+        (await parent.$isDescendant(this)))
     ) {
       throw new BadDataError(
         "Group parent can't be itself or descendant of itself."
@@ -795,7 +780,7 @@ export default class Group extends AbleObject<GroupData> {
 
   public async $delete() {
     let tilmeld = enforceTilmeld(this);
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
       throw new BadDataError("You don't have the authority to delete groups.");
     }
 

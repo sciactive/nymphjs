@@ -64,21 +64,19 @@ export default class Group extends Entity<GroupData> {
   // The name of the server class
   public static class = 'Group';
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (guid == null) {
-      this.$data.enabled = true;
-      (this.$data as CurrentGroupData).abilities = [];
-    }
+    this.$data.enabled = true;
+    (this.$data as CurrentGroupData).abilities = [];
   }
 
   static async factory(guid?: string): Promise<Group & GroupData> {
     return (await super.factory(guid)) as Group & GroupData;
   }
 
-  static factorySync(guid?: string): Group & GroupData {
-    return super.factorySync(guid) as Group & GroupData;
+  static factorySync(): Group & GroupData {
+    return super.factorySync() as Group & GroupData;
   }
 
   public async $checkGroupname(): Promise<{

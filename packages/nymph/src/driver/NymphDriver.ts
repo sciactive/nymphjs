@@ -102,30 +102,6 @@ export default abstract class NymphDriver {
     options?: Options<T>,
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number>;
-  protected abstract getEntitiesSync<
-    T extends EntityConstructor = EntityConstructor
-  >(
-    options: Options<T> & { return: 'count' },
-    ...selectors: Selector[]
-  ): number;
-  protected abstract getEntitiesSync<
-    T extends EntityConstructor = EntityConstructor
-  >(
-    options: Options<T> & { return: 'guid' },
-    ...selectors: Selector[]
-  ): string[];
-  protected abstract getEntitiesSync<
-    T extends EntityConstructor = EntityConstructor
-  >(
-    options?: Options<T>,
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[];
-  protected abstract getEntitiesSync<
-    T extends EntityConstructor = EntityConstructor
-  >(
-    options?: Options<T>,
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[] | string[] | number;
   abstract getUID(name: string): Promise<number | null>;
   abstract import(filename: string): Promise<boolean>;
   abstract newUID(name: string): Promise<number | null>;
@@ -716,63 +692,6 @@ export default abstract class NymphDriver {
     }
 
     return queryParts;
-  }
-
-  /**
-   * Get the first entity to match all options/selectors, synchronously.
-   *
-   * This should really only be used internally by the Entity class. It's a bad
-   * idea to get entities synchronously. The Entity class uses this to load
-   * sleeping references.
-   *
-   * @param options The options.
-   * @param selectors Unlimited optional selectors to search for, or a single GUID. If none are given, all entities are searched for the given options.
-   * @returns An entity, or null on failure or nothing found.
-   */
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'count' },
-    ...selectors: Selector[]
-  ): number;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'guid' },
-    ...selectors: Selector[]
-  ): string | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T>,
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']> | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'count' },
-    guid: string
-  ): number;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'guid' },
-    guid: string
-  ): string | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T>,
-    guid: string
-  ): ReturnType<T['factorySync']> | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> = {},
-    ...selectors: Selector[] | string[]
-  ): ReturnType<T['factorySync']> | string | number | null {
-    // Set up options and selectors.
-    if (typeof selectors[0] === 'string') {
-      selectors = [{ type: '&', guid: selectors[0] }];
-    }
-    options.limit = 1;
-    const entities = this.getEntitiesSync(
-      options,
-      ...(selectors as Selector[])
-    );
-    if (options.return === 'count') {
-      return entities as unknown as number;
-    }
-    if (!entities || !entities.length) {
-      return null;
-    }
-    return entities[0];
   }
 
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(

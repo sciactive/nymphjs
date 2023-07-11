@@ -178,15 +178,13 @@ export default class User extends Entity<UserData> {
     this.handleToken();
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (guid == null) {
-      this.$data.enabled = true;
-      (this.$data as CurrentUserData).abilities = [];
-      (this.$data as CurrentUserData).groups = [];
-      (this.$data as CurrentUserData).inheritAbilities = true;
-    }
+    this.$data.enabled = true;
+    (this.$data as CurrentUserData).abilities = [];
+    (this.$data as CurrentUserData).groups = [];
+    (this.$data as CurrentUserData).inheritAbilities = true;
   }
 
   static async factory(guid?: string): Promise<User & UserData> {
@@ -212,8 +210,8 @@ export default class User extends Entity<UserData> {
     return entity;
   }
 
-  static factorySync(guid?: string): User & UserData {
-    return super.factorySync(guid) as User & UserData;
+  static factorySync(): User & UserData {
+    return super.factorySync() as User & UserData;
   }
 
   public async $checkUsername(): Promise<{

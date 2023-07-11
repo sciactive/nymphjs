@@ -2,6 +2,7 @@ import {
   EntityData,
   EntityJson,
   EntityPatch,
+  EntityPromise,
   Selector,
   SerializedEntityData,
 } from '@nymphjs/nymph';
@@ -120,11 +121,11 @@ export type UserData = {
   /**
    * The user's primary group.
    */
-  group?: Group & GroupData;
+  group?: EntityPromise<Group & GroupData>;
   /**
    * The user's secondary groups.
    */
-  groups?: (Group & GroupData)[];
+  groups?: EntityPromise<(Group & GroupData)[]>;
   /**
    * Whether the user should inherit the abilities of his groups.
    */
@@ -312,21 +313,19 @@ export default class User extends AbleObject<UserData> {
     return entity;
   }
 
-  static factorySync(guid?: string): User & UserData {
-    return super.factorySync(guid) as User & UserData;
+  static factorySync(): User & UserData {
+    return super.factorySync() as User & UserData;
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (this.guid == null) {
-      // Defaults.
-      this.$data.enabled = true;
-      this.$data.abilities = [];
-      this.$data.groups = [];
-      this.$data.inheritAbilities = true;
-      this.$updateDataProtection();
-    }
+    // Defaults.
+    this.$data.enabled = true;
+    this.$data.abilities = [];
+    this.$data.groups = [];
+    this.$data.inheritAbilities = true;
+    this.$updateDataProtection();
   }
 
   public static current(returnObjectIfNotExist: true): User & UserData;
@@ -544,7 +543,7 @@ export default class User extends AbleObject<UserData> {
     if (!this.$data.enabled) {
       return { result: false, message: 'This user is disabled.' };
     }
-    if (this.$gatekeeper()) {
+    if (await this.$gatekeeper()) {
       return { result: true, message: 'You are already logged in.' };
     }
     if (!this.$checkPassword(data.password)) {
@@ -692,7 +691,7 @@ export default class User extends AbleObject<UserData> {
       };
     }
 
-    tilmeld.logout();
+    await tilmeld.logout();
 
     for (let callback of (this.constructor as typeof User)
       .afterLogoutCallbacks) {
@@ -718,6 +717,22 @@ export default class User extends AbleObject<UserData> {
     );
   }
 
+  public $getGid() {
+    if (this.$dataStore.group) {
+      return (this.$dataStore.group as Group & GroupData).guid;
+    }
+    return null;
+  }
+
+  public $getGids() {
+    if (this.$dataStore.groups) {
+      return (this.$dataStore.groups as (Group & GroupData)[])
+        .map((group) => group.guid)
+        .filter((guid) => guid != null) as string[];
+    }
+    return null;
+  }
+
   /**
    * Get the user's group descendants.
    */
@@ -725,9 +740,11 @@ export default class User extends AbleObject<UserData> {
     if (this.$descendantGroups == null) {
       this.$descendantGroups = [];
       if (this.$data.group != null) {
-        this.$descendantGroups = await this.$data.group.$getDescendants();
+        this.$descendantGroups = await (
+          await this.$data.group
+        ).$getDescendants();
       }
-      for (let curGroup of this.$data.groups ?? []) {
+      for (let curGroup of (await this.$data.groups) ?? []) {
         this.$descendantGroups = this.$descendantGroups?.concat(
           await curGroup.$getDescendants()
         );
@@ -736,33 +753,16 @@ export default class User extends AbleObject<UserData> {
     return this.$descendantGroups;
   }
 
-  /**
-   * Get the user's group descendants.
-   */
-  public $getDescendantGroupsSync(): (Group & GroupData)[] {
-    if (this.$descendantGroups == null) {
-      this.$descendantGroups = [];
-      if (this.$data.group != null) {
-        this.$descendantGroups = this.$data.group.$getDescendantsSync();
-      }
-      for (let curGroup of this.$data.groups ?? []) {
-        this.$descendantGroups = this.$descendantGroups?.concat(
-          curGroup.$getDescendantsSync()
-        );
-      }
-    }
-    return this.$descendantGroups;
-  }
-
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
     const tilmeld = enforceTilmeld(this);
-    this.$referenceWake();
+    this.$check();
 
     if (
       'abilities' in input.data &&
       input.data.abilities?.includes('system/admin') !==
         this.$data.abilities?.includes('system/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke system/admin."
@@ -773,7 +773,8 @@ export default class User extends AbleObject<UserData> {
       'abilities' in input.data &&
       input.data.abilities?.includes('tilmeld/admin') !==
         this.$data.abilities?.includes('tilmeld/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/admin."
@@ -784,7 +785,8 @@ export default class User extends AbleObject<UserData> {
       'abilities' in input.data &&
       input.data.abilities?.includes('tilmeld/switch') !==
         this.$data.abilities?.includes('tilmeld/switch') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/switch."
@@ -797,13 +799,14 @@ export default class User extends AbleObject<UserData> {
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
     const tilmeld = enforceTilmeld(this);
-    this.$referenceWake();
+    this.$check();
 
     if (
       'abilities' in patch.set &&
       patch.set.abilities?.includes('system/admin') !==
         this.$data.abilities?.includes('system/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke system/admin."
@@ -814,7 +817,8 @@ export default class User extends AbleObject<UserData> {
       'abilities' in patch.set &&
       patch.set.abilities?.includes('tilmeld/admin') !==
         this.$data.abilities?.includes('tilmeld/admin') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/admin."
@@ -825,7 +829,8 @@ export default class User extends AbleObject<UserData> {
       'abilities' in patch.set &&
       patch.set.abilities?.includes('tilmeld/switch') !==
         this.$data.abilities?.includes('tilmeld/switch') &&
-      !tilmeld.gatekeeper('system/admin')
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke tilmeld/switch."
@@ -948,6 +953,22 @@ export default class User extends AbleObject<UserData> {
     }
   }
 
+  public $updateGroupDataProtection() {
+    if (
+      this.$dataStore.group != null &&
+      !(this.$dataStore.group as Group & GroupData).$asleep()
+    ) {
+      (this.$dataStore.group as Group & GroupData).$updateDataProtection();
+    }
+    for (let group of (this.$dataStore.groups as
+      | (Group & GroupData)[]
+      | null) ?? []) {
+      if (!group.$asleep()) {
+        group.$updateDataProtection();
+      }
+    }
+  }
+
   /**
    * Check to see if a user has an ability.
    *
@@ -962,7 +983,7 @@ export default class User extends AbleObject<UserData> {
    * @param ability The ability.
    * @returns True or false.
    */
-  public $gatekeeper(ability?: string): boolean {
+  public async $gatekeeper(ability?: string): Promise<boolean> {
     const tilmeld = enforceTilmeld(this);
     if (ability == null) {
       return tilmeld.User.current()?.$is(this) ?? false;
@@ -971,17 +992,14 @@ export default class User extends AbleObject<UserData> {
     if (this.$gatekeeperCache == null) {
       let abilities = this.$data.abilities ?? [];
       if (this.$data.inheritAbilities) {
-        for (let curGroup of this.$data.groups ?? []) {
+        for (let curGroup of (await this.$data.groups) ?? []) {
           if (curGroup.enabled) {
             abilities = abilities.concat(curGroup.abilities ?? []);
           }
         }
-        if (
-          this.$data.group != null &&
-          this.$data.group.cdate != null &&
-          this.$data.group.enabled
-        ) {
-          abilities = abilities.concat(this.$data.group.abilities ?? []);
+        const group = await this.$data.group;
+        if (group != null && group.cdate != null && group.enabled) {
+          abilities = abilities.concat(group.abilities ?? []);
         }
       }
       this.$gatekeeperCache = Object.fromEntries(
@@ -1102,13 +1120,15 @@ export default class User extends AbleObject<UserData> {
    * @param group The group.
    * @returns True if the user is already in the group. The resulting array of groups if the user was not.
    */
-  public $addGroup(group: Group & GroupData) {
-    if (this.$data.groups == null) {
-      this.$data.groups = [];
+  public async $addGroup(group: Group & GroupData) {
+    let groups = await this.$data.groups;
+    if (groups == null) {
+      groups = [];
     }
-    if (!group.$inArray(this.$data.groups)) {
-      this.$data.groups.push(group);
-      return this.$data.groups;
+    if (!group.$inArray(groups)) {
+      groups.push(group);
+      this.$data.groups = groups;
+      return groups;
     }
     return true;
   }
@@ -1141,10 +1161,11 @@ export default class User extends AbleObject<UserData> {
    * @param group The group.
    * @returns True if the user wasn't in the group. The resulting array of groups if the user was.
    */
-  public $delGroup(group: Group & GroupData) {
-    if (this.$data.groups != null && group.$inArray(this.$data.groups)) {
+  public async $delGroup(group: Group & GroupData) {
+    let groups = (await this.$data.groups) || [];
+    if (this.$data.groups != null && group.$inArray(groups)) {
       const newGroups: (Group & GroupData)[] = [];
-      for (let curGroup of this.$data.groups) {
+      for (let curGroup of groups) {
         if (!group.$is(curGroup)) {
           newGroups.push(curGroup);
         }
@@ -1161,12 +1182,12 @@ export default class User extends AbleObject<UserData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public $inGroup(group: (Group & GroupData) | string) {
+  public async $inGroup(group: (Group & GroupData) | string) {
     if (typeof group === 'string') {
-      if (this.$data.group?.guid === group) {
+      if ((await this.$data.group)?.guid === group) {
         return true;
       }
-      for (let curGroup of this.$data.groups ?? []) {
+      for (let curGroup of (await this.$data.groups) ?? []) {
         if (curGroup.guid === group) {
           return true;
         }
@@ -1174,7 +1195,8 @@ export default class User extends AbleObject<UserData> {
       return false;
     }
     return (
-      group.$is(this.$data.group) || group.$inArray(this.$data.groups ?? [])
+      group.$is(await this.$data.group) ||
+      group.$inArray((await this.$data.groups) ?? [])
     );
   }
 
@@ -1184,16 +1206,16 @@ export default class User extends AbleObject<UserData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public $isDescendant(group: (Group & GroupData) | string) {
+  public async $isDescendant(group: (Group & GroupData) | string) {
     // Check to see if the user is in a descendant group of the given group.
     if (
-      this.$data.group?.cdate != null &&
-      this.$data.group.$isDescendant(group)
+      (await this.$data.group)?.cdate != null &&
+      (await this.$data.group)?.$isDescendant(group)
     ) {
       return true;
     }
-    for (let curGroup of this.$data.groups ?? []) {
-      if (curGroup.$isDescendant(group)) {
+    for (let curGroup of (await this.$data.groups) ?? []) {
+      if (await curGroup.$isDescendant(group)) {
         return true;
       }
     }
@@ -1925,8 +1947,8 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (
-      tilmeld.gatekeeper('tilmeld/admin') &&
-      !tilmeld.gatekeeper('system/admin') &&
+      (await tilmeld.gatekeeper('tilmeld/admin')) &&
+      !(await tilmeld.gatekeeper('system/admin')) &&
       this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(
@@ -2020,7 +2042,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Email changes.
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
       // The user isn't an admin, so email address changes should contain some
       // security measures.
       if (tilmeld.config.verifyEmail) {
@@ -2119,19 +2141,17 @@ export default class User extends AbleObject<UserData> {
     this.$nymph = tnymph;
     tilmeld = enforceTilmeld(this);
 
-    if (
-      this.$data.group != null &&
-      this.$data.group.user != null &&
-      this.$is(this.$data.group.user)
-    ) {
+    const group = await this.$data.group;
+    if (group != null && group.user != null && this.$is(await group.user)) {
       try {
         // Update the user's generated primary group.
-        this.$data.group.groupname = this.$data.username;
-        this.$data.group.avatar = this.$data.avatar;
-        this.$data.group.email = this.$data.email;
-        this.$data.group.name = this.$data.name;
-        this.$data.group.phone = this.$data.phone;
-        await this.$data.group.$saveSkipAC();
+        group.groupname = this.$data.username;
+        group.avatar = this.$data.avatar;
+        group.email = this.$data.email;
+        group.name = this.$data.name;
+        group.phone = this.$data.phone;
+        await group.$saveSkipAC();
+        this.$data.group = group;
       } catch (e: any) {
         await tnymph.rollback(transaction);
         this.$nymph = nymph;
@@ -2197,11 +2217,11 @@ export default class User extends AbleObject<UserData> {
 
   public async $delete() {
     const tilmeld = enforceTilmeld(this);
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
       throw new BadDataError("You don't have the authority to delete users.");
     }
     if (
-      !tilmeld.gatekeeper('system/admin') &&
+      !(await tilmeld.gatekeeper('system/admin')) &&
       this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(

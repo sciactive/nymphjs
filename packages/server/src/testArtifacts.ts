@@ -69,21 +69,19 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     return (await super.factory(guid)) as EmployeeModel & EmployeeModelData;
   }
 
-  static factorySync(guid?: string): EmployeeModel & EmployeeModelData {
-    return super.factorySync(guid) as EmployeeModel & EmployeeModelData;
+  static factorySync(): EmployeeModel & EmployeeModelData {
+    return super.factorySync() as EmployeeModel & EmployeeModelData;
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (this.guid == null) {
-      this.$addTag('employee');
-      this.$data.current = true;
-      this.$data.startDate = Date.now();
-      this.$data.subordinates = [];
-      if (!IS_MANAGER) {
-        this.$privateData.push('salary');
-      }
+    this.$addTag('employee');
+    this.$data.current = true;
+    this.$data.startDate = Date.now();
+    this.$data.subordinates = [];
+    if (!IS_MANAGER) {
+      this.$privateData.push('salary');
     }
   }
 
@@ -180,22 +178,20 @@ export class Employee extends Entity<EmployeeData> {
   // The name of the server class
   public static class = 'Employee';
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (guid == null) {
-      this.$addTag('employee');
-      this.$data.current = true;
-      this.$data.subordinates = [];
-    }
+    this.$addTag('employee');
+    this.$data.current = true;
+    this.$data.subordinates = [];
   }
 
   static async factory(guid?: string): Promise<Employee & EmployeeData> {
     return (await super.factory(guid)) as Employee & EmployeeData;
   }
 
-  static factorySync(guid?: string): Employee & EmployeeData {
-    return super.factorySync(guid) as Employee & EmployeeData;
+  static factorySync(): Employee & EmployeeData {
+    return super.factorySync() as Employee & EmployeeData;
   }
 
   $testMethod(value: number) {
@@ -262,16 +258,14 @@ export class RestrictedModel extends EntityServer<RestrictedModelData> {
     return (await super.factory(guid)) as RestrictedModel & RestrictedModelData;
   }
 
-  static factorySync(guid?: string): RestrictedModel & RestrictedModelData {
-    return super.factorySync(guid) as RestrictedModel & RestrictedModelData;
+  static factorySync(): RestrictedModel & RestrictedModelData {
+    return super.factorySync() as RestrictedModel & RestrictedModelData;
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (this.guid == null) {
-      this.$data.name = '';
-    }
+    this.$data.name = '';
   }
 
   public async $save() {
@@ -303,20 +297,18 @@ export class Restricted extends Entity<RestrictedData> {
   // The name of the server class
   public static class = 'Restricted';
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (guid == null) {
-      this.$data.name = '';
-    }
+    this.$data.name = '';
   }
 
   static async factory(guid?: string): Promise<Restricted & RestrictedData> {
     return (await super.factory(guid)) as Restricted & RestrictedData;
   }
 
-  static factorySync(guid?: string): Restricted & RestrictedData {
-    return super.factorySync(guid) as Restricted & RestrictedData;
+  static factorySync(): Restricted & RestrictedData {
+    return super.factorySync() as Restricted & RestrictedData;
   }
 
   $testMethod(value: number) {
@@ -348,19 +340,14 @@ export class PubSubDisabledModel extends EntityServer<PubSubDisabledModelData> {
       PubSubDisabledModelData;
   }
 
-  static factorySync(
-    guid?: string
-  ): PubSubDisabledModel & PubSubDisabledModelData {
-    return super.factorySync(guid) as PubSubDisabledModel &
-      PubSubDisabledModelData;
+  static factorySync(): PubSubDisabledModel & PubSubDisabledModelData {
+    return super.factorySync() as PubSubDisabledModel & PubSubDisabledModelData;
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (guid == null) {
-      this.$data.name = '';
-    }
+    this.$data.name = '';
   }
 
   public async $save() {
@@ -384,12 +371,10 @@ export class PubSubDisabled extends Entity<PubSubDisabledData> {
   // The name of the server class
   public static class = 'PubSubDisabled';
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (guid == null) {
-      this.$data.name = '';
-    }
+    this.$data.name = '';
   }
 
   static async factory(
@@ -398,7 +383,7 @@ export class PubSubDisabled extends Entity<PubSubDisabledData> {
     return (await super.factory(guid)) as PubSubDisabled & PubSubDisabledData;
   }
 
-  static factorySync(guid?: string): PubSubDisabled & PubSubDisabledData {
-    return super.factorySync(guid) as PubSubDisabled & PubSubDisabledData;
+  static factorySync(): PubSubDisabled & PubSubDisabledData {
+    return super.factorySync() as PubSubDisabled & PubSubDisabledData;
   }
 }

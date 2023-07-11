@@ -12,7 +12,7 @@
   ],
   "scripts": {
     "clean": "test -d dist && rm -r dist || true",
-    "build": "tsc; cp src/runMysqlSync.js dist/runMysqlSync.js",
+    "build": "tsc",
     "watch": "tsc --watch",
     "prepublish": "npm run clean && npm run build",
     "test": "jest",

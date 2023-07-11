@@ -58,7 +58,7 @@ export function createServer(
     next();
   }
 
-  function authenticateTilmeld(
+  async function authenticateTilmeld(
     request: Request,
     response: NymphResponse,
     next: NextFunction
@@ -67,7 +67,7 @@ export function createServer(
       response.locals.nymph.tilmeld.request = request;
       response.locals.nymph.tilmeld.response = response;
       try {
-        response.locals.nymph.tilmeld.authenticate();
+        await response.locals.nymph.tilmeld.authenticate();
       } catch (e: any) {
         httpError(response, 500, e);
         return;
@@ -215,10 +215,10 @@ export function createServer(
         }
         if (response.locals.nymph.tilmeld) {
           if (
-            !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+            !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
               data,
               TilmeldAccessLevels.READ_ACCESS
-            )
+            ))
           ) {
             httpError(response, 403);
             return;
@@ -503,10 +503,10 @@ export function createServer(
         }
         if (response.locals.nymph.tilmeld) {
           if (
-            !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+            !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
               data,
               TilmeldAccessLevels.WRITE_ACCESS
-            )
+            ))
           ) {
             httpError(response, 403);
             return;
@@ -574,10 +574,10 @@ export function createServer(
       }
       if (response.locals.nymph.tilmeld) {
         if (
-          !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+          !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
             data.name,
             TilmeldAccessLevels.FULL_ACCESS
-          )
+          ))
         ) {
           httpError(response, 403);
           return;
@@ -763,10 +763,10 @@ export function createServer(
         }
         if (response.locals.nymph.tilmeld) {
           if (
-            !response.locals.nymph.tilmeld.checkClientUIDPermissions(
+            !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
               data,
               TilmeldAccessLevels.FULL_ACCESS
-            )
+            ))
           ) {
             httpError(response, 403);
             return;

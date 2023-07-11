@@ -817,6 +817,7 @@
     }
     avatar = await entity.$getAvatar();
     await entity.$readyAll(1);
+    entity = entity;
   }
 
   let primaryGroupsSearching = false;
@@ -1001,12 +1002,12 @@
     const newEntity = entity.guid == null;
     try {
       if (await entity.$save()) {
+        await readyEntity();
         success = true;
         passwordVerify = '';
         if (newEntity) {
           replace(`/users/edit/${encodeURIComponent(entity.guid || '')}`);
         }
-        await readyEntity();
         setTimeout(() => {
           success = undefined;
         }, 1000);

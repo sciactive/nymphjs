@@ -64,14 +64,6 @@ These hats are absolutely fantastic.`;
     entityReferenceTest.test = 'good';
     expect(await entityReferenceTest.$save()).toEqual(true);
 
-    // Test synchronous getEntity.
-    testEntity = nymph.driver.getEntitySync(
-      { class: TestModel },
-      testGuid
-    ) as TestModelClass & TestModelData;
-    expect(testEntity).toBeInstanceOf(TestModel);
-    expect(testEntity.guid).toEqual(testGuid);
-
     // Test asynchronous getEntity.
     testEntity = (await nymph.getEntity(
       { class: TestModel },
@@ -1179,10 +1171,10 @@ These hats are absolutely fantastic.`;
     await createTestEntities();
 
     // Testing referenced entities...
-    expect(testEntity.reference?.test).toEqual('good');
+    expect((await testEntity.reference)?.test).toEqual('good');
 
     // Testing referenced entity arrays...
-    expect(testEntity.refArray?.[0].test).toEqual('good');
+    expect((await testEntity.refArray)?.[0].test).toEqual('good');
   });
 
   it('ref', async () => {
@@ -1790,8 +1782,8 @@ These hats are absolutely fantastic.`;
     await createTestEntities();
 
     // Deleting referenced entities...
-    expect(await testEntity.reference?.$delete()).toEqual(true);
-    expect(testEntity.reference?.guid).toBeNull();
+    expect(await (await testEntity.reference)?.$delete()).toEqual(true);
+    expect((await testEntity.reference)?.guid).toBeNull();
   });
 
   it('delete', async () => {
@@ -1900,11 +1892,13 @@ export function ExportImportTest(
         expect(model.number).toEqual(30);
         expect(model.timestamp).toBeGreaterThanOrEqual(strtotime('-2 minutes'));
 
-        expect(model.reference?.guid).not.toBeNull();
-        expect(model.reference?.string).toEqual('another');
-        expect(model.reference?.index?.match(/^\d+b$/)).toBeTruthy();
-        expect(model.refArray?.[0].guid).not.toBeNull();
-        expect(model.refArray?.[0].guid).toEqual(model.reference?.guid);
+        expect((await model.reference)?.guid).not.toBeNull();
+        expect((await model.reference)?.string).toEqual('another');
+        expect((await model.reference)?.index?.match(/^\d+b$/)).toBeTruthy();
+        expect((await model.refArray)?.[0].guid).not.toBeNull();
+        expect((await model.refArray)?.[0].guid).toEqual(
+          (await model.reference)?.guid
+        );
       }
     }
   }

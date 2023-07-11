@@ -15,26 +15,26 @@ export class MockNymphDriver {
     this.nymph = nymph;
   }
 
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     ...selectors: Selector[]
-  ): string | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<string | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): ReturnType<T['factorySync']> | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<ReturnType<T['factorySync']> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string
-  ): string | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<string | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string
-  ): ReturnType<T['factorySync']> | null;
-  public getEntitySync<T extends EntityConstructor = EntityConstructor>(
+  ): Promise<ReturnType<T['factorySync']> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): ReturnType<T['factorySync']> | string | null {
+  ): Promise<ReturnType<T['factorySync']> | string | null> {
     const guid =
       typeof selectors[0] === 'string' ? selectors[0] : selectors[0].guid;
     if (!options || !guid || typeof guid !== 'string' || !(guid in entities)) {
@@ -119,7 +119,7 @@ export class MockNymph {
     ...selectors: Selector[] | string[]
   ): Promise<ReturnType<T['factorySync']> | string | null> {
     // @ts-ignore: The selector type is correct here.
-    return this.driver.getEntitySync(options, ...selectors);
+    return await this.driver.getEntity(options, ...selectors);
   }
 
   public async saveEntity(entity: EntityInterface): Promise<boolean> {

@@ -16,10 +16,6 @@ import {
   sortObj,
 } from './utils';
 
-const sleepErr =
-  'This entity is in a sleeping reference state. ' +
-  'You must use .$ready() to wake it.';
-
 export default class Entity<T extends EntityData = EntityData>
   implements EntityInterface
 {
@@ -89,10 +85,9 @@ export default class Entity<T extends EntityData = EntityData>
   protected $readyPromise: Promise<Entity<T>> | null = null;
 
   /**
-   * Load an entity.
-   * @param guid The ID of the entity to load, undefined for a new entity.
+   * Initialize an entity.
    */
-  public constructor(guid?: string) {
+  public constructor() {
     this.$nymph = (this.constructor as EntityConstructor).nymph;
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
@@ -178,17 +173,6 @@ export default class Entity<T extends EntityData = EntityData>
     };
     this.$dataStore = {} as T;
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
-
-    if (guid != null) {
-      this.guid = guid;
-      this.$isASleepingReference = true;
-      this.$sleepingReference = [
-        'nymph_entity_reference',
-        this.guid,
-        (this.constructor as EntityConstructor).class,
-      ];
-      this.$ready();
-    }
 
     return new Proxy(this, {
       has(entity: Entity, name: string) {
@@ -283,18 +267,21 @@ export default class Entity<T extends EntityData = EntityData>
     const cacheEntity = (
       guid ? this.nymph.getEntityFromCache(this, guid) : null
     ) as Entity | null;
-    const entity = cacheEntity || new this(guid);
+    if (cacheEntity) {
+      return cacheEntity;
+    }
+    const entity = new this();
     if (guid != null) {
+      entity.guid = guid;
+      entity.$isASleepingReference = true;
+      entity.$sleepingReference = ['nymph_entity_reference', guid, this.class];
       await entity.$ready();
     }
     return entity;
   }
 
-  public static factorySync(guid?: string) {
-    const cacheEntity = (
-      guid ? this.nymph.getEntityFromCache(this, guid) : null
-    ) as Entity | null;
-    return cacheEntity || new this(guid);
+  public static factorySync() {
+    return new this();
   }
 
   public static factoryReference(reference: EntityReference) {
@@ -334,9 +321,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public toJSON() {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
     const obj: EntityJson = {
       class: (this.constructor as any).class as string,
       guid: this.guid,
@@ -382,9 +367,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $addTag(...tags: string[]) {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     if (tags.length < 1) {
       return;
@@ -393,9 +376,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $arraySearch(array: any[], strict = false) {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     if (!Array.isArray(array)) {
       return -1;
@@ -410,9 +391,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public async $delete(): Promise<boolean> {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     const guid = this.guid;
 
@@ -420,9 +399,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $equals(object: any) {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     if (!(object instanceof Entity)) {
       return false;
@@ -448,9 +425,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $getPatch(): EntityPatch {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
     if (this.guid == null) {
       throw new InvalidStateError(
         "You can't make a patch from an unsaved entity."
@@ -484,9 +459,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $hasTag(...tags: string[]) {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     if (!tags.length) {
       return false;
@@ -504,9 +477,7 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $is(object: any) {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     if (!(object instanceof Entity)) {
       return false;
@@ -527,14 +498,30 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public async $patch() {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     const mdate = this.mdate;
 
     await this.$nymph.patchEntity(this);
     return mdate !== this.mdate;
+  }
+
+  /**
+   * Check if this is a sleeping reference and throw an error if so.
+   */
+  protected $check() {
+    if (this.$isASleepingReference || this.$sleepingReference != null) {
+      throw new EntityIsSleepingReferenceError(
+        'This entity is in a sleeping reference state. You must use .$ready() to wake it.'
+      );
+    }
+  }
+
+  /**
+   * Check if this is a sleeping reference.
+   */
+  public $asleep() {
+    return this.$isASleepingReference || this.$sleepingReference != null;
   }
 
   public $ready() {
@@ -644,17 +631,13 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $removeTag(...tags: string[]) {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     this.tags = difference(this.tags, tags);
   }
 
   public async $save() {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
 
     await this.$nymph.saveEntity(this);
     return !!this.guid;
@@ -665,9 +648,7 @@ export default class Entity<T extends EntityData = EntityData>
     params: Iterable<any>,
     stateless = false
   ) {
-    if (this.$isASleepingReference) {
-      throw new EntityIsSleepingReferenceError(sleepErr);
-    }
+    this.$check();
     // Turn the params into a real array, in case an arguments object was
     // passed.
     const paramArray = Array.prototype.slice.call(params);

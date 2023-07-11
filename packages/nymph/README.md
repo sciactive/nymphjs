@@ -76,19 +76,17 @@ export default class Todo extends Entity<TodoData> {
     return (await super.factory(guid)) as Todo & TodoData;
   }
 
-  static factorySync(guid?: string): Todo & TodoData {
-    return super.factorySync(guid) as Todo & TodoData;
+  static factorySync(): Todo & TodoData {
+    return super.factorySync() as Todo & TodoData;
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (this.guid == null) {
-      // Within the methods of an entity, you will use `this.$data` to access
-      // its data. Outside, you don't need the $data part.
-      this.$data.text = '';
-      this.$data.done = false;
-    }
+    // Within the methods of an entity, you will use `this.$data` to access
+    // its data. Outside, you don't need the $data part.
+    this.$data.text = '';
+    this.$data.done = false;
   }
 
   async $getOtherTodos() {

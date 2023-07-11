@@ -1,3 +1,4 @@
+import type { EntityPromise } from './Entity.types';
 import Entity from './Entity';
 
 export type TestModelData = {
@@ -11,12 +12,12 @@ export type TestModelData = {
   numberString?: string;
   timestamp?: Number;
   boolean?: boolean;
-  reference?: TestModel & TestModelData;
-  refArray?: (TestModel & TestModelData)[];
+  reference?: EntityPromise<TestModel & TestModelData>;
+  refArray?: EntityPromise<(TestModel & TestModelData)[]>;
   refObject?: {
     [k: string]: TestModel & TestModelData;
   };
-  parent?: TestModel & TestModelData;
+  parent?: EntityPromise<TestModel & TestModelData>;
   // For Import/Export Tests.
   index?: string;
 };
@@ -38,17 +39,15 @@ export class TestModel extends Entity<TestModelData> {
     return (await super.factory(guid)) as TestModel & TestModelData;
   }
 
-  static factorySync(guid?: string): TestModel & TestModelData {
-    return super.factorySync(guid) as TestModel & TestModelData;
+  static factorySync(): TestModel & TestModelData {
+    return super.factorySync() as TestModel & TestModelData;
   }
 
-  constructor(guid?: string) {
-    super(guid);
+  constructor() {
+    super();
 
-    if (this.guid == null) {
-      this.$addTag('test');
-      this.$data.boolean = true;
-    }
+    this.$addTag('test');
+    this.$data.boolean = true;
   }
 
   public $useProtectedData() {
@@ -82,8 +81,8 @@ export class TestBModel extends TestModel {
     return (await super.factory(guid)) as TestBModel & TestModelData;
   }
 
-  static factorySync(guid?: string): TestBModel & TestModelData {
-    return super.factorySync(guid) as TestBModel & TestModelData;
+  static factorySync(): TestBModel & TestModelData {
+    return super.factorySync() as TestBModel & TestModelData;
   }
 }
 
@@ -102,7 +101,7 @@ export class TestEmptyModel extends Entity<TestEmptyModelData> {
     return (await super.factory(guid)) as TestEmptyModel & TestEmptyModelData;
   }
 
-  static factorySync(guid?: string): TestEmptyModel & TestEmptyModelData {
-    return super.factorySync(guid) as TestEmptyModel & TestEmptyModelData;
+  static factorySync(): TestEmptyModel & TestEmptyModelData {
+    return super.factorySync() as TestEmptyModel & TestEmptyModelData;
   }
 }

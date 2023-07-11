@@ -14,6 +14,10 @@ export type ACProperties = {
 
 export type EntityReference = ['nymph_entity_reference', string, string];
 
+export type EntityPromise<T extends EntityInterface | EntityInterface[]> =
+  | T
+  | Promise<T>;
+
 export type EntityData = {
   [k: string]: any;
 };

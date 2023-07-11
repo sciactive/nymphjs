@@ -1,9 +1,3 @@
-import {
-  Worker,
-  MessageChannel,
-  receiveMessageOnPort,
-} from 'node:worker_threads';
-import { resolve } from 'node:path';
 import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
 import format from 'pg-format';
 import {
@@ -49,8 +43,6 @@ export default class PostgreSQLDriver extends NymphDriver {
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected link: Pool;
   protected transaction: PostgreSQLDriverTransaction | null = null;
-  // @ts-ignore: this is assigned in connect(), which is called by the constructor.
-  protected worker: Worker;
 
   static escape(input: string) {
     return format.ident(input);
@@ -63,8 +55,7 @@ export default class PostgreSQLDriver extends NymphDriver {
   constructor(
     config: Partial<PostgreSQLDriverConfig>,
     link?: Pool,
-    transaction?: PostgreSQLDriverTransaction,
-    worker?: Worker
+    transaction?: PostgreSQLDriverTransaction
   ) {
     super();
     this.config = { ...defaults, ...config };
@@ -85,9 +76,6 @@ export default class PostgreSQLDriver extends NymphDriver {
     if (transaction != null) {
       this.transaction = transaction;
     }
-    if (worker != null) {
-      this.worker = worker;
-    }
     if (link == null) {
       this.connect();
     }
@@ -102,8 +90,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     return new PostgreSQLDriver(
       this.config,
       this.link,
-      this.transaction ?? undefined,
-      this.worker ?? undefined
+      this.transaction ?? undefined
     );
   }
 
@@ -142,7 +129,6 @@ export default class PostgreSQLDriver extends NymphDriver {
           })
         );
         connection.done();
-        this.worker.postMessage('halt');
       }
     } catch (e: any) {
       this.connected = false;
@@ -152,17 +138,6 @@ export default class PostgreSQLDriver extends NymphDriver {
     if (!this.connected) {
       try {
         this.link = new Pool(this.postgresqlConfig);
-        const worker = new Worker(resolve(__dirname, 'runPostgresqlSync.js'), {
-          workerData: this.postgresqlConfig,
-        });
-        worker.on('message', (message) => {
-          if (message === 'halted') {
-            worker.terminate();
-          } else if (typeof message === 'object' && 'error' in message) {
-            console.error('Worker Thread Error', message.error);
-          }
-        });
-        this.worker = worker;
         this.connected = true;
       } catch (e: any) {
         if (
@@ -190,7 +165,6 @@ export default class PostgreSQLDriver extends NymphDriver {
   public async disconnect() {
     if (this.connected) {
       await new Promise((resolve) => this.link.end(() => resolve(0)));
-      this.worker.postMessage('halt');
       this.connected = false;
     }
     return this.connected;
@@ -215,10 +189,10 @@ export default class PostgreSQLDriver extends NymphDriver {
    * @param etype The entity type to create a table for. If this is blank, the default tables are created.
    * @returns True on success, false on failure.
    */
-  private createTables(etype: string | null = null) {
+  private async createTables(etype: string | null = null) {
     if (etype != null) {
       // Create the entity table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`
         )} (
@@ -229,41 +203,41 @@ export default class PostgreSQLDriver extends NymphDriver {
           PRIMARY KEY ("guid")
         ) WITH ( OIDS=FALSE );`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_cdate`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_cdate`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`
         )} USING btree ("cdate");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_mdate`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_mdate`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`
         )} USING btree ("mdate");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_tags`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_tags`
         )} ON ${PostgreSQLDriver.escape(
@@ -271,7 +245,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} USING gin ("tags");`
       );
       // Create the data table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} (
@@ -285,53 +259,53 @@ export default class PostgreSQLDriver extends NymphDriver {
             )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
         ) WITH ( OIDS=FALSE );`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} USING btree ("guid");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_name`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_name`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} USING btree ("name");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid_name__user`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid_name__user`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`
         )} USING btree ("guid") WHERE "name" = 'user'::text;`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid_name__group`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid_name__group`
         )} ON ${PostgreSQLDriver.escape(
@@ -339,7 +313,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} USING btree ("guid") WHERE "name" = 'group'::text;`
       );
       // Create the data comparisons table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
         )} (
@@ -355,53 +329,53 @@ export default class PostgreSQLDriver extends NymphDriver {
             )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
         ) WITH ( OIDS=FALSE );`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_guid`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_guid`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
         )} USING btree ("guid");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_name`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_name`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
         )} USING btree ("name");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_guid_name_truthy`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_guid_name_truthy`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`
         )} USING btree ("guid", "name") WHERE "truthy" = TRUE;`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_guid_name_falsy`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_guid_name_falsy`
         )} ON ${PostgreSQLDriver.escape(
@@ -409,7 +383,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} USING btree ("guid", "name") WHERE "truthy" <> TRUE;`
       );
       // Create the references table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`
         )} (
@@ -423,41 +397,41 @@ export default class PostgreSQLDriver extends NymphDriver {
             )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
         ) WITH ( OIDS=FALSE );`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_guid`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_guid`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`
         )} USING btree ("guid");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_name`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_name`
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`
         )} USING btree ("name");`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_reference`
         )};`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_reference`
         )} ON ${PostgreSQLDriver.escape(
@@ -466,7 +440,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       );
     } else {
       // Create the UID table.
-      this.queryRunSync(
+      await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}uids`
         )} (
@@ -475,7 +449,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           PRIMARY KEY ("name")
         ) WITH ( OIDS = FALSE );`
       );
-      this.queryRunSync(
+      await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}uids`
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`
@@ -513,41 +487,13 @@ export default class PostgreSQLDriver extends NymphDriver {
       return await runQuery();
     } catch (e: any) {
       const errorCode = e?.code;
-      if (errorCode === '42P01' && this.createTables()) {
+      if (errorCode === '42P01' && (await this.createTables())) {
         // If the tables don't exist yet, create them.
         for (let etype of etypes) {
-          this.createTables(etype);
+          await this.createTables(etype);
         }
         try {
           return await runQuery();
-        } catch (e2: any) {
-          throw new QueryFailedError(
-            'Query failed: ' + e2?.code + ' - ' + e2?.message,
-            query
-          );
-        }
-      } else {
-        throw e;
-      }
-    }
-  }
-
-  private querySync<T extends () => any>(
-    runQuery: T,
-    query: string,
-    etypes: string[] = []
-  ): ReturnType<T> {
-    try {
-      return runQuery();
-    } catch (e: any) {
-      const errorCode = e?.code;
-      if (errorCode === '42P01' && this.createTables()) {
-        // If the tables don't exist yet, create them.
-        for (let etype of etypes) {
-          this.createTables(etype);
-        }
-        try {
-          return runQuery();
         } catch (e2: any) {
           throw new QueryFailedError(
             'Query failed: ' + e2?.code + ' - ' + e2?.message,
@@ -590,43 +536,6 @@ export default class PostgreSQLDriver extends NymphDriver {
             }
           }
         );
-        return results.rows;
-      },
-      `${query} -- ${JSON.stringify(params)}`,
-      etypes
-    );
-  }
-
-  private queryIterSync(
-    query: string,
-    {
-      etypes = [],
-      params = {},
-    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
-  ) {
-    const { query: newQuery, params: newParams } = this.translateQuery(
-      query,
-      params
-    );
-    return this.querySync(
-      () => {
-        const channel = new MessageChannel();
-
-        this.worker.postMessage(
-          { query: newQuery, params: newParams, port: channel.port2 },
-          [channel.port2]
-        );
-
-        let output = undefined;
-        while (!output) {
-          output = receiveMessageOnPort(channel.port1);
-        }
-
-        if (output.message.error) {
-          throw new Error(output.message.error);
-        }
-
-        const { results } = output.message;
         return results.rows;
       },
       `${query} -- ${JSON.stringify(params)}`,
@@ -701,43 +610,6 @@ export default class PostgreSQLDriver extends NymphDriver {
             }
           }
         );
-        return { rowCount: results.rowCount ?? 0 };
-      },
-      `${query} -- ${JSON.stringify(params)}`,
-      etypes
-    );
-  }
-
-  private queryRunSync(
-    query: string,
-    {
-      etypes = [],
-      params = {},
-    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
-  ) {
-    const { query: newQuery, params: newParams } = this.translateQuery(
-      query,
-      params
-    );
-    return this.querySync(
-      () => {
-        const channel = new MessageChannel();
-
-        this.worker.postMessage(
-          { query: newQuery, params: newParams, port: channel.port2 },
-          [channel.port2]
-        );
-
-        let output = undefined;
-        while (!output) {
-          output = receiveMessageOnPort(channel.port1);
-        }
-
-        if (output.message.error) {
-          throw new Error(output.message.error);
-        }
-
-        const { results } = output.message;
         return { rowCount: results.rowCount ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
@@ -2009,26 +1881,6 @@ export default class PostgreSQLDriver extends NymphDriver {
     };
   }
 
-  protected performQuerySync(
-    options: Options,
-    formattedSelectors: FormattedSelector[],
-    etype: string
-  ): {
-    result: any;
-  } {
-    const { query, params, etypes } = this.makeEntityQuery(
-      options,
-      formattedSelectors,
-      etype
-    );
-    const result = (this.queryIterSync(query, { etypes, params }) || [])[
-      Symbol.iterator
-    ]();
-    return {
-      result,
-    };
-  }
-
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
     ...selectors: Selector[]
@@ -2075,57 +1927,6 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
 
     const result = await resultPromise;
-    const value = process();
-    if (value instanceof Error) {
-      throw value;
-    }
-    return value;
-  }
-
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'count' },
-    ...selectors: Selector[]
-  ): number;
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> & { return: 'guid' },
-    ...selectors: Selector[]
-  ): string[];
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options?: Options<T>,
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[];
-  protected getEntitiesSync<T extends EntityConstructor = EntityConstructor>(
-    options: Options<T> = {},
-    ...selectors: Selector[]
-  ): ReturnType<T['factorySync']>[] | string[] | number {
-    const { result, process } = this.getEntitesRowLike<T>(
-      // @ts-ignore: options is correct here.
-      options,
-      selectors,
-      (options, formattedSelectors, etype) =>
-        this.performQuerySync(options, formattedSelectors, etype),
-      () => {
-        const next: any = result.next();
-        return next.done ? null : next.value;
-      },
-      () => undefined,
-      (row) => Number(row.count),
-      (row) => row.guid,
-      (row) => ({
-        tags: row.tags,
-        cdate: isNaN(Number(row.cdate)) ? null : Number(row.cdate),
-        mdate: isNaN(Number(row.mdate)) ? null : Number(row.mdate),
-      }),
-      (row) => ({
-        name: row.name,
-        svalue:
-          row.value === 'N'
-            ? JSON.stringify(Number(row.number))
-            : row.value === 'S'
-            ? JSON.stringify(row.string)
-            : row.value,
-      })
-    );
     const value = process();
     if (value instanceof Error) {
       throw value;
