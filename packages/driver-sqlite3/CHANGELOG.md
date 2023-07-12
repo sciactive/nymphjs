@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.41](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.40...v1.0.0-beta.41) (2023-07-12)
+
+### Features
+
+- remove synchronous database queries ([b579fb2](https://github.com/sciactive/nymphjs/commit/b579fb2eacd96cdd1b386a62c5c00cdbb2438f6e))
+
 # [1.0.0-beta.40](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.39...v1.0.0-beta.40) (2023-07-10)
 
 **Note:** Version bump only for package @nymphjs/driver-sqlite3

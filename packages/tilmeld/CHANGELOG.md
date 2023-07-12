@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.41](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.40...v1.0.0-beta.41) (2023-07-12)
+
+### Features
+
+- remove synchronous database queries ([b579fb2](https://github.com/sciactive/nymphjs/commit/b579fb2eacd96cdd1b386a62c5c00cdbb2438f6e))
+- rewrite server side async api to match client side api ([9c537a8](https://github.com/sciactive/nymphjs/commit/9c537a8be49e9b989af0822a4c2236e8c2d20f87))
+
 # [1.0.0-beta.40](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.39...v1.0.0-beta.40) (2023-07-10)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
