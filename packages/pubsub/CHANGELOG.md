@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.42](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.41...v1.0.0-beta.42) (2023-07-12)
+
+### Features
+
+- make fillSession async so that gatekeeper can be sync ([fb6def4](https://github.com/sciactive/nymphjs/commit/fb6def45cd031516c9bcd3438f905e2ff881707b))
+
 # [1.0.0-beta.41](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.40...v1.0.0-beta.41) (2023-07-12)
 
 ### Features
