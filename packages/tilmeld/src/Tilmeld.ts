@@ -76,6 +76,14 @@ export default class Tilmeld implements TilmeldInterface {
   private alreadyLoggedOutSwitch = false;
 
   /**
+   * Gatekeeper ability cache.
+   *
+   * Gatekeeper will cache the user's abilities that it calculates, so it can
+   * check faster if that user has been checked before.
+   */
+  private gatekeeperCache: { [k: string]: true } | null = null;
+
+  /**
    * Create a new instance of Tilmeld.
    *
    * @param config The Tilmeld configuration.
@@ -94,6 +102,7 @@ export default class Tilmeld implements TilmeldInterface {
     tilmeld.request = this.request;
     tilmeld.response = this.response;
     tilmeld.currentUser = this.currentUser;
+    tilmeld.gatekeeperCache = this.gatekeeperCache;
 
     return tilmeld;
   }
@@ -138,7 +147,9 @@ export default class Tilmeld implements TilmeldInterface {
       user.mdate = currentUserMDate;
       user.tags = currentUserTags;
       user.$putData(currentUserData, currentUserSData);
-      this.fillSession(user);
+      this.currentUser = user;
+      this.currentUser.$updateDataProtection();
+      this.currentUser.$updateGroupDataProtection();
     }
 
     // Set up access control hooks when Nymph is called.
@@ -154,11 +165,17 @@ export default class Tilmeld implements TilmeldInterface {
    * @param ability The ability.
    * @returns Whether the user has the given ability.
    */
-  public async gatekeeper(ability?: string): Promise<boolean> {
-    if (this.currentUser == null) {
+  public gatekeeper(ability?: string) {
+    if (this.currentUser == null || this.gatekeeperCache == null) {
       return false;
     }
-    return await this.currentUser.$gatekeeper(ability);
+    if (ability == null) {
+      return true;
+    }
+    return (
+      (ability in this.gatekeeperCache && !!this.gatekeeperCache[ability]) ||
+      !!this.currentUser.abilities?.includes('system/admin')
+    );
   }
 
   private initAccessControl() {
@@ -839,8 +856,10 @@ export default class Tilmeld implements TilmeldInterface {
    *
    * @param user The user.
    */
-  public fillSession(user: User & UserData) {
+  public async fillSession(user: User & UserData) {
     this.currentUser = user;
+    this.gatekeeperCache = await user.$getGatekeeperCache();
+
     // Now update the data protection on the user and all the groups.
     this.currentUser.$updateDataProtection();
     this.currentUser.$updateGroupDataProtection();
@@ -852,6 +871,7 @@ export default class Tilmeld implements TilmeldInterface {
   public clearSession() {
     const user = this.currentUser;
     this.currentUser = null;
+    this.gatekeeperCache = null;
     if (user) {
       user.$updateDataProtection();
       user.$updateGroupDataProtection();
@@ -913,7 +933,7 @@ export default class Tilmeld implements TilmeldInterface {
     ) {
       // The user has already been authenticated through some other means.
       const user = this.response.locals.user;
-      this.fillSession(user);
+      await this.fillSession(user);
       return true;
     }
 
@@ -994,7 +1014,7 @@ export default class Tilmeld implements TilmeldInterface {
       if (switchUser.guid == null) {
         await this.logoutSwitch();
       } else {
-        this.fillSession(switchUser);
+        await this.fillSession(switchUser);
 
         if (this.response) {
           this.response.locals.user = switchUser;
@@ -1007,9 +1027,9 @@ export default class Tilmeld implements TilmeldInterface {
     if (expire.getTime() < Date.now() + this.config.jwtRenew * 1000) {
       // If the user is less than renew time from needing a new token, give them
       // a new one.
-      this.login(user, fromAuthHeader);
+      await this.login(user, fromAuthHeader);
     } else {
-      this.fillSession(user);
+      await this.fillSession(user);
     }
 
     if (this.response) {
@@ -1027,7 +1047,7 @@ export default class Tilmeld implements TilmeldInterface {
    * @param sendCookie Send the auth token as a cookie.
    * @returns True on success, false on failure.
    */
-  public login(
+  public async login(
     user: User & UserData,
     sendAuthHeader: boolean,
     sendCookie = true
@@ -1057,7 +1077,7 @@ export default class Tilmeld implements TilmeldInterface {
         this.response.locals.user = user;
       }
 
-      this.fillSession(user);
+      await this.fillSession(user);
       return true;
     }
     return false;
@@ -1073,7 +1093,7 @@ export default class Tilmeld implements TilmeldInterface {
    * @param sendCookie Send the auth token as a cookie.
    * @returns True on success, false on failure.
    */
-  public loginSwitch(
+  public async loginSwitch(
     user: User & UserData,
     sendAuthHeader: boolean,
     sendCookie = true
@@ -1103,7 +1123,7 @@ export default class Tilmeld implements TilmeldInterface {
         this.response.locals.user = user;
       }
 
-      this.fillSession(user);
+      await this.fillSession(user);
       return true;
     }
     return false;

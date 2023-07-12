@@ -691,11 +691,11 @@ export default class PubSub {
             const switchUser = await nymph.tilmeld.extractToken(switchToken);
             if (switchUser) {
               // Log in the switchUser for access controls.
-              nymph.tilmeld.fillSession(switchUser);
+              await nymph.tilmeld.fillSession(switchUser);
             }
           } else {
             // Log in the user for access controls.
-            nymph.tilmeld.fillSession(user);
+            await nymph.tilmeld.fillSession(user);
           }
         }
       }
@@ -886,11 +886,11 @@ export default class PubSub {
             const switchUser = await nymph.tilmeld.extractToken(switchToken);
             if (switchUser) {
               // Log in the switchUser for access controls.
-              nymph.tilmeld.fillSession(switchUser);
+              await nymph.tilmeld.fillSession(switchUser);
             }
           } else {
             // Log in the user for access controls.
-            nymph.tilmeld.fillSession(user);
+            await nymph.tilmeld.fillSession(user);
           }
         }
       }
@@ -1170,11 +1170,11 @@ export default class PubSub {
             const switchUser = await nymph.tilmeld.extractToken(switchToken);
             if (switchUser) {
               // Log in the switchUser for access controls.
-              nymph.tilmeld.fillSession(switchUser);
+              await nymph.tilmeld.fillSession(switchUser);
             }
           } else {
             // Log in the user for access controls.
-            nymph.tilmeld.fillSession(user);
+            await nymph.tilmeld.fillSession(user);
           }
         }
       }

@@ -76,11 +76,13 @@ The GUID and unique code generators are used to generate new GUIDs for Nymph obj
 
 In version 1.0.0-beta.41, the server side API was rewritten to match the client side API. All synchronous database calls were removed. This is to prevent a very rare potential bug, because synchronous database calls were made outside of transactions. Here is a list of some things that changed that could break your code:
 
-- `gatekeeper` is now async
 - `$gatekeeper` is now async
 - no guid on `constructor` or `factorySync`
 - `checkClientUIDPermissions` is now async
 - `authenticate` is now async
+- `fillSession` is now async
+- `login` is now async
+- `loginSwitch` is now async
 - `logout` is now async
 - `logoutSwitch` is now async
 - `$addGroup` is now async

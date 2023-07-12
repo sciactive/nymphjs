@@ -582,7 +582,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Authentication was successful, attempt to login.
-    if (!tilmeld.login(this, true)) {
+    if (!(await tilmeld.login(this, true))) {
       return { result: false, message: 'Incorrect login/password.' };
     }
 
@@ -654,7 +654,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Authentication was successful, attempt to login.
-    if (!tilmeld.loginSwitch(this, true)) {
+    if (!(await tilmeld.loginSwitch(this, true))) {
       return { result: false, message: 'Incorrect login/password.' };
     }
 
@@ -984,27 +984,34 @@ export default class User extends AbleObject<UserData> {
     }
     // Check the cache to see if we've already checked this user.
     if (this.$gatekeeperCache == null) {
-      let abilities = this.$data.abilities ?? [];
-      if (this.$data.inheritAbilities) {
-        await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
-        for (let curGroup of this.$data.groups ?? []) {
-          if (curGroup.enabled) {
-            abilities = abilities.concat(curGroup.abilities ?? []);
-          }
-        }
-        await this.$data.group?.$wake();
-        const group = this.$data.group;
-        if (group != null && group.cdate != null && group.enabled) {
-          abilities = abilities.concat(group.abilities ?? []);
-        }
-      }
-      this.$gatekeeperCache = Object.fromEntries(
-        abilities.map((ability) => [ability, true])
-      );
+      this.$gatekeeperCache = await this.$getGatekeeperCache();
     }
     return (
       (ability in this.$gatekeeperCache && !!this.$gatekeeperCache[ability]) ||
       !!this.$data.abilities?.includes('system/admin')
+    );
+  }
+
+  /**
+   * Build a gatekeeper cache object.
+   */
+  public async $getGatekeeperCache() {
+    let abilities = this.$data.abilities ?? [];
+    if (this.$data.inheritAbilities) {
+      await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
+      for (let curGroup of this.$data.groups ?? []) {
+        if (curGroup.enabled) {
+          abilities = abilities.concat(curGroup.abilities ?? []);
+        }
+      }
+      await this.$data.group?.$wake();
+      const group = this.$data.group;
+      if (group != null && group.cdate != null && group.enabled) {
+        abilities = abilities.concat(group.abilities ?? []);
+      }
+    }
+    return Object.fromEntries(
+      abilities.map((ability) => [ability, true as true])
     );
   }
 
@@ -1246,7 +1253,7 @@ export default class User extends AbleObject<UserData> {
     if (await this.$save()) {
       if (data.revokeCurrentTokens) {
         const tilmeld = enforceTilmeld(this);
-        tilmeld.login(this, true);
+        await tilmeld.login(this, true);
       }
       return { result: true, message: 'Your password has been changed.' };
     } else {
@@ -1299,7 +1306,7 @@ export default class User extends AbleObject<UserData> {
 
     if (await this.$save()) {
       const tilmeld = enforceTilmeld(this);
-      tilmeld.login(this, true);
+      await tilmeld.login(this, true);
       return {
         result: true,
         message: 'You have logged out of all other sessions.',
@@ -1885,7 +1892,7 @@ export default class User extends AbleObject<UserData> {
           tilmeld.config.unverifiedAccess &&
           !madeAdmin
         ) {
-          if (!tilmeld.login(this, true)) {
+          if (!(await tilmeld.login(this, true))) {
             throw new Error('An error occurred trying to log you in.');
           }
           message +=
@@ -1894,7 +1901,7 @@ export default class User extends AbleObject<UserData> {
             'registration.';
           loggedin = true;
         } else {
-          if (!tilmeld.login(this, true)) {
+          if (!(await tilmeld.login(this, true))) {
             throw new Error('An error occurred trying to log you in.');
           }
           message += "You're now registered and logged in!";
@@ -1914,7 +1921,7 @@ export default class User extends AbleObject<UserData> {
         try {
           await tnymph.commit(transaction);
           this.$nymph = nymph;
-          this.$nymph.tilmeld?.fillSession(this);
+          await this.$nymph.tilmeld?.fillSession(this);
         } catch (e: any) {
           throw e;
         }
@@ -2189,9 +2196,11 @@ export default class User extends AbleObject<UserData> {
       this.$gatekeeperCache = undefined;
       await tnymph.commit(transaction);
 
-      if (enforceTilmeld(nymph).User.current(true).$is(this)) {
+      const tilmeld = enforceTilmeld(nymph);
+
+      if (tilmeld.User.current(true).$is(this)) {
         // Update the user in the session cache.
-        enforceTilmeld(nymph).fillSession(this);
+        await tilmeld.fillSession(this);
       }
     } else {
       await tnymph.rollback(transaction);
