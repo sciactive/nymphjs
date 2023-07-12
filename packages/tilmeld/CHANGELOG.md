@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.43](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.42...v1.0.0-beta.43) (2023-07-12)
+
+### Bug Fixes
+
+- update calls to gatekeeper to not use await ([ad36172](https://github.com/sciactive/nymphjs/commit/ad361725b67054aeb9e8e1c1a221c8e150a2c737))
+
 # [1.0.0-beta.42](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.41...v1.0.0-beta.42) (2023-07-12)
 
 ### Features
