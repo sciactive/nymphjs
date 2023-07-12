@@ -1,7 +1,7 @@
 {
   "name": "@nymphjs/query-parser",
   "version": "1.0.0-beta.40",
-  "description": "NymphJS - Query Parse",
+  "description": "Nymph.js - Query Parse",
   "browser": "dist/index.js",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

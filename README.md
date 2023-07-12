@@ -94,7 +94,7 @@ You will also now need to call `$wake` on sleeping references before you access 
 
 # Development
 
-To develop NymphJS, checkout the repo and run:
+To develop Nymph.js, checkout the repo and run:
 
 ```sh
 npm i

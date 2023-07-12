@@ -1,7 +1,7 @@
 {
   "name": "@nymphjs/driver-sqlite3",
   "version": "1.0.0-beta.40",
-  "description": "NymphJS - SQLite3 DB Driver",
+  "description": "Nymph.js - SQLite3 DB Driver",
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

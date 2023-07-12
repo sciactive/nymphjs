@@ -1,7 +1,7 @@
 {
   "name": "@nymphjs/client",
   "version": "1.0.0-beta.40",
-  "description": "NymphJS - Client",
+  "description": "Nymph.js - Client",
   "browser": "dist/index.js",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

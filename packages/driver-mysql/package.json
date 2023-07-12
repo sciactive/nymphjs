@@ -1,7 +1,7 @@
 {
   "name": "@nymphjs/driver-mysql",
   "version": "1.0.0-beta.40",
-  "description": "NymphJS - MySQL DB Driver",
+  "description": "Nymph.js - MySQL DB Driver",
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

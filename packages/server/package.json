@@ -1,7 +1,7 @@
 {
   "name": "@nymphjs/server",
   "version": "1.0.0-beta.40",
-  "description": "NymphJS - REST Server",
+  "description": "Nymph.js - REST Server",
   "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
