@@ -80,9 +80,9 @@ export default class Entity<T extends EntityData = EntityData>
    */
   protected $sleepingReference: EntityReference | null = null;
   /**
-   * A promise that resolved when the entity's data is ready.
+   * A promise that resolved when the entity's data is wake.
    */
-  protected $readyPromise: Promise<Entity<T>> | null = null;
+  protected $wakePromise: Promise<Entity<T>> | null = null;
 
   /**
    * Initialize an entity.
@@ -275,7 +275,7 @@ export default class Entity<T extends EntityData = EntityData>
       entity.guid = guid;
       entity.$isASleepingReference = true;
       entity.$sleepingReference = ['nymph_entity_reference', guid, this.class];
-      await entity.$ready();
+      await entity.$wake();
     }
     return entity;
   }
@@ -512,7 +512,7 @@ export default class Entity<T extends EntityData = EntityData>
   protected $check() {
     if (this.$isASleepingReference || this.$sleepingReference != null) {
       throw new EntityIsSleepingReferenceError(
-        'This entity is in a sleeping reference state. You must use .$ready() to wake it.'
+        'This entity is in a sleeping reference state. You must use .$wake() to wake it.'
       );
     }
   }
@@ -524,18 +524,21 @@ export default class Entity<T extends EntityData = EntityData>
     return this.$isASleepingReference || this.$sleepingReference != null;
   }
 
-  public $ready() {
+  /**
+   * Wake from a sleeping reference.
+   */
+  public $wake() {
     if (!this.$isASleepingReference) {
-      this.$readyPromise = null;
+      this.$wakePromise = null;
       return Promise.resolve(this);
     }
     if (this.$sleepingReference?.[1] == null) {
       throw new InvalidStateError(
-        'Tried to ready a sleeping reference with no GUID.'
+        'Tried to wake a sleeping reference with no GUID.'
       );
     }
-    if (!this.$readyPromise) {
-      this.$readyPromise = this.$nymph
+    if (!this.$wakePromise) {
+      this.$wakePromise = this.$nymph
         .getEntityData(
           { class: this.constructor as EntityConstructor },
           { type: '&', guid: this.$sleepingReference[1] }
@@ -548,16 +551,16 @@ export default class Entity<T extends EntityData = EntityData>
           return this.$init(data);
         })
         .finally(() => {
-          this.$readyPromise = null;
+          this.$wakePromise = null;
         });
     }
-    return this.$readyPromise;
+    return this.$wakePromise;
   }
 
-  public $readyAll(level?: number) {
+  public $wakeAll(level?: number) {
     return new Promise((resolve, reject) => {
-      // Run this once this entity is ready.
-      const readyProps = () => {
+      // Run this once this entity is awake.
+      const wakeProps = () => {
         let newLevel;
         // If level is undefined, keep going forever, otherwise, stop once we've
         // gone deep enough.
@@ -569,17 +572,17 @@ export default class Entity<T extends EntityData = EntityData>
           return;
         }
         const promises = [];
-        // Go through data looking for entities to ready.
+        // Go through data looking for entities to wake.
         for (let [key, value] of Object.entries(this.$data)) {
           if (value instanceof Entity && value.$isASleepingReference) {
-            promises.push(value.$readyAll(newLevel));
+            promises.push(value.$wakeAll(newLevel));
           } else if (Array.isArray(value)) {
             for (let i = 0; i < value.length; i++) {
               if (
                 value[i] instanceof Entity &&
                 value[i].$isASleepingReference
               ) {
-                promises.push(value[i].$readyAll(newLevel));
+                promises.push(value[i].$wakeAll(newLevel));
               }
             }
           }
@@ -595,9 +598,9 @@ export default class Entity<T extends EntityData = EntityData>
       };
 
       if (this.$isASleepingReference) {
-        this.$ready().then(readyProps, (errObj) => reject(errObj));
+        this.$wake().then(wakeProps, (errObj) => reject(errObj));
       } else {
-        readyProps();
+        wakeProps();
       }
     }) as Promise<Entity<T>>;
   }
@@ -610,7 +613,7 @@ export default class Entity<T extends EntityData = EntityData>
 
   public async $refresh() {
     if (this.$isASleepingReference) {
-      await this.$ready();
+      await this.$wake();
       return true;
     }
 

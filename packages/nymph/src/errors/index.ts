@@ -8,6 +8,8 @@ export * from './EntityIsSleepingReferenceError';
 
 export * from './InvalidParametersError';
 
+export * from './InvalidStateError';
+
 export * from './NotConfiguredError';
 
 export * from './QueryFailedError';

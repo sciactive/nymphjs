@@ -15,6 +15,7 @@ import {
   EntityConflictError,
   EntityIsSleepingReferenceError,
   InvalidParametersError,
+  InvalidStateError,
 } from './errors';
 import {
   entitiesToReferences,
@@ -141,6 +142,10 @@ export default class Entity<T extends EntityData = EntityData>
    */
   protected $sleepingReference: EntityReference | null = null;
   /**
+   * A promise that resolved when the entity's data is wake.
+   */
+  protected $wakePromise: Promise<Entity<T>> | null = null;
+  /**
    * Properties that will not be serialized into JSON with toJSON(). This
    * can be considered a denylist, because these properties will not be set
    * with incoming JSON.
@@ -249,44 +254,6 @@ export default class Entity<T extends EntityData = EntityData>
           delete this.$sdata[name];
         }
         if (data.hasOwnProperty(name)) {
-          const value = data[name];
-          if (value instanceof Entity) {
-            if (value.$asleep()) {
-              return new Promise(async (resolve, reject) => {
-                try {
-                  await value.$wake();
-                  resolve(value);
-                } catch (e: any) {
-                  reject(e);
-                }
-              });
-            } else {
-              return Promise.resolve(value);
-            }
-          } else if (
-            Array.isArray(value) &&
-            value.find((value: any) => value instanceof Entity)
-          ) {
-            return Promise.all(
-              value.map((value: any) => {
-                if (value instanceof Entity) {
-                  if (value.$asleep()) {
-                    return new Promise(async (resolve, reject) => {
-                      try {
-                        await value.$wake();
-                        resolve(value);
-                      } catch (e: any) {
-                        reject(e);
-                      }
-                    });
-                  } else {
-                    return Promise.resolve(value);
-                  }
-                }
-                return Promise.resolve(value);
-              })
-            );
-          }
           return data[name];
         }
         return undefined;
@@ -619,10 +586,10 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $getAcUid() {
-    return this.$dataStore.user?.guid as string | null;
+    return this.$data.user?.guid as string | null;
   }
   public $getAcGid() {
-    return this.$dataStore.group?.guid as string | null;
+    return this.$data.group?.guid as string | null;
   }
   public $getAcReadIds() {
     return this.$data.acRead?.map((entity: EntityInterface) => entity.guid) as
@@ -944,41 +911,13 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   /**
-   * Wake from a sleeping reference.
-   *
-   * @returns True on success, false on failure.
-   */
-  async $wake() {
-    if (!this.$isASleepingReference || this.$sleepingReference == null) {
-      return true;
-    }
-    const EntityClass = this.$nymph.getEntityClass(this.$sleepingReference[2]);
-    const entity = await this.$nymph.getEntity(
-      {
-        class: EntityClass,
-        skipAc: this.$skipAc,
-      },
-      { type: '&', guid: this.$sleepingReference[1] }
-    );
-    if (entity == null || entity.guid == null) {
-      return false;
-    }
-    this.$isASleepingReference = false;
-    this.$sleepingReference = null;
-    this.guid = entity.guid;
-    this.tags = entity.tags;
-    this.cdate = entity.cdate;
-    this.mdate = entity.mdate;
-    this.$putData(entity.$getData(), entity.$getSData());
-    return true;
-  }
-
-  /**
    * Check if this is a sleeping reference and throw an error if so.
    */
   protected $check() {
     if (this.$isASleepingReference || this.$sleepingReference != null) {
-      throw new EntityIsSleepingReferenceError('This entity is still asleep.');
+      throw new EntityIsSleepingReferenceError(
+        'This entity is in a sleeping reference state. You must use .$wake() to wake it.'
+      );
     }
   }
 
@@ -987,6 +926,104 @@ export default class Entity<T extends EntityData = EntityData>
    */
   public $asleep() {
     return this.$isASleepingReference || this.$sleepingReference != null;
+  }
+
+  /**
+   * Wake from a sleeping reference.
+   */
+  public $wake() {
+    if (!this.$isASleepingReference || this.$sleepingReference == null) {
+      this.$wakePromise = null;
+      return Promise.resolve(this);
+    }
+    if (this.$sleepingReference?.[1] == null) {
+      throw new InvalidStateError(
+        'Tried to wake a sleeping reference with no GUID.'
+      );
+    }
+    if (!this.$wakePromise) {
+      const EntityClass = this.$nymph.getEntityClass(
+        this.$sleepingReference[2]
+      );
+      this.$wakePromise = this.$nymph
+        .getEntity(
+          {
+            class: EntityClass,
+            skipAc: this.$skipAc,
+          },
+          { type: '&', guid: this.$sleepingReference[1] }
+        )
+        .then((entity) => {
+          if (entity == null || entity.guid == null) {
+            return Promise.reject(
+              new InvalidStateError(
+                'The sleeping reference could not be retrieved.'
+              )
+            );
+          }
+          this.$isASleepingReference = false;
+          this.$sleepingReference = null;
+          this.guid = entity.guid;
+          this.tags = entity.tags;
+          this.cdate = entity.cdate;
+          this.mdate = entity.mdate;
+          this.$putData(entity.$getData(), entity.$getSData());
+
+          return this;
+        })
+        .finally(() => {
+          this.$wakePromise = null;
+        });
+    }
+    return this.$wakePromise;
+  }
+
+  public $wakeAll(level?: number) {
+    return new Promise((resolve, reject) => {
+      // Run this once this entity is wake.
+      const wakeProps = () => {
+        let newLevel;
+        // If level is undefined, keep going forever, otherwise, stop once we've
+        // gone deep enough.
+        if (level !== undefined) {
+          newLevel = level - 1;
+        }
+        if (newLevel !== undefined && newLevel < 0) {
+          resolve(this);
+          return;
+        }
+        const promises = [];
+        // Go through data looking for entities to wake.
+        for (let [key, value] of Object.entries(this.$data)) {
+          if (value instanceof Entity && value.$isASleepingReference) {
+            promises.push(value.$wakeAll(newLevel));
+          } else if (Array.isArray(value)) {
+            for (let i = 0; i < value.length; i++) {
+              if (
+                value[i] instanceof Entity &&
+                value[i].$isASleepingReference
+              ) {
+                promises.push(value[i].$wakeAll(newLevel));
+              }
+            }
+          }
+        }
+        if (promises.length) {
+          Promise.all(promises).then(
+            () => resolve(this),
+            (errObj) => reject(errObj)
+          );
+        } else {
+          resolve(this);
+        }
+      };
+
+      if (this.$isASleepingReference) {
+        this.$wake().then(wakeProps, (errObj) => reject(errObj));
+      } else {
+        wakeProps();
+      }
+    }) as Promise<Entity<T>>;
   }
 
   public async $refresh() {

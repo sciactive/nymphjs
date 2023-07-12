@@ -1,14 +1,13 @@
-import type { EntityPromise } from '@nymphjs/nymph';
 import Group, { GroupData } from './Group';
 import User, { UserData } from './User';
 
 export type AccessControlData = {
-  user?: EntityPromise<User & UserData>;
-  group?: EntityPromise<Group & GroupData>;
+  user?: User & UserData;
+  group?: Group & GroupData;
   acUser?: number;
   acGroup?: number;
   acOther?: number;
-  acFull?: EntityPromise<((User & UserData) | (Group & GroupData))[]>;
-  acWrite?: EntityPromise<((User & UserData) | (Group & GroupData))[]>;
-  acRead?: EntityPromise<((User & UserData) | (Group & GroupData))[]>;
+  acFull?: ((User & UserData) | (Group & GroupData))[];
+  acWrite?: ((User & UserData) | (Group & GroupData))[];
+  acRead?: ((User & UserData) | (Group & GroupData))[];
 };

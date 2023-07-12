@@ -10,6 +10,7 @@ import {
   Employee as EmployeeClass,
   RestrictedModel as RestrictedModelClass,
   Restricted as RestrictedClass,
+  EmployeeData,
 } from './testArtifacts';
 
 const sqliteConfig = {
@@ -182,10 +183,10 @@ describe('Nymph REST Server and Client', () => {
       'nymph_entity_reference',
       jane.guid,
       'Employee',
-    ]);
-    await entity.$ready();
+    ]) as EmployeeClass & EmployeeData;
+    await entity.$wake();
 
-    expect(jane?.name).toEqual('Jane Doe');
+    expect(entity?.name).toEqual('Jane Doe');
   });
 
   it('change an entity', async () => {

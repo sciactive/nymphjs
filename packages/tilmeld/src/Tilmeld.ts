@@ -394,7 +394,7 @@ export default class Tilmeld implements TilmeldInterface {
           entity.user = user;
         }
         if (entity.group == null) {
-          const group = await user.group;
+          const group = user.group;
           if (group != null && group.guid != null) {
             entity.group = group;
           }

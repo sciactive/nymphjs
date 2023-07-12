@@ -1171,10 +1171,12 @@ These hats are absolutely fantastic.`;
     await createTestEntities();
 
     // Testing referenced entities...
-    expect((await testEntity.reference)?.test).toEqual('good');
+    await testEntity.reference?.$wake();
+    expect(testEntity.reference?.test).toEqual('good');
 
     // Testing referenced entity arrays...
-    expect((await testEntity.refArray)?.[0].test).toEqual('good');
+    await Promise.all(testEntity.refArray?.map((e) => e.$wake()) || []);
+    expect(testEntity.refArray?.[0].test).toEqual('good');
   });
 
   it('ref', async () => {
@@ -1782,8 +1784,10 @@ These hats are absolutely fantastic.`;
     await createTestEntities();
 
     // Deleting referenced entities...
-    expect(await (await testEntity.reference)?.$delete()).toEqual(true);
-    expect((await testEntity.reference)?.guid).toBeNull();
+    await testEntity.reference?.$wake();
+    expect(await testEntity.reference?.$delete()).toEqual(true);
+    await Promise.all(testEntity.refArray?.map((e) => e.$wake()) || []);
+    expect(testEntity.reference?.guid).toBeNull();
   });
 
   it('delete', async () => {
@@ -1892,13 +1896,13 @@ export function ExportImportTest(
         expect(model.number).toEqual(30);
         expect(model.timestamp).toBeGreaterThanOrEqual(strtotime('-2 minutes'));
 
-        expect((await model.reference)?.guid).not.toBeNull();
-        expect((await model.reference)?.string).toEqual('another');
-        expect((await model.reference)?.index?.match(/^\d+b$/)).toBeTruthy();
-        expect((await model.refArray)?.[0].guid).not.toBeNull();
-        expect((await model.refArray)?.[0].guid).toEqual(
-          (await model.reference)?.guid
-        );
+        await model.reference?.$wake();
+        expect(model.reference?.guid).not.toBeNull();
+        expect(model.reference?.string).toEqual('another');
+        expect(model.reference?.index?.match(/^\d+b$/)).toBeTruthy();
+        await Promise.all(model.refArray?.map((e) => e.$wake()) || []);
+        expect(model.refArray?.[0].guid).not.toBeNull();
+        expect(model.refArray?.[0].guid).toEqual(model.reference?.guid);
       }
     }
   }

@@ -1,4 +1,3 @@
-import type { EntityPromise } from './Entity.types';
 import Entity from './Entity';
 
 export type TestModelData = {
@@ -12,12 +11,12 @@ export type TestModelData = {
   numberString?: string;
   timestamp?: Number;
   boolean?: boolean;
-  reference?: EntityPromise<TestModel & TestModelData>;
-  refArray?: EntityPromise<(TestModel & TestModelData)[]>;
+  reference?: TestModel & TestModelData;
+  refArray?: (TestModel & TestModelData)[];
   refObject?: {
     [k: string]: TestModel & TestModelData;
   };
-  parent?: EntityPromise<TestModel & TestModelData>;
+  parent?: TestModel & TestModelData;
   // For Import/Export Tests.
   index?: string;
 };

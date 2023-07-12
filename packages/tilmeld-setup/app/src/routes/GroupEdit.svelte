@@ -17,7 +17,7 @@
   </div>
 
   {#if entity.user}
-    {#await entity.user.$ready() then _user}
+    {#await entity.user.$wake() then _user}
       <div style="padding: 12px;" class="mdc-typography--subtitle1">
         Generated primary group for <a
           href="#/users/edit/{encodeURIComponent(entity.user.guid || '')}"
@@ -440,7 +440,7 @@
       entity.unverifiedSecondary = false;
     }
     avatar = await entity.$getAvatar();
-    await entity.$readyAll(1);
+    await entity.$wakeAll(1);
     entity = entity;
   }
 

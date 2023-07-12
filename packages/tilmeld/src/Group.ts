@@ -2,7 +2,6 @@ import {
   EntityData,
   EntityJson,
   EntityPatch,
-  EntityPromise,
   Options,
   Selector,
   SerializedEntityData,
@@ -48,11 +47,11 @@ export type GroupData = {
   /**
    * The group's parent.
    */
-  parent?: EntityPromise<Group & GroupData>;
+  parent?: Group & GroupData;
   /**
    * If generatePrimary is on, this will be the user who generated this group.
    */
-  user?: EntityPromise<User & UserData> | null;
+  user?: (User & UserData) | null;
 
   /**
    * Whether the group can be used.
@@ -220,13 +219,15 @@ export default class Group extends AbleObject<GroupData> {
         await Promise.all(
           assignableGroups.map(async (group) => {
             let curGroup = group;
-            let parent = await curGroup.parent;
+            let parent = curGroup.parent;
+            await parent?.$wake();
             while (parent != null && parent?.cdate != null) {
               if (parent?.guid === highestParent) {
                 return group;
               }
               curGroup = parent;
-              parent = await curGroup.parent;
+              parent = curGroup.parent;
+              await parent?.$wake();
             }
             return null;
           })
@@ -366,9 +367,9 @@ export default class Group extends AbleObject<GroupData> {
       this.$privateData = [];
       this.$allowlistData = undefined;
     } else if (
-      this.$dataStore.user != null &&
+      this.$data.user != null &&
       user != null &&
-      (this.$dataStore.user as User & UserData).guid === user.guid
+      this.$data.user.guid === user.guid
     ) {
       // Users can see their group's data.
       this.$privateData = [];
@@ -395,7 +396,8 @@ export default class Group extends AbleObject<GroupData> {
       return false;
     }
     // Check to see if the group is a descendant of the given group.
-    const parent = await this.$data.parent;
+    const parent = this.$data.parent;
+    await parent?.$wake();
     if (parent == null) {
       return false;
     }
@@ -467,12 +469,14 @@ export default class Group extends AbleObject<GroupData> {
   public async $getLevel() {
     const tilmeld = enforceTilmeld(this);
     let group = await tilmeld.Group.factory(this.guid ?? undefined);
-    let parent = await group.parent;
+    let parent = group.parent;
+    await parent?.$wake();
     let level = 0;
     while (parent != null && parent.cdate != null && level < 1024) {
       level++;
       group = parent;
-      parent = await group.parent;
+      parent = group.parent;
+      await parent?.$wake();
     }
     return level;
   }
@@ -724,7 +728,8 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     // Validate group parent. Make sure it's not a descendant of this group.
-    const parent = await this.$data.parent;
+    const parent = this.$data.parent;
+    await parent?.$wake();
     if (
       parent &&
       (parent.cdate == null ||

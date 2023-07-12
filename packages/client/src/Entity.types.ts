@@ -166,14 +166,14 @@ export interface EntityInterface extends DataObjectInterface {
    *
    * @returns The entity.
    */
-  $ready(): Promise<EntityInterface>;
+  $wake(): Promise<EntityInterface>;
   /**
    * Ready this entity's data, and the data of entity's within this one's.
    *
-   * @param level The number of levels deep to ready. If undefined, it will keep going until there are no more entities. (Careful of infinite loops.)
+   * @param level The number of levels deep to wake. If undefined, it will keep going until there are no more entities. (Careful of infinite loops.)
    * @returns The entity.
    */
-  $readyAll(level?: number): Promise<EntityInterface>;
+  $wakeAll(level?: number): Promise<EntityInterface>;
   /**
    * Remove one or more tags.
    *
@@ -234,7 +234,7 @@ export type EntityConstructor = (new (...args: any[]) => EntityInterface) & {
    * Create a new sleeping reference instance.
    *
    * Sleeping references won't retrieve their data from the server until they
-   * are readied with `ready()` or a parent's `readyAll()`.
+   * are readied with `$wake()` or a parent's `$wakeAll()`.
    *
    * @param reference The Nymph Entity Reference to use to wake.
    * @returns The new instance.

@@ -816,7 +816,7 @@
       entity.revokeTokenDate = 0;
     }
     avatar = await entity.$getAvatar();
-    await entity.$readyAll(1);
+    await entity.$wakeAll(1);
     entity = entity;
   }
 

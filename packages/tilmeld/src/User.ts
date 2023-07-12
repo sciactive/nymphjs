@@ -2,7 +2,6 @@ import {
   EntityData,
   EntityJson,
   EntityPatch,
-  EntityPromise,
   Selector,
   SerializedEntityData,
 } from '@nymphjs/nymph';
@@ -121,11 +120,11 @@ export type UserData = {
   /**
    * The user's primary group.
    */
-  group?: EntityPromise<Group & GroupData>;
+  group?: Group & GroupData;
   /**
    * The user's secondary groups.
    */
-  groups?: EntityPromise<(Group & GroupData)[]>;
+  groups?: (Group & GroupData)[];
   /**
    * Whether the user should inherit the abilities of his groups.
    */
@@ -718,15 +717,15 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $getGid() {
-    if (this.$dataStore.group) {
-      return (this.$dataStore.group as Group & GroupData).guid;
+    if (this.$data.group) {
+      return this.$data.group.guid;
     }
     return null;
   }
 
   public $getGids() {
-    if (this.$dataStore.groups) {
-      return (this.$dataStore.groups as (Group & GroupData)[])
+    if (this.$data.groups) {
+      return this.$data.groups
         .map((group) => group.guid)
         .filter((guid) => guid != null) as string[];
     }
@@ -740,11 +739,11 @@ export default class User extends AbleObject<UserData> {
     if (this.$descendantGroups == null) {
       this.$descendantGroups = [];
       if (this.$data.group != null) {
-        this.$descendantGroups = await (
-          await this.$data.group
-        ).$getDescendants();
+        await this.$data.group.$wake();
+        this.$descendantGroups = await this.$data.group.$getDescendants();
       }
-      for (let curGroup of (await this.$data.groups) ?? []) {
+      await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
+      for (let curGroup of this.$data.groups ?? []) {
         this.$descendantGroups = this.$descendantGroups?.concat(
           await curGroup.$getDescendants()
         );
@@ -954,15 +953,10 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $updateGroupDataProtection() {
-    if (
-      this.$dataStore.group != null &&
-      !(this.$dataStore.group as Group & GroupData).$asleep()
-    ) {
-      (this.$dataStore.group as Group & GroupData).$updateDataProtection();
+    if (this.$data.group != null && !this.$data.group.$asleep()) {
+      this.$data.group.$updateDataProtection();
     }
-    for (let group of (this.$dataStore.groups as
-      | (Group & GroupData)[]
-      | null) ?? []) {
+    for (let group of this.$data.groups ?? []) {
       if (!group.$asleep()) {
         group.$updateDataProtection();
       }
@@ -992,12 +986,14 @@ export default class User extends AbleObject<UserData> {
     if (this.$gatekeeperCache == null) {
       let abilities = this.$data.abilities ?? [];
       if (this.$data.inheritAbilities) {
-        for (let curGroup of (await this.$data.groups) ?? []) {
+        await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
+        for (let curGroup of this.$data.groups ?? []) {
           if (curGroup.enabled) {
             abilities = abilities.concat(curGroup.abilities ?? []);
           }
         }
-        const group = await this.$data.group;
+        await this.$data.group?.$wake();
+        const group = this.$data.group;
         if (group != null && group.cdate != null && group.enabled) {
           abilities = abilities.concat(group.abilities ?? []);
         }
@@ -1121,7 +1117,8 @@ export default class User extends AbleObject<UserData> {
    * @returns True if the user is already in the group. The resulting array of groups if the user was not.
    */
   public async $addGroup(group: Group & GroupData) {
-    let groups = await this.$data.groups;
+    await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
+    let groups = this.$data.groups;
     if (groups == null) {
       groups = [];
     }
@@ -1162,7 +1159,8 @@ export default class User extends AbleObject<UserData> {
    * @returns True if the user wasn't in the group. The resulting array of groups if the user was.
    */
   public async $delGroup(group: Group & GroupData) {
-    let groups = (await this.$data.groups) || [];
+    await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
+    let groups = this.$data.groups || [];
     if (this.$data.groups != null && group.$inArray(groups)) {
       const newGroups: (Group & GroupData)[] = [];
       for (let curGroup of groups) {
@@ -1184,10 +1182,10 @@ export default class User extends AbleObject<UserData> {
    */
   public async $inGroup(group: (Group & GroupData) | string) {
     if (typeof group === 'string') {
-      if ((await this.$data.group)?.guid === group) {
+      if (this.$data.group?.guid === group) {
         return true;
       }
-      for (let curGroup of (await this.$data.groups) ?? []) {
+      for (let curGroup of this.$data.groups ?? []) {
         if (curGroup.guid === group) {
           return true;
         }
@@ -1195,8 +1193,7 @@ export default class User extends AbleObject<UserData> {
       return false;
     }
     return (
-      group.$is(await this.$data.group) ||
-      group.$inArray((await this.$data.groups) ?? [])
+      group.$is(this.$data.group) || group.$inArray(this.$data.groups ?? [])
     );
   }
 
@@ -1208,13 +1205,16 @@ export default class User extends AbleObject<UserData> {
    */
   public async $isDescendant(group: (Group & GroupData) | string) {
     // Check to see if the user is in a descendant group of the given group.
+    await this.$data.group?.$wake();
     if (
-      (await this.$data.group)?.cdate != null &&
-      (await this.$data.group)?.$isDescendant(group)
+      this.$data.group != null &&
+      this.$data.group?.cdate != null &&
+      (await this.$data.group?.$isDescendant(group))
     ) {
       return true;
     }
-    for (let curGroup of (await this.$data.groups) ?? []) {
+    await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
+    for (let curGroup of this.$data.groups ?? []) {
       if (await curGroup.$isDescendant(group)) {
         return true;
       }
@@ -2141,8 +2141,9 @@ export default class User extends AbleObject<UserData> {
     this.$nymph = tnymph;
     tilmeld = enforceTilmeld(this);
 
-    const group = await this.$data.group;
-    if (group != null && group.user != null && this.$is(await group.user)) {
+    const group = this.$data.group;
+    await group?.$wake();
+    if (group != null && group.user != null && this.$is(group.user)) {
       try {
         // Update the user's generated primary group.
         group.groupname = this.$data.username;
