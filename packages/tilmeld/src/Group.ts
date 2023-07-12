@@ -164,7 +164,7 @@ export default class Group extends AbleObject<GroupData> {
     selectors?: Selector[]
   ) {
     const tilmeld = enforceTilmeld(this);
-    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new Error("You don't have permission to do that.");
     }
 
@@ -187,7 +187,7 @@ export default class Group extends AbleObject<GroupData> {
     selectors?: Selector[]
   ) {
     const tilmeld = enforceTilmeld(this);
-    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new Error("You don't have permission to do that.");
     }
 
@@ -785,7 +785,7 @@ export default class Group extends AbleObject<GroupData> {
 
   public async $delete() {
     let tilmeld = enforceTilmeld(this);
-    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete groups.");
     }
 

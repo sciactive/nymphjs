@@ -1954,8 +1954,8 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (
-      (await tilmeld.gatekeeper('tilmeld/admin')) &&
-      !(await tilmeld.gatekeeper('system/admin')) &&
+      tilmeld.gatekeeper('tilmeld/admin') &&
+      !tilmeld.gatekeeper('system/admin') &&
       this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(
@@ -2049,7 +2049,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Email changes.
-    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       // The user isn't an admin, so email address changes should contain some
       // security measures.
       if (tilmeld.config.verifyEmail) {
@@ -2227,11 +2227,11 @@ export default class User extends AbleObject<UserData> {
 
   public async $delete() {
     const tilmeld = enforceTilmeld(this);
-    if (!(await tilmeld.gatekeeper('tilmeld/admin'))) {
+    if (!tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete users.");
     }
     if (
-      !(await tilmeld.gatekeeper('system/admin')) &&
+      !tilmeld.gatekeeper('system/admin') &&
       this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(
