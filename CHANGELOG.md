@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.44](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.43...v1.0.0-beta.44) (2023-07-13)
+
+### Bug Fixes
+
+- wake before gatekeeper check ([1b7e985](https://github.com/sciactive/nymphjs/commit/1b7e985c41bd758c478503b9e51efcc2df5e6a91))
+
 # [1.0.0-beta.43](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.42...v1.0.0-beta.43) (2023-07-12)
 
 ### Bug Fixes

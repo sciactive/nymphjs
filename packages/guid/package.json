@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/guid",
-  "version": "1.0.0-beta.43",
+  "version": "1.0.0-beta.44",
   "description": "Nymph.js - GUID and Unique Code Generators",
   "type": "commonjs",
   "main": "dist/index.js",
