@@ -978,6 +978,7 @@ export default class User extends AbleObject<UserData> {
    * @returns True or false.
    */
   public async $gatekeeper(ability?: string): Promise<boolean> {
+    await this.$wake();
     const tilmeld = enforceTilmeld(this);
     if (ability == null) {
       return tilmeld.User.current()?.$is(this) ?? false;
@@ -996,6 +997,7 @@ export default class User extends AbleObject<UserData> {
    * Build a gatekeeper cache object.
    */
   public async $getGatekeeperCache() {
+    await this.$wake();
     let abilities = this.$data.abilities ?? [];
     if (this.$data.inheritAbilities) {
       await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
