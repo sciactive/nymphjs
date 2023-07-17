@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.45](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.44...v1.0.0-beta.45) (2023-07-17)
+
+### Bug Fixes
+
+- missing pubsub updates when new top level match uses qref with multiple results ([6dc26e2](https://github.com/sciactive/nymphjs/commit/6dc26e280453794ea9ce6c2b77482f85eb62bd23))
+
 # [1.0.0-beta.44](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.43...v1.0.0-beta.44) (2023-07-13)
 
 ### Bug Fixes
