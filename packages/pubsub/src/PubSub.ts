@@ -1461,20 +1461,49 @@ export default class PubSub {
               this.querySubs[QrefEntityClass.ETYPE][query].get(client);
             if (data) {
               const guids = data.current;
-              let newValue: [string, string | EntityInterface][];
-              const oldValue = newSelector[newKey];
-              if (!oldValue) {
-                newValue = [];
-              } else if (oldValue.length && !Array.isArray(oldValue[0])) {
-                newValue = [oldValue] as [string, string | EntityInterface][];
+              if (newKey === '!ref') {
+                // Insert the qref results as a not ref clause.
+                let newValue: [string, string | EntityInterface][];
+                const oldValue = newSelector[newKey];
+                if (
+                  oldValue == null ||
+                  (Array.isArray(oldValue) && !oldValue.length)
+                ) {
+                  newValue = [];
+                } else if (
+                  Array.isArray(oldValue) &&
+                  !Array.isArray(oldValue[0])
+                ) {
+                  newValue = [oldValue] as [string, string | EntityInterface][];
+                } else {
+                  newValue = oldValue as [string, string | EntityInterface][];
+                }
+                newValue.push(
+                  ...(guids.map((guid) => [name, guid]) as [string, string][])
+                );
+                newSelector[newKey] = newValue;
               } else {
-                newValue = oldValue as [string, string | EntityInterface][];
+                // Insert the qref results as an "or" selector clause with a ref
+                // selector.
+                let newValue: Selector[];
+                const oldValue = newSelector['selector'];
+                delete newSelector[key];
+                if (
+                  oldValue == null ||
+                  (Array.isArray(oldValue) && !oldValue.length)
+                ) {
+                  newValue = [];
+                } else if (!Array.isArray(oldValue)) {
+                  newValue = [oldValue] as Selector[];
+                } else {
+                  newValue = oldValue as Selector[];
+                }
+                newValue.push({
+                  type: '|',
+                  ref: guids.map((guid) => [name, guid]) as [string, string][],
+                });
+                newSelector['selector'] = newValue;
               }
-              newValue.push(
-                ...(guids.map((guid) => [name, guid]) as [string, string][])
-              );
-              // Insert the qref results as a ref clause.
-              newSelector[newKey] = newValue;
             } else {
               // Can't translate, so put the original back in.
               if (!newSelector[key]) {

@@ -376,35 +376,45 @@ describe('Nymph REST Server and Client', () => {
     let [jane, john] = await createBossJane();
     let entities: (EmployeeClass & EmployeeData)[] = [];
 
-    await new Promise((resolve) => {
-      if (jane.guid == null || john.guid == null) {
-        throw new Error('Entity is null.');
-      }
-      const subscription = pubsub.subscribeEntities(
-        { class: Employee },
-        {
-          type: '&',
-          guid: jane.guid,
-          qref: [
-            'subordinates',
-            [{ class: Employee }, { type: '&', '!truthy': 'current' }],
-          ],
-        }
-      )(async (update) => {
-        pubsub.updateArray(entities, update);
+    // Create employees that matches qref to test when multiple things match.
+    let oldEmployee = await createJane();
+    oldEmployee.current = false;
+    await oldEmployee.$save();
+    let oldEmployee2 = await createJane();
+    oldEmployee2.current = false;
+    await oldEmployee2.$save();
 
-        if (entities.length) {
-          subscription.unsubscribe();
-          resolve(true);
-        } else if (Array.isArray(update)) {
-          expect(update.length).toEqual(0);
-
-          // John gets fired.
-          john.current = false;
-          await john.$save();
+    expect(
+      await new Promise((resolve) => {
+        if (jane.guid == null || john.guid == null) {
+          throw new Error('Entity is null.');
         }
-      });
-    });
+        const subscription = pubsub.subscribeEntities(
+          { class: Employee },
+          {
+            type: '&',
+            guid: jane.guid,
+            qref: [
+              'subordinates',
+              [{ class: Employee }, { type: '&', '!truthy': 'current' }],
+            ],
+          }
+        )(async (update) => {
+          pubsub.updateArray(entities, update);
+
+          if (entities.length) {
+            subscription.unsubscribe();
+            resolve(true);
+          } else if (Array.isArray(update)) {
+            expect(update.length).toEqual(0);
+
+            // John gets fired.
+            john.current = false;
+            await john.$save();
+          }
+        });
+      })
+    ).toEqual(true);
 
     expect(entities.length).toEqual(1);
   });
