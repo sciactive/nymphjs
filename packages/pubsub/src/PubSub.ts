@@ -336,7 +336,7 @@ export default class PubSub {
     }
   }
 
-  private static isOrIsDescendent(parent: Nymph, child: Nymph) {
+  private static isOrIsDescendant(parent: Nymph, child: Nymph) {
     let check: Nymph | null = child;
     while (check) {
       if (check === parent) {
@@ -359,7 +359,7 @@ export default class PubSub {
           // Check that this instance is a parent and the instance is not in a
           // transaction.
           if (
-            !this.isOrIsDescendent(nymph, publish.nymph) ||
+            !this.isOrIsDescendant(nymph, publish.nymph) ||
             (await publish.nymph.inTransaction())
           ) {
             return publish;
@@ -377,7 +377,7 @@ export default class PubSub {
 
   private static removeTransactionPublishes(nymph: Nymph) {
     this.transactionPublishes = this.transactionPublishes.filter((publish) => {
-      if (this.isOrIsDescendent(nymph, publish.nymph)) {
+      if (this.isOrIsDescendant(nymph, publish.nymph)) {
         return false;
       }
       return true;
