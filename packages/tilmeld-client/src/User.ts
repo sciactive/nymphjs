@@ -344,11 +344,13 @@ export default class User extends Entity<UserData> {
     return await this.$serverCall('$saveTOTPSecret', [data]);
   }
 
-  public async $removeTOTPSecret(data: {
+  public async $removeTOTPSecret(data?: {
     password: string;
     code: string;
   }): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$removeTOTPSecret', [data]);
+    return await this.$serverCall('$removeTOTPSecret', [
+      ...(data ? [data] : []),
+    ]);
   }
 
   public static async current(

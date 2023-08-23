@@ -891,6 +891,8 @@ export default class User extends AbleObject<UserData> {
     ) {
       // Users who can edit other users can see most of their data.
       this.$privateData = ['password', 'salt', 'totpSecret'];
+      this.$clientEnabledMethods.push('$hasTOTPSecret');
+      this.$clientEnabledMethods.push('$removeTOTPSecret');
       this.$allowlistData = undefined;
     } else if (isCurrentUser || isNewUser) {
       // Users can see their own data, and edit some of it.
@@ -1447,39 +1449,46 @@ export default class User extends AbleObject<UserData> {
    * @param data The input data from the client.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
-  public async $removeTOTPSecret(data: {
+  public async $removeTOTPSecret(data?: {
     password: string;
     code: string;
   }): Promise<{ result: boolean; message: string }> {
-    if (!this.$checkPassword(data.password ?? '')) {
-      return { result: false, message: 'Incorrect password.' };
-    }
-
-    if (this.$data.totpSecret == null) {
-      return { result: false, message: "You don't have a 2FA secret." };
-    }
-
-    if (
-      data.code == null ||
-      typeof data.code !== 'string' ||
-      data.code.length !== 6
-    ) {
-      return { result: false, message: '2FA code is invalid.' };
-    }
-
     const tilmeld = enforceTilmeld(this);
 
-    const totp = new TOTP({
-      issuer: tilmeld.config.appName,
-      label: this.$data.username,
-      algorithm: 'SHA1',
-      digits: 6,
-      period: 30,
-      secret: this.$data.totpSecret,
-    });
+    if (data) {
+      if (!this.$checkPassword(data.password ?? '')) {
+        return { result: false, message: 'Incorrect password.' };
+      }
 
-    if (totp.validate({ token: data.code, window: 2 }) == null) {
-      return { result: false, message: '2FA code is incorrect.' };
+      if (
+        data.code == null ||
+        typeof data.code !== 'string' ||
+        data.code.length !== 6
+      ) {
+        return { result: false, message: '2FA code is invalid.' };
+      }
+
+      if (this.$data.totpSecret == null) {
+        return { result: false, message: "You don't have a 2FA secret." };
+      }
+
+      const totp = new TOTP({
+        issuer: tilmeld.config.appName,
+        label: this.$data.username,
+        algorithm: 'SHA1',
+        digits: 6,
+        period: 30,
+        secret: this.$data.totpSecret,
+      });
+
+      if (totp.validate({ token: data.code, window: 2 }) == null) {
+        return { result: false, message: '2FA code is incorrect.' };
+      }
+    } else if (!tilmeld.gatekeeper('tilmeld/admin')) {
+      return {
+        result: false,
+        message: 'You must provide your password and 2FA code.',
+      };
     }
 
     delete this.$data.totpSecret;
@@ -1487,7 +1496,7 @@ export default class User extends AbleObject<UserData> {
     if (await this.$save()) {
       return {
         result: true,
-        message: 'Your two factor secret has been removed.',
+        message: 'Two factor secret has been removed.',
       };
     } else {
       return { result: false, message: "Couldn't remove two factor secret." };

@@ -462,8 +462,11 @@
     {#if activeTab === 'Security'}
       <LayoutGrid style="padding: 0;">
         <LayoutCell span={12}>
-          The email verification secret is the code emailed to the user to
-          verify their address when they first sign up.
+          <h5>Verification</h5>
+          <p>
+            The email verification secret is the code emailed to the user to
+            verify their address when they first sign up.
+          </p>
         </LayoutCell>
         <LayoutCell span={12}>
           <Textfield
@@ -475,9 +478,12 @@
           />
         </LayoutCell>
         <LayoutCell span={12}>
-          The account recovery secret is the code emailed to the user to allow
-          them to change their password and recover their account. The date is
-          used to determine if the code has expired.
+          <h5>Account Recovery</h5>
+          <p>
+            The account recovery secret is the code emailed to the user to allow
+            them to change their password and recover their account. The date is
+            used to determine if the code has expired.
+          </p>
         </LayoutCell>
         <LayoutCell span={6}>
           <Textfield
@@ -505,13 +511,16 @@
           </Textfield>
         </LayoutCell>
         <LayoutCell span={12}>
-          An email change uses all of the following properties. The email change
-          date is used to rate limit email changes and to allow the user to
-          cancel the change within the rate limit time. The new secret is
-          emailed to the new address, and when the user clicks the link, that
-          email address is set for their account. The cancel secret is emailed
-          to the old address and will reset the user's email to the cancel
-          address if the link is clicked in time.
+          <h5>Email Change</h5>
+          <p>
+            An email change uses all of the following properties. The email
+            change date is used to rate limit email changes and to allow the
+            user to cancel the change within the rate limit time. The new secret
+            is emailed to the new address, and when the user clicks the link,
+            that email address is set for their account. The cancel secret is
+            emailed to the old address and will reset the user's email to the
+            cancel address if the link is clicked in time.
+          </p>
         </LayoutCell>
         <LayoutCell span={12}>
           <Textfield
@@ -565,11 +574,14 @@
           />
         </LayoutCell>
         <LayoutCell span={12}>
-          The token revocation date is the date that all authentication tokens
-          must be issued after in order to work. Any token issued before this
-          date will be denied access. You can set this to now to log the user
-          out of all of their current sessions. The user will have to log in
-          again with their password.
+          <h5>Auth Token Revocation</h5>
+          <p>
+            The token revocation date is the date that all authentication tokens
+            must be issued after in order to work. Any token issued before this
+            date will be denied access. You can set this to now to log the user
+            out of all of their current sessions. The user will have to log in
+            again with their password.
+          </p>
         </LayoutCell>
         <LayoutCell span={12}>
           <div style="display: flex; gap: 1em; align-items: center;">
@@ -592,6 +604,26 @@
             <Button on:click={() => (entity.revokeTokenDate = Date.now())}>
               <Label>Now</Label>
             </Button>
+          </div>
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <h5>Two Factor Authentication</h5>
+          <p>
+            2FA is an extra security measure that requires the user to have both
+            their password and a code generator device (usually an app on their
+            phone) to successfully authenticate.
+          </p>
+        </LayoutCell>
+        <LayoutCell span={12}>
+          <div style="display: inline-flex; gap: 1em; align-items: baseline;">
+            <span>
+              Has 2FA secret: {hasTOTPSecret ? 'Yes' : 'No'}
+            </span>
+            {#if hasTOTPSecret}
+              <Button on:click={removeTOTPSecret} disabled={saving}>
+                <Label>Remove 2FA</Label>
+              </Button>
+            {/if}
           </div>
         </LayoutCell>
       </LayoutGrid>
@@ -713,6 +745,7 @@
   let secondaryGroupSearch = '';
   let ability = '';
   let avatar = 'https://secure.gravatar.com/avatar/?d=mm&s=40';
+  let hasTOTPSecret: boolean | undefined = undefined;
   let failureMessage: string | undefined = undefined;
   let passwordVerify = '';
   let passwordVerified: boolean | undefined = undefined;
@@ -734,6 +767,7 @@
     user = (await User.current()) ?? undefined;
     sysAdmin = (await user?.$gatekeeper('system/admin')) ?? false;
     tilmeldSwitchUser = (await user?.$gatekeeper('tilmeld/switch')) ?? false;
+    hasTOTPSecret = (await user?.$hasTOTPSecret()) ?? false;
   });
   onMount(async () => {
     clientConfig = await User.getClientConfig();
@@ -985,6 +1019,25 @@
     if (entity.abilities?.indexOf('tilmeld/switch') === -1) {
       entity.abilities?.push('tilmeld/switch');
       entity = entity;
+    }
+  }
+
+  async function removeTOTPSecret() {
+    failureMessage = undefined;
+    if (confirm("Are you sure you want to remove the user's 2FA?")) {
+      saving = true;
+      try {
+        const result = await entity.$removeTOTPSecret();
+
+        if (result.result) {
+          hasTOTPSecret = false;
+        } else {
+          failureMessage = result.message;
+        }
+      } catch (e: any) {
+        failureMessage = e?.message;
+      }
+      saving = false;
     }
   }
 
