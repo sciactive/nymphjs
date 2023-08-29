@@ -206,7 +206,11 @@ export interface Config {
    */
   validEmailRegexNotice: string;
   /**
-   * The maximum length for usernames. Infinity for unlimited.
+   * The minimum length for usernames.
+   */
+  minUsernameLength: number;
+  /**
+   * The maximum length for usernames. `Infinity` for unlimited.
    */
   maxUsernameLength: number;
   /**

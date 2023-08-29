@@ -541,10 +541,16 @@ export default class Group extends AbleObject<GroupData> {
       if (this.$data.groupname == null || !this.$data.groupname.length) {
         return { result: false, message: 'Please specify a groupname.' };
       }
-      if (
-        tilmeld.config.maxUsernameLength > 0 &&
-        this.$data.groupname.length > tilmeld.config.maxUsernameLength
-      ) {
+      if (this.$data.groupname.length < tilmeld.config.minUsernameLength) {
+        return {
+          result: false,
+          message:
+            'Groupnames must be at least ' +
+            tilmeld.config.minUsernameLength +
+            ' characters.',
+        };
+      }
+      if (this.$data.groupname.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:
@@ -599,10 +605,16 @@ export default class Group extends AbleObject<GroupData> {
       if (this.$data.groupname == null || !this.$data.groupname.length) {
         return { result: false, message: 'Please specify an email.' };
       }
-      if (
-        tilmeld.config.maxUsernameLength > 0 &&
-        this.$data.groupname.length > tilmeld.config.maxUsernameLength
-      ) {
+      if (this.$data.groupname.length < tilmeld.config.minUsernameLength) {
+        return {
+          result: false,
+          message:
+            'Emails must be at least ' +
+            tilmeld.config.minUsernameLength +
+            ' characters.',
+        };
+      }
+      if (this.$data.groupname.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:

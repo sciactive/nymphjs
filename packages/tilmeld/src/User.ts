@@ -1514,10 +1514,16 @@ export default class User extends AbleObject<UserData> {
       if (this.$data.username == null || !this.$data.username.length) {
         return { result: false, message: 'Please specify a username.' };
       }
-      if (
-        tilmeld.config.maxUsernameLength > 0 &&
-        this.$data.username.length > tilmeld.config.maxUsernameLength
-      ) {
+      if (this.$data.username.length < tilmeld.config.minUsernameLength) {
+        return {
+          result: false,
+          message:
+            'Usernames must be at least ' +
+            tilmeld.config.minUsernameLength +
+            ' characters.',
+        };
+      }
+      if (this.$data.username.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:
@@ -1585,10 +1591,16 @@ export default class User extends AbleObject<UserData> {
       if (this.$data.username == null || !this.$data.username.length) {
         return { result: false, message: 'Please specify an email.' };
       }
-      if (
-        tilmeld.config.maxUsernameLength > 0 &&
-        this.$data.username.length > tilmeld.config.maxUsernameLength
-      ) {
+      if (this.$data.username.length < tilmeld.config.minUsernameLength) {
+        return {
+          result: false,
+          message:
+            'Emails must be at least ' +
+            tilmeld.config.minUsernameLength +
+            ' characters.',
+        };
+      }
+      if (this.$data.username.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:

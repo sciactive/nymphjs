@@ -49,6 +49,7 @@ export default {
   validEmailRegex:
     /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
   validEmailRegexNotice: 'Email must be a correctly formatted address.',
+  minUsernameLength: 1,
   maxUsernameLength: 128,
   jwtSecret: '',
   jwtExpire: 60 * 60 * 24 * 7 * 8, // 8 weeks(ish)
