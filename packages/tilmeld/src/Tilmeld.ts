@@ -1063,9 +1063,9 @@ export default class Tilmeld implements TilmeldInterface {
               domain: this.config.cookieDomain,
               path: this.config.cookiePath,
               maxAge: this.config.jwtExpire * 1000,
-              secure: appUrl.protocol === 'https',
+              secure: appUrl.protocol === 'https:',
               httpOnly: false, // Allow JS access (for CSRF protection).
-              sameSite: appUrl.protocol === 'https' ? 'lax' : 'strict',
+              sameSite: appUrl.protocol === 'https:' ? 'lax' : 'strict',
             });
           }
 
@@ -1109,9 +1109,9 @@ export default class Tilmeld implements TilmeldInterface {
               domain: this.config.cookieDomain,
               path: this.config.cookiePath,
               maxAge: this.config.jwtSwitchExpire * 1000,
-              secure: appUrl.protocol === 'https',
+              secure: appUrl.protocol === 'https:',
               httpOnly: false, // Allow JS access (for PubSub auth token).
-              sameSite: appUrl.protocol === 'https' ? 'lax' : 'strict',
+              sameSite: appUrl.protocol === 'https:' ? 'lax' : 'strict',
             });
           }
 
