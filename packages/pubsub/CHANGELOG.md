@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.46](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.45...v1.0.0-beta.46) (2023-08-29)
+
+### Bug Fixes
+
+- make the name even much more correct this time ([8d0b381](https://github.com/sciactive/nymphjs/commit/8d0b3817925ce9b1de21d2f9248f6cdec0f7d3f0))
+
 # [1.0.0-beta.45](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.44...v1.0.0-beta.45) (2023-07-17)
 
 ### Bug Fixes

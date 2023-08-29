@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.46](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.45...v1.0.0-beta.46) (2023-08-29)
+
+### Bug Fixes
+
+- secure cookies ([85d3ca4](https://github.com/sciactive/nymphjs/commit/85d3ca49f9ecdcdbaf68fee6639c3e77a4aeb109))
+
+### Features
+
+- add minimum username length ([fcb317a](https://github.com/sciactive/nymphjs/commit/fcb317ad8f758a89b1b24f377b506e8a38f9ad41))
+- enable tilmeld admins to remove totp secret from users ([18455b3](https://github.com/sciactive/nymphjs/commit/18455b3edbbfa1188f8cf317438bbfa028ba8f47))
+
 # [1.0.0-beta.45](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.44...v1.0.0-beta.45) (2023-07-17)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
