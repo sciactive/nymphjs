@@ -142,7 +142,7 @@ describe('Entity', () => {
     await testEntity.$refresh();
 
     expect(testEntityCopy.mdate ?? Infinity).toBeLessThanOrEqual(
-      testEntity.mdate ?? 0
+      testEntity.mdate ?? 0,
     );
   });
 
@@ -162,7 +162,7 @@ describe('Entity', () => {
     expect(testEntity.$hasTag('test', 'test2')).toEqual(true);
     testEntity.$addTag('test', 'test3', 'test4', 'test5', 'test6');
     expect(
-      testEntity.$hasTag('test', 'test3', 'test4', 'test5', 'test6')
+      testEntity.$hasTag('test', 'test3', 'test4', 'test5', 'test6'),
     ).toEqual(true);
     testEntity.$removeTag('test2');
     expect(testEntity.$hasTag('test2')).toEqual(false);

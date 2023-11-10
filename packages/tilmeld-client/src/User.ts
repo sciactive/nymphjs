@@ -173,7 +173,7 @@ export default class User extends Entity<UserData> {
       store.removeNymphResponseListener();
     }
     store.removeNymphResponseListener = nymph.on('response', (response) =>
-      this.handleToken(response)
+      this.handleToken(response),
     );
     this.handleToken();
   }
@@ -201,7 +201,7 @@ export default class User extends Entity<UserData> {
         {
           type: '&',
           ilike: ['username', username.replace(/([\\%_])/g, (s) => `\\${s}`)],
-        }
+        },
       );
       if (entity != null) {
         return entity;
@@ -246,7 +246,7 @@ export default class User extends Entity<UserData> {
     const store = User.stores.get(this.$nymph);
     if (store == null) {
       throw new Error(
-        'This user class was never initialized with an instance of Nymph'
+        'This user class was never initialized with an instance of Nymph',
       );
     }
 
@@ -274,7 +274,7 @@ export default class User extends Entity<UserData> {
     const store = User.stores.get(this.$nymph);
     if (store == null) {
       throw new Error(
-        'This user class was never initialized with an instance of Nymph'
+        'This user class was never initialized with an instance of Nymph',
       );
     }
 
@@ -292,7 +292,7 @@ export default class User extends Entity<UserData> {
     const store = User.stores.get(this.$nymph);
     if (store == null) {
       throw new Error(
-        'This user class was never initialized with an instance of Nymph'
+        'This user class was never initialized with an instance of Nymph',
       );
     }
 
@@ -354,13 +354,13 @@ export default class User extends Entity<UserData> {
   }
 
   public static async current(
-    returnObjectIfNotExist: true
+    returnObjectIfNotExist: true,
   ): Promise<User & CurrentUserData>;
   public static async current(
-    returnObjectIfNotExist?: false
+    returnObjectIfNotExist?: false,
   ): Promise<(User & CurrentUserData) | null>;
   public static async current(
-    returnObjectIfNotExist?: boolean
+    returnObjectIfNotExist?: boolean,
   ): Promise<(User & CurrentUserData) | null> {
     const currentUser = await this.serverCallStatic('current', [false]);
     if (currentUser == null) {
@@ -383,7 +383,7 @@ export default class User extends Entity<UserData> {
     const store = User.stores.get(this.nymph);
     if (store == null) {
       throw new Error(
-        'This user class was never initialized with an instance of Nymph'
+        'This user class was never initialized with an instance of Nymph',
       );
     }
 
@@ -416,7 +416,7 @@ export default class User extends Entity<UserData> {
     const store = User.stores.get(this.nymph);
     if (store == null) {
       throw new Error(
-        'This user class was never initialized with an instance of Nymph'
+        'This user class was never initialized with an instance of Nymph',
       );
     }
 
@@ -426,7 +426,7 @@ export default class User extends Entity<UserData> {
     if (!store.clientConfigPromise) {
       store.clientConfigPromise = this.serverCallStatic(
         'getClientConfig',
-        []
+        [],
       ).then((config) => {
         store.clientConfig = config;
         store.clientConfigPromise = undefined;
@@ -489,12 +489,12 @@ export default class User extends Entity<UserData> {
       ? LoginCallback
       : T extends 'logout'
       ? LogoutCallback
-      : never
+      : never,
   ) {
     const store = User.stores.get(this.nymph);
     if (store == null) {
       throw new Error(
-        'This user class was never initialized with an instance of Nymph'
+        'This user class was never initialized with an instance of Nymph',
       );
     }
 
@@ -521,12 +521,12 @@ export default class User extends Entity<UserData> {
       ? LoginCallback
       : T extends 'logout'
       ? LogoutCallback
-      : never
+      : never,
   ) {
     const store = User.stores.get(this.nymph);
     if (store == null) {
       throw new Error(
-        'This user class was never initialized with an instance of Nymph'
+        'This user class was never initialized with an instance of Nymph',
       );
     }
 

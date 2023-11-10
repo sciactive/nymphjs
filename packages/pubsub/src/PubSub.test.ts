@@ -32,7 +32,7 @@ const nymphServer = new NymphServer({}, new SQLite3Driver(sqliteConfig));
 const EmployeeModel = nymphServer.addEntityClass(EmployeeModelClass);
 const RestrictedModel = nymphServer.addEntityClass(RestrictedModelClass);
 const PubSubDisabledModel = nymphServer.addEntityClass(
-  PubSubDisabledModelClass
+  PubSubDisabledModelClass,
 );
 PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
@@ -112,12 +112,12 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           equal: ['name', 'Jane Doe'],
-        }
+        },
       )(async (update) => {
         if (updated) {
           expect('added' in update && update.added).toEqual((await jane).guid);
           expect('data' in update && update.data.guid).toEqual(
-            (await jane).guid
+            (await jane).guid,
           );
           subscription.unsubscribe();
           resolve(true);
@@ -141,7 +141,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           equal: ['name', 'Steve Transaction'],
-        }
+        },
       )(async (update) => {
         if (updated) {
           if (committed) {
@@ -189,7 +189,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           equal: ['name', 'Steve Rollback'],
-        }
+        },
       )(async (update) => {
         if (updated) {
           if ('added' in update && update.added === guid) {
@@ -236,7 +236,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           equal: ['name', 'Steve Complex'],
-        }
+        },
       )(async (update) => {
         if (updated) {
           if (committed) {
@@ -313,7 +313,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           guid: jane.guid,
-        }
+        },
       )(async (update) => {
         pubsub.updateArray(entities, update);
 
@@ -351,7 +351,7 @@ describe('Nymph REST Server and Client', () => {
             'subordinates',
             [{ class: Employee }, { type: '&', guid: john.guid }],
           ],
-        }
+        },
       )(async (update) => {
         pubsub.updateArray(entities, update);
 
@@ -398,7 +398,7 @@ describe('Nymph REST Server and Client', () => {
               'subordinates',
               [{ class: Employee }, { type: '&', '!truthy': 'current' }],
             ],
-          }
+          },
         )(async (update) => {
           pubsub.updateArray(entities, update);
 
@@ -413,7 +413,7 @@ describe('Nymph REST Server and Client', () => {
             await john.$save();
           }
         });
-      })
+      }),
     ).toEqual(true);
 
     expect(entities.length).toEqual(1);
@@ -436,7 +436,7 @@ describe('Nymph REST Server and Client', () => {
             'subordinates',
             [{ class: Employee }, { type: '&', truthy: 'current' }],
           ],
-        }
+        },
       )(async (update) => {
         pubsub.updateArray(entities, update);
 
@@ -474,7 +474,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           guid: jane.guid,
-        }
+        },
       )(async (update) => {
         pubsub.updateArray(entities, update);
 
@@ -506,7 +506,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           equal: ['name', 'Jane Doe'],
-        }
+        },
       )(async (update) => {
         pubsub.updateArray(entities, update);
 
@@ -544,7 +544,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           equal: ['name', 'Jane Doe'],
-        }
+        },
       )(async (update) => {
         pubsub.updateArray(entities, update);
 
@@ -609,7 +609,7 @@ describe('Nymph REST Server and Client', () => {
         {
           type: '&',
           equal: ['name', 'Jane Doe'],
-        }
+        },
       )(
         async () => {
           receivedBadUpdate = true;
@@ -618,7 +618,7 @@ describe('Nymph REST Server and Client', () => {
         (e: any) => {
           error = e;
           resolve();
-        }
+        },
       );
     });
 
@@ -676,7 +676,7 @@ describe('Nymph REST Server and Client', () => {
         },
         (err) => {
           expect(err.status).toEqual(404);
-        }
+        },
       );
 
       const directValue = await nymph.newUID('testNewUID');
@@ -704,7 +704,7 @@ describe('Nymph REST Server and Client', () => {
         },
         (err) => {
           expect(err.status).toEqual(404);
-        }
+        },
       );
 
       await nymph.deleteUID('testIncUID');
@@ -726,7 +726,7 @@ describe('Nymph REST Server and Client', () => {
         },
         (err) => {
           expect(err.status).toEqual(404);
-        }
+        },
       );
 
       await nymph.setUID('testSetUID', 123);
@@ -750,7 +750,7 @@ describe('Nymph REST Server and Client', () => {
         },
         (err) => {
           expect(err.status).toEqual(404);
-        }
+        },
       );
 
       await nymph.setUID('testRenameUID', 456);
@@ -769,7 +769,7 @@ describe('Nymph REST Server and Client', () => {
         },
         (err) => {
           expect(err.status).toEqual(404);
-        }
+        },
       );
 
       await nymph.setUID('testRename2UID', 456);
@@ -795,7 +795,7 @@ describe('Nymph REST Server and Client', () => {
         },
         (err) => {
           expect(err.status).toEqual(404);
-        }
+        },
       );
 
       await nymph.deleteUID('testDeleteUID');

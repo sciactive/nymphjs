@@ -25,7 +25,7 @@ const nymph = new Nymph(
     verifyChangeRedirect: 'http://localhost:8080',
     cancelChangeRedirect: 'http://localhost:8080',
     jwtSecret: 'shhhhh',
-  })
+  }),
 );
 
 const app = express();
@@ -40,8 +40,8 @@ app.use(
     nymph,
     {
       allowRegistration: true,
-    }
-  )
+    },
+  ),
 );
 
 app.listen(8080, () => {

@@ -6,7 +6,7 @@ import { Entity } from '@nymphjs/nymph';
  * Used in entities which support abilities, such as users and groups.
  */
 export default abstract class AbleObject<
-  T extends { abilities?: string[] }
+  T extends { abilities?: string[] },
 > extends Entity<T> {
   /**
    * Grant an ability.

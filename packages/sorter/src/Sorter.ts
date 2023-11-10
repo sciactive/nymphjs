@@ -27,7 +27,7 @@ export default class Sorter<Entity extends Object> {
 
   private _arraySortProperty(
     a: Entity & { [k: string]: any },
-    b: Entity & { [k: string]: any }
+    b: Entity & { [k: string]: any },
   ) {
     const prop = this.sortProperty as string;
     const parent = this.sortParent as string;
@@ -92,7 +92,7 @@ export default class Sorter<Entity extends Object> {
   public hsort(
     property: string,
     parentProperty: string,
-    sortOptions?: SortOptions
+    sortOptions?: SortOptions,
   ): Entity[] {
     // First sort by the requested property.
     this.sort(property, sortOptions);
@@ -189,7 +189,7 @@ export default class Sorter<Entity extends Object> {
       reverse = false,
       collatorOptions = undefined,
       comparator = undefined,
-    }: SortOptions = {}
+    }: SortOptions = {},
   ): Entity[] {
     // Sort by the requested property.
     this.sortProperty = property;
@@ -199,7 +199,7 @@ export default class Sorter<Entity extends Object> {
       collatorOptions || {
         sensitivity: caseSensitive ? 'case' : 'base',
         caseFirst: 'false',
-      }
+      },
     );
     this.comparator = comparator;
     this.array.sort(this._arraySortProperty.bind(this));
@@ -221,7 +221,7 @@ export default class Sorter<Entity extends Object> {
       reverse = false,
       collatorOptions = undefined,
       comparator = undefined,
-    }: SortOptions = {}
+    }: SortOptions = {},
   ): Entity[] {
     // Sort by the requested property.
     this.sortProperty = property;
@@ -230,7 +230,7 @@ export default class Sorter<Entity extends Object> {
       undefined,
       collatorOptions || {
         sensitivity: caseSensitive ? 'case' : 'base',
-      }
+      },
     );
     this.comparator = comparator;
     this.array.sort(this._arraySortProperty.bind(this));

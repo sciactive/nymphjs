@@ -21,7 +21,7 @@ const _nymph = new Nymph(
   new SQLite3Driver({
     filename: ':memory:',
   }),
-  tilmeld
+  tilmeld,
 );
 
 const User = tilmeld.User;

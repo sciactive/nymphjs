@@ -7,7 +7,7 @@ import { enforceTilmeld } from '@nymphjs/tilmeld';
 export function setup(
   options: NymphOptions,
   nymph: Nymph,
-  { allowRegistration = false }: { allowRegistration?: boolean } = {}
+  { allowRegistration = false }: { allowRegistration?: boolean } = {},
 ) {
   const app = express();
   const tilmeld = enforceTilmeld(nymph);
@@ -92,7 +92,7 @@ export function setup(
         if (tilmeld.config.unverifiedAccess) {
           user.groups = await nymph.getEntities(
             { class: tilmeld.Group, skipAc: true },
-            { type: '&', equal: ['defaultSecondary', true] }
+            { type: '&', equal: ['defaultSecondary', true] },
           );
         }
         user.enabled = true;
@@ -148,7 +148,7 @@ export function setup(
         ) {
           printError(
             400,
-            "That email change cancellation link has expired. Please contact an administrator if you can't access your account."
+            "That email change cancellation link has expired. Please contact an administrator if you can't access your account.",
           );
           return;
         }
@@ -172,19 +172,19 @@ export function setup(
         default:
           printSuccess(
             'Your account has been verified.',
-            tilmeld.config.verifyRedirect
+            tilmeld.config.verifyRedirect,
           );
           break;
         case 'verifychange':
           printSuccess(
             'Your new email address has been verified.',
-            tilmeld.config.verifyChangeRedirect
+            tilmeld.config.verifyChangeRedirect,
           );
           break;
         case 'cancelchange':
           printSuccess(
             'The email address change has been canceled.',
-            tilmeld.config.cancelChangeRedirect
+            tilmeld.config.cancelChangeRedirect,
           );
           break;
       }
@@ -198,7 +198,7 @@ export function setup(
     response.send(
       `window.nymphOptions = ${JSON.stringify(options)};\n` +
         `window.allowRegistration = ${JSON.stringify(allowRegistration)};\n` +
-        `window.appUrl = ${JSON.stringify(tilmeld.config.appUrl)};`
+        `window.appUrl = ${JSON.stringify(tilmeld.config.appUrl)};`,
     );
   });
 
@@ -206,7 +206,7 @@ export function setup(
     '/app',
     express.static(__dirname + '/app', {
       fallthrough: true,
-    })
+    }),
   );
   app.use(express.static(__dirname + '/../static', { fallthrough: false }));
 

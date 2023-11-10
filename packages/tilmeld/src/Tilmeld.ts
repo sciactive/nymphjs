@@ -183,7 +183,7 @@ export default class Tilmeld implements TilmeldInterface {
     const handleQuery = function (
       nymph: Nymph,
       options: Options,
-      selectors: FormattedSelector[]
+      selectors: FormattedSelector[],
     ) {
       const tilmeld = enforceTilmeld(nymph);
       if (
@@ -225,7 +225,7 @@ export default class Tilmeld implements TilmeldInterface {
     // Filter entities being deleted for user permissions.
     const checkPermissionsDelete = async function (
       nymph: Nymph,
-      entity: EntityInterface
+      entity: EntityInterface,
     ) {
       const tilmeld = enforceTilmeld(nymph);
       if (
@@ -245,11 +245,11 @@ export default class Tilmeld implements TilmeldInterface {
     const checkPermissionsDeleteByID = async function (
       nymph: Nymph,
       guid: string,
-      className?: string
+      className?: string,
     ) {
       const entity = await nymph.getEntity(
         { class: nymph.getEntityClass(className ?? 'Entity') },
-        { type: '&', guid: guid }
+        { type: '&', guid: guid },
       );
       if (entity != null) {
         checkPermissionsDelete(nymph, entity);
@@ -261,7 +261,7 @@ export default class Tilmeld implements TilmeldInterface {
     // disallowed changes to AC properties.
     const checkPermissionsSaveAndFilterAcChanges = async function (
       nymph: Nymph,
-      entity: EntityInterface & AccessControlData
+      entity: EntityInterface & AccessControlData,
     ) {
       const tilmeld = enforceTilmeld(nymph);
       if (!entity) {
@@ -338,12 +338,12 @@ export default class Tilmeld implements TilmeldInterface {
               entity,
               TilmeldAccessLevels.FULL_ACCESS,
               undefined,
-              originalAc
+              originalAc,
             )
           ) {
             // Only allow changes to AC properties if the user has full access.
             throw new AccessControlError(
-              'No permission to change access control properties.'
+              'No permission to change access control properties.',
             );
           }
 
@@ -354,7 +354,7 @@ export default class Tilmeld implements TilmeldInterface {
               newAc.user !== tilmeld.currentUser)
           ) {
             throw new AccessControlError(
-              'No permission to assign to another user.'
+              'No permission to assign to another user.',
             );
           }
 
@@ -366,7 +366,7 @@ export default class Tilmeld implements TilmeldInterface {
               (tilmeld.currentUser?.$getGids() ?? []).includes(newAc.group))
           ) {
             throw new AccessControlError(
-              'No permission to assign to another group.'
+              'No permission to assign to another group.',
             );
           }
         }
@@ -397,7 +397,7 @@ export default class Tilmeld implements TilmeldInterface {
      */
     const addAccess = async function (
       nymph: Nymph,
-      entity: EntityInterface & AccessControlData
+      entity: EntityInterface & AccessControlData,
     ) {
       const tilmeld = enforceTilmeld(nymph);
       const user = tilmeld.currentUser;
@@ -440,7 +440,7 @@ export default class Tilmeld implements TilmeldInterface {
 
     const validate = async function (
       _nymph: Nymph,
-      entity: EntityInterface & AccessControlData
+      entity: EntityInterface & AccessControlData,
     ) {
       if (!(entity instanceof User) && !(entity instanceof Group)) {
         const ownershipAcPropertyValidator = (prop: any) => {
@@ -450,7 +450,7 @@ export default class Tilmeld implements TilmeldInterface {
             prop > TilmeldAccessLevels.FULL_ACCESS
           ) {
             throw new AccessControlError(
-              'Invalid access control property: ' + prop
+              'Invalid access control property: ' + prop,
             );
           }
         };
@@ -458,13 +458,13 @@ export default class Tilmeld implements TilmeldInterface {
         const accessAcPropertyValidator = (prop: any) => {
           if (!Array.isArray(prop)) {
             throw new AccessControlError(
-              'Invalid access control property: ' + prop
+              'Invalid access control property: ' + prop,
             );
           }
           prop.forEach((value) => {
             if (!(value instanceof User || value instanceof Group)) {
               throw new AccessControlError(
-                'Invalid access control property: ' + prop
+                'Invalid access control property: ' + prop,
               );
             }
           });
@@ -473,7 +473,7 @@ export default class Tilmeld implements TilmeldInterface {
         if ('user' in entity) {
           if (!(entity.user instanceof User)) {
             throw new AccessControlError(
-              'Invalid access control property: user'
+              'Invalid access control property: user',
             );
           }
         }
@@ -481,7 +481,7 @@ export default class Tilmeld implements TilmeldInterface {
         if ('group' in entity) {
           if (!(entity.group instanceof Group)) {
             throw new AccessControlError(
-              'Invalid access control property: group'
+              'Invalid access control property: group',
             );
           }
         }
@@ -526,7 +526,7 @@ export default class Tilmeld implements TilmeldInterface {
    */
   public addAccessControlSelectors(
     options: Options,
-    selectors: FormattedSelector[]
+    selectors: FormattedSelector[],
   ) {
     const user = this.currentUser;
 
@@ -691,7 +691,7 @@ export default class Tilmeld implements TilmeldInterface {
     entity: EntityInterface,
     type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
     user?: (User & UserData) | false,
-    acProperties?: ACProperties
+    acProperties?: ACProperties,
   ) {
     if (!acProperties) {
       acProperties = entity.$getCurrentAcValues() as ACProperties;
@@ -811,7 +811,7 @@ export default class Tilmeld implements TilmeldInterface {
   public async checkClientUIDPermissions(
     name: string,
     type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
-    user?: (User & UserData) | false
+    user?: (User & UserData) | false,
   ) {
     let userOrEmpty: User & UserData = this.User.factorySync();
     // Calculate the user.
@@ -896,7 +896,7 @@ export default class Tilmeld implements TilmeldInterface {
       {
         type: '&',
         guid: guid,
-      }
+      },
     );
     if (!user || !user.guid) {
       return null;
@@ -1050,7 +1050,7 @@ export default class Tilmeld implements TilmeldInterface {
   public async login(
     user: User & UserData,
     sendAuthHeader: boolean,
-    sendCookie = true
+    sendCookie = true,
   ) {
     if (user.guid != null && user.enabled) {
       if (this.response) {
@@ -1096,7 +1096,7 @@ export default class Tilmeld implements TilmeldInterface {
   public async loginSwitch(
     user: User & UserData,
     sendAuthHeader: boolean,
-    sendCookie = true
+    sendCookie = true,
   ) {
     if (user.guid != null) {
       if (this.response) {

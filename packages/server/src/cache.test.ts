@@ -48,7 +48,7 @@ describe('Nymph REST Server and Client with Client Weak Ref Cache', () => {
     // @ts-ignore TS doesn't know about WeakRef.
     if (typeof WeakRef === 'undefined') {
       throw new Error(
-        'You must run this test in an environment that includes WeakRef.'
+        'You must run this test in an environment that includes WeakRef.',
       );
     }
 
@@ -61,7 +61,7 @@ describe('Nymph REST Server and Client with Client Weak Ref Cache', () => {
     const checkA = await Employee.factory(employee.guid);
     const checkB = await nymph.getEntity(
       { class: Employee },
-      { type: '&', guid: employee.guid }
+      { type: '&', guid: employee.guid },
     );
 
     if (!checkB) {

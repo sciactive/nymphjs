@@ -237,7 +237,7 @@ export interface Config {
   jwtBuilder: (
     config: Config,
     user: User & UserData,
-    switchToken?: boolean
+    switchToken?: boolean,
   ) => string;
   /**
    * Function to verify that a JWT was signed with the secret key, validate its
@@ -251,7 +251,7 @@ export interface Config {
   jwtExtract: (
     config: Config,
     token: string,
-    xsrfToken?: string
+    xsrfToken?: string,
   ) => { guid: string; issued: Date; expire: Date } | null;
   /**
    * The absolute path to the email template directory. Used by the default
@@ -268,7 +268,7 @@ export interface Config {
   configEmail: (
     tilmeld: Tilmeld,
     options: EmailOptions,
-    user: User & UserData
+    user: User & UserData,
   ) => Promise<EmailConfig>;
   /**
    * Send an email to a user. Uses `email-templates` by default.
@@ -298,7 +298,7 @@ export interface Config {
   sendEmail: (
     tilmeld: Tilmeld,
     options: EmailOptions,
-    user: User & UserData
+    user: User & UserData,
   ) => Promise<boolean>;
   /**
    * The address you'd like to receive a notification of registered users, if

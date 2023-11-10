@@ -119,7 +119,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   static async factoryGroupname(
-    groupname?: string
+    groupname?: string,
   ): Promise<Group & GroupData> {
     const entity = new this();
     if (groupname != null) {
@@ -130,7 +130,7 @@ export default class Group extends AbleObject<GroupData> {
         {
           type: '&',
           ilike: ['groupname', groupname.replace(/([\\%_])/g, (s) => `\\${s}`)],
-        }
+        },
       );
       if (entity != null) {
         return entity;
@@ -161,7 +161,7 @@ export default class Group extends AbleObject<GroupData> {
    */
   public static async getPrimaryGroups(
     options?: Options,
-    selectors?: Selector[]
+    selectors?: Selector[],
   ) {
     const tilmeld = enforceTilmeld(this);
     if (!tilmeld.gatekeeper('tilmeld/admin')) {
@@ -171,7 +171,7 @@ export default class Group extends AbleObject<GroupData> {
     return await this.getAssignableGroups(
       tilmeld.config.highestPrimary,
       { ...options, class: tilmeld.Group, return: 'entity' },
-      [...(selectors ?? [])]
+      [...(selectors ?? [])],
     );
   }
 
@@ -184,7 +184,7 @@ export default class Group extends AbleObject<GroupData> {
    */
   public static async getSecondaryGroups(
     options?: Options,
-    selectors?: Selector[]
+    selectors?: Selector[],
   ) {
     const tilmeld = enforceTilmeld(this);
     if (!tilmeld.gatekeeper('tilmeld/admin')) {
@@ -194,14 +194,14 @@ export default class Group extends AbleObject<GroupData> {
     return await this.getAssignableGroups(
       tilmeld.config.highestSecondary,
       { ...options, class: tilmeld.Group, return: 'entity' },
-      [...(selectors ?? [])]
+      [...(selectors ?? [])],
     );
   }
 
   private static async getAssignableGroups(
     highestParent: string | boolean,
     options: Options<typeof Group>,
-    selectors: Selector[]
+    selectors: Selector[],
   ) {
     const tilmeld = enforceTilmeld(this);
     let assignableGroups: (Group & GroupData)[] = [];
@@ -212,7 +212,7 @@ export default class Group extends AbleObject<GroupData> {
 
     assignableGroups = await this.nymph.getEntities(
       { ...options, class: tilmeld.Group },
-      ...selectors
+      ...selectors,
     );
     if (highestParent !== true) {
       assignableGroups = (
@@ -230,7 +230,7 @@ export default class Group extends AbleObject<GroupData> {
               await parent?.$wake();
             }
             return null;
-          })
+          }),
         )
       ).filter((group) => group != null) as (Group & GroupData)[];
     }
@@ -263,7 +263,7 @@ export default class Group extends AbleObject<GroupData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke system/admin."
+        "You don't have the authority to grant or revoke system/admin.",
       );
     }
 
@@ -275,7 +275,7 @@ export default class Group extends AbleObject<GroupData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/admin."
+        "You don't have the authority to grant or revoke tilmeld/admin.",
       );
     }
 
@@ -287,7 +287,7 @@ export default class Group extends AbleObject<GroupData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/switch."
+        "You don't have the authority to grant or revoke tilmeld/switch.",
       );
     }
 
@@ -306,7 +306,7 @@ export default class Group extends AbleObject<GroupData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke system/admin."
+        "You don't have the authority to grant or revoke system/admin.",
       );
     }
 
@@ -318,7 +318,7 @@ export default class Group extends AbleObject<GroupData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/admin."
+        "You don't have the authority to grant or revoke tilmeld/admin.",
       );
     }
 
@@ -330,7 +330,7 @@ export default class Group extends AbleObject<GroupData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/switch."
+        "You don't have the authority to grant or revoke tilmeld/switch.",
       );
     }
 
@@ -383,7 +383,7 @@ export default class Group extends AbleObject<GroupData> {
    * @returns True or false.
    */
   public async $isDescendant(
-    givenGroup: (Group & GroupData) | string
+    givenGroup: (Group & GroupData) | string,
   ): Promise<boolean> {
     const tilmeld = enforceTilmeld(this);
     let group: Group & GroupData;
@@ -423,7 +423,7 @@ export default class Group extends AbleObject<GroupData> {
         type: '&',
         equal: ['enabled', true],
         ref: ['parent', this],
-      }
+      },
     );
   }
 
@@ -434,7 +434,7 @@ export default class Group extends AbleObject<GroupData> {
    * @returns An array of groups.
    */
   public async $getDescendants(
-    andSelf = false
+    andSelf = false,
   ): Promise<(Group & GroupData)[]> {
     const tilmeld = enforceTilmeld(this);
     let groups: (Group & GroupData)[] = [];
@@ -444,7 +444,7 @@ export default class Group extends AbleObject<GroupData> {
         type: '&',
         equal: ['enabled', true],
         ref: ['parent', this],
-      }
+      },
     );
     for (let entity of entities) {
       groups = (await entity.$getDescendants(true)).concat(groups);
@@ -492,7 +492,7 @@ export default class Group extends AbleObject<GroupData> {
   public async $getUsers(
     descendants = false,
     limit?: number,
-    offset?: number
+    offset?: number,
   ): Promise<(User & UserData)[]> {
     const tilmeld = enforceTilmeld(this);
     let groups: (Group & GroupData)[] = [];
@@ -523,7 +523,7 @@ export default class Group extends AbleObject<GroupData> {
             group,
           ]),
         ],
-      }
+      },
     );
   }
 
@@ -562,7 +562,7 @@ export default class Group extends AbleObject<GroupData> {
       if (
         difference(
           this.$data.groupname.split(''),
-          tilmeld.config.validChars.split('')
+          tilmeld.config.validChars.split(''),
         ).length
       ) {
         return {
@@ -589,7 +589,7 @@ export default class Group extends AbleObject<GroupData> {
       }
       const test = await this.$nymph.getEntity(
         { class: tilmeld.Group, skipAc: true },
-        selector
+        selector,
       );
       if (test != null) {
         return { result: false, message: 'That groupname is taken.' };
@@ -656,7 +656,7 @@ export default class Group extends AbleObject<GroupData> {
     }
     const test = await this.$nymph.getEntity(
       { class: tilmeld.Group, skipAc: true },
-      selector
+      selector,
     );
     if (test != null) {
       return {
@@ -749,7 +749,7 @@ export default class Group extends AbleObject<GroupData> {
         (await parent.$isDescendant(this)))
     ) {
       throw new BadDataError(
-        "Group parent can't be itself or descendant of itself."
+        "Group parent can't be itself or descendant of itself.",
       );
     }
 
@@ -763,14 +763,14 @@ export default class Group extends AbleObject<GroupData> {
     if (this.$data.defaultPrimary) {
       const currentPrimary = await this.$nymph.getEntity(
         { class: tilmeld.Group },
-        { type: '&', truthy: 'defaultPrimary' }
+        { type: '&', truthy: 'defaultPrimary' },
       );
       if (currentPrimary != null && !this.$is(currentPrimary)) {
         currentPrimary.defaultPrimary = false;
         if (!(await currentPrimary.$save())) {
           throw new CouldNotChangeDefaultPrimaryGroupError(
             'Could not change new user primary group from ' +
-              `${currentPrimary.groupname}.`
+              `${currentPrimary.groupname}.`,
           );
         }
       }
@@ -828,7 +828,7 @@ export default class Group extends AbleObject<GroupData> {
       {
         type: '&',
         ref: ['group', this],
-      }
+      },
     );
     for (let user of primaryUsers) {
       delete user.group;
@@ -848,7 +848,7 @@ export default class Group extends AbleObject<GroupData> {
       {
         type: '&',
         ref: ['groups', this],
-      }
+      },
     );
     for (let user of secondaryUsers) {
       user.$delGroup(this);

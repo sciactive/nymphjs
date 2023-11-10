@@ -25,11 +25,11 @@ export class MockNymphDriver {
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
-    guid: string
+    guid: string,
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
-    guid: string
+    guid: string,
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
@@ -84,7 +84,7 @@ export class MockNymph {
   public getEntityClass<T extends EntityConstructor>(className: T): T;
   public getEntityClass(className: string): EntityConstructor;
   public getEntityClass<T extends EntityConstructor = EntityConstructor>(
-    className: T | string
+    className: T | string,
   ): T | EntityConstructor {
     let key: string | null = null;
     if (typeof className === 'string') {
@@ -108,11 +108,11 @@ export class MockNymph {
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
-    guid: string
+    guid: string,
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
-    guid: string
+    guid: string,
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},

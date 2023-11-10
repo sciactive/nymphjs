@@ -134,7 +134,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '&',
         ref: ['subordinates', jane],
-      }
+      },
     );
 
     expect(checkSteve?.guid).toEqual(steve.guid);
@@ -147,7 +147,7 @@ describe('Nymph REST Server and Client', () => {
           'subordinates',
           [{ class: Employee }, { type: '&', guid: jane.guid }],
         ],
-      }
+      },
     );
 
     expect(checkSteveQref?.guid).toEqual(steve.guid);
@@ -161,7 +161,7 @@ describe('Nymph REST Server and Client', () => {
     expect(entity.$hasTag('test', 'test2')).toEqual(true);
     entity.$addTag('test', 'test3', 'test4', 'test5', 'test6');
     expect(entity.$hasTag('test', 'test3', 'test4', 'test5', 'test6')).toEqual(
-      true
+      true,
     );
     entity.$removeTag('test2');
     expect(!entity.$hasTag('test2')).toEqual(true);
@@ -237,7 +237,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '&',
         equal: ['name', 'Jane Doe'],
-      }
+      },
     );
 
     expect(jane).not.toBeNull();
@@ -257,7 +257,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '&',
         tag: ['employee'],
-      }
+      },
     );
 
     expect(entities.length).toEqual(4);
@@ -283,13 +283,13 @@ describe('Nymph REST Server and Client', () => {
 
     const resultSelectors = await nymph.getEntities(
       { class: Employee },
-      { type: '&', equal: ['name', 'Jane Doe'] }
+      { type: '&', equal: ['name', 'Jane Doe'] },
     );
 
     // Testing count return with selectors...
     const resultSelectorsCount = await nymph.getEntities(
       { class: Employee, return: 'count' },
-      { type: '&', equal: ['name', 'Jane Doe'] }
+      { type: '&', equal: ['name', 'Jane Doe'] },
     );
     expect(resultSelectorsCount).toBeGreaterThanOrEqual(1);
     expect(resultSelectorsCount).toEqual(resultSelectors.length);
@@ -312,7 +312,7 @@ describe('Nymph REST Server and Client', () => {
     // Testing empty count...
     const resultSelectorsEmpty = await nymph.getEntities(
       { class: Employee, return: 'count' },
-      { type: '&', tag: 'pickle' }
+      { type: '&', tag: 'pickle' },
     );
     expect(resultSelectorsEmpty).toEqual(0);
   });
@@ -331,7 +331,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '&',
         tag: 'employee',
-      }
+      },
     );
 
     expect(entities.length).toEqual(4);
@@ -357,7 +357,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '&',
         like: ['name', '%Jane%'],
-      }
+      },
     );
 
     expect(entities.length).toEqual(4);
@@ -383,7 +383,7 @@ describe('Nymph REST Server and Client', () => {
           type: '|',
           like: ['name', '%Jane%'],
         },
-      }
+      },
     );
 
     expect(entities.length).toEqual(4);
@@ -418,7 +418,7 @@ describe('Nymph REST Server and Client', () => {
             },
           ],
         },
-      }
+      },
     );
 
     expect(entities.length).toEqual(4);
@@ -443,7 +443,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '&',
         guid,
-      }
+      },
     );
 
     expect(check.length).toEqual(0);
@@ -466,7 +466,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '|',
         guid: guids,
-      }
+      },
     );
 
     expect(check.length).toEqual(0);
@@ -483,7 +483,7 @@ describe('Nymph REST Server and Client', () => {
       error = e;
     }
     expect(error.message).toEqual(
-      "Can't use Entity class directly from the front end."
+      "Can't use Entity class directly from the front end.",
     );
   });
 
@@ -623,7 +623,7 @@ describe('Nymph REST Server and Client', () => {
       {
         class: Employee,
       },
-      jane1.guid
+      jane1.guid,
     );
     if (jane1 == null || jane2 == null) {
       throw new Error('Entity is null.');
@@ -649,7 +649,7 @@ describe('Nymph REST Server and Client', () => {
       {
         class: Employee,
       },
-      first.guid
+      first.guid,
     );
 
     if (second == null || second.guid == null) {
@@ -681,7 +681,7 @@ describe('Nymph REST Server and Client', () => {
       {
         class: Employee,
       },
-      first.guid
+      first.guid,
     );
 
     if (second == null || second.guid == null) {
@@ -704,7 +704,7 @@ describe('Nymph REST Server and Client', () => {
       {
         type: '&',
         '!guid': first.guid,
-      }
+      },
     );
 
     if (third == null || third.guid == null) {

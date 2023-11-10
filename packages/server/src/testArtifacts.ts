@@ -64,7 +64,7 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
   ];
 
   static async factory(
-    guid?: string
+    guid?: string,
   ): Promise<EmployeeModel & EmployeeModelData> {
     return (await super.factory(guid)) as EmployeeModel & EmployeeModelData;
   }
@@ -132,7 +132,7 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
 
     if (!aborted) {
       throw new Error(
-        "testStaticIterableAbort wasn't aborted after the first iteration."
+        "testStaticIterableAbort wasn't aborted after the first iteration.",
       );
     }
   }
@@ -144,7 +144,7 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
   public static *throwErrorStaticIterable() {
     yield 1;
     throw new BadFunctionCallError(
-      'This function throws errors after the first iteration.'
+      'This function throws errors after the first iteration.',
     );
   }
 
@@ -253,7 +253,7 @@ export class RestrictedModel extends EntityServer<RestrictedModelData> {
   public static restEnabled = false;
 
   static async factory(
-    guid?: string
+    guid?: string,
   ): Promise<RestrictedModel & RestrictedModelData> {
     return (await super.factory(guid)) as RestrictedModel & RestrictedModelData;
   }
@@ -334,7 +334,7 @@ export class PubSubDisabledModel extends EntityServer<PubSubDisabledModelData> {
   public static pubSubEnabled = false;
 
   static async factory(
-    guid?: string
+    guid?: string,
   ): Promise<PubSubDisabledModel & PubSubDisabledModelData> {
     return (await super.factory(guid)) as PubSubDisabledModel &
       PubSubDisabledModelData;
@@ -378,7 +378,7 @@ export class PubSubDisabled extends Entity<PubSubDisabledData> {
   }
 
   static async factory(
-    guid?: string
+    guid?: string,
   ): Promise<PubSubDisabled & PubSubDisabledData> {
     return (await super.factory(guid)) as PubSubDisabled & PubSubDisabledData;
   }

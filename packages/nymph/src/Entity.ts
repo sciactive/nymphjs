@@ -249,7 +249,7 @@ export default class Entity<T extends EntityData = EntityData>
           data[name] = referencesToEntities(
             JSON.parse(this.$sdata[name]),
             this.$nymph,
-            this.$skipAc
+            this.$skipAc,
           );
           delete this.$sdata[name];
         }
@@ -284,7 +284,7 @@ export default class Entity<T extends EntityData = EntityData>
       defineProperty: (
         data: EntityData,
         name: string,
-        descriptor: PropertyDescriptor
+        descriptor: PropertyDescriptor,
       ) => {
         this.$check();
 
@@ -302,7 +302,7 @@ export default class Entity<T extends EntityData = EntityData>
           data[name] = referencesToEntities(
             JSON.parse(this.$sdata[name]),
             this.$nymph,
-            this.$skipAc
+            this.$skipAc,
           );
           delete this.$sdata[name];
         }
@@ -313,7 +313,7 @@ export default class Entity<T extends EntityData = EntityData>
         this.$check();
 
         return Object.getOwnPropertyNames(data).concat(
-          Object.getOwnPropertyNames(this.$sdata)
+          Object.getOwnPropertyNames(this.$sdata),
         );
       },
     };
@@ -389,7 +389,7 @@ export default class Entity<T extends EntityData = EntityData>
       defineProperty: (
         entity: Entity,
         name: string,
-        descriptor: PropertyDescriptor
+        descriptor: PropertyDescriptor,
       ) => {
         if (
           typeof name !== 'string' ||
@@ -426,7 +426,7 @@ export default class Entity<T extends EntityData = EntityData>
       ownKeys: (entity: Entity) => {
         this.$check();
         return Object.getOwnPropertyNames(entity).concat(
-          Object.getOwnPropertyNames(entity.$data)
+          Object.getOwnPropertyNames(entity.$data),
         );
       },
     }) as Entity<T>;
@@ -439,7 +439,7 @@ export default class Entity<T extends EntityData = EntityData>
         {
           class: this as any as EntityConstructor,
         },
-        { type: '&', guid }
+        { type: '&', guid },
       );
       if (entity != null) {
         return entity;
@@ -676,7 +676,7 @@ export default class Entity<T extends EntityData = EntityData>
 
     if (this.guid != input.guid) {
       throw new EntityConflictError(
-        'Tried to accept JSON input for the wrong entity.'
+        'Tried to accept JSON input for the wrong entity.',
       );
     }
 
@@ -726,10 +726,10 @@ export default class Entity<T extends EntityData = EntityData>
           (this.constructor as typeof Entity).class !== 'Group') ||
         !(this.$nymph.tilmeld as any).currentUser ||
         (!(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
-          'tilmeld/admin'
+          'tilmeld/admin',
         ) &&
           !(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
-            'system/admin'
+            'system/admin',
           ))
       ) {
         protectedProps.push('user');
@@ -771,7 +771,7 @@ export default class Entity<T extends EntityData = EntityData>
 
     if (this.guid != patch.guid) {
       throw new EntityConflictError(
-        'Tried to accept JSON patch for the wrong entity.'
+        'Tried to accept JSON patch for the wrong entity.',
       );
     }
 
@@ -796,10 +796,10 @@ export default class Entity<T extends EntityData = EntityData>
           (this.constructor as typeof Entity).class !== 'Group') ||
         !(this.$nymph.tilmeld as any).currentUser ||
         (!(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
-          'tilmeld/admin'
+          'tilmeld/admin',
         ) &&
           !(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
-            'system/admin'
+            'system/admin',
           ))
       ) {
         protectedProps.push('user');
@@ -819,7 +819,7 @@ export default class Entity<T extends EntityData = EntityData>
       (this.$data as any)[name] = referencesToEntities(
         patch.set[name],
         this.$nymph,
-        this.$skipAc
+        this.$skipAc,
       );
     }
 
@@ -872,7 +872,7 @@ export default class Entity<T extends EntityData = EntityData>
       (this.$dataStore as any)[name] = referencesToEntities(
         data[name],
         this.$nymph,
-        this.$skipAc
+        this.$skipAc,
       );
     }
     this.$sdata = mySdata;
@@ -895,14 +895,14 @@ export default class Entity<T extends EntityData = EntityData>
     ) {
       throw new InvalidParametersError(
         'referenceSleep expects parameter 1 to be a valid Nymph entity ' +
-          'reference.'
+          'reference.',
       );
     }
     const thisClass: string = (this.constructor as any).class;
     if (reference[2] !== thisClass) {
       throw new InvalidParametersError(
         'referenceSleep can only be called with an entity reference of the ' +
-          `same class. Given class: ${reference[2]}; this class: ${thisClass}.`
+          `same class. Given class: ${reference[2]}; this class: ${thisClass}.`,
       );
     }
     this.$isASleepingReference = true;
@@ -916,7 +916,7 @@ export default class Entity<T extends EntityData = EntityData>
   protected $check() {
     if (this.$isASleepingReference || this.$sleepingReference != null) {
       throw new EntityIsSleepingReferenceError(
-        'This entity is in a sleeping reference state. You must use .$wake() to wake it.'
+        'This entity is in a sleeping reference state. You must use .$wake() to wake it.',
       );
     }
   }
@@ -938,12 +938,12 @@ export default class Entity<T extends EntityData = EntityData>
     }
     if (this.$sleepingReference?.[1] == null) {
       throw new InvalidStateError(
-        'Tried to wake a sleeping reference with no GUID.'
+        'Tried to wake a sleeping reference with no GUID.',
       );
     }
     if (!this.$wakePromise) {
       const EntityClass = this.$nymph.getEntityClass(
-        this.$sleepingReference[2]
+        this.$sleepingReference[2],
       );
       this.$wakePromise = this.$nymph
         .getEntity(
@@ -951,14 +951,14 @@ export default class Entity<T extends EntityData = EntityData>
             class: EntityClass,
             skipAc: this.$skipAc,
           },
-          { type: '&', guid: this.$sleepingReference[1] }
+          { type: '&', guid: this.$sleepingReference[1] },
         )
         .then((entity) => {
           if (entity == null || entity.guid == null) {
             return Promise.reject(
               new InvalidStateError(
-                'The sleeping reference could not be retrieved.'
-              )
+                'The sleeping reference could not be retrieved.',
+              ),
             );
           }
           this.$isASleepingReference = false;
@@ -1011,7 +1011,7 @@ export default class Entity<T extends EntityData = EntityData>
         if (promises.length) {
           Promise.all(promises).then(
             () => resolve(this),
-            (errObj) => reject(errObj)
+            (errObj) => reject(errObj),
           );
         } else {
           resolve(this);
@@ -1035,12 +1035,12 @@ export default class Entity<T extends EntityData = EntityData>
     const refresh = await this.$nymph.getEntity(
       {
         class: this.$nymph.getEntityClass(
-          this.constructor as EntityConstructor
+          this.constructor as EntityConstructor,
         ),
         skipCache: true,
         skipAc: this.$skipAc,
       },
-      { type: '&', guid: this.guid }
+      { type: '&', guid: this.guid },
     );
     if (refresh == null) {
       return 0;

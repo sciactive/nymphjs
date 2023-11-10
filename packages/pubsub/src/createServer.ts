@@ -8,7 +8,7 @@ import PubSub from './PubSub';
 export default function createServer(
   port = 8080,
   config: Partial<Config> = {},
-  nymph: Nymph
+  nymph: Nymph,
 ) {
   const server = http.createServer((_request, response) => {
     response.writeHead(404);
@@ -19,7 +19,7 @@ export default function createServer(
     (config.logger ?? defaults.logger)(
       'log',
       new Date().toISOString(),
-      `Nymph-PubSub server started listening on port ${port}.`
+      `Nymph-PubSub server started listening on port ${port}.`,
     );
   });
 

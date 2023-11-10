@@ -7,7 +7,7 @@ export type PubSubCountCallback = (count: number) => void;
 export type PubSubCallbacks<T> = [
   PubSubResolveCallback<T> | undefined,
   PubSubRejectCallback | undefined,
-  PubSubCountCallback | undefined
+  PubSubCountCallback | undefined,
 ];
 export type PubSubEventType = 'connect' | 'disconnect' | 'error';
 export type PubSubConnectCallback = () => void;
@@ -36,5 +36,5 @@ export type PubSubUpdate<T> =
 export type PubSubSubscribable<T> = (
   resolve?: PubSubResolveCallback<T> | undefined,
   reject?: PubSubRejectCallback | undefined,
-  count?: PubSubCountCallback | undefined
+  count?: PubSubCountCallback | undefined,
 ) => PubSubSubscription<T>;

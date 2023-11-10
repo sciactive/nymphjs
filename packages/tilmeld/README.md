@@ -38,7 +38,7 @@ const nymph = new Nymph(
   new SQLite3Driver({
     filename: ':memory:',
   }),
-  tilmeld
+  tilmeld,
 );
 
 // These are the classes specific to this instance of Tilmeld.

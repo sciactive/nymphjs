@@ -40,7 +40,7 @@ export type EventType =
  */
 export type TilmeldCheckUsernameCallback = (
   user: User & UserData,
-  data: { username: string }
+  data: { username: string },
 ) => Promise<{ result: boolean; message?: string }>;
 /**
  * Theses are run before the user data checks, so the only checks before are
@@ -48,11 +48,11 @@ export type TilmeldCheckUsernameCallback = (
  */
 export type TilmeldBeforeRegisterCallback = (
   user: User & UserData,
-  data: { password: string; additionalData?: { [k: string]: any } }
+  data: { password: string; additionalData?: { [k: string]: any } },
 ) => Promise<void>;
 export type TilmeldAfterRegisterCallback = (
   user: User & UserData,
-  result: { loggedin: boolean; message: string }
+  result: { loggedin: boolean; message: string },
 ) => Promise<void>;
 /**
  * These are run after the authentication checks, but before the login action.
@@ -63,20 +63,20 @@ export type TilmeldBeforeLoginCallback = (
     username: string;
     password: string;
     additionalData?: { [k: string]: any };
-  }
+  },
 ) => Promise<void>;
 /**
  * This is run before the transaction is committed, and you can perform
  * additional functions on the transaction, which is available in `user.$nymph`.
  */
 export type TilmeldAfterLoginCallback = (
-  user: User & UserData
+  user: User & UserData,
 ) => Promise<void>;
 export type TilmeldBeforeLogoutCallback = (
-  user: User & UserData
+  user: User & UserData,
 ) => Promise<void>;
 export type TilmeldAfterLogoutCallback = (
-  user: User & UserData
+  user: User & UserData,
 ) => Promise<void>;
 
 export type UserData = {
@@ -303,7 +303,7 @@ export default class User extends AbleObject<UserData> {
         {
           type: '&',
           ilike: ['username', username.replace(/([\\%_])/g, (s) => `\\${s}`)],
-        }
+        },
       );
       if (entity != null) {
         return entity;
@@ -329,10 +329,10 @@ export default class User extends AbleObject<UserData> {
 
   public static current(returnObjectIfNotExist: true): User & UserData;
   public static current(
-    returnObjectIfNotExist?: false
+    returnObjectIfNotExist?: false,
   ): (User & UserData) | null;
   public static current(
-    returnObjectIfNotExist?: boolean
+    returnObjectIfNotExist?: boolean,
   ): (User & UserData) | null {
     const tilmeld = enforceTilmeld(this);
     if (tilmeld.currentUser == null) {
@@ -370,7 +370,7 @@ export default class User extends AbleObject<UserData> {
         {
           type: '&',
           ilike: ['email', data.account.replace(/([\\%_])/g, (s) => `\\${s}`)],
-        }
+        },
       );
 
       if (getUser == null) {
@@ -466,7 +466,7 @@ export default class User extends AbleObject<UserData> {
       data.secret !== user.recoverSecret ||
       strtotime(
         '+' + tilmeld.config.pwRecoveryTimeLimit,
-        Math.floor((user.recoverSecretDate ?? 0) / 1000)
+        Math.floor((user.recoverSecretDate ?? 0) / 1000),
       ) *
         1000 <
         Date.now()
@@ -745,7 +745,7 @@ export default class User extends AbleObject<UserData> {
       await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
       for (let curGroup of this.$data.groups ?? []) {
         this.$descendantGroups = this.$descendantGroups?.concat(
-          await curGroup.$getDescendants()
+          await curGroup.$getDescendants(),
         );
       }
     }
@@ -764,7 +764,7 @@ export default class User extends AbleObject<UserData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke system/admin."
+        "You don't have the authority to grant or revoke system/admin.",
       );
     }
 
@@ -776,7 +776,7 @@ export default class User extends AbleObject<UserData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/admin."
+        "You don't have the authority to grant or revoke tilmeld/admin.",
       );
     }
 
@@ -788,7 +788,7 @@ export default class User extends AbleObject<UserData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/switch."
+        "You don't have the authority to grant or revoke tilmeld/switch.",
       );
     }
 
@@ -808,7 +808,7 @@ export default class User extends AbleObject<UserData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke system/admin."
+        "You don't have the authority to grant or revoke system/admin.",
       );
     }
 
@@ -820,7 +820,7 @@ export default class User extends AbleObject<UserData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/admin."
+        "You don't have the authority to grant or revoke tilmeld/admin.",
       );
     }
 
@@ -832,7 +832,7 @@ export default class User extends AbleObject<UserData> {
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
       throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/switch."
+        "You don't have the authority to grant or revoke tilmeld/switch.",
       );
     }
 
@@ -1015,7 +1015,7 @@ export default class User extends AbleObject<UserData> {
       }
     }
     return Object.fromEntries(
-      abilities.map((ability) => [ability, true as true])
+      abilities.map((ability) => [ability, true as true]),
     );
   }
 
@@ -1044,7 +1044,7 @@ export default class User extends AbleObject<UserData> {
 
     if (this.$data.secret != null) {
       const link = `${verifyUrl}?action=verify&id=${encodeURIComponent(
-        this.guid
+        this.guid,
       )}&secret=${encodeURIComponent(this.$data.secret)}`;
       success =
         success &&
@@ -1062,13 +1062,13 @@ export default class User extends AbleObject<UserData> {
               verifyLink: link,
             },
           },
-          this
+          this,
         ));
     }
 
     if (this.$data.newEmailSecret != null) {
       const link = `${verifyUrl}?action=verifychange&id=${encodeURIComponent(
-        this.guid
+        this.guid,
       )}&secret=${encodeURIComponent(this.$data.newEmailSecret)}`;
       success =
         success &&
@@ -1088,13 +1088,13 @@ export default class User extends AbleObject<UserData> {
               newEmail: this.$data.newEmailAddress,
             },
           },
-          this
+          this,
         ));
     }
 
     if (this.$data.cancelEmailSecret != null) {
       const link = `${verifyUrl}?action=cancelchange&id=${encodeURIComponent(
-        this.guid
+        this.guid,
       )}&secret=${encodeURIComponent(this.$data.cancelEmailSecret)}`;
       success =
         success &&
@@ -1114,7 +1114,7 @@ export default class User extends AbleObject<UserData> {
               newEmail: this.$data.newEmailAddress ?? this.$data.email,
             },
           },
-          this
+          this,
         ));
     }
 
@@ -1286,7 +1286,7 @@ export default class User extends AbleObject<UserData> {
       default:
         this.$data.salt = nanoid();
         this.$data.password = sha256(password + this.$data.salt).toString(
-          Base64
+          Base64,
         );
         break;
     }
@@ -1536,7 +1536,7 @@ export default class User extends AbleObject<UserData> {
       if (
         difference(
           this.$data.username.split(''),
-          tilmeld.config.validChars.split('')
+          tilmeld.config.validChars.split(''),
         ).length
       ) {
         return {
@@ -1563,7 +1563,7 @@ export default class User extends AbleObject<UserData> {
       }
       const test = await this.$nymph.getEntity(
         { class: tilmeld.User, skipAc: true },
-        selector
+        selector,
       );
       if (test != null) {
         return { result: false, message: 'That username is taken.' };
@@ -1643,7 +1643,7 @@ export default class User extends AbleObject<UserData> {
     }
     const test = await this.$nymph.getEntity(
       { class: tilmeld.User, skipAc: true },
-      selector
+      selector,
     );
     if (test != null) {
       return {
@@ -1687,7 +1687,7 @@ export default class User extends AbleObject<UserData> {
     }
     const test = await this.$nymph.getEntity(
       { class: tilmeld.User, skipAc: true },
-      selector
+      selector,
     );
     if (test != null) {
       return { result: false, message: 'Phone number is in use.' };
@@ -1783,7 +1783,7 @@ export default class User extends AbleObject<UserData> {
           {
             type: '&',
             equal: ['defaultPrimary', true],
-          }
+          },
         );
         if (parent != null) {
           generatedPrimaryGroup.parent = parent;
@@ -1805,7 +1805,7 @@ export default class User extends AbleObject<UserData> {
           {
             type: '&',
             equal: ['defaultPrimary', true],
-          }
+          },
         );
         if (group != null) {
           this.$data.group = group;
@@ -1820,7 +1820,7 @@ export default class User extends AbleObject<UserData> {
           {
             type: '&',
             equal: ['unverifiedSecondary', true],
-          }
+          },
         );
       } else {
         // Add the default secondaries.
@@ -1829,7 +1829,7 @@ export default class User extends AbleObject<UserData> {
           {
             type: '&',
             equal: ['defaultSecondary', true],
-          }
+          },
         );
       }
 
@@ -1879,7 +1879,7 @@ export default class User extends AbleObject<UserData> {
                 userPhone: this.$data.phone,
               },
             },
-            this
+            this,
           );
         }
 
@@ -1982,7 +1982,7 @@ export default class User extends AbleObject<UserData> {
       this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(
-        "You don't have the authority to modify system admins."
+        "You don't have the authority to modify system admins.",
       );
     }
 
@@ -2100,10 +2100,10 @@ export default class User extends AbleObject<UserData> {
                 new Date(
                   strtotime(
                     '+' + tilmeld.config.emailRateLimit,
-                    Math.floor(this.$data.emailChangeDate / 1000)
-                  ) * 1000
+                    Math.floor(this.$data.emailChangeDate / 1000),
+                  ) * 1000,
                 ).toString() +
-                ' to change your email address again.'
+                ' to change your email address again.',
             );
           } else {
             if (
@@ -2258,7 +2258,7 @@ export default class User extends AbleObject<UserData> {
       this.$data.abilities?.includes('system/admin')
     ) {
       throw new BadDataError(
-        "You don't have the authority to delete system admins."
+        "You don't have the authority to delete system admins.",
       );
     }
     if (tilmeld.User.current(true).$is(this)) {
@@ -2283,7 +2283,7 @@ export default class User extends AbleObject<UserData> {
       ? TilmeldBeforeLogoutCallback
       : T extends 'afterLogout'
       ? TilmeldAfterLogoutCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'checkUsername'
       ? 'checkUsernameCallbacks'
@@ -2324,7 +2324,7 @@ export default class User extends AbleObject<UserData> {
       ? TilmeldBeforeLogoutCallback
       : T extends 'afterLogout'
       ? TilmeldAfterLogoutCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'checkUsername'
       ? 'checkUsernameCallbacks'

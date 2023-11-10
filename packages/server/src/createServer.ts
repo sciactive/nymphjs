@@ -43,7 +43,7 @@ export class ForbiddenClassError extends Error {
  */
 export function createServer(
   nymph: Nymph,
-  { jsonOptions = {} }: { jsonOptions?: OptionsJson } = {}
+  { jsonOptions = {} }: { jsonOptions?: OptionsJson } = {},
 ) {
   const rest = express();
   rest.use(cookieParser());
@@ -52,7 +52,7 @@ export function createServer(
   function instantiateNymph(
     _request: Request,
     response: NymphResponse,
-    next: NextFunction
+    next: NextFunction,
   ) {
     response.locals.nymph = nymph.clone();
     next();
@@ -61,7 +61,7 @@ export function createServer(
   async function authenticateTilmeld(
     request: Request,
     response: NymphResponse,
-    next: NextFunction
+    next: NextFunction,
   ) {
     if (response.locals.nymph.tilmeld) {
       response.locals.nymph.tilmeld.request = request;
@@ -79,7 +79,7 @@ export function createServer(
   function unauthenticateTilmeld(
     _request: Request,
     response: NymphResponse,
-    next: NextFunction
+    next: NextFunction,
   ) {
     if (response.locals.nymph.tilmeld) {
       response.locals.nymph.tilmeld.request = null;
@@ -163,7 +163,7 @@ export function createServer(
           selectors = classNamesToEntityConstructors(
             response.locals.nymph,
             selectors,
-            true
+            true,
           );
         } catch (e: any) {
           if (e?.message === 'Not accessible.') {
@@ -185,12 +185,12 @@ export function createServer(
           if (action === 'entity') {
             result = await response.locals.nymph.getEntity(
               options,
-              ...selectors
+              ...selectors,
             );
           } else {
             result = await response.locals.nymph.getEntities(
               options,
-              ...selectors
+              ...selectors,
             );
           }
         } catch (e: any) {
@@ -217,7 +217,7 @@ export function createServer(
           if (
             !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
               data,
-              TilmeldAccessLevels.READ_ACCESS
+              TilmeldAccessLevels.READ_ACCESS,
             ))
           ) {
             httpError(response, 403);
@@ -345,7 +345,7 @@ export function createServer(
         try {
           const params = referencesToEntities(
             [...data.params],
-            response.locals.nymph
+            response.locals.nymph,
           );
           if (data.static) {
             let EntityClass: EntityConstructor;
@@ -396,7 +396,7 @@ export function createServer(
                   | Iterator<any, any, boolean>
                   | AsyncIterator<any, any, boolean> = method.call(
                   EntityClass,
-                  ...params
+                  ...params,
                 );
                 let sequence = result;
                 if (result instanceof Promise) {
@@ -505,7 +505,7 @@ export function createServer(
           if (
             !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
               data,
-              TilmeldAccessLevels.WRITE_ACCESS
+              TilmeldAccessLevels.WRITE_ACCESS,
             ))
           ) {
             httpError(response, 403);
@@ -565,7 +565,7 @@ export function createServer(
     response: NymphResponse,
     action: string,
     data: any,
-    patch: boolean
+    patch: boolean,
   ) {
     if (action === 'uid') {
       if (typeof data.name !== 'string' || typeof data.value !== 'number') {
@@ -576,7 +576,7 @@ export function createServer(
         if (
           !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
             data.name,
-            TilmeldAccessLevels.FULL_ACCESS
+            TilmeldAccessLevels.FULL_ACCESS,
           ))
         ) {
           httpError(response, 403);
@@ -716,7 +716,7 @@ export function createServer(
           try {
             entity = await response.locals.nymph.getEntity(
               { class: EntityClass },
-              { type: '&', guid: entData.guid }
+              { type: '&', guid: entData.guid },
             );
           } catch (e: any) {
             lastException = e;
@@ -765,7 +765,7 @@ export function createServer(
           if (
             !(await response.locals.nymph.tilmeld.checkClientUIDPermissions(
               data,
-              TilmeldAccessLevels.FULL_ACCESS
+              TilmeldAccessLevels.FULL_ACCESS,
             ))
           ) {
             httpError(response, 403);
@@ -800,12 +800,12 @@ export function createServer(
     entityData: EntityJson | EntityPatch,
     nymph: Nymph,
     patch = false,
-    allowConflict = false
+    allowConflict = false,
   ): Promise<EntityInterface> {
     if (entityData.class === 'Entity') {
       // Don't let clients use the `Entity` class, since it has no validity/AC checks.
       throw new InvalidParametersError(
-        "Can't use Entity class directly from the front end."
+        "Can't use Entity class directly from the front end.",
       );
     }
     let EntityClass = nymph.getEntityClass(entityData.class);
@@ -819,7 +819,7 @@ export function createServer(
         {
           type: '&',
           guid: `${entityData['guid']}`,
-        }
+        },
       );
       if (entity === null) {
         throw new Error(NOT_FOUND_ERROR);
@@ -878,7 +878,7 @@ export function createServer(
   function httpError(
     res: NymphResponse,
     defaultStatusCode: number,
-    error?: Error & { status?: number; statusText?: string }
+    error?: Error & { status?: number; statusText?: string },
   ) {
     const status = error?.status || defaultStatusCode;
     const statusText =
@@ -923,7 +923,7 @@ export function createServer(
   function eventStreamError(
     res: NymphResponse,
     defaultStatusCode: number,
-    error?: Error & { status?: number; statusText?: string }
+    error?: Error & { status?: number; statusText?: string },
   ) {
     const status = error?.status || defaultStatusCode;
     const statusText =

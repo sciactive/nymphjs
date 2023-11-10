@@ -47,7 +47,7 @@ export async function login(
   username: string,
   password: string,
   code?: string,
-  additionalData?: { [k: string]: any }
+  additionalData?: { [k: string]: any },
 ) {
   if (username === '') {
     throw new Error('You need to enter a username.');
@@ -82,7 +82,7 @@ export async function login(
 export async function register(
   User: typeof UserClass,
   userDetails: RegistrationDetails,
-  clientConfig?: ClientConfig
+  clientConfig?: ClientConfig,
 ): Promise<{
   loggedin: boolean;
   message: string;
@@ -138,7 +138,7 @@ export async function register(
 export async function checkUsername(
   User: typeof UserClass,
   username: string,
-  clientConfig?: ClientConfig
+  clientConfig?: ClientConfig,
 ) {
   let user = User.factorySync() as UserClass & CurrentUserData;
   user.username = username;

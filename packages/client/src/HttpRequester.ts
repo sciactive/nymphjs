@@ -7,17 +7,17 @@ export type HttpRequesterEventType = 'request' | 'response';
 export type HttpRequesterRequestCallback = (
   requester: HttpRequester,
   url: string,
-  options: RequestInit
+  options: RequestInit,
 ) => void;
 export type HttpRequesterResponseCallback = (
   requester: HttpRequester,
   response: Response,
-  text: string
+  text: string,
 ) => void;
 export type HttpRequesterIteratorCallback = (
   requester: HttpRequester,
   url: string,
-  headers: Record<string, string>
+  headers: Record<string, string>,
 ) => void;
 export type HttpRequesterRequestOptions = {
   url: string;
@@ -64,7 +64,7 @@ export default class HttpRequester {
       ? HttpRequesterResponseCallback
       : T extends 'iterator'
       ? HttpRequesterIteratorCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
@@ -89,7 +89,7 @@ export default class HttpRequester {
       ? HttpRequesterResponseCallback
       : T extends 'iterator'
       ? HttpRequesterIteratorCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
@@ -140,7 +140,7 @@ export default class HttpRequester {
 
   async _httpRequest(
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-    opt: HttpRequesterRequestOptions
+    opt: HttpRequesterRequestOptions,
   ) {
     const dataString = JSON.stringify(opt.data);
     let url = opt.url;
@@ -176,7 +176,7 @@ export default class HttpRequester {
       text = await response.text();
     } catch (e: any) {
       throw new InvalidResponseError(
-        'Server response did not contain valid text body.'
+        'Server response did not contain valid text body.',
       );
     }
     if (!response.ok) {
@@ -220,7 +220,7 @@ export default class HttpRequester {
           throw e;
         }
         throw new InvalidResponseError(
-          'Server response was invalid: ' + JSON.stringify(text)
+          'Server response was invalid: ' + JSON.stringify(text),
         );
       }
     } else {
@@ -230,7 +230,7 @@ export default class HttpRequester {
 
   async _iteratorRequest(
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-    opt: HttpRequesterRequestOptions
+    opt: HttpRequesterRequestOptions,
   ): Promise<AbortableAsyncIterator> {
     const dataString = JSON.stringify(opt.data);
     let url = opt.url;
@@ -280,7 +280,7 @@ export default class HttpRequester {
         if (response.ok) {
           if (response.headers.get('content-type') === EventStreamContentType) {
             throw new InvalidResponseError(
-              'Server response is not an event stream.'
+              'Server response is not an event stream.',
             );
           }
 
@@ -328,7 +328,7 @@ export default class HttpRequester {
           if (opt.dataType === 'json') {
             if (!text.length) {
               responses.push(
-                new InvalidResponseError('Server response was empty.')
+                new InvalidResponseError('Server response was empty.'),
               );
             } else {
               try {
@@ -339,8 +339,8 @@ export default class HttpRequester {
                 } else {
                   responses.push(
                     new InvalidResponseError(
-                      'Server response was invalid: ' + JSON.stringify(text)
-                    )
+                      'Server response was invalid: ' + JSON.stringify(text),
+                    ),
                   );
                 }
               }
@@ -375,7 +375,7 @@ export default class HttpRequester {
               ? new RedirectError(serverResponse, errObj)
               : errObj.status < 500
               ? new ClientError(serverResponse, errObj)
-              : new ServerError(serverResponse, errObj)
+              : new ServerError(serverResponse, errObj),
           );
         } else if (event.event === 'finished') {
           responsesDone = true;
@@ -398,8 +398,8 @@ export default class HttpRequester {
       onclose() {
         responses.push(
           new ConnectionClosedUnexpectedlyError(
-            'The connection to the server was closed unexpectedly.'
-          )
+            'The connection to the server was closed unexpectedly.',
+          ),
         );
 
         responsesDone = true;
@@ -412,7 +412,7 @@ export default class HttpRequester {
       },
     }).catch((err) => {
       responses.push(
-        new ConnectionError('The connection could not be established: ' + err)
+        new ConnectionError('The connection could not be established: ' + err),
       );
 
       responsesDone = true;
@@ -464,7 +464,7 @@ export class HttpError extends Error {
   constructor(
     name: string,
     response: Response,
-    errObj: { textStatus: string }
+    errObj: { textStatus: string },
   ) {
     super(errObj.textStatus);
     this.name = name;

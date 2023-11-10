@@ -124,7 +124,7 @@ export default class Entity<T extends EntityData = EntityData>
       deleteProperty: (data: EntityData, name: string) => {
         if (typeof name !== 'symbol' && this.$isASleepingReference) {
           console.error(
-            `Tried to delete data on a sleeping reference: ${name}`
+            `Tried to delete data on a sleeping reference: ${name}`,
           );
           return false;
         }
@@ -138,11 +138,11 @@ export default class Entity<T extends EntityData = EntityData>
       defineProperty: (
         data: EntityData,
         name: string,
-        descriptor: PropertyDescriptor
+        descriptor: PropertyDescriptor,
       ) => {
         if (typeof name !== 'symbol' && this.$isASleepingReference) {
           console.error(
-            `Tried to define data on a sleeping reference: ${name}`
+            `Tried to define data on a sleeping reference: ${name}`,
           );
           return false;
         }
@@ -156,7 +156,7 @@ export default class Entity<T extends EntityData = EntityData>
       getOwnPropertyDescriptor: (data: EntityData, name: string) => {
         if (typeof name !== 'symbol' && this.$isASleepingReference) {
           console.error(
-            `Tried to get property descriptor on a sleeping reference: ${name}`
+            `Tried to get property descriptor on a sleeping reference: ${name}`,
           );
           return undefined;
         }
@@ -229,7 +229,7 @@ export default class Entity<T extends EntityData = EntityData>
       defineProperty(
         entity: Entity,
         name: string,
-        descriptor: PropertyDescriptor
+        descriptor: PropertyDescriptor,
       ) {
         if (
           typeof name !== 'string' ||
@@ -257,7 +257,7 @@ export default class Entity<T extends EntityData = EntityData>
 
       ownKeys(entity: Entity) {
         return Object.getOwnPropertyNames(entity).concat(
-          Object.getOwnPropertyNames(entity.$data)
+          Object.getOwnPropertyNames(entity.$data),
         );
       },
     }) as Entity<T>;
@@ -302,21 +302,21 @@ export default class Entity<T extends EntityData = EntityData>
       method,
       // Turn the params into a real array, in case an arguments object was
       // passed.
-      Array.prototype.slice.call(params)
+      Array.prototype.slice.call(params),
     );
     return data.return;
   }
 
   public static async serverCallStaticIterator(
     method: string,
-    params: Iterable<any>
+    params: Iterable<any>,
   ) {
     return await this.nymph.serverCallStaticIterator(
       this.class,
       method,
       // Turn the params into a real array, in case an arguments object was
       // passed.
-      Array.prototype.slice.call(params)
+      Array.prototype.slice.call(params),
     );
   }
 
@@ -357,7 +357,7 @@ export default class Entity<T extends EntityData = EntityData>
       })
       .reduce(
         (obj, { key, value }) => Object.assign(obj, { [key]: value }),
-        {}
+        {},
       ) as T;
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
@@ -428,7 +428,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.$check();
     if (this.guid == null) {
       throw new InvalidStateError(
-        "You can't make a patch from an unsaved entity."
+        "You can't make a patch from an unsaved entity.",
       );
     }
     const patch: EntityPatch = {
@@ -436,10 +436,10 @@ export default class Entity<T extends EntityData = EntityData>
       mdate: this.mdate,
       class: (this.constructor as EntityConstructor).class,
       addTags: this.tags.filter(
-        (tag) => this.$originalTags.indexOf(tag) === -1
+        (tag) => this.$originalTags.indexOf(tag) === -1,
       ),
       removeTags: this.$originalTags.filter(
-        (tag) => this.tags.indexOf(tag) === -1
+        (tag) => this.tags.indexOf(tag) === -1,
       ),
       unset: [],
       set: {},
@@ -512,7 +512,7 @@ export default class Entity<T extends EntityData = EntityData>
   protected $check() {
     if (this.$isASleepingReference || this.$sleepingReference != null) {
       throw new EntityIsSleepingReferenceError(
-        'This entity is in a sleeping reference state. You must use .$wake() to wake it.'
+        'This entity is in a sleeping reference state. You must use .$wake() to wake it.',
       );
     }
   }
@@ -534,14 +534,14 @@ export default class Entity<T extends EntityData = EntityData>
     }
     if (this.$sleepingReference?.[1] == null) {
       throw new InvalidStateError(
-        'Tried to wake a sleeping reference with no GUID.'
+        'Tried to wake a sleeping reference with no GUID.',
       );
     }
     if (!this.$wakePromise) {
       this.$wakePromise = this.$nymph
         .getEntityData(
           { class: this.constructor as EntityConstructor },
-          { type: '&', guid: this.$sleepingReference[1] }
+          { type: '&', guid: this.$sleepingReference[1] },
         )
         .then((data) => {
           if (data == null) {
@@ -590,7 +590,7 @@ export default class Entity<T extends EntityData = EntityData>
         if (promises.length) {
           Promise.all(promises).then(
             () => resolve(this),
-            (errObj) => reject(errObj)
+            (errObj) => reject(errObj),
           );
         } else {
           resolve(this);
@@ -627,7 +627,7 @@ export default class Entity<T extends EntityData = EntityData>
       {
         type: '&',
         guid: this.guid,
-      }
+      },
     );
     this.$init(data);
     return this.guid == null ? 0 : true;
@@ -649,7 +649,7 @@ export default class Entity<T extends EntityData = EntityData>
   public async $serverCall(
     method: string,
     params: Iterable<any>,
-    stateless = false
+    stateless = false,
   ) {
     this.$check();
     // Turn the params into a real array, in case an arguments object was
@@ -659,7 +659,7 @@ export default class Entity<T extends EntityData = EntityData>
       this,
       method,
       paramArray,
-      stateless
+      stateless,
     );
     if (!stateless && data.entity) {
       this.$init(data.entity);

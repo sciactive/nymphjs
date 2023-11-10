@@ -95,7 +95,7 @@ export default class PubSub {
           >
         | undefined,
       reject?: PubSubRejectCallback | undefined,
-      count?: PubSubCountCallback | undefined
+      count?: PubSubCountCallback | undefined,
     ) => {
       const callbacks: PubSubCallbacks<
         PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
@@ -144,7 +144,7 @@ export default class PubSub {
           >
         | undefined,
       reject?: PubSubRejectCallback | undefined,
-      count?: PubSubCountCallback | undefined
+      count?: PubSubCountCallback | undefined,
     ) => {
       const newResolve = (args: any) => {
         if (!args.length) {
@@ -179,7 +179,7 @@ export default class PubSub {
     const subscribe = (
       resolve?: PubSubResolveCallback<number> | undefined,
       reject?: PubSubRejectCallback | undefined,
-      count?: PubSubCountCallback | undefined
+      count?: PubSubCountCallback | undefined,
     ) => {
       const callbacks: PubSubCallbacks<number> = [resolve, reject, count];
 
@@ -202,11 +202,11 @@ export default class PubSub {
     entity: T,
     resolve?: PubSubResolveCallback<T> | undefined,
     reject?: PubSubRejectCallback | undefined,
-    count?: PubSubCountCallback | undefined
+    count?: PubSubCountCallback | undefined,
   ) {
     if (!entity.guid) {
       throw new InvalidRequestError(
-        "You can't subscribe to an entity with no GUID."
+        "You can't subscribe to an entity with no GUID.",
       );
     }
     const query = [
@@ -269,21 +269,24 @@ export default class PubSub {
     // Wait 5 seconds, then check and attempt connection again if unsuccessful.
     // Keep repeating, adding attempts^2*5 seconds each time to a max of ten
     // minutes, until successful.
-    this.waitForConnectionTimeout = setTimeout(() => {
-      if (this.connection) {
-        if (this.connection.readyState !== this.WebSocket.OPEN) {
-          if (this.connection.readyState !== this.WebSocket.CONNECTING) {
-            this.connection.close();
-            this._waitForConnection(attempts + 1);
-            this._attemptConnect();
-          } else {
-            this._waitForConnection(attempts + 1);
+    this.waitForConnectionTimeout = setTimeout(
+      () => {
+        if (this.connection) {
+          if (this.connection.readyState !== this.WebSocket.OPEN) {
+            if (this.connection.readyState !== this.WebSocket.CONNECTING) {
+              this.connection.close();
+              this._waitForConnection(attempts + 1);
+              this._attemptConnect();
+            } else {
+              this._waitForConnection(attempts + 1);
+            }
           }
+        } else {
+          this._attemptConnect();
         }
-      } else {
-        this._attemptConnect();
-      }
-    }, Math.max(Math.pow(attempts, 2) * 5000, 1000 * 60 * 10));
+      },
+      Math.max(Math.pow(attempts, 2) * 5000, 1000 * 60 * 10),
+    );
   }
 
   private _attemptConnect() {
@@ -378,7 +381,7 @@ export default class PubSub {
             callback(
               set
                 ? data.data.map((e: EntityJson) => this.nymph.initEntity(e))
-                : data
+                : data,
             );
           }
         }
@@ -397,8 +400,8 @@ export default class PubSub {
               errCallback(
                 new ClientError(
                   { status: 404, statusText: 'Not Found' } as Response,
-                  { textStatus: 'Not Found' }
-                )
+                  { textStatus: 'Not Found' },
+                ),
               );
             }
           } else if (typeof callback === 'function') {
@@ -620,7 +623,7 @@ export default class PubSub {
 
   public updateArray(
     current: EntityInterface[],
-    update: PubSubUpdate<EntityInterface[]>
+    update: PubSubUpdate<EntityInterface[]>,
   ) {
     if (Array.isArray(update)) {
       const newArr = [...update];
@@ -738,7 +741,7 @@ export default class PubSub {
       ? PubSubDisconnectCallback
       : T extends 'error'
       ? PubSubErrorCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
@@ -763,7 +766,7 @@ export default class PubSub {
       ? PubSubDisconnectCallback
       : T extends 'error'
       ? PubSubErrorCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
@@ -804,7 +807,7 @@ export class PubSubSubscription<T> {
   constructor(
     query: string,
     callbacks: PubSubCallbacks<T>,
-    unsubscribe: () => void
+    unsubscribe: () => void,
   ) {
     this.query = query;
     this.callbacks = callbacks;

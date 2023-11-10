@@ -52,7 +52,7 @@ export default class Nymph {
     this.Entity = this.addEntityClass(Entity);
 
     requester = new HttpRequester(
-      'fetch' in NymphOptions ? NymphOptions.fetch : undefined
+      'fetch' in NymphOptions ? NymphOptions.fetch : undefined,
     );
 
     requester.on('request', (_requester, url, options) => {
@@ -94,7 +94,7 @@ export default class Nymph {
   public getEntityClass<T extends EntityConstructor>(className: T): T;
   public getEntityClass(className: string): EntityConstructor;
   public getEntityClass<T extends EntityConstructor = EntityConstructor>(
-    className: T | string
+    className: T | string,
   ): T | EntityConstructor {
     let key: string | null = null;
     if (typeof className === 'string') {
@@ -160,7 +160,7 @@ export default class Nymph {
       ) {
         throw new InvalidRequestError(
           'Due to REST restriction, you can only create new entities or ' +
-            'update existing entities, not both at the same time.'
+            'update existing entities, not both at the same time.',
         );
       }
     });
@@ -170,7 +170,7 @@ export default class Nymph {
   public async patchEntity(entity: EntityInterface) {
     if (entity.guid == null) {
       throw new InvalidRequestError(
-        "You can't patch an entity that hasn't yet been saved."
+        "You can't patch an entity that hasn't yet been saved.",
       );
     }
 
@@ -187,7 +187,7 @@ export default class Nymph {
       if (cur.guid == null) {
         throw new InvalidRequestError(
           'Due to REST restriction, you can only create new entities or ' +
-            'update existing entities, not both at the same time.'
+            'update existing entities, not both at the same time.',
         );
       }
     });
@@ -199,19 +199,19 @@ export default class Nymph {
     entity: T,
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     data: { [k: string]: any },
-    plural: false
+    plural: false,
   ): Promise<T>;
   private async requestWithMethod<T extends EntityInterface>(
     entity: T[],
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     data: { [k: string]: any },
-    plural: true
+    plural: true,
   ): Promise<T[]>;
   private async requestWithMethod<T extends EntityInterface>(
     entity: T | T[],
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     data: { [k: string]: any },
-    plural: boolean
+    plural: boolean,
   ): Promise<T | T[]> {
     const response = await requester[method]({
       url: this.restUrl,
@@ -227,7 +227,7 @@ export default class Nymph {
         typeof response[i].guid !== 'undefined' &&
         (e.guid == null || e.guid === response[i].guid)
           ? e.$init(response[i])
-          : e
+          : e,
       ) as T[];
     } else if (!Array.isArray(entity) && typeof response.guid !== 'undefined') {
       return entity.$init(response) as T;
@@ -249,15 +249,15 @@ export default class Nymph {
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
-    guid: string
+    guid: string,
   ): Promise<number>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
-    guid: string
+    guid: string,
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
-    guid: string
+    guid: string,
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
@@ -298,15 +298,15 @@ export default class Nymph {
   ): Promise<EntityJson<T> | null>;
   public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
-    guid: string
+    guid: string,
   ): Promise<number>;
   public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
-    guid: string
+    guid: string,
   ): Promise<string | null>;
   public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
-    guid: string
+    guid: string,
   ): Promise<EntityJson<T> | null>;
   public async getEntityData<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
@@ -314,7 +314,7 @@ export default class Nymph {
   ): Promise<EntityJson<T> | string | number | null> {
     if (options.class instanceof Entity) {
       throw new InvalidRequestError(
-        "You can't make REST requests with the base Entity class."
+        "You can't make REST requests with the base Entity class.",
       );
     }
     // Set up options and selectors.
@@ -377,12 +377,12 @@ export default class Nymph {
   }
 
   public initEntity<T extends EntityConstructor = EntityConstructor>(
-    entityJSON: EntityJson<T>
+    entityJSON: EntityJson<T>,
   ): ReturnType<T['factorySync']> {
     const EntityClass = this.getEntityClass(entityJSON.class);
     if (!EntityClass) {
       throw new ClassNotAvailableError(
-        entityJSON.class + ' class cannot be found.'
+        entityJSON.class + ' class cannot be found.',
       );
     }
     let entity = EntityClass.factorySync();
@@ -390,7 +390,7 @@ export default class Nymph {
       // Try to get it from cache.
       const entityFromCache = this.cache.get(
         EntityClass,
-        entityJSON.guid || ''
+        entityJSON.guid || '',
       );
       if (entityFromCache != null) {
         entity = entityFromCache;
@@ -401,7 +401,7 @@ export default class Nymph {
 
   public getEntityFromCache<T extends EntityConstructor = EntityConstructor>(
     EntityClass: EntityConstructor,
-    guid: string
+    guid: string,
   ): ReturnType<T['factorySync']> | null {
     if (!this.weakCache) {
       return null;
@@ -413,7 +413,7 @@ export default class Nymph {
 
   public setEntityToCache(
     EntityClass: EntityConstructor,
-    entity: EntityInterface
+    entity: EntityInterface,
   ) {
     if (!this.weakCache) {
       return;
@@ -449,7 +449,7 @@ export default class Nymph {
 
   public async deleteEntity(
     entity: EntityInterface | EntityInterface[],
-    _plural = false
+    _plural = false,
   ) {
     return await requester.DELETE({
       url: this.restUrl,
@@ -478,7 +478,7 @@ export default class Nymph {
     entity: EntityInterface,
     method: string,
     params: any[],
-    stateless = false
+    stateless = false,
   ): Promise<ServerCallResponse> {
     const data = await requester.POST({
       url: this.restUrl,
@@ -503,7 +503,7 @@ export default class Nymph {
   public async serverCallStatic(
     className: string,
     method: string,
-    params: any[]
+    params: any[],
   ): Promise<ServerCallStaticResponse> {
     const data = await requester.POST({
       url: this.restUrl,
@@ -525,7 +525,7 @@ export default class Nymph {
   public async serverCallStaticIterator(
     className: string,
     method: string,
-    params: any[]
+    params: any[],
   ): Promise<AbortableAsyncIterator<ServerCallStaticResponse>> {
     const iterable = await requester.POST_ITERATOR({
       url: this.restUrl,
@@ -565,7 +565,7 @@ export default class Nymph {
       ? RequestCallback
       : T extends 'response'
       ? ResponseCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
@@ -586,7 +586,7 @@ export default class Nymph {
       ? RequestCallback
       : T extends 'response'
       ? ResponseCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'

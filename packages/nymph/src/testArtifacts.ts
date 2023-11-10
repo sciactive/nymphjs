@@ -95,7 +95,7 @@ export class TestEmptyModel extends Entity<TestEmptyModelData> {
   static class = 'TestEmptyModel';
 
   static async factory(
-    guid?: string
+    guid?: string,
   ): Promise<TestEmptyModel & TestEmptyModelData> {
     return (await super.factory(guid)) as TestEmptyModel & TestEmptyModelData;
   }

@@ -8,13 +8,13 @@ const { nolookalikesSafe } = dictionary;
 const guidSuffix = customAlphabet('0123456789abcdef', 20);
 export function guid() {
   return `${sha1(
-    `${DateTime.now().weekYear}${DateTime.now().weekNumber}`
+    `${DateTime.now().weekYear}${DateTime.now().weekNumber}`,
   ).slice(0, 4)}${guidSuffix()}`;
 }
 
 export const makeTableSuffix = customAlphabet(
   '0123456789abcdefghijklmnopqrstuvwxyz',
-  20
+  20,
 );
 
 export const humanSecret = customAlphabet(nolookalikesSafe, 10);

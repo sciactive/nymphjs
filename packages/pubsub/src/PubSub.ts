@@ -174,7 +174,7 @@ export default class PubSub {
               config: configWithDefaults,
             });
             await this.publishTransactionPublishes(curNymph);
-          }
+          },
         );
         const off2 = enymph.on('failedDeleteEntityByID', async () => {
           off();
@@ -309,7 +309,7 @@ export default class PubSub {
           config.logger(
             'error',
             new Date().toISOString(),
-            `Publish connection failed. (${error.toString()}, ${host})`
+            `Publish connection failed. (${error.toString()}, ${host})`,
           );
         }
       });
@@ -320,7 +320,7 @@ export default class PubSub {
             config.logger(
               'error',
               new Date().toISOString(),
-              `Publish connect error. (${error.toString()}, ${host})`
+              `Publish connect error. (${error.toString()}, ${host})`,
             );
           }
         });
@@ -366,7 +366,7 @@ export default class PubSub {
           }
           this.publish(publish.payload, publish.config);
           return null;
-        })
+        }),
       )
     ).filter((value) => value != null) as {
       nymph: Nymph;
@@ -392,7 +392,7 @@ export default class PubSub {
   public constructor(
     config: Partial<Config>,
     nymph: Nymph,
-    server: WebSocketServer
+    server: WebSocketServer,
   ) {
     this.nymph = nymph;
     this.config = { ...defaults, ...config };
@@ -412,7 +412,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        'Client from origin ' + request.origin + ' was kicked by the bouncer.'
+        'Client from origin ' + request.origin + ' was kicked by the bouncer.',
       );
       return;
     }
@@ -421,7 +421,7 @@ export default class PubSub {
     this.config.logger(
       'log',
       new Date().toISOString(),
-      `Client joined the party! (${connection.remoteAddress}).`
+      `Client joined the party! (${connection.remoteAddress}).`,
     );
 
     connection.on('error', (err) => {
@@ -448,7 +448,7 @@ export default class PubSub {
     if (
       !data.action ||
       ['authenticate', 'subscribe', 'unsubscribe', 'publish'].indexOf(
-        data.action
+        data.action,
       ) === -1
     ) {
       return;
@@ -474,7 +474,7 @@ export default class PubSub {
     this.config.logger(
       'log',
       new Date().toISOString(),
-      `Client skedaddled. (${description}, ${conn.remoteAddress})`
+      `Client skedaddled. (${description}, ${conn.remoteAddress})`,
     );
 
     let mess = 0;
@@ -502,7 +502,7 @@ export default class PubSub {
                     JSON.stringify({
                       query: curData.query,
                       count,
-                    })
+                    }),
                   );
                 }
               }
@@ -532,7 +532,7 @@ export default class PubSub {
                   JSON.stringify({
                     uid: curUID,
                     count,
-                  })
+                  }),
                 );
               }
             }
@@ -551,7 +551,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        `Cleaned up client's mess. (${mess}, ${conn.remoteAddress})`
+        `Cleaned up client's mess. (${mess}, ${conn.remoteAddress})`,
       );
     }
   }
@@ -560,7 +560,7 @@ export default class PubSub {
     this.config.logger(
       'error',
       new Date().toISOString(),
-      `An error occured. (${e.message}, ${conn.remoteAddress})`
+      `An error occured. (${e.message}, ${conn.remoteAddress})`,
     );
   }
 
@@ -569,7 +569,7 @@ export default class PubSub {
    */
   private handleAuthentication(
     from: connection,
-    data: AuthenticateMessageData
+    data: AuthenticateMessageData,
   ) {
     // Save the user's auth token in session storage.
     const authToken = data.authToken;
@@ -586,7 +586,7 @@ export default class PubSub {
    */
   private async handleSubscription(
     from: connection,
-    data: SubscribeMessageData
+    data: SubscribeMessageData,
   ) {
     try {
       if ('query' in data && data.query != null) {
@@ -622,7 +622,7 @@ export default class PubSub {
     qrefParent?: {
       etype: string;
       query: string;
-    }
+    },
   ) {
     let args: [MessageOptions, ...Selector[]] = JSON.parse(data.query);
     let EntityClass = this.nymph.getEntityClass(args[0].class);
@@ -664,7 +664,7 @@ export default class PubSub {
           {
             etype,
             query: serialArgs,
-          }
+          },
         );
       }
 
@@ -721,7 +721,7 @@ export default class PubSub {
                   class: EntityClass,
                   source: 'client',
                 },
-                { type: '|', guid: existingSub.current }
+                { type: '|', guid: existingSub.current },
               )
             : [];
         }
@@ -744,7 +744,7 @@ export default class PubSub {
             query: data.query,
             set: true,
             data: entities,
-          })
+          }),
         );
       }
 
@@ -755,7 +755,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        `Client subscribed to a query! (${serialArgs}, ${from.remoteAddress})`
+        `Client subscribed to a query! (${serialArgs}, ${from.remoteAddress})`,
       );
 
       if (this.config.broadcastCounts) {
@@ -768,7 +768,7 @@ export default class PubSub {
               JSON.stringify({
                 query: curData.query,
                 count,
-              })
+              }),
             );
           }
         }
@@ -789,7 +789,7 @@ export default class PubSub {
           {
             etype,
             query: serialArgs,
-          }
+          },
         );
       }
 
@@ -811,7 +811,7 @@ export default class PubSub {
               !(
                 qrefParent.etype === parent.etype &&
                 qrefParent.query === parent.query
-              )
+              ),
           );
         }
         if (!qrefParent) {
@@ -824,7 +824,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        `Client unsubscribed from a query! (${serialArgs}, ${from.remoteAddress})`
+        `Client unsubscribed from a query! (${serialArgs}, ${from.remoteAddress})`,
       );
 
       const count = this.querySubs[etype][serialArgs].size;
@@ -847,7 +847,7 @@ export default class PubSub {
               JSON.stringify({
                 query: curData.query,
                 count,
-              })
+              }),
             );
           }
         }
@@ -860,7 +860,7 @@ export default class PubSub {
    */
   private async handleSubscriptionUid(
     from: connection,
-    data: UidSubscribeMessageData
+    data: UidSubscribeMessageData,
   ) {
     if (data.action === 'subscribe') {
       // Client is subscribing to a UID.
@@ -901,7 +901,7 @@ export default class PubSub {
           uid: data.uid,
           set: true,
           data: await this.nymph.getUID(data.uid),
-        })
+        }),
       );
 
       if (nymph.tilmeld != null && authToken != null) {
@@ -912,7 +912,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        `Client subscribed to a UID! (${data.uid}, ${from.remoteAddress})`
+        `Client subscribed to a UID! (${data.uid}, ${from.remoteAddress})`,
       );
 
       if (this.config.broadcastCounts) {
@@ -925,7 +925,7 @@ export default class PubSub {
               JSON.stringify({
                 uid: data.uid,
                 count,
-              })
+              }),
             );
           }
         }
@@ -944,7 +944,7 @@ export default class PubSub {
       this.config.logger(
         'log',
         new Date().toISOString(),
-        `Client unsubscribed from a UID! (${data.uid}, ${from.remoteAddress})`
+        `Client unsubscribed from a UID! (${data.uid}, ${from.remoteAddress})`,
       );
 
       const count = this.uidSubs[data.uid].size;
@@ -964,7 +964,7 @@ export default class PubSub {
               JSON.stringify({
                 uid: data.uid,
                 count,
-              })
+              }),
             );
           }
         }
@@ -978,7 +978,7 @@ export default class PubSub {
   private async handlePublish(
     from: connection,
     msg: Message,
-    data: PublishMessageData
+    data: PublishMessageData,
   ) {
     if (
       'guid' in data &&
@@ -1019,12 +1019,12 @@ export default class PubSub {
    */
   private async handlePublishEntity(
     from: connection,
-    data: PublishEntityMessageData
+    data: PublishEntityMessageData,
   ) {
     this.config.logger(
       'log',
       new Date().toISOString(),
-      `Received an entity publish! (${data.guid}, ${data.event}, ${from.remoteAddress})`
+      `Received an entity publish! (${data.guid}, ${data.event}, ${from.remoteAddress})`,
     );
 
     const etype = data.etype;
@@ -1054,7 +1054,7 @@ export default class PubSub {
           this.config.logger(
             'error',
             new Date().toISOString(),
-            `Error checking for client updates! (${e?.message})`
+            `Error checking for client updates! (${e?.message})`,
           );
         }
       }
@@ -1071,7 +1071,7 @@ export default class PubSub {
           const entitySData: SerializedEntityData = {};
           if (typeof data.entity.class !== 'string') {
             throw new Error(
-              `Received entity data class is not valid: ${data.entity.class}`
+              `Received entity data class is not valid: ${data.entity.class}`,
             );
           }
           const DataEntityClass = this.nymph.getEntityClass(data.entity.class);
@@ -1084,7 +1084,7 @@ export default class PubSub {
                 entitySData,
                 selectors,
                 data.guid,
-                data.entity?.tags ?? []
+                data.entity?.tags ?? [],
               ))
           ) {
             // It either matches the query, or there are qref queries.
@@ -1104,7 +1104,7 @@ export default class PubSub {
               if (qrefQueries.length) {
                 const translatedSelectors = this.translateQRefSelectors(
                   curClient,
-                  selectors
+                  selectors,
                 );
                 if (
                   !this.nymph.driver.checkData(
@@ -1112,7 +1112,7 @@ export default class PubSub {
                     entitySData,
                     translatedSelectors,
                     data.guid,
-                    data.entity?.tags ?? []
+                    data.entity?.tags ?? [],
                   )
                 ) {
                   // The query doesn't match when the qref queries are filled.
@@ -1127,7 +1127,7 @@ export default class PubSub {
           this.config.logger(
             'error',
             new Date().toISOString(),
-            `Error checking for client updates! (${e?.message})`
+            `Error checking for client updates! (${e?.message})`,
           );
         }
       }
@@ -1137,7 +1137,7 @@ export default class PubSub {
   private async updateClient(
     curClient: connection,
     curData: QuerySubscriptionData,
-    data: PublishEntityMessageData
+    data: PublishEntityMessageData,
   ) {
     // Update currents list.
     let current: EntityInterface[];
@@ -1156,7 +1156,7 @@ export default class PubSub {
       const selectors = classNamesToEntityConstructors(
         nymph,
         clientSelectors,
-        true
+        true,
       );
       if (this.sessions.has(curClient)) {
         const session = this.sessions.get(curClient);
@@ -1183,13 +1183,13 @@ export default class PubSub {
       this.config.logger(
         'error',
         new Date().toISOString(),
-        `Error updating client! (${e?.message}, ${curClient.remoteAddress})`
+        `Error updating client! (${e?.message}, ${curClient.remoteAddress})`,
       );
       return;
     }
 
     const entityMap = Object.fromEntries(
-      current.map((entity) => [entity.guid, entity])
+      current.map((entity) => [entity.guid, entity]),
     );
     const currentGuids = current.map((entity) => entity.guid ?? '');
     const removed = difference(curData.current, currentGuids);
@@ -1201,13 +1201,13 @@ export default class PubSub {
         this.config.logger(
           'log',
           new Date().toISOString(),
-          `Notifying client of removal! (${curClient.remoteAddress})`
+          `Notifying client of removal! (${curClient.remoteAddress})`,
         );
         curClient.sendUTF(
           JSON.stringify({
             query: curData.query,
             removed: guid,
-          })
+          }),
         );
       }
 
@@ -1217,7 +1217,7 @@ export default class PubSub {
         this.config.logger(
           'log',
           new Date().toISOString(),
-          `Notifying client of new match! (${curClient.remoteAddress})`
+          `Notifying client of new match! (${curClient.remoteAddress})`,
         );
         if (typeof entity.updateDataProtection === 'function') {
           entity.updateDataProtection();
@@ -1227,7 +1227,7 @@ export default class PubSub {
             query: curData.query,
             added: guid,
             data: entity,
-          })
+          }),
         );
       }
 
@@ -1237,7 +1237,7 @@ export default class PubSub {
         this.config.logger(
           'log',
           new Date().toISOString(),
-          `Notifying client of update! (${curClient.remoteAddress})`
+          `Notifying client of update! (${curClient.remoteAddress})`,
         );
         if (typeof entity.updateDataProtection === 'function') {
           entity.updateDataProtection();
@@ -1247,7 +1247,7 @@ export default class PubSub {
             query: curData.query,
             updated: data.guid,
             data: entity,
-          })
+          }),
         );
       }
     }
@@ -1277,18 +1277,18 @@ export default class PubSub {
    */
   private async handlePublishUid(
     from: connection,
-    data: PublishUidMessageData
+    data: PublishUidMessageData,
   ) {
     this.config.logger(
       'log',
       new Date().toISOString(),
       `Received a UID publish! (${
         'name' in data ? data.name : `${data.oldName} => ${data.newName}`
-      }, ${data.event}, ${from.remoteAddress})`
+      }, ${data.event}, ${from.remoteAddress})`,
     );
 
     const names = [data.name, data.oldName].filter(
-      (name) => name != null
+      (name) => name != null,
     ) as string[];
     let value = data.value;
     if (data.event === 'renameUID' && data.newName) {
@@ -1303,7 +1303,7 @@ export default class PubSub {
         this.config.logger(
           'log',
           new Date().toISOString(),
-          `Notifying client of ${data.event}! (${name}, ${curClient.remoteAddress})`
+          `Notifying client of ${data.event}! (${name}, ${curClient.remoteAddress})`,
         );
         const payload: {
           uid: string;
@@ -1329,14 +1329,14 @@ export default class PubSub {
         this.config.logger(
           'log',
           new Date().toISOString(),
-          `Notifying client of new value after rename! (${data.newName}, ${curClient.remoteAddress})`
+          `Notifying client of new value after rename! (${data.newName}, ${curClient.remoteAddress})`,
         );
         curClient.sendUTF(
           JSON.stringify({
             uid: data.newName,
             event: 'setUID',
             value,
-          })
+          }),
         );
       }
     }
@@ -1350,7 +1350,7 @@ export default class PubSub {
       this.config.logger(
         'error',
         new Date().toISOString(),
-        `Can't relay non UTF8 message.`
+        `Can't relay non UTF8 message.`,
       );
       return;
     }
@@ -1362,7 +1362,7 @@ export default class PubSub {
         this.config.logger(
           'error',
           new Date().toISOString(),
-          `Relay connection failed. (${error.toString()}, ${host})`
+          `Relay connection failed. (${error.toString()}, ${host})`,
         );
       });
 
@@ -1371,7 +1371,7 @@ export default class PubSub {
           this.config.logger(
             'error',
             new Date().toISOString(),
-            `Relay connect error. (${error.toString()}, ${host})`
+            `Relay connect error. (${error.toString()}, ${host})`,
           );
         });
 
@@ -1479,7 +1479,7 @@ export default class PubSub {
                   newValue = oldValue as [string, string | EntityInterface][];
                 }
                 newValue.push(
-                  ...(guids.map((guid) => [name, guid]) as [string, string][])
+                  ...(guids.map((guid) => [name, guid]) as [string, string][]),
                 );
                 newSelector[newKey] = newValue;
               } else {
@@ -1529,7 +1529,7 @@ export default class PubSub {
             newSelector[key] = [];
           }
           (newSelector[key] as [string, string | EntityInterface][]).push(
-            ...tmpArr
+            ...tmpArr,
           );
         } else {
           // @ts-ignore: ts doesn't know what value is here.

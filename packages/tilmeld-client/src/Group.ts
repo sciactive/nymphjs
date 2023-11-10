@@ -99,7 +99,7 @@ export default class Group extends Entity<GroupData> {
   }
 
   public async $getDescendants(
-    andSelf = false
+    andSelf = false,
   ): Promise<(Group & GroupData)[]> {
     return await this.$serverCall('$getDescendants', [andSelf], true);
   }
@@ -109,14 +109,14 @@ export default class Group extends Entity<GroupData> {
   }
 
   public async $isDescendant(
-    givenGroup: (Group & GroupData) | string
+    givenGroup: (Group & GroupData) | string,
   ): Promise<boolean> {
     return await this.$serverCall('$isDescendant', [givenGroup], true);
   }
 
   public static async getPrimaryGroups(
     options?: Options,
-    selectors?: Selector[]
+    selectors?: Selector[],
   ): Promise<(Group & GroupData)[]> {
     return await this.serverCallStatic('getPrimaryGroups', [
       { options, class: this.class },
@@ -126,7 +126,7 @@ export default class Group extends Entity<GroupData> {
 
   public static async getSecondaryGroups(
     options?: Options,
-    selectors?: Selector[]
+    selectors?: Selector[],
   ): Promise<(Group & GroupData)[]> {
     return await this.serverCallStatic('getSecondaryGroups', [
       { options, class: this.class },

@@ -69,7 +69,7 @@ export default {
         xsrfToken: 'TILMELDXSRF-' + nanoid(),
       },
       secret,
-      { expiresIn: switchToken ? config.jwtSwitchExpire : config.jwtExpire }
+      { expiresIn: switchToken ? config.jwtSwitchExpire : config.jwtExpire },
     );
   },
   jwtExtract: (config, token, xsrfToken?) => {
@@ -129,14 +129,14 @@ export default {
   },
   sendEmail: async (tilmeld, options, user) => {
     const email = new Email(
-      await tilmeld.config.configEmail(tilmeld, options, user)
+      await tilmeld.config.configEmail(tilmeld, options, user),
     );
     try {
       const result = await email.send({
         ...options,
         template: path.join(
           tilmeld.config.emailTemplateDir,
-          options.template ?? '.'
+          options.template ?? '.',
         ),
         locals: {
           // System
@@ -206,13 +206,13 @@ export default {
               name: 'control characters',
               invert: true,
             })
-            .max(256)
+            .max(256),
         ),
         defaultPrimary: Joi.boolean(),
         defaultSecondary: Joi.boolean(),
         unverifiedSecondary: Joi.boolean(),
       }),
-      'Invalid Group: '
+      'Invalid Group: ',
     );
   },
   validatorUser: (user) => {
@@ -275,7 +275,7 @@ export default {
               name: 'control characters',
               invert: true,
             })
-            .max(256)
+            .max(256),
         ),
         inheritAbilities: Joi.boolean(),
         secret: Joi.string()
@@ -323,7 +323,7 @@ export default {
           .max(40)
           .pattern(/^[A-Z234567]+$/, 'base32 encoded unpadded'),
       }),
-      'Invalid User: '
+      'Invalid User: ',
     );
   },
 } as Config;

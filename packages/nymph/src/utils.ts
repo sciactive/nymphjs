@@ -18,7 +18,7 @@ export function uniqueStrings(array: string[]) {
 export function classNamesToEntityConstructors(
   nymph: Nymph,
   selectors: Selector[],
-  enforceRestEnabledFlag = false
+  enforceRestEnabledFlag = false,
 ): Selector[] {
   const newSelectors: Selector[] = [];
 
@@ -63,7 +63,7 @@ export function classNamesToEntityConstructors(
               ...classNamesToEntityConstructors(
                 nymph,
                 selectors,
-                enforceRestEnabledFlag
+                enforceRestEnabledFlag,
               ),
             ],
           ]);
@@ -73,7 +73,7 @@ export function classNamesToEntityConstructors(
         newSelector[key] = classNamesToEntityConstructors(
           nymph,
           tmpArr,
-          enforceRestEnabledFlag
+          enforceRestEnabledFlag,
         );
       } else {
         // @ts-ignore: ts doesn't know what value is here.
@@ -108,7 +108,7 @@ export function entitiesToReferences(item: any): any {
 export function referencesToEntities(
   item: any,
   nymph: Nymph,
-  useSkipAc = false
+  useSkipAc = false,
 ): any {
   if (Array.isArray(item)) {
     // Check if it's a reference.

@@ -138,7 +138,7 @@ export default class Nymph {
     config: Partial<Config>,
     driver: NymphDriver,
     tilmeld?: TilmeldInterface,
-    parent?: Nymph
+    parent?: Nymph,
   ) {
     this.config = { ...defaults, ...config };
     this.driver = driver;
@@ -244,7 +244,7 @@ export default class Nymph {
   public getEntityClass<T extends EntityConstructor>(className: T): T;
   public getEntityClass(className: string): EntityConstructor;
   public getEntityClass<T extends EntityConstructor = EntityConstructor>(
-    className: T | string
+    className: T | string,
   ): T | EntityConstructor {
     let key: string | null = null;
     if (typeof className === 'string') {
@@ -268,7 +268,7 @@ export default class Nymph {
       this.config,
       this.driver.clone(),
       this.tilmeld?.clone(),
-      this
+      this,
     );
   }
 
@@ -791,11 +791,11 @@ export default class Nymph {
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
-    guid: string
+    guid: string,
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
-    guid: string
+    guid: string,
   ): Promise<ReturnType<T['factorySync']> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
@@ -813,7 +813,7 @@ export default class Nymph {
     }
     const entities = await this.driver.getEntities(
       options,
-      ...(selectors as Selector[])
+      ...(selectors as Selector[]),
     );
     if (options.return === 'count') {
       return entities as unknown as number;
@@ -864,7 +864,7 @@ export default class Nymph {
    */
   public async deleteEntityByID(
     guid: string,
-    className?: string
+    className?: string,
   ): Promise<boolean> {
     for (let callback of this.beforeDeleteEntityByIDCallbacks) {
       if (callback) {
@@ -1015,7 +1015,7 @@ export default class Nymph {
       ? NymphBeforeRollbackTransactionCallback
       : T extends 'afterRollbackTransaction'
       ? NymphAfterRollbackTransactionCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
@@ -1156,7 +1156,7 @@ export default class Nymph {
       ? NymphBeforeRollbackTransactionCallback
       : T extends 'afterRollbackTransaction'
       ? NymphAfterRollbackTransactionCallback
-      : never
+      : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'

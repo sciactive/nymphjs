@@ -46,7 +46,7 @@ async function run() {
 
   const otherPendingTodos = await nymph.getEntities(
     { class: Todo },
-    { type: '&', '!guid': myEntity.guid, equal: ['done', false] }
+    { type: '&', '!guid': myEntity.guid, equal: ['done', false] },
   );
 
   const total = otherPendingTodos.length;
@@ -54,7 +54,7 @@ async function run() {
   console.log(
     `Besides the one I just created, there ${
       single ? 'is' : 'are'
-    } ${total} pending todo${single ? '' : 's'} in the database.`
+    } ${total} pending todo${single ? '' : 's'} in the database.`,
   );
 }
 ```
@@ -95,7 +95,7 @@ export default class Todo extends Entity<TodoData> {
     // instance of Nymph, so it could be a transactional instance.
     const otherTodos = await this.$nymph.getEntities(
       { class: Todo },
-      { type: '!&', guid: this.guid }
+      { type: '!&', guid: this.guid },
     );
     return otherTodos;
   }

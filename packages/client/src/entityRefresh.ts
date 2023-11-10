@@ -14,7 +14,7 @@ export function saveEntities(entity: Entity) {
 
 const addEntitiesToObject = (
   item: any,
-  entitiesObject: { [k: string]: Entity }
+  entitiesObject: { [k: string]: Entity },
 ) => {
   // @ts-ignore: Accessing a private property.
   if (item instanceof Entity && !item.$isASleepingReference) {
@@ -37,7 +37,7 @@ const addEntitiesToObject = (
 // after the restore.
 export function restoreEntities(
   entity: Entity,
-  savedEntities: { [k: string]: Entity }
+  savedEntities: { [k: string]: Entity },
 ) {
   let data: { containsSleepingReference: boolean } = {
     containsSleepingReference: false,
@@ -49,7 +49,7 @@ export function restoreEntities(
     entity.$dataStore[key] = retoreEntitiesFromObject(
       value,
       savedEntities,
-      data
+      data,
     );
   }
 
@@ -59,7 +59,7 @@ export function restoreEntities(
 const retoreEntitiesFromObject = <T extends any>(
   item: T,
   entitiesObject: { [k: string]: Entity },
-  data: { containsSleepingReference: boolean }
+  data: { containsSleepingReference: boolean },
 ): T => {
   if (item instanceof Entity) {
     // @ts-ignore: Accessing a private property.
@@ -78,7 +78,7 @@ const retoreEntitiesFromObject = <T extends any>(
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
     return item.map((item) =>
-      retoreEntitiesFromObject(item, entitiesObject, data)
+      retoreEntitiesFromObject(item, entitiesObject, data),
     ) as T;
   } else if (item instanceof Object) {
     for (let [key, value] of Object.entries(item)) {

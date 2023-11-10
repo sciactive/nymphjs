@@ -248,7 +248,7 @@ describe('Sorter', () => {
           parent = parent.parent;
         }
         return output + entity.name;
-      })
+      }),
     ).toEqual([
       'Anthony',
       '- Lamar',

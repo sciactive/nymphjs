@@ -51,7 +51,7 @@ export default class MySQLDriver extends NymphDriver {
   constructor(
     config: Partial<MySQLDriverConfig>,
     link?: Pool,
-    transaction?: MySQLDriverTransaction
+    transaction?: MySQLDriverTransaction,
   ) {
     super();
     this.config = { ...defaults, ...config };
@@ -86,7 +86,7 @@ export default class MySQLDriver extends NymphDriver {
     return new MySQLDriver(
       this.config,
       this.link,
-      this.transaction ?? undefined
+      this.transaction ?? undefined,
     );
   }
 
@@ -95,7 +95,7 @@ export default class MySQLDriver extends NymphDriver {
       return Promise.resolve(this.transaction.connection);
     }
     return new Promise((resolve, reject) =>
-      this.link.getConnection((err, con) => (err ? reject(err) : resolve(con)))
+      this.link.getConnection((err, con) => (err ? reject(err) : resolve(con))),
     );
   }
 
@@ -111,8 +111,8 @@ export default class MySQLDriver extends NymphDriver {
         const connection: PoolConnection = await new Promise(
           (resolve, reject) =>
             this.link.getConnection((err, con) =>
-              err ? reject(err) : resolve(con)
-            )
+              err ? reject(err) : resolve(con),
+            ),
         );
         connection.release();
       }
@@ -136,7 +136,7 @@ export default class MySQLDriver extends NymphDriver {
           this.mysqlConfig.database === 'nymph'
         ) {
           throw new NotConfiguredError(
-            "It seems the config hasn't been set up correctly."
+            "It seems the config hasn't been set up correctly.",
           );
         } else {
           throw new UnableToConnectError('Could not connect: ' + e?.message);
@@ -185,20 +185,20 @@ export default class MySQLDriver extends NymphDriver {
     let foreignKeyReferencesTableGuid = '';
     if (this.config.foreignKeys) {
       foreignKeyDataTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`
+        `${this.prefix}entities_${etype}`,
       )}(\`guid\`) ON DELETE CASCADE`;
       foreignKeyDataComparisonsTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`
+        `${this.prefix}entities_${etype}`,
       )}(\`guid\`) ON DELETE CASCADE`;
       foreignKeyReferencesTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`
+        `${this.prefix}entities_${etype}`,
       )}(\`guid\`) ON DELETE CASCADE`;
     }
     if (etype != null) {
       // Create the entity table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}entities_${etype}`
+          `${this.prefix}entities_${etype}`,
         )} (
           \`guid\` BINARY(12) NOT NULL,
           \`tags\` LONGTEXT,
@@ -209,12 +209,12 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_mdate\` USING BTREE (\`mdate\`),
           FULLTEXT \`id_tags\` (\`tags\`)
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
       // Create the data table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}data_${etype}`
+          `${this.prefix}data_${etype}`,
         )} (
           \`guid\` BINARY(12) NOT NULL${foreignKeyDataTableGuid},
           \`name\` TEXT NOT NULL,
@@ -223,12 +223,12 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_name\` USING HASH (\`name\`(255)),
           INDEX \`id_name_value\` USING BTREE (\`name\`(255), \`value\`(512))
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
       // Create the data comparisons table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`
+          `${this.prefix}comparisons_${etype}`,
         )} (
           \`guid\` BINARY(12) NOT NULL${foreignKeyDataComparisonsTableGuid},
           \`name\` TEXT NOT NULL,
@@ -238,12 +238,12 @@ export default class MySQLDriver extends NymphDriver {
           PRIMARY KEY (\`guid\`, \`name\`(255)),
           INDEX \`id_name\` USING HASH (\`name\`(255))
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
       // Create the references table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}references_${etype}`
+          `${this.prefix}references_${etype}`,
         )} (
           \`guid\` BINARY(12) NOT NULL${foreignKeyReferencesTableGuid},
           \`name\` TEXT NOT NULL,
@@ -251,19 +251,19 @@ export default class MySQLDriver extends NymphDriver {
           PRIMARY KEY (\`guid\`, \`name\`(255), \`reference\`),
           INDEX \`id_name_reference\` USING BTREE (\`name\`(255), \`reference\`)
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
     } else {
       // Create the UID table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}uids`
+          `${this.prefix}uids`,
         )} (
           \`name\` TEXT NOT NULL,
           \`cur_uid\` BIGINT(20) UNSIGNED NOT NULL,
           PRIMARY KEY (\`name\`(100))
         ) ENGINE ${this.config.engine}
-        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
     }
     return true;
@@ -271,7 +271,7 @@ export default class MySQLDriver extends NymphDriver {
 
   private translateQuery(
     origQuery: string,
-    origParams: { [k: string]: any }
+    origParams: { [k: string]: any },
   ): { query: string; params: any[] } {
     const params: any[] = [];
     let query = origQuery;
@@ -290,7 +290,7 @@ export default class MySQLDriver extends NymphDriver {
   private async query<T extends () => any>(
     runQuery: T,
     query: string,
-    etypes: string[] = []
+    etypes: string[] = [],
     // @ts-ignore: The return type of T is a promise.
   ): ReturnType<T> {
     try {
@@ -307,7 +307,7 @@ export default class MySQLDriver extends NymphDriver {
         } catch (e2: any) {
           throw new QueryFailedError(
             'Query failed: ' + e2?.errno + ' - ' + e2?.message,
-            query
+            query,
           );
         }
       } else if (errorCode === 2006) {
@@ -315,7 +315,7 @@ export default class MySQLDriver extends NymphDriver {
         if (!this.connect()) {
           throw new QueryFailedError(
             'Query failed: ' + e?.errno + ' - ' + e?.message,
-            query
+            query,
           );
         }
         try {
@@ -323,7 +323,7 @@ export default class MySQLDriver extends NymphDriver {
         } catch (e2: any) {
           throw new QueryFailedError(
             'Query failed: ' + e2?.errno + ' - ' + e2?.message,
-            query
+            query,
           );
         }
       } else {
@@ -340,11 +340,11 @@ export default class MySQLDriver extends NymphDriver {
     }: {
       etypes?: string[];
       params?: { [k: string]: any };
-    } = {}
+    } = {},
   ) {
     const { query: newQuery, params: newParams } = this.translateQuery(
       query,
-      params
+      params,
     );
     return this.query(
       async () => {
@@ -358,7 +358,7 @@ export default class MySQLDriver extends NymphDriver {
                   reject(error);
                 }
                 resolve(results);
-              }
+              },
             );
           } catch (e) {
             reject(e);
@@ -367,7 +367,7 @@ export default class MySQLDriver extends NymphDriver {
         return results;
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etypes
+      etypes,
     );
   }
 
@@ -379,11 +379,11 @@ export default class MySQLDriver extends NymphDriver {
     }: {
       etypes?: string[];
       params?: { [k: string]: any };
-    } = {}
+    } = {},
   ) {
     const { query: newQuery, params: newParams } = this.translateQuery(
       query,
-      params
+      params,
     );
     return this.query(
       async () => {
@@ -397,7 +397,7 @@ export default class MySQLDriver extends NymphDriver {
                   reject(error);
                 }
                 resolve(results);
-              }
+              },
             );
           } catch (e) {
             reject(e);
@@ -406,7 +406,7 @@ export default class MySQLDriver extends NymphDriver {
         return results[0];
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etypes
+      etypes,
     );
   }
 
@@ -418,11 +418,11 @@ export default class MySQLDriver extends NymphDriver {
     }: {
       etypes?: string[];
       params?: { [k: string]: any };
-    } = {}
+    } = {},
   ) {
     const { query: newQuery, params: newParams } = this.translateQuery(
       query,
-      params
+      params,
     );
     return this.query(
       async () => {
@@ -436,7 +436,7 @@ export default class MySQLDriver extends NymphDriver {
                   reject(error);
                 }
                 resolve(results);
-              }
+              },
             );
           } catch (e) {
             reject(e);
@@ -445,14 +445,14 @@ export default class MySQLDriver extends NymphDriver {
         return { changes: results.changedRows ?? 0 };
       },
       `${query} -- ${JSON.stringify(params)}`,
-      etypes
+      etypes,
     );
   }
 
   public async commit(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
-        'Transaction commit attempted without a name.'
+        'Transaction commit attempted without a name.',
       );
     }
     if (!this.transaction || this.transaction.count === 0) {
@@ -474,7 +474,7 @@ export default class MySQLDriver extends NymphDriver {
 
   public async deleteEntityByID(
     guid: string,
-    className?: EntityConstructor | string | null
+    className?: EntityConstructor | string | null,
   ) {
     let EntityClass: EntityConstructor;
     if (typeof className === 'string' || className == null) {
@@ -488,47 +488,47 @@ export default class MySQLDriver extends NymphDriver {
     try {
       await this.queryRun(
         `DELETE FROM ${MySQLDriver.escape(
-          `${this.prefix}entities_${etype}`
+          `${this.prefix}entities_${etype}`,
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       await this.queryRun(
         `DELETE FROM ${MySQLDriver.escape(
-          `${this.prefix}data_${etype}`
+          `${this.prefix}data_${etype}`,
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       await this.queryRun(
         `DELETE FROM ${MySQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`
+          `${this.prefix}comparisons_${etype}`,
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       await this.queryRun(
         `DELETE FROM ${MySQLDriver.escape(
-          `${this.prefix}references_${etype}`
+          `${this.prefix}references_${etype}`,
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       await this.commit('nymph-delete');
       // Remove any cached versions of this entity.
@@ -548,13 +548,13 @@ export default class MySQLDriver extends NymphDriver {
     }
     await this.queryRun(
       `DELETE FROM ${MySQLDriver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} WHERE \`name\`=@name;`,
       {
         params: {
           name,
         },
-      }
+      },
     );
     return true;
   }
@@ -575,8 +575,8 @@ export default class MySQLDriver extends NymphDriver {
     // Export UIDs.
     let uids = await this.queryIter(
       `SELECT * FROM ${MySQLDriver.escape(
-        `${this.prefix}uids`
-      )} ORDER BY \`name\`;`
+        `${this.prefix}uids`,
+      )} ORDER BY \`name\`;`,
     );
     for (const uid of uids) {
       writeLine(`<${uid.name}>[${uid.cur_uid}]`);
@@ -605,12 +605,12 @@ export default class MySQLDriver extends NymphDriver {
           `SELECT LOWER(HEX(e.\`guid\`)) AS \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\` AS \`dname\`, d.\`value\` AS \`dvalue\`, c.\`string\`, c.\`number\`
           FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${MySQLDriver.escape(
-            `${this.prefix}data_${etype}`
+            `${this.prefix}data_${etype}`,
           )} d ON e.\`guid\`=d.\`guid\`
           INNER JOIN ${MySQLDriver.escape(
-            `${this.prefix}comparisons_${etype}`
+            `${this.prefix}comparisons_${etype}`,
           )} c ON d.\`guid\`=c.\`guid\` AND d.\`name\`=c.\`name\`
-          ORDER BY e.\`guid\`;`
+          ORDER BY e.\`guid\`;`,
         )
       )[Symbol.iterator]();
       let datum = dataIterator.next();
@@ -663,7 +663,7 @@ export default class MySQLDriver extends NymphDriver {
     params: { [k: string]: any } = {},
     subquery = false,
     tableSuffix = '',
-    etypes: string[] = []
+    etypes: string[] = [],
   ) {
     if (typeof options.class?.alterOptions === 'function') {
       options = options.class.alterOptions(options);
@@ -1414,7 +1414,7 @@ export default class MySQLDriver extends NymphDriver {
                 params,
                 true,
                 tableSuffix,
-                etypes
+                etypes,
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1429,7 +1429,7 @@ export default class MySQLDriver extends NymphDriver {
             case '!qref':
               const [qrefOptions, ...qrefSelectors] = curValue[1] as [
                 Options,
-                ...FormattedSelector[]
+                ...FormattedSelector[],
               ];
               const QrefEntityClass = qrefOptions.class as EntityConstructor;
               etypes.push(QrefEntityClass.ETYPE);
@@ -1441,7 +1441,7 @@ export default class MySQLDriver extends NymphDriver {
                 params,
                 false,
                 makeTableSuffix(),
-                etypes
+                etypes,
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1462,7 +1462,7 @@ export default class MySQLDriver extends NymphDriver {
           }
         }
         return curQuery;
-      }
+      },
     );
 
     let sortBy: string;
@@ -1507,13 +1507,13 @@ export default class MySQLDriver extends NymphDriver {
         let limit = '';
         if ('limit' in options) {
           limit = ` LIMIT ${Math.floor(
-            isNaN(Number(options.limit)) ? 0 : Number(options.limit)
+            isNaN(Number(options.limit)) ? 0 : Number(options.limit),
           )}`;
         }
         let offset = '';
         if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(
-            isNaN(Number(options.offset)) ? 0 : Number(options.offset)
+            isNaN(Number(options.offset)) ? 0 : Number(options.offset),
           )}`;
         }
         const whereClause = queryParts.join(') AND (');
@@ -1522,14 +1522,14 @@ export default class MySQLDriver extends NymphDriver {
             query = `SELECT COUNT(${countTable}.\`guid\`) AS \`count\` FROM (
                 SELECT ${ieTable}.\`guid\` AS \`guid\`
                 FROM ${MySQLDriver.escape(
-                  `${this.prefix}entities_${etype}`
+                  `${this.prefix}entities_${etype}`,
                 )} ${ieTable}
                 WHERE (${whereClause})${limit}${offset}
               ) ${countTable}`;
           } else {
             query = `SELECT COUNT(${ieTable}.\`guid\`) AS \`count\`
               FROM ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`
+                `${this.prefix}entities_${etype}`,
               )} ${ieTable}
               WHERE (${whereClause})`;
           }
@@ -1540,7 +1540,7 @@ export default class MySQLDriver extends NymphDriver {
               : `${ieTable}.\`guid\``;
           query = `SELECT ${guidColumn} AS \`guid\`
             FROM ${MySQLDriver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} ${ieTable}
             ${sortJoinInner}
             WHERE (${whereClause})
@@ -1556,19 +1556,19 @@ export default class MySQLDriver extends NymphDriver {
               ${cTable}.\`string\`,
               ${cTable}.\`number\`
             FROM ${MySQLDriver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} ${eTable}
             LEFT JOIN ${MySQLDriver.escape(
-              `${this.prefix}data_${etype}`
+              `${this.prefix}data_${etype}`,
             )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
             INNER JOIN ${MySQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`
+              `${this.prefix}comparisons_${etype}`,
             )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
             ${sortJoin}
             INNER JOIN (
               SELECT ${ieTable}.\`guid\`
               FROM ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`
+                `${this.prefix}entities_${etype}`,
               )} ${ieTable}
               ${sortJoinInner}
               WHERE (${whereClause})
@@ -1584,13 +1584,13 @@ export default class MySQLDriver extends NymphDriver {
         let limit = '';
         if ('limit' in options) {
           limit = ` LIMIT ${Math.floor(
-            isNaN(Number(options.limit)) ? 0 : Number(options.limit)
+            isNaN(Number(options.limit)) ? 0 : Number(options.limit),
           )}`;
         }
         let offset = '';
         if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(
-            isNaN(Number(options.offset)) ? 0 : Number(options.offset)
+            isNaN(Number(options.offset)) ? 0 : Number(options.offset),
           )}`;
         }
         if (options.return === 'count') {
@@ -1598,13 +1598,13 @@ export default class MySQLDriver extends NymphDriver {
             query = `SELECT COUNT(${countTable}.\`guid\`) AS \`count\` FROM (
                 SELECT ${ieTable}.\`guid\` AS \`guid\`
                 FROM ${MySQLDriver.escape(
-                  `${this.prefix}entities_${etype}`
+                  `${this.prefix}entities_${etype}`,
                 )} ${ieTable}${limit}${offset}
               ) ${countTable}`;
           } else {
             query = `SELECT COUNT(${ieTable}.\`guid\`) AS \`count\`
               FROM ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`
+                `${this.prefix}entities_${etype}`,
               )} ${ieTable}`;
           }
         } else if (options.return === 'guid') {
@@ -1614,7 +1614,7 @@ export default class MySQLDriver extends NymphDriver {
               : `${ieTable}.\`guid\``;
           query = `SELECT ${guidColumn} AS \`guid\`
             FROM ${MySQLDriver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} ${ieTable}
             ${sortJoinInner}
             ORDER BY ${sortByInner}, ${ieTable}.\`guid\`${limit}${offset}`;
@@ -1630,19 +1630,19 @@ export default class MySQLDriver extends NymphDriver {
                 ${cTable}.\`string\`,
                 ${cTable}.\`number\`
               FROM ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`
+                `${this.prefix}entities_${etype}`,
               )} ${eTable}
               LEFT JOIN ${MySQLDriver.escape(
-                `${this.prefix}data_${etype}`
+                `${this.prefix}data_${etype}`,
               )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
               INNER JOIN ${MySQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`
+                `${this.prefix}comparisons_${etype}`,
               )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
               ${sortJoin}
               INNER JOIN (
                 SELECT ${ieTable}.\`guid\`
                 FROM ${MySQLDriver.escape(
-                  `${this.prefix}entities_${etype}`
+                  `${this.prefix}entities_${etype}`,
                 )} ${ieTable}
                 ${sortJoinInner}
                 ORDER BY ${sortByInner}${limit}${offset}
@@ -1659,13 +1659,13 @@ export default class MySQLDriver extends NymphDriver {
                 ${cTable}.\`string\`,
                 ${cTable}.\`number\`
               FROM ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`
+                `${this.prefix}entities_${etype}`,
               )} ${eTable}
               LEFT JOIN ${MySQLDriver.escape(
-                `${this.prefix}data_${etype}`
+                `${this.prefix}data_${etype}`,
               )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
               INNER JOIN ${MySQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`
+                `${this.prefix}comparisons_${etype}`,
               )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
               ${sortJoin}
               ORDER BY ${sortBy}, ${eTable}.\`guid\``;
@@ -1688,17 +1688,17 @@ export default class MySQLDriver extends NymphDriver {
   protected performQuery(
     options: Options,
     formattedSelectors: FormattedSelector[],
-    etype: string
+    etype: string,
   ): {
     result: any;
   } {
     const { query, params, etypes } = this.makeEntityQuery(
       options,
       formattedSelectors,
-      etype
+      etype,
     );
     const result = this.queryIter(query, { etypes, params }).then((val) =>
-      val[Symbol.iterator]()
+      val[Symbol.iterator](),
     );
     return {
       result,
@@ -1747,7 +1747,7 @@ export default class MySQLDriver extends NymphDriver {
             : row.value === 'S'
             ? JSON.stringify(row.string)
             : row.value,
-      })
+      }),
     );
 
     const result = await resultPromise;
@@ -1764,13 +1764,13 @@ export default class MySQLDriver extends NymphDriver {
     }
     const result = await this.queryGet(
       `SELECT \`cur_uid\` FROM ${MySQLDriver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} WHERE \`name\`=@name;`,
       {
         params: {
           name: name,
         },
-      }
+      },
     );
     return (result?.cur_uid as number | null) ?? null;
   }
@@ -1782,7 +1782,7 @@ export default class MySQLDriver extends NymphDriver {
         async (guid, tags, sdata, etype) => {
           await this.queryRun(
             `REPLACE INTO ${MySQLDriver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
             {
               etypes: [etype],
@@ -1796,47 +1796,47 @@ export default class MySQLDriver extends NymphDriver {
                   ? null
                   : Number(JSON.parse(sdata.mdate)),
               },
-            }
+            },
           );
           const promises = [];
           promises.push(
             this.queryRun(
               `DELETE FROM ${MySQLDriver.escape(
-                `${this.prefix}data_${etype}`
+                `${this.prefix}data_${etype}`,
               )} WHERE \`guid\`=UNHEX(@guid);`,
               {
                 etypes: [etype],
                 params: {
                   guid,
                 },
-              }
-            )
+              },
+            ),
           );
           promises.push(
             this.queryRun(
               `DELETE FROM ${MySQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`
+                `${this.prefix}comparisons_${etype}`,
               )} WHERE \`guid\`=UNHEX(@guid);`,
               {
                 etypes: [etype],
                 params: {
                   guid,
                 },
-              }
-            )
+              },
+            ),
           );
           promises.push(
             this.queryRun(
               `DELETE FROM ${MySQLDriver.escape(
-                `${this.prefix}references_${etype}`
+                `${this.prefix}references_${etype}`,
               )} WHERE \`guid\`=UNHEX(@guid);`,
               {
                 etypes: [etype],
                 params: {
                   guid,
                 },
-              }
-            )
+              },
+            ),
           );
           await Promise.all(promises);
           delete sdata.cdate;
@@ -1857,7 +1857,7 @@ export default class MySQLDriver extends NymphDriver {
             promises.push(
               this.queryRun(
                 `INSERT INTO ${MySQLDriver.escape(
-                  `${this.prefix}data_${etype}`
+                  `${this.prefix}data_${etype}`,
                 )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
                 {
                   etypes: [etype],
@@ -1866,13 +1866,13 @@ export default class MySQLDriver extends NymphDriver {
                     name,
                     storageValue,
                   },
-                }
-              )
+                },
+              ),
             );
             promises.push(
               this.queryRun(
                 `INSERT INTO ${MySQLDriver.escape(
-                  `${this.prefix}comparisons_${etype}`
+                  `${this.prefix}comparisons_${etype}`,
                 )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
                 {
                   etypes: [etype],
@@ -1883,15 +1883,15 @@ export default class MySQLDriver extends NymphDriver {
                     string: `${uvalue}`,
                     number: isNaN(Number(uvalue)) ? null : Number(uvalue),
                   },
-                }
-              )
+                },
+              ),
             );
             const references = this.findReferences(value);
             for (const reference of references) {
               promises.push(
                 this.queryRun(
                   `INSERT INTO ${MySQLDriver.escape(
-                    `${this.prefix}references_${etype}`
+                    `${this.prefix}references_${etype}`,
                   )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
                   {
                     etypes: [etype],
@@ -1900,8 +1900,8 @@ export default class MySQLDriver extends NymphDriver {
                       name,
                       reference,
                     },
-                  }
-                )
+                  },
+                ),
               );
             }
           }
@@ -1910,14 +1910,14 @@ export default class MySQLDriver extends NymphDriver {
         async (name, curUid) => {
           await this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
-              `${this.prefix}uids`
+              `${this.prefix}uids`,
             )} (\`name\`, \`cur_uid\`) VALUES (@name, @curUid) ON DUPLICATE KEY UPDATE \`cur_uid\`=@curUid;`,
             {
               params: {
                 name,
                 curUid,
               },
-            }
+            },
           );
         },
         async () => {
@@ -1925,7 +1925,7 @@ export default class MySQLDriver extends NymphDriver {
         },
         async () => {
           await this.commit('nymph-import');
-        }
+        },
       );
 
       return result;
@@ -1943,8 +1943,8 @@ export default class MySQLDriver extends NymphDriver {
     try {
       const lock = await this.queryGet(
         `SELECT GET_LOCK(${MySQLDriver.escapeValue(
-          `${this.prefix}uids_${name}`
-        )}, 10) AS \`lock\`;`
+          `${this.prefix}uids_${name}`,
+        )}, 10) AS \`lock\`;`,
       );
       if (lock.lock !== 1) {
         throw new QueryFailedError("Couldn't get lock for UID: " + name);
@@ -1952,28 +1952,28 @@ export default class MySQLDriver extends NymphDriver {
       let curUid: number | null = null;
       await this.queryRun(
         `INSERT INTO ${MySQLDriver.escape(
-          `${this.prefix}uids`
+          `${this.prefix}uids`,
         )} (\`name\`, \`cur_uid\`) VALUES (@name, 1) ON DUPLICATE KEY UPDATE \`cur_uid\`=\`cur_uid\`+1;`,
         {
           params: {
             name,
           },
-        }
+        },
       );
       const result = await this.queryGet(
         `SELECT \`cur_uid\` FROM ${MySQLDriver.escape(
-          `${this.prefix}uids`
+          `${this.prefix}uids`,
         )} WHERE \`name\`=@name;`,
         {
           params: {
             name,
           },
-        }
+        },
       );
       await this.queryRun(
         `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
-          `${this.prefix}uids_${name}`
-        )});`
+          `${this.prefix}uids_${name}`,
+        )});`,
       );
       await this.commit('nymph-newuid');
       curUid = result.cur_uid ?? null;
@@ -1982,8 +1982,8 @@ export default class MySQLDriver extends NymphDriver {
       if (e?.message !== "Couldn't get lock for UID: " + name) {
         await this.queryRun(
           `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
-            `${this.prefix}uids_${name}`
-          )});`
+            `${this.prefix}uids_${name}`,
+          )});`,
         );
       }
       await this.rollback('nymph-newuid');
@@ -1997,14 +1997,14 @@ export default class MySQLDriver extends NymphDriver {
     }
     await this.queryRun(
       `UPDATE ${MySQLDriver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} SET \`name\`=@newName WHERE \`name\`=@oldName;`,
       {
         params: {
           newName,
           oldName,
         },
-      }
+      },
     );
     return true;
   }
@@ -2012,7 +2012,7 @@ export default class MySQLDriver extends NymphDriver {
   public async rollback(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
-        'Transaction rollback attempted without a name.'
+        'Transaction rollback attempted without a name.',
       );
     }
     if (!this.transaction || this.transaction.count === 0) {
@@ -2037,12 +2037,12 @@ export default class MySQLDriver extends NymphDriver {
       guid: string,
       data: EntityData,
       sdata: SerializedEntityData,
-      etype: string
+      etype: string,
     ) => {
       const runInsertQuery = async (
         name: string,
         value: any,
-        svalue: string
+        svalue: string,
       ) => {
         if (value === undefined) {
           return;
@@ -2057,7 +2057,7 @@ export default class MySQLDriver extends NymphDriver {
         promises.push(
           this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
-              `${this.prefix}data_${etype}`
+              `${this.prefix}data_${etype}`,
             )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
             {
               etypes: [etype],
@@ -2066,13 +2066,13 @@ export default class MySQLDriver extends NymphDriver {
                 name,
                 storageValue,
               },
-            }
-          )
+            },
+          ),
         );
         promises.push(
           this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`
+              `${this.prefix}comparisons_${etype}`,
             )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
             {
               etypes: [etype],
@@ -2083,15 +2083,15 @@ export default class MySQLDriver extends NymphDriver {
                 string: `${value}`,
                 number: isNaN(Number(value)) ? null : Number(value),
               },
-            }
-          )
+            },
+          ),
         );
         const references = this.findReferences(svalue);
         for (const reference of references) {
           promises.push(
             this.queryRun(
               `INSERT INTO ${MySQLDriver.escape(
-                `${this.prefix}references_${etype}`
+                `${this.prefix}references_${etype}`,
               )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
               {
                 etypes: [etype],
@@ -2100,8 +2100,8 @@ export default class MySQLDriver extends NymphDriver {
                   name,
                   reference,
                 },
-              }
-            )
+              },
+            ),
           );
         }
         await Promise.all(promises);
@@ -2125,7 +2125,7 @@ export default class MySQLDriver extends NymphDriver {
           }
           await this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @cdate);`,
             {
               etypes: [etype],
@@ -2134,7 +2134,7 @@ export default class MySQLDriver extends NymphDriver {
                 tags: ' ' + tags.join(' ') + ' ',
                 cdate,
               },
-            }
+            },
           );
           await insertData(guid, data, sdata, etype);
           return true;
@@ -2151,73 +2151,73 @@ export default class MySQLDriver extends NymphDriver {
             promises.push(
               this.queryRun(
                 `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}entities_${etype}`
+                  `${this.prefix}entities_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                   },
-                }
-              )
+                },
+              ),
             );
             promises.push(
               this.queryRun(
                 `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}data_${etype}`
+                  `${this.prefix}data_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                   },
-                }
-              )
+                },
+              ),
             );
             promises.push(
               this.queryRun(
                 `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}comparisons_${etype}`
+                  `${this.prefix}comparisons_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                   },
-                }
-              )
+                },
+              ),
             );
             promises.push(
               this.queryRun(
                 `SELECT 1 FROM ${MySQLDriver.escape(
-                  `${this.prefix}references_${etype}`
+                  `${this.prefix}references_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                   },
-                }
-              )
+                },
+              ),
             );
             await Promise.all(promises);
           }
           if (this.config.tableLocking) {
             await this.queryRun(
               `LOCK TABLES ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`
+                `${this.prefix}entities_${etype}`,
               )} WRITE, ${MySQLDriver.escape(
-                `${this.prefix}data_${etype}`
+                `${this.prefix}data_${etype}`,
               )} WRITE, ${MySQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`
+                `${this.prefix}comparisons_${etype}`,
               )} WRITE, ${MySQLDriver.escape(
-                `${this.prefix}references_${etype}`
-              )} WRITE;`
+                `${this.prefix}references_${etype}`,
+              )} WRITE;`,
             );
           }
           const info = await this.queryRun(
             `UPDATE ${MySQLDriver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} SET \`tags\`=@tags, \`mdate\`=@mdate WHERE \`guid\`=UNHEX(@guid) AND \`mdate\` <= @emdate;`,
             {
               etypes: [etype],
@@ -2227,7 +2227,7 @@ export default class MySQLDriver extends NymphDriver {
                 guid,
                 emdate: isNaN(Number(entity.mdate)) ? 0 : Number(entity.mdate),
               },
-            }
+            },
           );
           let success = false;
           if (info.changes === 1) {
@@ -2235,41 +2235,41 @@ export default class MySQLDriver extends NymphDriver {
             promises.push(
               this.queryRun(
                 `DELETE FROM ${MySQLDriver.escape(
-                  `${this.prefix}data_${etype}`
+                  `${this.prefix}data_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid);`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                   },
-                }
-              )
+                },
+              ),
             );
             promises.push(
               this.queryRun(
                 `DELETE FROM ${MySQLDriver.escape(
-                  `${this.prefix}comparisons_${etype}`
+                  `${this.prefix}comparisons_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid);`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                   },
-                }
-              )
+                },
+              ),
             );
             promises.push(
               this.queryRun(
                 `DELETE FROM ${MySQLDriver.escape(
-                  `${this.prefix}references_${etype}`
+                  `${this.prefix}references_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid);`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                   },
-                }
-              )
+                },
+              ),
             );
             await Promise.all(promises);
             await insertData(guid, data, sdata, etype);
@@ -2290,7 +2290,7 @@ export default class MySQLDriver extends NymphDriver {
             await this.rollback('nymph-save');
           }
           return success;
-        }
+        },
       );
 
       return result;
@@ -2306,14 +2306,14 @@ export default class MySQLDriver extends NymphDriver {
     }
     await this.queryRun(
       `INSERT INTO ${MySQLDriver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} (\`name\`, \`cur_uid\`) VALUES (@name, @curUid) ON DUPLICATE KEY UPDATE \`cur_uid\`=@curUid;`,
       {
         params: {
           name,
           curUid,
         },
-      }
+      },
     );
     return true;
   }
@@ -2321,7 +2321,7 @@ export default class MySQLDriver extends NymphDriver {
   private async internalTransaction(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
-        'Transaction start attempted without a name.'
+        'Transaction start attempted without a name.',
       );
     }
 

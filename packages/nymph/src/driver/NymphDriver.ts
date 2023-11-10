@@ -28,7 +28,7 @@ export default abstract class NymphDriver {
   protected nymph: Nymph = new Proxy({} as Nymph, {
     get() {
       throw new Error(
-        'Attempted access of Nymph instance before driver initialization!'
+        'Attempted access of Nymph instance before driver initialization!',
       );
     },
   });
@@ -73,7 +73,7 @@ export default abstract class NymphDriver {
   abstract inTransaction(): Promise<boolean>;
   abstract deleteEntityByID(
     guid: string,
-    classConstructor: EntityConstructor
+    classConstructor: EntityConstructor,
   ): Promise<boolean>;
   abstract deleteEntityByID(guid: string, className?: string): Promise<boolean>;
   abstract deleteUID(name: string): Promise<boolean>;
@@ -84,7 +84,7 @@ export default abstract class NymphDriver {
   abstract disconnect(): Promise<boolean>;
 
   protected abstract exportEntities(
-    writeLine: (line: string) => void
+    writeLine: (line: string) => void,
   ): Promise<void>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
@@ -123,7 +123,7 @@ export default abstract class NymphDriver {
   protected posixRegexMatch(
     pattern: string,
     subject: string,
-    caseInsensitive = false
+    caseInsensitive = false,
   ) {
     const posixClasses = [
       // '[[:<:]]',
@@ -203,11 +203,11 @@ export default abstract class NymphDriver {
       guid: string,
       tags: string[],
       sdata: SerializedEntityData,
-      etype: string
+      etype: string,
     ) => Promise<void>,
     saveUIDCallback: (name: string, value: number) => Promise<void>,
     startTransactionCallback: (() => Promise<void>) | null = null,
-    commitTransactionCallback: (() => Promise<void>) | null = null
+    commitTransactionCallback: (() => Promise<void>) | null = null,
   ) {
     let rl: ReadLines;
     try {
@@ -229,7 +229,7 @@ export default abstract class NymphDriver {
         continue;
       }
       const entityMatch = text.match(
-        /^\s*{([0-9A-Fa-f]+)}<([-\w_]+)>\[([^\]]*)\]\s*$/
+        /^\s*{([0-9A-Fa-f]+)}<([-\w_]+)>\[([^\]]*)\]\s*$/,
       );
       const propMatch = text.match(/^\s*([^=]+)\s*=\s*(.*\S)\s*$/);
       const uidMatch = text.match(/^\s*<([^>]+)>\[(\d+)\]\s*$/);
@@ -273,7 +273,7 @@ export default abstract class NymphDriver {
     sdata: SerializedEntityData,
     selectors: Selector[],
     guid: string | null = null,
-    tags: string[] | null = null
+    tags: string[] | null = null,
   ) {
     const formattedSelectors = this.formatSelectors(selectors).selectors;
 
@@ -295,7 +295,7 @@ export default abstract class NymphDriver {
           const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
           pass = xor(
             this.checkData(data, sdata, tmpArr, guid, tags),
-            xor(typeIsNot, clauseNot)
+            xor(typeIsNot, clauseNot),
           );
         } else {
           if (key === 'qref' || key === '!qref') {
@@ -324,7 +324,7 @@ export default abstract class NymphDriver {
                 case '!tag':
                   pass = xor(
                     (tags ?? []).indexOf(propName) !== -1,
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'defined':
@@ -335,7 +335,7 @@ export default abstract class NymphDriver {
                 case '!truthy':
                   pass = xor(
                     propName in data && data[propName],
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'ref':
@@ -344,7 +344,7 @@ export default abstract class NymphDriver {
                   pass = xor(
                     propName in data &&
                       this.entityReferenceSearch(data[propName], testRefValue),
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'equal':
@@ -354,7 +354,7 @@ export default abstract class NymphDriver {
                     propName in data &&
                       JSON.stringify(data[propName]) ===
                         JSON.stringify(testEqualValue),
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'contain':
@@ -365,9 +365,9 @@ export default abstract class NymphDriver {
                   pass = xor(
                     propName in data &&
                       JSON.stringify(data[propName]).indexOf(
-                        JSON.stringify(testContainValue)
+                        JSON.stringify(testContainValue),
                       ) !== -1,
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'like':
@@ -382,9 +382,9 @@ export default abstract class NymphDriver {
                           escapeRegExp(testLikeValue)
                             .replace('%', () => '.*')
                             .replace('_', () => '.') +
-                          '$'
+                          '$',
                       ).test(data[propName]),
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'match':
@@ -396,7 +396,7 @@ export default abstract class NymphDriver {
                   pass = xor(
                     propName in data &&
                       this.posixRegexMatch(testMatchValue, data[propName]),
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'imatch':
@@ -410,9 +410,9 @@ export default abstract class NymphDriver {
                       this.posixRegexMatch(
                         testIMatchValue,
                         data[propName],
-                        true
+                        true,
                       ),
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'gt':
@@ -422,7 +422,7 @@ export default abstract class NymphDriver {
                   )[1] as number;
                   pass = xor(
                     propName in data && data[propName] > testGTValue,
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'gte':
@@ -432,7 +432,7 @@ export default abstract class NymphDriver {
                   )[1] as number;
                   pass = xor(
                     propName in data && data[propName] >= testGTEValue,
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'lt':
@@ -442,7 +442,7 @@ export default abstract class NymphDriver {
                   )[1] as number;
                   pass = xor(
                     propName in data && data[propName] < testLTValue,
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
                 case 'lte':
@@ -452,7 +452,7 @@ export default abstract class NymphDriver {
                   )[1] as number;
                   pass = xor(
                     propName in data && data[propName] <= testLTEValue,
-                    xor(typeIsNot, clauseNot)
+                    xor(typeIsNot, clauseNot),
                   );
                   break;
               }
@@ -510,7 +510,7 @@ export default abstract class NymphDriver {
       | EntityInterface
       | EntityReference
       | string
-      | (EntityInterface | EntityReference | string)[]
+      | (EntityInterface | EntityReference | string)[],
   ) {
     // Get the GUID, if the passed $entity is an object.
     const guids: string[] = [];
@@ -553,7 +553,7 @@ export default abstract class NymphDriver {
 
   public formatSelectors(
     selectors: Selector[],
-    options: Options = {}
+    options: Options = {},
   ): {
     selectors: FormattedSelector[];
     qrefs: [Options, ...FormattedSelector[]][];
@@ -599,7 +599,7 @@ export default abstract class NymphDriver {
             const newSelectors = this.formatSelectors(qrefSelectors, options);
             qrefs.push(
               [newOptions, ...newSelectors.selectors],
-              ...newSelectors.qrefs
+              ...newSelectors.qrefs,
             );
             formatArr[i] = [name, [newOptions, ...newSelectors.selectors]];
           }
@@ -651,8 +651,8 @@ export default abstract class NymphDriver {
       key: string,
       value: any,
       typeIsOr: boolean,
-      typeIsNot: boolean
-    ) => string
+      typeIsNot: boolean,
+    ) => string,
   ) {
     const queryParts = [];
     for (const curSelector of selectors) {
@@ -687,7 +687,7 @@ export default abstract class NymphDriver {
     performQueryCallback: (
       options: Options<T>,
       formattedSelectors: FormattedSelector[],
-      etype: string
+      etype: string,
     ) => {
       result: any;
     },
@@ -703,7 +703,7 @@ export default abstract class NymphDriver {
     getDataNameAndSValueCallback: (row: any) => {
       name: string;
       svalue: string;
-    }
+    },
   ): { result: any; process: () => number | Error };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
@@ -711,7 +711,7 @@ export default abstract class NymphDriver {
     performQueryCallback: (
       options: Options<T>,
       formattedSelectors: FormattedSelector[],
-      etype: string
+      etype: string,
     ) => {
       result: any;
     },
@@ -727,7 +727,7 @@ export default abstract class NymphDriver {
     getDataNameAndSValueCallback: (row: any) => {
       name: string;
       svalue: string;
-    }
+    },
   ): { result: any; process: () => string[] | Error };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
@@ -735,7 +735,7 @@ export default abstract class NymphDriver {
     performQueryCallback: (
       options: Options<T>,
       formattedSelectors: FormattedSelector[],
-      etype: string
+      etype: string,
     ) => {
       result: any;
     },
@@ -751,7 +751,7 @@ export default abstract class NymphDriver {
     getDataNameAndSValueCallback: (row: any) => {
       name: string;
       svalue: string;
-    }
+    },
   ): { result: any; process: () => ReturnType<T['factorySync']>[] | Error };
   protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
@@ -759,7 +759,7 @@ export default abstract class NymphDriver {
     performQueryCallback: (
       options: Options<T>,
       formattedSelectors: FormattedSelector[],
-      etype: string
+      etype: string,
     ) => {
       result: any;
     },
@@ -775,7 +775,7 @@ export default abstract class NymphDriver {
     getDataNameAndSValueCallback: (row: any) => {
       name: string;
       svalue: string;
-    }
+    },
   ): {
     result: any;
     process: () => ReturnType<T['factorySync']>[] | string[] | number | Error;
@@ -791,7 +791,7 @@ export default abstract class NymphDriver {
         ['&', '!&', '|', '!|'].indexOf(selector.type) === -1
       ) {
         throw new InvalidParametersError(
-          'Invalid query selector passed: ' + JSON.stringify(selector)
+          'Invalid query selector passed: ' + JSON.stringify(selector),
         );
       }
     }
@@ -820,7 +820,7 @@ export default abstract class NymphDriver {
         const entity = this.pullCache<ReturnType<T['factorySync']>>(
           selectors[0]['guid'],
           EntityClass.class,
-          !!options.skipAc
+          !!options.skipAc,
         );
         if (
           entity != null &&
@@ -829,7 +829,7 @@ export default abstract class NymphDriver {
             entity.hasTag(
               ...(Array.isArray(selectors[0].tag)
                 ? selectors[0].tag
-                : [selectors[0].tag])
+                : [selectors[0].tag]),
             ))
         ) {
           const guid = entity.guid;
@@ -858,7 +858,7 @@ export default abstract class NymphDriver {
       const { result } = performQueryCallback(
         options,
         formattedSelectors.selectors,
-        etype
+        etype,
       );
 
       return {
@@ -948,7 +948,7 @@ export default abstract class NymphDriver {
       data: EntityData,
       sdata: SerializedEntityData,
       cdate: number,
-      etype: string
+      etype: string,
     ) => Promise<boolean>,
     saveExistingEntityCallback: (
       entity: EntityInterface,
@@ -957,12 +957,12 @@ export default abstract class NymphDriver {
       data: EntityData,
       sdata: SerializedEntityData,
       mdate: number,
-      etype: string
+      etype: string,
     ) => Promise<boolean>,
     startTransactionCallback: (() => Promise<void>) | null = null,
     commitTransactionCallback:
       | ((success: boolean) => Promise<boolean>)
-      | null = null
+      | null = null,
   ) {
     // Get a modified date.
     const mdate = Date.now();
@@ -985,7 +985,7 @@ export default abstract class NymphDriver {
         data,
         sdata,
         cdate,
-        etype
+        etype,
       );
       if (success) {
         entity.guid = newId;
@@ -1004,7 +1004,7 @@ export default abstract class NymphDriver {
         data,
         sdata,
         mdate,
-        etype
+        etype,
       );
       if (success) {
         entity.mdate = mdate;
@@ -1021,7 +1021,7 @@ export default abstract class NymphDriver {
         entity.mdate as number,
         entity.tags,
         data,
-        sdata
+        sdata,
       );
     }
     return success;
@@ -1038,7 +1038,7 @@ export default abstract class NymphDriver {
   protected pullCache<T extends EntityInterface = EntityInterface>(
     guid: string,
     className: string,
-    useSkipAc = false
+    useSkipAc = false,
   ): T | null {
     // Increment the entity access count.
     if (!(guid in this.entityCount)) {
@@ -1056,7 +1056,7 @@ export default abstract class NymphDriver {
         entity.tags = this.entityCache[guid]['tags'];
         entity.$putData(
           this.entityCache[guid]['data'],
-          this.entityCache[guid]['sdata']
+          this.entityCache[guid]['sdata'],
         );
         return entity;
       }
@@ -1080,7 +1080,7 @@ export default abstract class NymphDriver {
     mdate: number,
     tags: string[],
     data: EntityData,
-    sdata: SerializedEntityData
+    sdata: SerializedEntityData,
   ) {
     if (guid == null) {
       return;

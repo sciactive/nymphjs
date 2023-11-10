@@ -28,7 +28,7 @@ const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:',
-  })
+  }),
 );
 const MyEntity = nymph.addEntityClass(MyEntityClass);
 
@@ -87,7 +87,7 @@ const nymph = new Nymph(
   new SQLite3Driver({
     filename: ':memory:',
   }),
-  tilmeld
+  tilmeld,
 );
 const MyEntity = nymph.addEntityClass(MyEntityClass);
 
@@ -123,8 +123,8 @@ app.user(
     {
       restUrl: 'https://mydomain.tld/rest',
     },
-    nymph
-  )
+    nymph,
+  ),
 );
 
 // Do anything else you need to do...

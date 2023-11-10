@@ -44,7 +44,7 @@ export default class SQLite3Driver extends NymphDriver {
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
       throw new InvalidParametersError(
-        'SQLite3 identifiers (like entity ETYPE) cannot contain null characters.'
+        'SQLite3 identifiers (like entity ETYPE) cannot contain null characters.',
       );
     }
 
@@ -106,7 +106,7 @@ export default class SQLite3Driver extends NymphDriver {
         // Create the preg_match and regexp functions.
         link.function('regexp', { deterministic: true }, ((
           pattern: string,
-          subject: string
+          subject: string,
         ) => (this.posixRegexMatch(pattern, subject) ? 1 : 0)) as (
           ...params: any[]
         ) => any);
@@ -153,7 +153,7 @@ export default class SQLite3Driver extends NymphDriver {
       if (!this.store) {
         if (write) {
           throw new Error(
-            'Tried to open in write without opening in read first.'
+            'Tried to open in write without opening in read first.',
           );
         }
         this.store = new InternalStore(link);
@@ -171,7 +171,7 @@ export default class SQLite3Driver extends NymphDriver {
       if (filename === ':memory:') {
         throw new NotConfiguredError(
           "It seems the config hasn't been set up correctly. Could not connect: " +
-            e?.message
+            e?.message,
         );
       } else {
         throw new UnableToConnectError('Could not connect: ' + e?.message);
@@ -226,137 +226,137 @@ export default class SQLite3Driver extends NymphDriver {
         // Create the entity table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`
-          )} ("guid" CHARACTER(24) PRIMARY KEY, "tags" TEXT, "cdate" REAL NOT NULL, "mdate" REAL NOT NULL);`
+            `${this.prefix}entities_${etype}`,
+          )} ("guid" CHARACTER(24) PRIMARY KEY, "tags" TEXT, "cdate" REAL NOT NULL, "mdate" REAL NOT NULL);`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}_id_cdate`
+            `${this.prefix}entities_${etype}_id_cdate`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`
-          )} ("cdate");`
+            `${this.prefix}entities_${etype}`,
+          )} ("cdate");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}_id_mdate`
+            `${this.prefix}entities_${etype}_id_mdate`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`
-          )} ("mdate");`
+            `${this.prefix}entities_${etype}`,
+          )} ("mdate");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}_id_tags`
+            `${this.prefix}entities_${etype}_id_tags`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`
-          )} ("tags");`
+            `${this.prefix}entities_${etype}`,
+          )} ("tags");`,
         );
         // Create the data table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`
+            `${this.prefix}data_${etype}`,
           )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`
-          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "value" TEXT NOT NULL, PRIMARY KEY("guid", "name"));`
+            `${this.prefix}entities_${etype}`,
+          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "value" TEXT NOT NULL, PRIMARY KEY("guid", "name"));`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid`
+            `${this.prefix}data_${etype}_id_guid`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`
-          )} ("guid");`
+            `${this.prefix}data_${etype}`,
+          )} ("guid");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_name`
+            `${this.prefix}data_${etype}_id_name`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`
-          )} ("name");`
+            `${this.prefix}data_${etype}`,
+          )} ("name");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_value`
+            `${this.prefix}data_${etype}_id_value`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`
-          )} ("value");`
+            `${this.prefix}data_${etype}`,
+          )} ("value");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid__name_user`
+            `${this.prefix}data_${etype}_id_guid__name_user`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`
-          )} ("guid") WHERE "name" = \'user\';`
+            `${this.prefix}data_${etype}`,
+          )} ("guid") WHERE "name" = \'user\';`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid__name_group`
+            `${this.prefix}data_${etype}_id_guid__name_group`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`
-          )} ("guid") WHERE "name" = \'group\';`
+            `${this.prefix}data_${etype}`,
+          )} ("guid") WHERE "name" = \'group\';`,
         );
         // Create the comparisons table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}`
+            `${this.prefix}comparisons_${etype}`,
           )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`
-          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "truthy" INTEGER, "string" TEXT, "number" REAL, PRIMARY KEY("guid", "name"));`
+            `${this.prefix}entities_${etype}`,
+          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "truthy" INTEGER, "string" TEXT, "number" REAL, PRIMARY KEY("guid", "name"));`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}_id_guid`
+            `${this.prefix}comparisons_${etype}_id_guid`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}`
-          )} ("guid");`
+            `${this.prefix}comparisons_${etype}`,
+          )} ("guid");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}_id_name`
+            `${this.prefix}comparisons_${etype}_id_name`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}`
-          )} ("name");`
+            `${this.prefix}comparisons_${etype}`,
+          )} ("name");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}_id_name__truthy`
+            `${this.prefix}comparisons_${etype}_id_name__truthy`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}`
-          )} ("name") WHERE "truthy" = 1;`
+            `${this.prefix}comparisons_${etype}`,
+          )} ("name") WHERE "truthy" = 1;`,
         );
         // Create the references table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`
+            `${this.prefix}references_${etype}`,
           )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`
-          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "reference" CHARACTER(24) NOT NULL, PRIMARY KEY("guid", "name", "reference"));`
+            `${this.prefix}entities_${etype}`,
+          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "reference" CHARACTER(24) NOT NULL, PRIMARY KEY("guid", "name", "reference"));`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_guid`
+            `${this.prefix}references_${etype}_id_guid`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`
-          )} ("guid");`
+            `${this.prefix}references_${etype}`,
+          )} ("guid");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_name`
+            `${this.prefix}references_${etype}_id_name`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`
-          )} ("name");`
+            `${this.prefix}references_${etype}`,
+          )} ("name");`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_reference`
+            `${this.prefix}references_${etype}_id_reference`,
           )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`
-          )} ("reference");`
+            `${this.prefix}references_${etype}`,
+          )} ("reference");`,
         );
       } else {
         // Create the UID table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}uids`
-          )} ("name" TEXT PRIMARY KEY NOT NULL, "cur_uid" INTEGER NOT NULL);`
+            `${this.prefix}uids`,
+          )} ("name" TEXT PRIMARY KEY NOT NULL, "cur_uid" INTEGER NOT NULL);`,
         );
       }
       this.commit('nymph-tablecreation');
@@ -370,7 +370,7 @@ export default class SQLite3Driver extends NymphDriver {
   private query<T extends () => any>(
     runQuery: T,
     query: string,
-    etypes: string[] = []
+    etypes: string[] = [],
   ): ReturnType<T> {
     try {
       return runQuery();
@@ -390,13 +390,13 @@ export default class SQLite3Driver extends NymphDriver {
         } catch (e2: any) {
           throw new QueryFailedError(
             'Query failed: ' + e2?.code + ' - ' + e2?.message,
-            query
+            query,
           );
         }
       } else {
         throw new QueryFailedError(
           'Query failed: ' + e?.code + ' - ' + e?.message,
-          query
+          query,
         );
       }
     }
@@ -407,7 +407,7 @@ export default class SQLite3Driver extends NymphDriver {
     {
       etypes = [],
       params = {},
-    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {},
   ) {
     return this.query(
       () =>
@@ -415,7 +415,7 @@ export default class SQLite3Driver extends NymphDriver {
           .prepare(query)
           .iterate(params),
       `${query} -- ${JSON.stringify(params)}`,
-      etypes
+      etypes,
     );
   }
 
@@ -424,13 +424,13 @@ export default class SQLite3Driver extends NymphDriver {
     {
       etypes = [],
       params = {},
-    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {},
   ) {
     return this.query(
       () =>
         (this.store.linkWrite || this.store.link).prepare(query).get(params),
       `${query} -- ${JSON.stringify(params)}`,
-      etypes
+      etypes,
     );
   }
 
@@ -439,20 +439,20 @@ export default class SQLite3Driver extends NymphDriver {
     {
       etypes = [],
       params = {},
-    }: { etypes?: string[]; params?: { [k: string]: any } } = {}
+    }: { etypes?: string[]; params?: { [k: string]: any } } = {},
   ) {
     return this.query(
       () =>
         (this.store.linkWrite || this.store.link).prepare(query).run(params),
       `${query} -- ${JSON.stringify(params)}`,
-      etypes
+      etypes,
     );
   }
 
   public async commit(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
-        'Transaction commit attempted without a name.'
+        'Transaction commit attempted without a name.',
       );
     }
     if (this.store.transactionsStarted === 0) {
@@ -476,7 +476,7 @@ export default class SQLite3Driver extends NymphDriver {
 
   public async deleteEntityByID(
     guid: string,
-    className?: EntityConstructor | string | null
+    className?: EntityConstructor | string | null,
   ) {
     let EntityClass: EntityConstructor;
     if (typeof className === 'string' || className == null) {
@@ -490,47 +490,47 @@ export default class SQLite3Driver extends NymphDriver {
     try {
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}entities_${etype}`
+          `${this.prefix}entities_${etype}`,
         )} WHERE "guid"=@guid;`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}`
+          `${this.prefix}data_${etype}`,
         )} WHERE "guid"=@guid;`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}comparisons_${etype}`
+          `${this.prefix}comparisons_${etype}`,
         )} WHERE "guid"=@guid;`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}references_${etype}`
+          `${this.prefix}references_${etype}`,
         )} WHERE "guid"=@guid;`,
         {
           etypes: [etype],
           params: {
             guid,
           },
-        }
+        },
       );
       await this.commit('nymph-delete');
       // Remove any cached versions of this entity.
@@ -551,13 +551,13 @@ export default class SQLite3Driver extends NymphDriver {
     await this.startTransaction('nymph-delete-uid');
     this.queryRun(
       `DELETE FROM ${SQLite3Driver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} WHERE "name"=@name;`,
       {
         params: {
           name,
         },
-      }
+      },
     );
     await this.commit('nymph-delete-uid');
     return true;
@@ -579,8 +579,8 @@ export default class SQLite3Driver extends NymphDriver {
     // Export UIDs.
     let uids: IterableIterator<any> = this.queryIter(
       `SELECT * FROM ${SQLite3Driver.escape(
-        `${this.prefix}uids`
-      )} ORDER BY "name";`
+        `${this.prefix}uids`,
+      )} ORDER BY "name";`,
     );
     for (const uid of uids) {
       writeLine(`<${uid.name}>[${uid.cur_uid}]`);
@@ -594,7 +594,7 @@ export default class SQLite3Driver extends NymphDriver {
 
     // Get the etypes.
     const tables: IterableIterator<any> = this.queryIter(
-      "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;"
+      "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;",
     );
     const etypes = [];
     for (const table of tables) {
@@ -607,12 +607,12 @@ export default class SQLite3Driver extends NymphDriver {
       // Export entities.
       const dataIterator: IterableIterator<any> = this.queryIter(
         `SELECT e.*, d."name" AS "dname", d."value" AS "dvalue", c."string", c."number" FROM ${SQLite3Driver.escape(
-          `${this.prefix}entities_${etype}`
+          `${this.prefix}entities_${etype}`,
         )} e LEFT JOIN ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}`
+          `${this.prefix}data_${etype}`,
         )} d USING ("guid") INNER JOIN ${SQLite3Driver.escape(
-          `${this.prefix}comparisons_${etype}`
-        )} c USING ("guid", "name") ORDER BY e."guid";`
+          `${this.prefix}comparisons_${etype}`,
+        )} c USING ("guid", "name") ORDER BY e."guid";`,
       )[Symbol.iterator]();
       let datum = dataIterator.next();
       while (!datum.done) {
@@ -664,7 +664,7 @@ export default class SQLite3Driver extends NymphDriver {
     params: { [k: string]: any } = {},
     subquery = false,
     tableSuffix = '',
-    etypes: string[] = []
+    etypes: string[] = [],
   ) {
     if (typeof options.class?.alterOptions === 'function') {
       options = options.class.alterOptions(options);
@@ -1368,7 +1368,7 @@ export default class SQLite3Driver extends NymphDriver {
                 params,
                 true,
                 tableSuffix,
-                etypes
+                etypes,
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1383,7 +1383,7 @@ export default class SQLite3Driver extends NymphDriver {
             case '!qref':
               const [qrefOptions, ...qrefSelectors] = curValue[1] as [
                 Options,
-                ...FormattedSelector[]
+                ...FormattedSelector[],
               ];
               const QrefEntityClass = qrefOptions.class as EntityConstructor;
               etypes.push(QrefEntityClass.ETYPE);
@@ -1395,7 +1395,7 @@ export default class SQLite3Driver extends NymphDriver {
                 params,
                 false,
                 makeTableSuffix(),
-                etypes
+                etypes,
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1416,7 +1416,7 @@ export default class SQLite3Driver extends NymphDriver {
           }
         }
         return curQuery;
-      }
+      },
     );
 
     let sortBy: string;
@@ -1465,21 +1465,21 @@ export default class SQLite3Driver extends NymphDriver {
             query = `SELECT COUNT("guid") AS "count" FROM (
                 SELECT "guid"
                 FROM ${SQLite3Driver.escape(
-                  this.prefix + 'entities_' + etype
+                  this.prefix + 'entities_' + etype,
                 )} ${ieTable}
                 WHERE (${whereClause})${limit}${offset}
               )`;
           } else {
             query = `SELECT COUNT("guid") AS "count"
               FROM ${SQLite3Driver.escape(
-                this.prefix + 'entities_' + etype
+                this.prefix + 'entities_' + etype,
               )} ${ieTable}
               WHERE (${whereClause})`;
           }
         } else if (options.return === 'guid') {
           query = `SELECT "guid"
             FROM ${SQLite3Driver.escape(
-              this.prefix + 'entities_' + etype
+              this.prefix + 'entities_' + etype,
             )} ${ieTable}
             ${sortJoin}
             WHERE (${whereClause})
@@ -1495,19 +1495,19 @@ export default class SQLite3Driver extends NymphDriver {
               ${cTable}."string",
               ${cTable}."number"
             FROM ${SQLite3Driver.escape(
-              this.prefix + 'entities_' + etype
+              this.prefix + 'entities_' + etype,
             )} ${eTable}
             LEFT JOIN ${SQLite3Driver.escape(
-              this.prefix + 'data_' + etype
+              this.prefix + 'data_' + etype,
             )} ${dTable} USING ("guid")
             INNER JOIN ${SQLite3Driver.escape(
-              this.prefix + 'comparisons_' + etype
+              this.prefix + 'comparisons_' + etype,
             )} ${cTable} USING ("guid", "name")
             ${sortJoin}
             INNER JOIN (
               SELECT "guid"
               FROM ${SQLite3Driver.escape(
-                this.prefix + 'entities_' + etype
+                this.prefix + 'entities_' + etype,
               )} ${ieTable}
               ${sortJoin}
               WHERE (${whereClause})
@@ -1533,19 +1533,19 @@ export default class SQLite3Driver extends NymphDriver {
             query = `SELECT COUNT("guid") AS "count" FROM (
                 SELECT "guid"
                 FROM ${SQLite3Driver.escape(
-                  this.prefix + 'entities_' + etype
+                  this.prefix + 'entities_' + etype,
                 )} ${ieTable}${limit}${offset}
               )`;
           } else {
             query = `SELECT COUNT("guid") AS "count"
               FROM ${SQLite3Driver.escape(
-                this.prefix + 'entities_' + etype
+                this.prefix + 'entities_' + etype,
               )} ${ieTable}`;
           }
         } else if (options.return === 'guid') {
           query = `SELECT "guid"
             FROM ${SQLite3Driver.escape(
-              this.prefix + 'entities_' + etype
+              this.prefix + 'entities_' + etype,
             )} ${ieTable}
             ${sortJoin}
             ORDER BY ${sortByInner}, "guid"${limit}${offset}`;
@@ -1561,19 +1561,19 @@ export default class SQLite3Driver extends NymphDriver {
                 ${cTable}."string",
                 ${cTable}."number"
               FROM ${SQLite3Driver.escape(
-                this.prefix + 'entities_' + etype
+                this.prefix + 'entities_' + etype,
               )} ${eTable}
               LEFT JOIN ${SQLite3Driver.escape(
-                this.prefix + 'data_' + etype
+                this.prefix + 'data_' + etype,
               )} ${dTable} USING ("guid")
               INNER JOIN ${SQLite3Driver.escape(
-                this.prefix + 'comparisons_' + etype
+                this.prefix + 'comparisons_' + etype,
               )} c USING ("guid", "name")
               ${sortJoin}
               INNER JOIN (
                 SELECT "guid"
                 FROM ${SQLite3Driver.escape(
-                  this.prefix + 'entities_' + etype
+                  this.prefix + 'entities_' + etype,
                 )} ${ieTable}
                 ${sortJoin}
                 ORDER BY ${sortByInner}${limit}${offset}
@@ -1590,13 +1590,13 @@ export default class SQLite3Driver extends NymphDriver {
                 ${cTable}."string",
                 ${cTable}."number"
               FROM ${SQLite3Driver.escape(
-                this.prefix + 'entities_' + etype
+                this.prefix + 'entities_' + etype,
               )} ${eTable}
               LEFT JOIN ${SQLite3Driver.escape(
-                this.prefix + 'data_' + etype
+                this.prefix + 'data_' + etype,
               )} ${dTable} USING ("guid")
               INNER JOIN ${SQLite3Driver.escape(
-                this.prefix + 'comparisons_' + etype
+                this.prefix + 'comparisons_' + etype,
               )} ${cTable} USING ("guid", "name")
               ${sortJoin}
               ORDER BY ${sortBy}, ${eTable}."guid"`;
@@ -1619,14 +1619,14 @@ export default class SQLite3Driver extends NymphDriver {
   protected performQuery(
     options: Options,
     formattedSelectors: FormattedSelector[],
-    etype: string
+    etype: string,
   ): {
     result: any;
   } {
     const { query, params, etypes } = this.makeEntityQuery(
       options,
       formattedSelectors,
-      etype
+      etype,
     );
     const result = this.queryIter(query, { etypes, params })[Symbol.iterator]();
     return {
@@ -1675,7 +1675,7 @@ export default class SQLite3Driver extends NymphDriver {
             : row.value === 'S'
             ? JSON.stringify(row.string)
             : row.value,
-      })
+      }),
     );
     const value = process();
     if (value instanceof Error) {
@@ -1690,13 +1690,13 @@ export default class SQLite3Driver extends NymphDriver {
     }
     const result: any = this.queryGet(
       `SELECT "cur_uid" FROM ${SQLite3Driver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} WHERE "name"=@name;`,
       {
         params: {
           name: name,
         },
-      }
+      },
     );
     return (result?.cur_uid as number | null) ?? null;
   }
@@ -1708,51 +1708,51 @@ export default class SQLite3Driver extends NymphDriver {
         async (guid, tags, sdata, etype) => {
           this.queryRun(
             `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} WHERE "guid"=@guid;`,
             {
               etypes: [etype],
               params: {
                 guid,
               },
-            }
+            },
           );
           this.queryRun(
             `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}`
+              `${this.prefix}data_${etype}`,
             )} WHERE "guid"=@guid;`,
             {
               etypes: [etype],
               params: {
                 guid,
               },
-            }
+            },
           );
           this.queryRun(
             `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}comparisons_${etype}`
+              `${this.prefix}comparisons_${etype}`,
             )} WHERE "guid"=@guid;`,
             {
               etypes: [etype],
               params: {
                 guid,
               },
-            }
+            },
           );
           this.queryRun(
             `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}references_${etype}`
+              `${this.prefix}references_${etype}`,
             )} WHERE "guid"=@guid;`,
             {
               etypes: [etype],
               params: {
                 guid,
               },
-            }
+            },
           );
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
             {
               etypes: [etype],
@@ -1762,7 +1762,7 @@ export default class SQLite3Driver extends NymphDriver {
                 cdate: Number(JSON.parse(sdata.cdate)),
                 mdate: Number(JSON.parse(sdata.mdate)),
               },
-            }
+            },
           );
           delete sdata.cdate;
           delete sdata.mdate;
@@ -1780,7 +1780,7 @@ export default class SQLite3Driver extends NymphDriver {
                 : value;
             this.queryRun(
               `INSERT INTO ${SQLite3Driver.escape(
-                `${this.prefix}data_${etype}`
+                `${this.prefix}data_${etype}`,
               )} ("guid", "name", "value") VALUES (@guid, @name, @storageValue);`,
               {
                 etypes: [etype],
@@ -1789,11 +1789,11 @@ export default class SQLite3Driver extends NymphDriver {
                   name,
                   storageValue,
                 },
-              }
+              },
             );
             this.queryRun(
               `INSERT INTO ${SQLite3Driver.escape(
-                `${this.prefix}comparisons_${etype}`
+                `${this.prefix}comparisons_${etype}`,
               )} ("guid", "name", "truthy", "string", "number") VALUES (@guid, @name, @truthy, @string, @number);`,
               {
                 etypes: [etype],
@@ -1804,13 +1804,13 @@ export default class SQLite3Driver extends NymphDriver {
                   string: `${uvalue}`,
                   number: Number(uvalue),
                 },
-              }
+              },
             );
             const references = this.findReferences(value);
             for (const reference of references) {
               this.queryRun(
                 `INSERT INTO ${SQLite3Driver.escape(
-                  `${this.prefix}references_${etype}`
+                  `${this.prefix}references_${etype}`,
                 )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
                 {
                   etypes: [etype],
@@ -1819,7 +1819,7 @@ export default class SQLite3Driver extends NymphDriver {
                     name,
                     reference,
                   },
-                }
+                },
               );
             }
           }
@@ -1827,24 +1827,24 @@ export default class SQLite3Driver extends NymphDriver {
         async (name, curUid) => {
           this.queryRun(
             `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}uids`
+              `${this.prefix}uids`,
             )} WHERE "name"=@name;`,
             {
               params: {
                 name,
               },
-            }
+            },
           );
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}uids`
+              `${this.prefix}uids`,
             )} ("name", "cur_uid") VALUES (@name, @curUid);`,
             {
               params: {
                 name,
                 curUid,
               },
-            }
+            },
           );
         },
         async () => {
@@ -1852,7 +1852,7 @@ export default class SQLite3Driver extends NymphDriver {
         },
         async () => {
           await this.commit('nymph-import');
-        }
+        },
       );
     } catch (e: any) {
       await this.rollback('nymph-import');
@@ -1870,40 +1870,40 @@ export default class SQLite3Driver extends NymphDriver {
         (
           this.queryGet(
             `SELECT "cur_uid" FROM ${SQLite3Driver.escape(
-              `${this.prefix}uids`
+              `${this.prefix}uids`,
             )} WHERE "name"=@name;`,
             {
               params: {
                 name,
               },
-            }
+            },
           ) as any
         )?.cur_uid ?? null;
       if (curUid == null) {
         curUid = 1;
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
-            `${this.prefix}uids`
+            `${this.prefix}uids`,
           )} ("name", "cur_uid") VALUES (@name, @curUid);`,
           {
             params: {
               name,
               curUid,
             },
-          }
+          },
         );
       } else {
         curUid++;
         this.queryRun(
           `UPDATE ${SQLite3Driver.escape(
-            `${this.prefix}uids`
+            `${this.prefix}uids`,
           )} SET "cur_uid"=@curUid WHERE "name"=@name;`,
           {
             params: {
               curUid,
               name,
             },
-          }
+          },
         );
       }
       await this.commit('nymph-newuid');
@@ -1921,14 +1921,14 @@ export default class SQLite3Driver extends NymphDriver {
     await this.startTransaction('nymph-rename-uid');
     this.queryRun(
       `UPDATE ${SQLite3Driver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} SET "name"=@newName WHERE "name"=@oldName;`,
       {
         params: {
           newName,
           oldName,
         },
-      }
+      },
     );
     await this.commit('nymph-rename-uid');
     return true;
@@ -1937,7 +1937,7 @@ export default class SQLite3Driver extends NymphDriver {
   public async rollback(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
-        'Transaction rollback attempted without a name.'
+        'Transaction rollback attempted without a name.',
       );
     }
     if (this.store.transactionsStarted === 0) {
@@ -1964,7 +1964,7 @@ export default class SQLite3Driver extends NymphDriver {
       guid: string,
       data: EntityData,
       sdata: SerializedEntityData,
-      etype: string
+      etype: string,
     ) => {
       const runInsertQuery = (name: string, value: any, svalue: string) => {
         if (value === undefined) {
@@ -1978,7 +1978,7 @@ export default class SQLite3Driver extends NymphDriver {
             : svalue;
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`
+            `${this.prefix}data_${etype}`,
           )} ("guid", "name", "value") VALUES (@guid, @name, @storageValue);`,
           {
             etypes: [etype],
@@ -1987,11 +1987,11 @@ export default class SQLite3Driver extends NymphDriver {
               name,
               storageValue,
             },
-          }
+          },
         );
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}`
+            `${this.prefix}comparisons_${etype}`,
           )} ("guid", "name", "truthy", "string", "number") VALUES (@guid, @name, @truthy, @string, @number);`,
           {
             etypes: [etype],
@@ -2002,13 +2002,13 @@ export default class SQLite3Driver extends NymphDriver {
               string: `${value}`,
               number: Number(value),
             },
-          }
+          },
         );
         const references = this.findReferences(svalue);
         for (const reference of references) {
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}references_${etype}`
+              `${this.prefix}references_${etype}`,
             )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
             {
               etypes: [etype],
@@ -2017,7 +2017,7 @@ export default class SQLite3Driver extends NymphDriver {
                 name,
                 reference,
               },
-            }
+            },
           );
         }
       };
@@ -2040,7 +2040,7 @@ export default class SQLite3Driver extends NymphDriver {
           }
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @cdate);`,
             {
               etypes: [etype],
@@ -2049,7 +2049,7 @@ export default class SQLite3Driver extends NymphDriver {
                 tags: ',' + tags.join(',') + ',',
                 cdate,
               },
-            }
+            },
           );
           insertData(guid, data, sdata, etype);
           return true;
@@ -2063,7 +2063,7 @@ export default class SQLite3Driver extends NymphDriver {
           }
           const info = this.queryRun(
             `UPDATE ${SQLite3Driver.escape(
-              `${this.prefix}entities_${etype}`
+              `${this.prefix}entities_${etype}`,
             )} SET "tags"=@tags, "mdate"=@mdate WHERE "guid"=@guid AND "mdate" <= @emdate;`,
             {
               etypes: [etype],
@@ -2073,42 +2073,42 @@ export default class SQLite3Driver extends NymphDriver {
                 guid,
                 emdate: Number(entity.mdate),
               },
-            }
+            },
           );
           let success = false;
           if (info.changes === 1) {
             this.queryRun(
               `DELETE FROM ${SQLite3Driver.escape(
-                `${this.prefix}data_${etype}`
+                `${this.prefix}data_${etype}`,
               )} WHERE "guid"=@guid;`,
               {
                 etypes: [etype],
                 params: {
                   guid,
                 },
-              }
+              },
             );
             this.queryRun(
               `DELETE FROM ${SQLite3Driver.escape(
-                `${this.prefix}comparisons_${etype}`
+                `${this.prefix}comparisons_${etype}`,
               )} WHERE "guid"=@guid;`,
               {
                 etypes: [etype],
                 params: {
                   guid,
                 },
-              }
+              },
             );
             this.queryRun(
               `DELETE FROM ${SQLite3Driver.escape(
-                `${this.prefix}references_${etype}`
+                `${this.prefix}references_${etype}`,
               )} WHERE "guid"=@guid;`,
               {
                 etypes: [etype],
                 params: {
                   guid,
                 },
-              }
+              },
             );
             insertData(guid, data, sdata, etype);
             success = true;
@@ -2125,7 +2125,7 @@ export default class SQLite3Driver extends NymphDriver {
             await this.rollback('nymph-save');
           }
           return success;
-        }
+        },
       );
     } catch (e: any) {
       await this.rollback('nymph-save');
@@ -2140,24 +2140,24 @@ export default class SQLite3Driver extends NymphDriver {
     await this.startTransaction('nymph-set-uid');
     this.queryRun(
       `DELETE FROM ${SQLite3Driver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} WHERE "name"=@name;`,
       {
         params: {
           name,
         },
-      }
+      },
     );
     this.queryRun(
       `INSERT INTO ${SQLite3Driver.escape(
-        `${this.prefix}uids`
+        `${this.prefix}uids`,
       )} ("name", "cur_uid") VALUES (@name, @curUid);`,
       {
         params: {
           name,
           curUid,
         },
-      }
+      },
     );
     await this.commit('nymph-set-uid');
     return true;
@@ -2166,7 +2166,7 @@ export default class SQLite3Driver extends NymphDriver {
   public async startTransaction(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
-        'Transaction start attempted without a name.'
+        'Transaction start attempted without a name.',
       );
     }
     if (!this.config.explicitWrite && !this.store.linkWrite) {

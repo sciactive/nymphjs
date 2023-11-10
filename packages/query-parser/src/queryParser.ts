@@ -4,7 +4,7 @@ import splitn from '@sciactive/splitn';
 export type BareQueryHandler = (
   input: string,
   entityClass?: EntityConstructor,
-  defaultFields?: string[]
+  defaultFields?: string[],
 ) => Partial<Selector>;
 
 export type QRefMap = {
@@ -12,7 +12,7 @@ export type QRefMap = {
 };
 
 export default function queryParser<
-  T extends EntityConstructor = EntityConstructor
+  T extends EntityConstructor = EntityConstructor,
 >({
   query,
   entityClass,
@@ -27,7 +27,7 @@ export default function queryParser<
         type: '|',
         ilike: defaultFields.map((field) => [field, input]) as [
           string,
-          string
+          string,
         ][],
       };
     }
@@ -144,7 +144,7 @@ function selectorsParser({
           defaultFields,
           qrefMap,
           bareHandler,
-        })
+        }),
       );
     }
   }

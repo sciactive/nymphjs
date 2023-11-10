@@ -195,7 +195,7 @@ export interface EntityInterface extends DataObjectInterface {
   $serverCall(
     method: string,
     params: Iterable<any>,
-    stateless: boolean
+    stateless: boolean,
   ): Promise<any>;
   /**
    * Return a Nymph Entity Reference for this entity.

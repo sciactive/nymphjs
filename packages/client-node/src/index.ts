@@ -37,7 +37,7 @@ class NodePubSub extends PubSub {
         WebSocket: w3cwebsocket as unknown as typeof WebSocket,
         ...nymphOptions,
       },
-      nymph
+      nymph,
     );
   }
 }

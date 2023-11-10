@@ -12,7 +12,7 @@ import {
 
 export function QueriesTest(
   nymph: Nymph,
-  it: (name: string, fn: () => void) => void
+  it: (name: string, fn: () => void) => void,
 ) {
   const TestModel = nymph.addEntityClass(TestModelClass);
   const TestBModel = nymph.addEntityClass(TestBModelClass);
@@ -67,7 +67,7 @@ These hats are absolutely fantastic.`;
     // Test asynchronous getEntity.
     testEntity = (await nymph.getEntity(
       { class: TestModel },
-      testGuid
+      testGuid,
     )) as TestModelClass & TestModelData;
     expect(testEntity).toBeInstanceOf(TestModel);
     expect(testEntity.guid).toEqual(testGuid);
@@ -156,7 +156,7 @@ These hats are absolutely fantastic.`;
 
     if (!(await transaction.inTransaction())) {
       console.log(
-        'This Nymph driver or database seems to not support transactions. Skipping transaction tests.'
+        'This Nymph driver or database seems to not support transactions. Skipping transaction tests.',
       );
       await transaction.rollback('test');
       return;
@@ -187,7 +187,7 @@ These hats are absolutely fantastic.`;
     expect(await testEntity.$delete()).toEqual(true);
     const resultEntity = await transaction.getEntity(
       { class: TestModel },
-      testGuid
+      testGuid,
     );
     expect(resultEntity).toBeNull();
 
@@ -200,7 +200,7 @@ These hats are absolutely fantastic.`;
     // Verify it's back.
     testEntity = (await transaction.getEntity(
       { class: TestModel },
-      testGuid
+      testGuid,
     )) as TestModelClass & TestModelData;
 
     expect(testEntity.guid).toEqual(testGuid);
@@ -246,7 +246,7 @@ These hats are absolutely fantastic.`;
         limit: 1,
         sort: 'cdate',
       },
-      { type: '&', tag: 'test' }
+      { type: '&', tag: 'test' },
     );
     expect(resultEntities.length).toEqual(1);
     expect(testEntity.$is(resultEntities[0])).toEqual(true);
@@ -258,7 +258,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by GUID and tags...
     const resultEntity = await nymph.getEntity(
       { class: TestModel },
-      { type: '&', guid: testGuid, tag: 'test' }
+      { type: '&', guid: testGuid, tag: 'test' },
     );
     expect(testEntity.$is(resultEntity)).toEqual(true);
   });
@@ -269,7 +269,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by GUID and tags...
     const resultEntity = await nymph.getEntity(
       { class: TestModel },
-      { type: '|', guid: [testGuid, guid()] }
+      { type: '|', guid: [testGuid, guid()] },
     );
     expect(testEntity.$is(resultEntity)).toEqual(true);
   });
@@ -280,7 +280,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by GUID and tags...
     const resultEntity = await nymph.getEntity(
       { class: TestModel },
-      { type: '|', guid: [guid(), guid()] }
+      { type: '|', guid: [guid(), guid()] },
     );
     expect(testEntity.$is(resultEntity)).toEqual(false);
   });
@@ -291,7 +291,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by !GUID...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', '!guid': guid(), tag: 'test' }
+      { type: '&', '!guid': guid(), tag: 'test' },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -302,7 +302,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by !tags...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', guid: testGuid, '!tag': ['barbecue', 'pickles'] }
+      { type: '&', guid: testGuid, '!tag': ['barbecue', 'pickles'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -313,7 +313,7 @@ These hats are absolutely fantastic.`;
     // Testing GUID and wrong tags...
     const resultEntity = await nymph.getEntity(
       { class: TestModel },
-      { type: '&', guid: testGuid, tag: ['pickles'] }
+      { type: '&', guid: testGuid, tag: ['pickles'] },
     );
     expect(resultEntity).toBeNull();
   });
@@ -324,7 +324,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by tags...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test' }
+      { type: '&', tag: 'test' },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -335,7 +335,7 @@ These hats are absolutely fantastic.`;
     // Testing wrong tags...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'pickles' }
+      { type: '&', tag: 'pickles' },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -346,7 +346,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by tags inclusively...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '|', tag: ['pickles', 'test', 'barbecue'] }
+      { type: '|', tag: ['pickles', 'test', 'barbecue'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -357,7 +357,7 @@ These hats are absolutely fantastic.`;
     // Testing wrong inclusive tags...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '|', tag: ['pickles', 'barbecue'] }
+      { type: '|', tag: ['pickles', 'barbecue'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -369,7 +369,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
-      { type: '|', tag: ['pickles', 'test', 'barbecue'] }
+      { type: '|', tag: ['pickles', 'test', 'barbecue'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -381,7 +381,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
-      { type: '|', tag: ['pickles', 'barbecue'] }
+      { type: '|', tag: ['pickles', 'barbecue'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -393,7 +393,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'pickles' },
-      { type: '|', tag: ['test', 'barbecue'] }
+      { type: '|', tag: ['test', 'barbecue'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -404,7 +404,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by defined...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', defined: 'string' }
+      { type: '&', defined: 'string' },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -415,7 +415,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by !defined...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', '!defined': 'pickles' }
+      { type: '&', tag: 'test', '!defined': 'pickles' },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -427,7 +427,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '!&', defined: 'pickles' },
-      { type: '&', tag: 'test' }
+      { type: '&', tag: 'test' },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -438,7 +438,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by equal...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', equal: ['string', 'test'] }
+      { type: '&', equal: ['string', 'test'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -452,7 +452,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by !equal...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', '!equal': ['string', 'wrong'] }
+      { type: '&', tag: 'test', '!equal': ['string', 'wrong'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -464,7 +464,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by like...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', like: ['string', 't_s%'] }
+      { type: '&', like: ['string', 't_s%'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -478,7 +478,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by !like...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', '!like': ['string', 'wr_n%'] }
+      { type: '&', tag: 'test', '!like': ['string', 'wr_n%'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -490,7 +490,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by ilike...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', ilike: ['string', 'T_s%'] }
+      { type: '&', ilike: ['string', 'T_s%'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -504,7 +504,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by !ilike...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', '!ilike': ['string', 'wr_n%'] }
+      { type: '&', tag: 'test', '!ilike': ['string', 'wr_n%'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -516,7 +516,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by like...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', like: ['string', 'T_s%'] }
+      { type: '&', like: ['string', 'T_s%'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -527,7 +527,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by tags and equal...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', equal: ['string', 'test'] }
+      { type: '&', tag: 'test', equal: ['string', 'test'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -538,7 +538,7 @@ These hats are absolutely fantastic.`;
     // Testing wrong tags and right equal...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'pickles', equal: ['string', 'test'] }
+      { type: '&', tag: 'pickles', equal: ['string', 'test'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -549,7 +549,7 @@ These hats are absolutely fantastic.`;
     // Testing right tags and wrong equal...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', equal: ['string', 'pickles'] }
+      { type: '&', tag: 'test', equal: ['string', 'pickles'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -560,7 +560,7 @@ These hats are absolutely fantastic.`;
     // Testing wrong tags and wrong equal...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'pickles', equal: ['string', 'pickles'] }
+      { type: '&', tag: 'pickles', equal: ['string', 'pickles'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -571,14 +571,14 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by contain...
     let resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', contain: ['array', 'values'] }
+      { type: '&', contain: ['array', 'values'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
     // Retrieving entity by contain with full match...
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', contain: ['string', 'test'] }
+      { type: '&', contain: ['string', 'test'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -590,7 +590,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
-      { type: '!&', contain: ['array', 'pickles'] }
+      { type: '!&', contain: ['array', 'pickles'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -601,14 +601,14 @@ These hats are absolutely fantastic.`;
     // Testing wrong contain...
     let resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', contain: ['array', 'pickles'] }
+      { type: '&', contain: ['array', 'pickles'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
     // Testing wrong contain...
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', contain: ['string', 'pickles'] }
+      { type: '&', contain: ['string', 'pickles'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -619,12 +619,12 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by regex match...
     let resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', match: ['match', '.*'] } // anything
+      { type: '&', match: ['match', '.*'] }, // anything
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', match: ['match', 'Edward McCheese'] } // a substring
+      { type: '&', tag: 'test', match: ['match', 'Edward McCheese'] }, // a substring
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     resultEntity = await nymph.getEntities(
@@ -636,7 +636,7 @@ These hats are absolutely fantastic.`;
           ['string', '[0-9]'],
           ['match', 'Edward McCheese'],
         ],
-      } // inclusive test
+      }, // inclusive test
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     resultEntity = await nymph.getEntities(
@@ -645,7 +645,7 @@ These hats are absolutely fantastic.`;
         type: '&',
         tag: 'test',
         match: ['match', '[-a-zA-Z0-9+_]+@[-a-zA-Z0-9_]+.[-a-zA-Z0-9_]{2,4}'],
-      } // a simple email
+      }, // a simple email
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     resultEntity = await nymph.getEntities(
@@ -654,7 +654,7 @@ These hats are absolutely fantastic.`;
         type: '&',
         tag: 'test',
         match: ['match', '\\([0-9]{3}\\) [0-9]{3}-[0-9]{4}'],
-      } // a phone number
+      }, // a phone number
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -665,7 +665,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by regex match...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', imatch: ['match', 'edward mccheese'] } // a substring
+      { type: '&', tag: 'test', imatch: ['match', 'edward mccheese'] }, // a substring
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -676,12 +676,12 @@ These hats are absolutely fantastic.`;
     // Testing wrong regex match...
     let resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', match: ['match', 'Q'] }
+      { type: '&', match: ['match', 'Q'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'pickle', match: ['match', '.*'] }
+      { type: '&', tag: 'pickle', match: ['match', '.*'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
     resultEntity = await nymph.getEntities(
@@ -692,7 +692,7 @@ These hats are absolutely fantastic.`;
           ['string', '[0-9]'],
           ['match', ',,'],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -703,7 +703,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by regex match...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', match: ['match', 'edward mccheese'] } // a substring
+      { type: '&', tag: 'test', match: ['match', 'edward mccheese'] }, // a substring
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -715,7 +715,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
-      { type: '|', equal: ['string', 'pickles'], match: ['string', 'test'] }
+      { type: '|', equal: ['string', 'pickles'], match: ['string', 'test'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -732,7 +732,7 @@ These hats are absolutely fantastic.`;
           ['number', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -745,7 +745,7 @@ These hats are absolutely fantastic.`;
           ['number', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -758,7 +758,7 @@ These hats are absolutely fantastic.`;
           ['number', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -771,7 +771,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -784,7 +784,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -797,7 +797,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -814,7 +814,7 @@ These hats are absolutely fantastic.`;
           ['number', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -827,7 +827,7 @@ These hats are absolutely fantastic.`;
           ['number', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -840,7 +840,7 @@ These hats are absolutely fantastic.`;
           ['number', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -853,7 +853,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -866,7 +866,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -879,7 +879,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -896,7 +896,7 @@ These hats are absolutely fantastic.`;
           ['number', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -909,7 +909,7 @@ These hats are absolutely fantastic.`;
           ['number', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -922,7 +922,7 @@ These hats are absolutely fantastic.`;
           ['number', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -935,7 +935,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -948,7 +948,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -961,7 +961,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -978,7 +978,7 @@ These hats are absolutely fantastic.`;
           ['number', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -991,7 +991,7 @@ These hats are absolutely fantastic.`;
           ['number', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -1004,7 +1004,7 @@ These hats are absolutely fantastic.`;
           ['number', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
 
@@ -1017,7 +1017,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 30],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -1030,7 +1030,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 31],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -1043,7 +1043,7 @@ These hats are absolutely fantastic.`;
           ['numberString', 29],
           ['pickles', 100],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1055,7 +1055,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
-      { type: '!&', gte: ['number', 60] }
+      { type: '!&', gte: ['number', 60] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1066,7 +1066,7 @@ These hats are absolutely fantastic.`;
     // Testing wrong inequality...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', lte: ['number', 29.99] }
+      { type: '&', lte: ['number', 29.99] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1077,7 +1077,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by time...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', gt: ['cdate', (testEntity.cdate ?? 0) - 120] }
+      { type: '&', tag: 'test', gt: ['cdate', (testEntity.cdate ?? 0) - 120] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1088,7 +1088,7 @@ These hats are absolutely fantastic.`;
     // Testing wrong time...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', gte: ['cdate', (testEntity.cdate ?? 0) + 1] }
+      { type: '&', tag: 'test', gte: ['cdate', (testEntity.cdate ?? 0) + 1] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1101,7 +1101,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by relative time...
     let resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', gt: ['timestamp', null, '-1 day'] }
+      { type: '&', gt: ['timestamp', null, '-1 day'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -1115,7 +1115,7 @@ These hats are absolutely fantastic.`;
           ['timestamp', null, '-1 day'],
           ['timestamp', null, '+5 days'],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -1123,7 +1123,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by relative time...
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', gt: ['timestamp', null, '-3 days'] }
+      { type: '&', gt: ['timestamp', null, '-3 days'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(true);
@@ -1131,7 +1131,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by relative time...
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', gt: ['cdate', null, '-1 day'] }
+      { type: '&', gt: ['cdate', null, '-1 day'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(true);
@@ -1145,7 +1145,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by relative time...
     let resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', gt: ['timestamp', null, '+1 day'] }
+      { type: '&', tag: 'test', gt: ['timestamp', null, '+1 day'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -1153,7 +1153,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by relative time...
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', lt: ['timestamp', null, '-3 days'] }
+      { type: '&', tag: 'test', lt: ['timestamp', null, '-3 days'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -1161,7 +1161,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by relative time...
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', tag: 'test', gt: ['cdate', null, '+1 day'] }
+      { type: '&', tag: 'test', gt: ['cdate', null, '+1 day'] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
     expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -1185,7 +1185,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by reference...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', ref: ['reference', refGuid] }
+      { type: '&', ref: ['reference', refGuid] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1197,7 +1197,7 @@ These hats are absolutely fantastic.`;
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', tag: 'test' },
-      { type: '!&', ref: ['reference', guid()] }
+      { type: '!&', ref: ['reference', guid()] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1208,7 +1208,7 @@ These hats are absolutely fantastic.`;
     // Testing wrong reference...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', ref: ['reference', guid()] }
+      { type: '&', ref: ['reference', guid()] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1219,7 +1219,7 @@ These hats are absolutely fantastic.`;
     // Testing non-existent reference...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', ref: ['pickle', refGuid] }
+      { type: '&', ref: ['pickle', refGuid] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1236,7 +1236,7 @@ These hats are absolutely fantastic.`;
           ['reference', refGuid],
           ['reference', guid()],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1253,7 +1253,7 @@ These hats are absolutely fantastic.`;
           ['reference', guid()],
           ['reference', guid()],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1264,7 +1264,7 @@ These hats are absolutely fantastic.`;
     // Retrieving entity by array reference...
     const resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', ref: ['refArray', refGuid] }
+      { type: '&', ref: ['refArray', refGuid] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1281,7 +1281,7 @@ These hats are absolutely fantastic.`;
           ['refArray', refGuid],
           ['refArray', guid()],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1326,7 +1326,7 @@ These hats are absolutely fantastic.`;
           ['array', 'values'],
           ['array', 500],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1346,13 +1346,13 @@ These hats are absolutely fantastic.`;
 
     const resultSelectors = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', ref: ['reference', refGuid] }
+      { type: '&', ref: ['reference', refGuid] },
     );
 
     // Testing count return with selectors...
     const resultSelectorsCount = await nymph.getEntities(
       { class: TestModel, return: 'count' },
-      { type: '&', ref: ['reference', refGuid] }
+      { type: '&', ref: ['reference', refGuid] },
     );
     expect(resultSelectorsCount).toBeGreaterThanOrEqual(1);
     expect(resultSelectorsCount).toEqual(resultSelectors.length);
@@ -1375,7 +1375,7 @@ These hats are absolutely fantastic.`;
     // Testing empty count...
     const resultSelectorsEmpty = await nymph.getEntities(
       { class: TestModel, return: 'count' },
-      { type: '&', ref: ['reference', guid()] }
+      { type: '&', ref: ['reference', guid()] },
     );
     expect(resultSelectorsEmpty).toEqual(0);
   });
@@ -1420,7 +1420,7 @@ These hats are absolutely fantastic.`;
           ['array', 'values'],
           ['array', 500],
         ],
-      }
+      },
     );
     expect(resultGuid.indexOf(testEntity.guid ?? '')).toBeGreaterThan(-1);
   });
@@ -1470,7 +1470,7 @@ These hats are absolutely fantastic.`;
             ],
           },
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
@@ -1515,7 +1515,7 @@ These hats are absolutely fantastic.`;
             ],
           },
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity2)).toEqual(true);
 
@@ -1531,7 +1531,7 @@ These hats are absolutely fantastic.`;
           },
           { type: '&', gte: ['number', 16000] },
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity3)).toEqual(true);
 
@@ -1553,7 +1553,7 @@ These hats are absolutely fantastic.`;
             },
           },
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity4)).toEqual(true);
   });
@@ -1572,7 +1572,7 @@ These hats are absolutely fantastic.`;
           },
           { type: '&', gte: ['number', 16000] },
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1589,7 +1589,7 @@ These hats are absolutely fantastic.`;
           'reference',
           [{ class: TestModel }, { type: '&', equal: ['test', 'good'] }],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1606,7 +1606,7 @@ These hats are absolutely fantastic.`;
           'reference',
           [{ class: TestModel }, { type: '&', equal: ['test', 'pickles'] }],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
@@ -1623,7 +1623,7 @@ These hats are absolutely fantastic.`;
           'reference',
           [{ class: TestBModel }, { type: '&', equal: ['test', 'good'] }],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1640,7 +1640,7 @@ These hats are absolutely fantastic.`;
           'reference',
           [{ class: TestModel }, { type: '&', equal: ['test', 'pickles'] }],
         ],
-      }
+      },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
@@ -1654,7 +1654,7 @@ These hats are absolutely fantastic.`;
       expect(resultEntities.length).toBeGreaterThan(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
         expect(resultEntities[i + 1][sort]).toBeGreaterThan(
-          resultEntities[i][sort] ?? 0
+          resultEntities[i][sort] ?? 0,
         );
       }
 
@@ -1678,7 +1678,7 @@ These hats are absolutely fantastic.`;
       expect(resultEntities.length).toBeGreaterThan(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
         expect(resultEntities[i + 1][sort]).toBeLessThan(
-          resultEntities[i][sort] ?? 0
+          resultEntities[i][sort] ?? 0,
         );
       }
 
@@ -1686,24 +1686,24 @@ These hats are absolutely fantastic.`;
       // Retrieving entities sorted...
       resultEntities = await nymph.getEntities(
         { class: TestModel, sort },
-        { type: '&', match: ['name', '^Multi Test '] }
+        { type: '&', match: ['name', '^Multi Test '] },
       );
       expect(resultEntities.length).toEqual(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
         expect(resultEntities[i + 1][sort]).toBeGreaterThan(
-          resultEntities[i][sort] ?? 0
+          resultEntities[i][sort] ?? 0,
         );
       }
 
       // Retrieving entities reverse sorted...
       resultEntities = await nymph.getEntities(
         { class: TestModel, sort, reverse: true },
-        { type: '&', match: ['name', '^Multi Test '] }
+        { type: '&', match: ['name', '^Multi Test '] },
       );
       expect(resultEntities.length).toEqual(100);
       for (let i = 0; i < resultEntities.length - 1; i++) {
         expect(resultEntities[i + 1][sort]).toBeLessThan(
-          resultEntities[i][sort] ?? 0
+          resultEntities[i][sort] ?? 0,
         );
       }
     }
@@ -1720,7 +1720,7 @@ These hats are absolutely fantastic.`;
     expect(resultEntities.length).toBeGreaterThan(100);
     for (let i = 0; i < resultEntities.length - 1; i++) {
       expect(resultEntities[i + 1].number ?? Infinity).toBeGreaterThanOrEqual(
-        resultEntities[i].number ?? 0
+        resultEntities[i].number ?? 0,
       );
     }
 
@@ -1744,7 +1744,7 @@ These hats are absolutely fantastic.`;
     expect(resultEntities.length).toBeGreaterThan(100);
     for (let i = 0; i < resultEntities.length - 1; i++) {
       expect(resultEntities[i + 1].number ?? 0).toBeLessThanOrEqual(
-        resultEntities[i].number ?? Infinity
+        resultEntities[i].number ?? Infinity,
       );
     }
 
@@ -1752,30 +1752,30 @@ These hats are absolutely fantastic.`;
     // Retrieving entities sorted...
     resultEntities = await nymph.getEntities(
       { class: TestModel, sort: 'number' },
-      { type: '&', match: ['name', '^Multi Test '] }
+      { type: '&', match: ['name', '^Multi Test '] },
     );
     expect(resultEntities.length).toEqual(100);
     for (let i = 0; i < resultEntities.length - 1; i++) {
       expect(resultEntities[i + 1].number ?? Infinity).toBeGreaterThan(
-        resultEntities[i].number ?? 0
+        resultEntities[i].number ?? 0,
       );
       expect(resultEntities[i].name).toEqual(
-        `Multi Test ${100 - (resultEntities[i].number ?? 0)}`
+        `Multi Test ${100 - (resultEntities[i].number ?? 0)}`,
       );
     }
 
     // Retrieving entities reverse sorted...
     resultEntities = await nymph.getEntities(
       { class: TestModel, sort: 'number', reverse: true },
-      { type: '&', match: ['name', '^Multi Test '] }
+      { type: '&', match: ['name', '^Multi Test '] },
     );
     expect(resultEntities.length).toEqual(100);
     for (let i = 0; i < resultEntities.length - 1; i++) {
       expect(resultEntities[i + 1].number ?? 0).toBeLessThan(
-        resultEntities[i].number ?? Infinity
+        resultEntities[i].number ?? Infinity,
       );
       expect(resultEntities[i].name).toEqual(
-        `Multi Test ${100 - (resultEntities[i].number ?? 0)}`
+        `Multi Test ${100 - (resultEntities[i].number ?? 0)}`,
       );
     }
   });
@@ -1799,7 +1799,7 @@ These hats are absolutely fantastic.`;
 
     const entity = await nymph.getEntity(
       { class: TestModel },
-      { type: '&', guid: testGuid }
+      { type: '&', guid: testGuid },
     );
 
     expect(entity).toBeNull();
@@ -1808,7 +1808,7 @@ These hats are absolutely fantastic.`;
 
 export function UIDTest(
   nymph: Nymph,
-  it: (name: string, fn: () => void) => void
+  it: (name: string, fn: () => void) => void,
 ) {
   it('delete old test data', async () => {
     expect(await nymph.deleteUID('TestUID')).toEqual(true);
@@ -1849,7 +1849,7 @@ export function UIDTest(
 
 export function ExportImportTest(
   nymph: Nymph,
-  it: (name: string, fn: () => void) => void
+  it: (name: string, fn: () => void) => void,
 ) {
   const TestModel = nymph.addEntityClass(TestModelClass);
   const TestBModel = nymph.addEntityClass(TestBModelClass);
@@ -1947,7 +1947,7 @@ export function ExportImportTest(
 
   it('export data', async () => {
     expect(await nymph.export(__dirname + '/testentityexport.nex')).toEqual(
-      true
+      true,
     );
   });
 
@@ -1964,7 +1964,7 @@ export function ExportImportTest(
     expect(bmodels.length).toEqual(0);
 
     expect(await nymph.import(__dirname + '/testentityexport.nex')).toEqual(
-      true
+      true,
     );
 
     await checkEntityDataAndCount();

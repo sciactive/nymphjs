@@ -6,7 +6,7 @@ import {
 } from '@nymphjs/tilmeld-client';
 
 const nymph = new Nymph(
-  (window as unknown as { nymphOptions: NymphOptions }).nymphOptions
+  (window as unknown as { nymphOptions: NymphOptions }).nymphOptions,
 );
 const User = nymph.addEntityClass(UserClass);
 const Group = nymph.addEntityClass(GroupClass);

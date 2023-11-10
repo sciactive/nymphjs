@@ -59,7 +59,7 @@ let subscription = pubsub.subscribeEntities(
   {
     type: '&',
     '!tag': 'archived',
-  }
+  },
 )(
   (update) => {
     // The first time this is called, `update` will be an array of Todo
@@ -77,7 +77,7 @@ let subscription = pubsub.subscribeEntities(
     // If you provide this callback, the server will send updates of how many
     // clients are subscribed to this query.
     userCount = count;
-  }
+  },
 );
 
 // ...

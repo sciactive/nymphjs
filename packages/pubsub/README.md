@@ -27,7 +27,7 @@ const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
-  })
+  }),
 );
 PubSub.initPublisher(pubSubConfig, nymph);
 ```
@@ -51,7 +51,7 @@ const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
-  })
+  }),
 );
 // Don't forget to do this; even here!
 PubSub.initPublisher(pubSubConfig, nymph);
@@ -81,7 +81,7 @@ const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:', // Put the correct driver/config here.
-  })
+  }),
 );
 // Don't forget to do this; even here!
 PubSub.initPublisher(pubSubConfig, nymph);
@@ -95,7 +95,7 @@ const server = http.createServer((_request, response) => {
 const listener = server.listen(port, () => {
   console.log(
     new Date().toISOString(),
-    `Nymph-PubSub server started listening on port ${port}.`
+    `Nymph-PubSub server started listening on port ${port}.`,
   );
 });
 const wsServer = new WebSocketServer({
