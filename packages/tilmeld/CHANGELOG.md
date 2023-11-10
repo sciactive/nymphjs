@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.47](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.46...v1.0.0-beta.47) (2023-11-10)
+
+**Note:** Version bump only for package @nymphjs/tilmeld
+
 # [1.0.0-beta.46](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.45...v1.0.0-beta.46) (2023-08-29)
 
 ### Bug Fixes
