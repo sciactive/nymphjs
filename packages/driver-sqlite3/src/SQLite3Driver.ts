@@ -359,12 +359,13 @@ export default class SQLite3Driver extends NymphDriver {
           )} ("name" TEXT PRIMARY KEY NOT NULL, "cur_uid" INTEGER NOT NULL);`,
         );
       }
-      this.commit('nymph-tablecreation');
-      return true;
     } catch (e: any) {
       this.rollback('nymph-tablecreation');
       throw e;
     }
+
+    this.commit('nymph-tablecreation');
+    return true;
   }
 
   private query<T extends () => any>(
@@ -532,16 +533,17 @@ export default class SQLite3Driver extends NymphDriver {
           },
         },
       );
-      await this.commit('nymph-delete');
-      // Remove any cached versions of this entity.
-      if (this.nymph.config.cache) {
-        this.cleanCache(guid);
-      }
-      return true;
     } catch (e: any) {
       await this.rollback('nymph-delete');
       throw e;
     }
+
+    await this.commit('nymph-delete');
+    // Remove any cached versions of this entity.
+    if (this.nymph.config.cache) {
+      this.cleanCache(guid);
+    }
+    return true;
   }
 
   public async deleteUID(name: string) {
@@ -1865,8 +1867,9 @@ export default class SQLite3Driver extends NymphDriver {
       throw new InvalidParametersError('Name not given for UID.');
     }
     await this.startTransaction('nymph-newuid');
+    let curUid: number | undefined = undefined;
     try {
-      let curUid =
+      curUid =
         (
           this.queryGet(
             `SELECT "cur_uid" FROM ${SQLite3Driver.escape(
@@ -1906,12 +1909,13 @@ export default class SQLite3Driver extends NymphDriver {
           },
         );
       }
-      await this.commit('nymph-newuid');
-      return curUid as number;
     } catch (e: any) {
       await this.rollback('nymph-newuid');
       throw e;
     }
+
+    await this.commit('nymph-newuid');
+    return curUid as number;
   }
 
   public async renameUID(oldName: string, newName: string) {
@@ -2028,6 +2032,7 @@ export default class SQLite3Driver extends NymphDriver {
         runInsertQuery(name, JSON.parse(sdata[name]), sdata[name]);
       }
     };
+    let inTransaction = false;
     try {
       return this.saveEntityRowLike(
         entity,
@@ -2117,18 +2122,24 @@ export default class SQLite3Driver extends NymphDriver {
         },
         async () => {
           await this.startTransaction('nymph-save');
+          inTransaction = true;
         },
         async (success) => {
-          if (success) {
-            await this.commit('nymph-save');
-          } else {
-            await this.rollback('nymph-save');
+          if (inTransaction) {
+            inTransaction = false;
+            if (success) {
+              await this.commit('nymph-save');
+            } else {
+              await this.rollback('nymph-save');
+            }
           }
           return success;
         },
       );
     } catch (e: any) {
-      await this.rollback('nymph-save');
+      if (inTransaction) {
+        await this.rollback('nymph-save');
+      }
       throw e;
     }
   }

@@ -1768,6 +1768,9 @@ export default class User extends AbleObject<UserData> {
     this.$nymph = tnymph;
     tilmeld = enforceTilmeld(this);
 
+    let message = '';
+    let loggedin = false;
+
     try {
       // Add primary group.
       let generatedPrimaryGroup: (Group & GroupData) | null = null;
@@ -1883,9 +1886,6 @@ export default class User extends AbleObject<UserData> {
           );
         }
 
-        let message = '';
-        let loggedin = false;
-
         // Save the primary group.
         if (generatedPrimaryGroup != null) {
           generatedPrimaryGroup.user = this;
@@ -1940,20 +1940,6 @@ export default class User extends AbleObject<UserData> {
             });
           }
         }
-
-        try {
-          await tnymph.commit(transaction);
-          this.$nymph = nymph;
-          await this.$nymph.tilmeld?.fillSession(this);
-        } catch (e: any) {
-          throw e;
-        }
-
-        return {
-          result: true,
-          loggedin,
-          message,
-        };
       } else {
         await tnymph.rollback(transaction);
         this.$nymph = nymph;
@@ -1968,6 +1954,20 @@ export default class User extends AbleObject<UserData> {
       this.$nymph = nymph;
       throw e;
     }
+
+    try {
+      await tnymph.commit(transaction);
+      this.$nymph = nymph;
+      await this.$nymph.tilmeld?.fillSession(this);
+    } catch (e: any) {
+      throw e;
+    }
+
+    return {
+      result: true,
+      loggedin,
+      message,
+    };
   }
 
   public async $save() {

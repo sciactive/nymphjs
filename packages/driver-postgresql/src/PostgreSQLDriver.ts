@@ -704,16 +704,17 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         },
       );
-      await this.commit('nymph-delete');
-      // Remove any cached versions of this entity.
-      if (this.nymph.config.cache) {
-        this.cleanCache(guid);
-      }
-      return true;
     } catch (e: any) {
       await this.rollback('nymph-delete');
       throw e;
     }
+
+    await this.commit('nymph-delete');
+    // Remove any cached versions of this entity.
+    if (this.nymph.config.cache) {
+      this.cleanCache(guid);
+    }
+    return true;
   }
 
   public async deleteUID(name: string) {
@@ -2145,6 +2146,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       throw new InvalidParametersError('Name not given for UID.');
     }
     await this.internalTransaction('nymph-newuid');
+    let curUid: number | undefined = undefined;
     try {
       const lock = await this.queryGet(
         `SELECT "cur_uid" FROM ${PostgreSQLDriver.escape(
@@ -2156,8 +2158,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         },
       );
-      let curUid: number | undefined =
-        lock?.cur_uid == null ? undefined : Number(lock.cur_uid);
+      curUid = lock?.cur_uid == null ? undefined : Number(lock.cur_uid);
       if (curUid == null) {
         curUid = 1;
         await this.queryRun(
@@ -2185,12 +2186,13 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         );
       }
-      await this.commit('nymph-newuid');
-      return curUid;
     } catch (e: any) {
       await this.rollback('nymph-newuid');
       throw e;
     }
+
+    await this.commit('nymph-newuid');
+    return curUid;
   }
 
   public async renameUID(oldName: string, newName: string) {
@@ -2315,6 +2317,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         await runInsertQuery(name, JSON.parse(sdata[name]), sdata[name]);
       }
     };
+    let inTransaction = false;
     try {
       const result = await this.saveEntityRowLike(
         entity,
@@ -2466,12 +2469,16 @@ export default class PostgreSQLDriver extends NymphDriver {
         },
         async () => {
           await this.internalTransaction('nymph-save');
+          inTransaction = true;
         },
         async (success) => {
-          if (success) {
-            await this.commit('nymph-save');
-          } else {
-            await this.rollback('nymph-save');
+          if (inTransaction) {
+            inTransaction = false;
+            if (success) {
+              await this.commit('nymph-save');
+            } else {
+              await this.rollback('nymph-save');
+            }
           }
           return success;
         },
@@ -2479,7 +2486,9 @@ export default class PostgreSQLDriver extends NymphDriver {
 
       return result;
     } catch (e: any) {
-      await this.rollback('nymph-save');
+      if (inTransaction) {
+        await this.rollback('nymph-save');
+      }
       throw e;
     }
   }
@@ -2512,12 +2521,13 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         },
       );
-      await this.commit('nymph-setuid');
-      return true;
     } catch (e: any) {
       await this.rollback('nymph-setuid');
       throw e;
     }
+
+    await this.commit('nymph-setuid');
+    return true;
   }
 
   private async internalTransaction(name: string) {

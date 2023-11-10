@@ -530,16 +530,17 @@ export default class MySQLDriver extends NymphDriver {
           },
         },
       );
-      await this.commit('nymph-delete');
-      // Remove any cached versions of this entity.
-      if (this.nymph.config.cache) {
-        this.cleanCache(guid);
-      }
-      return true;
     } catch (e: any) {
       await this.rollback('nymph-delete');
       throw e;
     }
+
+    await this.commit('nymph-delete');
+    // Remove any cached versions of this entity.
+    if (this.nymph.config.cache) {
+      this.cleanCache(guid);
+    }
+    return true;
   }
 
   public async deleteUID(name: string) {
@@ -1940,6 +1941,7 @@ export default class MySQLDriver extends NymphDriver {
       throw new InvalidParametersError('Name not given for UID.');
     }
     await this.internalTransaction('nymph-newuid');
+    let curUid: number | null = null;
     try {
       const lock = await this.queryGet(
         `SELECT GET_LOCK(${MySQLDriver.escapeValue(
@@ -1949,7 +1951,6 @@ export default class MySQLDriver extends NymphDriver {
       if (lock.lock !== 1) {
         throw new QueryFailedError("Couldn't get lock for UID: " + name);
       }
-      let curUid: number | null = null;
       await this.queryRun(
         `INSERT INTO ${MySQLDriver.escape(
           `${this.prefix}uids`,
@@ -1975,9 +1976,7 @@ export default class MySQLDriver extends NymphDriver {
           `${this.prefix}uids_${name}`,
         )});`,
       );
-      await this.commit('nymph-newuid');
       curUid = result.cur_uid ?? null;
-      return curUid;
     } catch (e: any) {
       if (e?.message !== "Couldn't get lock for UID: " + name) {
         await this.queryRun(
@@ -1989,6 +1988,9 @@ export default class MySQLDriver extends NymphDriver {
       await this.rollback('nymph-newuid');
       throw e;
     }
+
+    await this.commit('nymph-newuid');
+    return curUid;
   }
 
   public async renameUID(oldName: string, newName: string) {
@@ -2113,6 +2115,7 @@ export default class MySQLDriver extends NymphDriver {
         await runInsertQuery(name, JSON.parse(sdata[name]), sdata[name]);
       }
     };
+    let inTransaction = false;
     try {
       const result = await this.saveEntityRowLike(
         entity,
@@ -2282,12 +2285,16 @@ export default class MySQLDriver extends NymphDriver {
         },
         async () => {
           await this.internalTransaction('nymph-save');
+          inTransaction = true;
         },
         async (success) => {
-          if (success) {
-            await this.commit('nymph-save');
-          } else {
-            await this.rollback('nymph-save');
+          if (inTransaction) {
+            inTransaction = false;
+            if (success) {
+              await this.commit('nymph-save');
+            } else {
+              await this.rollback('nymph-save');
+            }
           }
           return success;
         },
@@ -2295,7 +2302,9 @@ export default class MySQLDriver extends NymphDriver {
 
       return result;
     } catch (e: any) {
-      await this.rollback('nymph-save');
+      if (inTransaction) {
+        await this.rollback('nymph-save');
+      }
       throw e;
     }
   }
