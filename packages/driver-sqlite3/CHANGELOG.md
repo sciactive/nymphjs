@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.48](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.47...v1.0.0-beta.48) (2023-11-10)
+
+### Bug Fixes
+
+- avoid trying to roll back a transaction twice ([e26ef31](https://github.com/sciactive/nymphjs/commit/e26ef312b617edcc715c81e7f92875dfaa7a904a))
+
 # [1.0.0-beta.47](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.46...v1.0.0-beta.47) (2023-11-10)
 
 **Note:** Version bump only for package @nymphjs/driver-sqlite3
