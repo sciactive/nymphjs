@@ -100,7 +100,11 @@ export default class PostgreSQLDriver extends NymphDriver {
     }
     return new Promise((resolve, reject) =>
       this.link.connect((err, client, done) =>
-        err ? reject(err) : resolve({ client, done }),
+        err
+          ? reject(err)
+          : client
+          ? resolve({ client, done })
+          : reject('No client returned from connect.'),
       ),
     );
   }
@@ -117,7 +121,11 @@ export default class PostgreSQLDriver extends NymphDriver {
         const connection: PostgreSQLDriverConnection = await new Promise(
           (resolve, reject) =>
             this.link.connect((err, client, done) =>
-              err ? reject(err) : resolve({ client, done }),
+              err
+                ? reject(err)
+                : client
+                ? resolve({ client, done })
+                : reject('No client returned from connect.'),
             ),
         );
         await new Promise((resolve, reject) =>

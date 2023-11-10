@@ -355,7 +355,7 @@
         username,
         password,
         code,
-        additionalData
+        additionalData,
       );
       successLoginMessage = data.message;
       dispatch('login', { user: data.user });

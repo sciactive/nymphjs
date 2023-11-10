@@ -13,12 +13,12 @@
       class="solo-fab"
       title="New User"
     >
-      <Icon component={Svg} viewBox="0 0 24 24">
+      <Icon tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiPlus} />
       </Icon>
     </Fab>
     <Paper class="solo-paper" elevation={6}>
-      <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
+      <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiMagnify} />
       </Icon>
       <Input
@@ -36,7 +36,7 @@
       class="solo-fab"
       title="Search"
     >
-      <Icon component={Svg} viewBox="0 0 24 24">
+      <Icon tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiArrowRight} />
       </Icon>
     </Fab>
@@ -71,7 +71,7 @@
                 <Cell
                   ><a
                     href="#/users/edit/{encodeURIComponent(
-                      curEntity.guid || ''
+                      curEntity.guid || '',
                     )}">{curEntity.username}</a
                   ></Cell
                 >
@@ -105,7 +105,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { push } from 'svelte-spa-router';
+  import type Navigo from 'navigo';
   import queryParser from '@nymphjs/query-parser';
   import type {
     AdminUserData,
@@ -122,10 +122,11 @@
   import DataTable, { Head, Body, Row, Cell } from '@smui/data-table';
   import { Input } from '@smui/textfield';
   import Fab from '@smui/fab';
-  import { Icon, Svg } from '@smui/common';
+  import { Icon } from '@smui/common';
 
   import { nymph, User, Group } from '../nymph';
 
+  export let router: Navigo;
   export let params: { query?: string } = {};
 
   let clientConfig: ClientConfig | undefined = undefined;
@@ -175,7 +176,7 @@
   let entitiesSearching = false;
   let entities: (UserClass & AdminUserData)[] | undefined = undefined;
   async function searchEntities() {
-    push(`/users/${encodeURIComponent(entitySearch)}`);
+    router.navigate(`/users/${encodeURIComponent(entitySearch)}`);
   }
   function entitySearchKeyDown(event: CustomEvent | KeyboardEvent) {
     event = event as KeyboardEvent;

@@ -6,8 +6,11 @@
   </section>
 {:else}
   <div style="display: flex; align-items: center; padding: 12px;">
-    <IconButton title="Back" on:click={pop}>
-      <Icon component={Svg} viewBox="0 0 24 24">
+    <IconButton
+      title="Back"
+      on:click={() => router.navigate('', { historyAPIMethod: 'back' })}
+    >
+      <Icon tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiArrowLeft} />
       </Icon>
     </IconButton>
@@ -171,7 +174,7 @@
               entity = entity;
             }}
           >
-            <Icon component={Svg} viewBox="0 0 24 24">
+            <Icon tag="svg" viewBox="0 0 24 24">
               <path fill="currentColor" d={mdiMinus} />
             </Icon>
           </IconButton>
@@ -182,7 +185,7 @@
 
       <div class="solo-search-container solo-container">
         <Paper class="solo-paper" elevation={1}>
-          <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
+          <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
             <path fill="currentColor" d={mdiMagnify} />
           </Icon>
           <Input
@@ -198,7 +201,7 @@
           class="solo-fab"
           title="Search"
         >
-          <Icon component={Svg} viewBox="0 0 24 24">
+          <Icon tag="svg" viewBox="0 0 24 24">
             <path fill="currentColor" d={mdiArrowRight} />
           </Icon>
         </IconButton>
@@ -266,7 +269,7 @@
                   <Cell
                     ><a
                       href="#/groups/edit/{encodeURIComponent(
-                        curEntity.guid || ''
+                        curEntity.guid || '',
                       )}">{curEntity.groupname}</a
                     ></Cell
                   >
@@ -274,14 +277,14 @@
                 <Cell
                   ><a
                     href="#/groups/edit/{encodeURIComponent(
-                      curEntity.guid || ''
+                      curEntity.guid || '',
                     )}">{curEntity.name}</a
                   ></Cell
                 >
                 <Cell
                   ><a
                     href="#/groups/edit/{encodeURIComponent(
-                      curEntity.guid || ''
+                      curEntity.guid || '',
                     )}">{curEntity.email}</a
                   ></Cell
                 >
@@ -293,7 +296,7 @@
                       entity = entity;
                     }}
                   >
-                    <Icon component={Svg} viewBox="0 0 24 24">
+                    <Icon tag="svg" viewBox="0 0 24 24">
                       <path fill="currentColor" d={mdiMinus} />
                     </Icon>
                   </IconButton>
@@ -314,7 +317,7 @@
 
       <div class="solo-search-container solo-container">
         <Paper class="solo-paper" elevation={1}>
-          <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
+          <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
             <path fill="currentColor" d={mdiMagnify} />
           </Icon>
           <Input
@@ -330,7 +333,7 @@
           class="solo-fab"
           title="Search"
         >
-          <Icon component={Svg} viewBox="0 0 24 24">
+          <Icon tag="svg" viewBox="0 0 24 24">
             <path fill="currentColor" d={mdiArrowRight} />
           </Icon>
         </IconButton>
@@ -395,7 +398,7 @@
                     entity = entity;
                   }}
                 >
-                  <Icon component={Svg} viewBox="0 0 24 24">
+                  <Icon tag="svg" viewBox="0 0 24 24">
                     <path fill="currentColor" d={mdiMinus} />
                   </Icon>
                 </IconButton>
@@ -420,7 +423,7 @@
           on:keydown={abilityKeyDown}
         />
         <IconButton on:click={addAbility}>
-          <Icon component={Svg} viewBox="0 0 24 24">
+          <Icon tag="svg" viewBox="0 0 24 24">
             <path fill="currentColor" d={mdiPlus} />
           </Icon>
         </IconButton>
@@ -651,7 +654,7 @@
           <span>Successfully saved!</span>
         {/if}
       </div>
-      {#if tilmeldSwitchUser && !entity.$is(user)}
+      {#if tilmeldSwitchUser && entity.guid && !entity.$is(user)}
         <div>
           <Button
             on:click={() => {
@@ -687,7 +690,7 @@
     <Button action="cancel">
       <Label>Cancel</Label>
     </Button>
-    <Button action="switch" default>
+    <Button action="switch">
       <Label>Switch</Label>
     </Button>
   </Actions>
@@ -695,7 +698,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { pop, replace } from 'svelte-spa-router';
+  import type Navigo from 'navigo';
   import type {
     AdminGroupData,
     AdminUserData,
@@ -728,10 +731,11 @@
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
-  import { Icon, Label, Svg } from '@smui/common';
+  import { Icon, Label } from '@smui/common';
 
   import { User, Group } from '../nymph';
 
+  export let router: Navigo;
   export let params: { guid: string };
 
   let entity: UserClass & AdminUserData;
@@ -881,7 +885,7 @@
       primaryGroups = (await Group.getPrimaryGroups(options, selectors)).filter(
         (group) => {
           return !group.$is(entity.group);
-        }
+        },
       );
     } catch (e: any) {
       failureMessage = e?.message;
@@ -1059,7 +1063,10 @@
         success = true;
         passwordVerify = '';
         if (newEntity) {
-          replace(`/users/edit/${encodeURIComponent(entity.guid || '')}`);
+          router.navigate(
+            `/users/edit/${encodeURIComponent(entity.guid || '')}`,
+            { historyAPIMethod: 'replaceState' },
+          );
         }
         setTimeout(() => {
           success = undefined;
@@ -1080,7 +1087,7 @@
       saving = true;
       try {
         if (await entity.$delete()) {
-          pop();
+          router.navigate('', { historyAPIMethod: 'back' });
         } else {
           failureMessage = 'An error occurred.';
         }
@@ -1092,7 +1099,7 @@
   }
 
   async function switchUserDialogCloseHandler(
-    e: CustomEvent<{ action: string }>
+    e: CustomEvent<{ action: string }>,
   ) {
     if (e.detail.action === 'switch') {
       saving = true;

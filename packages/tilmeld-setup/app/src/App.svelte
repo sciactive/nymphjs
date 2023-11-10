@@ -1,4 +1,5 @@
 <svelte:window on:resize={setMiniWindow} />
+
 <TopAppBar variant="static" class="tilmeld-top-app-bar">
   <Row>
     <Section>
@@ -19,7 +20,7 @@
         rel="noreferrer"
         title="Nymph/Tilmeld on GitHub"
       >
-        <Icon component={Svg} viewBox="0 0 24 24">
+        <Icon tag="svg" viewBox="0 0 24 24">
           <path fill="currentColor" d={mdiGithub} />
         </Icon>
       </IconButton>
@@ -29,7 +30,7 @@
         rel="noreferrer"
         title="SciActive on Mastodon"
       >
-        <Icon component={Svg} viewBox="0 0 24 24">
+        <Icon tag="svg" viewBox="0 0 24 24">
           <path fill="currentColor" d={mdiMastodon} />
         </Icon>
       </IconButton>
@@ -76,8 +77,10 @@
                 nonInteractive={!('href' in section)}
                 href={'href' in section ? `#${section.href}` : undefined}
                 activated={section.absolute
-                  ? $location === section.href
-                  : $location.startsWith(section.href ?? '!')}
+                  ? `${currentMatch.route.path}/` === section.href
+                  : `${currentMatch.route.path}/`.startsWith(
+                      section.href ?? '!',
+                    )}
                 style={section.indent
                   ? 'margin-left: ' + section.indent * 25 + 'px;'
                   : ''}
@@ -106,11 +109,11 @@
     <main class="tilmeld-main-content" bind:this={mainContent}>
       {#if tilmeldAdmin}
         {#if clientConfig}
-          <Router {routes} />
+          <svelte:component this={CurrentRoute} {router} {params} />
         {:else}
           Loading...
         {/if}
-      {:else if user == null}
+      {:else if user === null}
         <section style="display: flex; justify-content: center;">
           <Login
             {User}
@@ -118,6 +121,8 @@
             showExistingUserToggle={allowRegistration}
           />
         </section>
+      {:else if user === undefined}
+        Loading...
       {:else}
         <section>You don't have permission to access this app.</section>
       {/if}
@@ -127,8 +132,9 @@
 </div>
 
 <script lang="ts">
-  import { onMount, SvelteComponent } from 'svelte';
-  import Router, { location } from 'svelte-spa-router';
+  import type { ComponentType, SvelteComponent } from 'svelte';
+  import { onMount } from 'svelte';
+  import Navigo from 'navigo';
   import type {
     User as UserClass,
     ClientConfig,
@@ -141,7 +147,7 @@
   import IconButton from '@smui/icon-button';
   import List, { Item, Text, Separator } from '@smui/list';
   import Menu from '@smui/menu';
-  import { Icon, Svg } from '@smui/common';
+  import { Icon } from '@smui/common';
 
   import { User } from './nymph';
   import Intro from './routes/Intro.svelte';
@@ -159,17 +165,10 @@
   let drawerOpen = false;
   let accountMenu: any;
   let clientConfig: ClientConfig;
-  let user: (UserClass & CurrentUserData) | undefined = undefined;
+  let user: (UserClass & CurrentUserData) | null | undefined = undefined;
   let userAvatar: string = DEFAULT_AVATAR;
   let tilmeldAdmin: boolean | undefined = undefined;
   let accountOpen = false;
-
-  location.subscribe(() => {
-    if (mainContent) {
-      drawerOpen = false;
-      mainContent.scrollTop = 0;
-    }
-  });
 
   $: if (user) {
     user.$gatekeeper('tilmeld/admin').then((value) => (tilmeldAdmin = value));
@@ -179,14 +178,65 @@
     userAvatar = DEFAULT_AVATAR;
   }
 
-  const routes = {
-    '/': Intro,
-    '/users/edit/:guid': UserEdit,
-    '/users/:query?': Users,
-    '/groups/edit/:guid': GroupEdit,
-    '/groups/:query?': Groups,
-    '*': NotFound,
-  };
+  const router = new Navigo('/', { hash: true });
+  let CurrentRoute: ComponentType<SvelteComponent> = Intro;
+  let params: any = {};
+
+  router.hooks({
+    before(done, match) {
+      if (mainContent) {
+        drawerOpen = false;
+        mainContent.scrollTop = 0;
+      }
+
+      currentMatch = match;
+
+      done();
+    },
+  });
+
+  router.on({
+    '/': () => {
+      CurrentRoute = Intro;
+      params = {};
+    },
+    '/users/edit/:guid': ({ data }: any) => {
+      CurrentRoute = UserEdit;
+      params = data;
+    },
+    '/users/': () => {
+      CurrentRoute = Users;
+      params = {};
+    },
+    '/users/:query?': ({ data }: any) => {
+      CurrentRoute = Users;
+      params = data;
+    },
+    '/groups/edit/:guid': ({ data }: any) => {
+      CurrentRoute = GroupEdit;
+      params = data;
+    },
+    '/groups/': () => {
+      CurrentRoute = Groups;
+      params = {};
+    },
+    '/groups/:query?': ({ data }: any) => {
+      CurrentRoute = Groups;
+      params = data;
+    },
+  });
+
+  router.notFound(({ hashString }: any) => {
+    if (hashString === '') {
+      router.navigate('/', { historyAPIMethod: 'replaceState' });
+    } else {
+      CurrentRoute = NotFound;
+      params = {};
+    }
+  });
+
+  let currentMatch = router.getCurrentLocation();
+  router.resolve();
 
   const sections: (
     | {
@@ -210,12 +260,12 @@
     },
     {
       name: 'Users',
-      href: '/users/',
+      href: 'users/',
       indent: 0,
     },
     {
       name: 'Groups',
-      href: '/groups/',
+      href: 'groups/',
       indent: 0,
     },
   ];
@@ -224,17 +274,17 @@
     user = currentUser;
   };
   const onLogout = () => {
-    user = undefined;
+    user = null;
   };
 
   onMount(setMiniWindow);
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    user = (await User.current()) ?? undefined;
-  });
-  onMount(async () => {
+
     clientConfig = await User.getClientConfig();
+
+    user = await User.current();
   });
 
   function setMiniWindow() {

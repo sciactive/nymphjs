@@ -318,7 +318,7 @@
       (e) => {
         hasTOTPSecret = null;
         failureMessage = e?.message;
-      }
+      },
     );
   };
   const onLogout = () => {

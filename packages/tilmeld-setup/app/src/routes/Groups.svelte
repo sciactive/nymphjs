@@ -13,12 +13,12 @@
       class="solo-fab"
       title="New Group"
     >
-      <Icon component={Svg} viewBox="0 0 24 24">
+      <Icon tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiPlus} />
       </Icon>
     </Fab>
     <Paper class="solo-paper" elevation={6}>
-      <Icon class="solo-icon" component={Svg} viewBox="0 0 24 24">
+      <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiMagnify} />
       </Icon>
       <Input
@@ -36,7 +36,7 @@
       class="solo-fab"
       title="Search"
     >
-      <Icon component={Svg} viewBox="0 0 24 24">
+      <Icon tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiArrowRight} />
       </Icon>
     </Fab>
@@ -71,7 +71,7 @@
                 <Cell
                   ><a
                     href="#/groups/edit/{encodeURIComponent(
-                      curEntity.guid || ''
+                      curEntity.guid || '',
                     )}">{curEntity.groupname}</a
                   ></Cell
                 >
@@ -79,14 +79,14 @@
               <Cell
                 ><a
                   href="#/groups/edit/{encodeURIComponent(
-                    curEntity.guid || ''
+                    curEntity.guid || '',
                   )}">{curEntity.name}</a
                 ></Cell
               >
               <Cell
                 ><a
                   href="#/groups/edit/{encodeURIComponent(
-                    curEntity.guid || ''
+                    curEntity.guid || '',
                   )}">{curEntity.email}</a
                 ></Cell
               >
@@ -107,7 +107,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { push } from 'svelte-spa-router';
+  import type Navigo from 'navigo';
   import queryParser from '@nymphjs/query-parser';
   import type {
     AdminGroupData,
@@ -124,10 +124,11 @@
   import DataTable, { Head, Body, Row, Cell } from '@smui/data-table';
   import { Input } from '@smui/textfield';
   import Fab from '@smui/fab';
-  import { Icon, Svg } from '@smui/common';
+  import { Icon } from '@smui/common';
 
   import { nymph, Group, User } from '../nymph';
 
+  export let router: Navigo;
   export let params: { query?: string } = {};
 
   let clientConfig: ClientConfig | undefined = undefined;
@@ -177,7 +178,7 @@
   let entitiesSearching = false;
   let entities: (GroupClass & AdminGroupData)[] | undefined = undefined;
   async function searchEntities() {
-    push(`/groups/${encodeURIComponent(entitySearch)}`);
+    router.navigate(`/groups/${encodeURIComponent(entitySearch)}`);
   }
   function entitySearchKeyDown(event: CustomEvent | KeyboardEvent) {
     event = event as KeyboardEvent;

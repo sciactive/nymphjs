@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "An ORM for Node.js.",
   "scripts": {
-    "format": "prettier --write .",
-    "lint": "prettier --check .",
+    "format": "prettier --ignore-unknown --write \"**/*\"",
+    "lint": "prettier --ignore-unknown --check \"**/*\"",
     "clean": "lerna run clean",
     "docs": "typedoc",
     "prepare": "husky install && npm run lint",
