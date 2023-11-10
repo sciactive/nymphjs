@@ -2537,7 +2537,7 @@ export default class PostgreSQLDriver extends NymphDriver {
   }
 
   public async startTransaction(name: string) {
-    const inTransaction = this.inTransaction();
+    const inTransaction = await this.inTransaction();
     const transaction = await this.internalTransaction(name);
     if (!inTransaction) {
       this.transaction = null;
