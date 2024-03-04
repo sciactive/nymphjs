@@ -14,6 +14,7 @@ module.exports = {
   resolve: {
     extensions: ['.mjs', '.js', '.ts', '.svelte'],
     mainFields: ['svelte', 'browser', 'module', 'main'],
+    conditionNames: ['svelte', 'require', 'node'],
   },
   module: {
     rules: [
