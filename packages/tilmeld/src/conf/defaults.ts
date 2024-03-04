@@ -52,9 +52,9 @@ export default {
   minUsernameLength: 1,
   maxUsernameLength: 128,
   jwtSecret: '',
-  jwtExpire: 60 * 60 * 24 * 7 * 8, // 8 weeks(ish)
+  jwtExpire: 60 * 60 * 24 * 7 * 24, // 24 weeks(ish) (6 months)
   jwtSwitchExpire: 60 * 60 * 6, // 6 hours
-  jwtRenew: 60 * 60 * 24 * 7 * 2, // 2 weeks(ish)
+  jwtRenew: 60 * 60 * 24 * 7 * 12, // 12 weeks(ish) (3 months)
   jwtBuilder: (config, user, switchToken) => {
     const secret = config.jwtSecret;
     if (secret === '') {
@@ -64,12 +64,14 @@ export default {
     return jwt.sign(
       {
         iss: config.appUrl,
-        nbf: Date.now() / 1000,
+        nbf: Math.floor(Date.now() / 1000),
+        exp:
+          Math.floor(Date.now() / 1000) +
+          (switchToken ? config.jwtSwitchExpire : config.jwtExpire),
         guid: user.guid,
         xsrfToken: 'TILMELDXSRF-' + nanoid(),
       },
       secret,
-      { expiresIn: switchToken ? config.jwtSwitchExpire : config.jwtExpire },
     );
   },
   jwtExtract: (config, token, xsrfToken?) => {
@@ -81,7 +83,7 @@ export default {
     try {
       const payload = jwt.verify(token, secret, {
         issuer: config.appUrl,
-        clockTolerance: 10,
+        clockTolerance: 60,
       });
 
       if (typeof payload === 'string') {
