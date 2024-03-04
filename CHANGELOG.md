@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.49](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.48...v1.0.0-beta.49) (2024-03-04)
+
+### Bug Fixes
+
+- change some jwt defaults and fix nbf date ([cff5f38](https://github.com/sciactive/nymphjs/commit/cff5f38da6c1624b3fc27655e3601f409f8b86c2))
+
 # [1.0.0-beta.48](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.47...v1.0.0-beta.48) (2023-11-10)
 
 ### Bug Fixes

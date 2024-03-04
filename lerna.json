@@ -1,6 +1,6 @@
 {
   "packages": ["packages/*"],
-  "version": "1.0.0-beta.48",
+  "version": "1.0.0-beta.49",
   "command": {
     "version": {
       "allowBranch": ["master"],
