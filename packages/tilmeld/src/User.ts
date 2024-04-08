@@ -1720,21 +1720,6 @@ export default class User extends AbleObject<UserData> {
       };
     }
 
-    try {
-      for (let callback of (this.constructor as typeof User)
-        .beforeRegisterCallbacks) {
-        if (callback) {
-          await callback(this, data);
-        }
-      }
-    } catch (e: any) {
-      return {
-        result: false,
-        loggedin: false,
-        message: e.message,
-      };
-    }
-
     if (!('password' in data) || !data.password.length) {
       return {
         result: false,
@@ -1772,6 +1757,23 @@ export default class User extends AbleObject<UserData> {
     let loggedin = false;
 
     try {
+      try {
+        for (let callback of (this.constructor as typeof User)
+          .beforeRegisterCallbacks) {
+          if (callback) {
+            await callback(this, data);
+          }
+        }
+      } catch (e: any) {
+        await tnymph.rollback(transaction);
+        this.$nymph = nymph;
+        return {
+          result: false,
+          loggedin: false,
+          message: e.message,
+        };
+      }
+
       // Add primary group.
       let generatedPrimaryGroup: (Group & GroupData) | null = null;
       if (tilmeld.config.generatePrimary) {
