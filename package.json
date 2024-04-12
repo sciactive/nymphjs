@@ -10,7 +10,7 @@
     "prepare": "husky install && npm run lint",
     "postinstall": "npm run build",
     "build": "lerna run build",
-    "test": "lerna run test --concurrency=1 --stream --no-prefix --no-bail -- --passWithNoTests",
+    "test": "lerna run test --concurrency=1 --stream --no-prefix --no-progress --no-bail -- --passWithNoTests",
     "test:db:start": "lerna run test:db:start --stream --parallel",
     "test:db:stop": "lerna run test:db:stop"
   },

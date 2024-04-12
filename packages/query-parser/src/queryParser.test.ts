@@ -996,4 +996,53 @@ describe('queryParser', () => {
       },
     ]);
   });
+
+  it('parses nested qref clauses', () => {
+    const query =
+      'categories<{Category parent<{Category id="sort+newsletters"}>}> ';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        Category: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        qref: [
+          [
+            'categories',
+            [
+              { class: Category },
+              {
+                type: '&',
+                qref: [
+                  [
+                    'parent',
+                    [
+                      { class: Category },
+                      {
+                        type: '&',
+                        equal: [['id', 'sort+newsletters']],
+                      },
+                    ],
+                  ],
+                ],
+              },
+            ],
+          ],
+        ],
+      },
+    ]);
+  });
 });

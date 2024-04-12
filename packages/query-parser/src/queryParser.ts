@@ -242,7 +242,7 @@ function selectorParser({
       try {
         let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
         value = unQuoteCurlies(value.slice(1, -1));
-        let [className, qrefQuery] = value.split(' ', 2);
+        let [className, qrefQuery] = splitn(value, ' ', 2);
         const EntityClass = qrefMap[className].class;
         if (EntityClass == null) {
           continue;
@@ -280,7 +280,7 @@ function selectorParser({
     selector['!equal'] = [];
     for (let match of equalMatch) {
       try {
-        let [name, value] = match.trim().split('=', 2);
+        let [name, value] = splitn(match.trim(), '=', 2);
         try {
           if (name.endsWith('!')) {
             selector['!equal'].push([name.slice(0, -1), JSON.parse(value)]);
@@ -315,7 +315,7 @@ function selectorParser({
     selector['!ref'] = [];
     for (let match of refMatch) {
       try {
-        let [name, value] = match.trim().slice(0, -1).split('<', 2);
+        let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
         if (name.endsWith('!')) {
           selector['!ref'].push([name.slice(0, -1), value.slice(1, -1)]);
         } else {
@@ -342,7 +342,7 @@ function selectorParser({
     selector['!contain'] = [];
     for (let match of containMatch) {
       try {
-        let [name, value] = match.trim().slice(0, -1).split('<', 2);
+        let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
         try {
           if (name.endsWith('!')) {
             selector['!contain'].push([
@@ -385,7 +385,7 @@ function selectorParser({
     selector['!imatch'] = [];
     for (let match of posixMatch) {
       try {
-        let [name, value] = match.trim().split('~', 2);
+        let [name, value] = splitn(match.trim(), '~', 2);
         if (name.endsWith('!')) {
           if (value.endsWith('i')) {
             selector['!imatch'].push([
@@ -434,7 +434,7 @@ function selectorParser({
     selector['!ilike'] = [];
     for (let match of likeMatch) {
       try {
-        let [name, value] = match.trim().split('~', 2);
+        let [name, value] = splitn(match.trim(), '~', 2);
         if (name.endsWith('!')) {
           if (value.endsWith('"i')) {
             selector['!ilike'].push([
@@ -558,7 +558,7 @@ function selectorParser({
     selector.gt = [];
     for (let match of gtMatch) {
       try {
-        let [name, value] = match.trim().split('>', 2);
+        let [name, value] = splitn(match.trim(), '>', 2);
         selector.gt.push([name, Number(value)]);
       } catch (e: any) {
         continue;
@@ -579,7 +579,7 @@ function selectorParser({
     }
     for (let match of gtRelativeMatch) {
       try {
-        let [name, value] = match.trim().split('>', 2);
+        let [name, value] = splitn(match.trim(), '>', 2);
         (selector.gt as [string, null, string][]).push([
           name,
           null,
@@ -602,7 +602,7 @@ function selectorParser({
     selector.gte = [];
     for (let match of gteMatch) {
       try {
-        let [name, value] = match.trim().split('>=', 2);
+        let [name, value] = splitn(match.trim(), '>=', 2);
         selector.gte.push([name, Number(value)]);
       } catch (e: any) {
         continue;
@@ -623,7 +623,7 @@ function selectorParser({
     }
     for (let match of gteRelativeMatch) {
       try {
-        let [name, value] = match.trim().split('>=', 2);
+        let [name, value] = splitn(match.trim(), '>=', 2);
         (selector.gte as [string, null, string][]).push([
           name,
           null,
@@ -646,7 +646,7 @@ function selectorParser({
     selector.lt = [];
     for (let match of ltMatch) {
       try {
-        let [name, value] = match.trim().split('<', 2);
+        let [name, value] = splitn(match.trim(), '<', 2);
         selector.lt.push([name, Number(value)]);
       } catch (e: any) {
         continue;
@@ -667,7 +667,7 @@ function selectorParser({
     }
     for (let match of ltRelativeMatch) {
       try {
-        let [name, value] = match.trim().split('<', 2);
+        let [name, value] = splitn(match.trim(), '<', 2);
         (selector.lt as [string, null, string][]).push([
           name,
           null,
@@ -690,7 +690,7 @@ function selectorParser({
     selector.lte = [];
     for (let match of lteMatch) {
       try {
-        let [name, value] = match.trim().split('<=', 2);
+        let [name, value] = splitn(match.trim(), '<=', 2);
         selector.lte.push([name, Number(value)]);
       } catch (e: any) {
         continue;
@@ -711,7 +711,7 @@ function selectorParser({
     }
     for (let match of lteRelativeMatch) {
       try {
-        let [name, value] = match.trim().split('<=', 2);
+        let [name, value] = splitn(match.trim(), '<=', 2);
         (selector.lte as [string, null, string][]).push([
           name,
           null,
