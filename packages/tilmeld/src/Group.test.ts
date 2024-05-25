@@ -41,7 +41,7 @@ describe('Group', () => {
     const validGroup = await makeNewGroup();
 
     expect(() => {
-      defaults.validatorGroup(validGroup);
+      defaults.validatorGroup({ config: defaults } as Tilmeld, validGroup);
     }).not.toThrow();
   });
 
@@ -52,7 +52,7 @@ describe('Group', () => {
     invalidGroup.unknown = 'I should cause an error.';
 
     expect(() => {
-      defaults.validatorGroup(invalidGroup);
+      defaults.validatorGroup({ config: defaults } as Tilmeld, invalidGroup);
     }).toThrow('Invalid Group:  "unknown" is not allowed');
   });
 });

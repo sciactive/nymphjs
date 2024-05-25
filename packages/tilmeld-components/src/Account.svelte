@@ -47,7 +47,7 @@
         </div>
       {/if}
 
-      {#if clientConfig.emailUsernames || clientConfig.userFields.indexOf('email') !== -1}
+      {#if clientConfig.emailUsernames || clientConfig.userFields.includes('email')}
         <div>
           <Textfield
             bind:value={user.email}
@@ -69,7 +69,7 @@
         </div>
       {/if}
 
-      {#if clientConfig.userFields.indexOf('name') !== -1}
+      {#if clientConfig.userFields.includes('name')}
         <div>
           <Textfield
             bind:value={user.nameFirst}
@@ -107,7 +107,7 @@
         </div>
       {/if}
 
-      {#if clientConfig.userFields.indexOf('phone') !== -1}
+      {#if clientConfig.userFields.includes('phone')}
         <div>
           <Textfield
             bind:value={user.phone}

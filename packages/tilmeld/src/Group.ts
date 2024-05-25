@@ -360,8 +360,8 @@ export default class Group extends AbleObject<GroupData> {
 
     if (
       user != null &&
-      ((user.abilities?.indexOf('tilmeld/admin') ?? -1) !== -1 ||
-        (user.abilities?.indexOf('system/admin') ?? -1) !== -1)
+      (user.abilities?.includes('tilmeld/admin') ||
+        user.abilities?.includes('system/admin'))
     ) {
       // Users who can edit groups can see their data.
       this.$privateData = [];
@@ -689,16 +689,22 @@ export default class Group extends AbleObject<GroupData> {
     this.$data.enabled = !!this.$data.enabled;
 
     // Clear empty values.
-    if (this.$data.name === '') {
+    if (this.$data.name === '' || !tilmeld.config.userFields.includes('name')) {
       delete this.$data.name;
     }
-    if (this.$data.email === '') {
+    if (
+      this.$data.email === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.email;
     }
     if (this.$data.avatar === '') {
       delete this.$data.avatar;
     }
-    if (this.$data.phone === '') {
+    if (
+      this.$data.phone === '' ||
+      !tilmeld.config.userFields.includes('phone')
+    ) {
       delete this.$data.phone;
     }
     if (this.$data.parent == null) {
@@ -732,7 +738,10 @@ export default class Group extends AbleObject<GroupData> {
     if (!unCheck.result) {
       throw new BadUsernameError(unCheck.message);
     }
-    if (!tilmeld.config.emailUsernames) {
+    if (
+      !tilmeld.config.emailUsernames &&
+      tilmeld.config.userFields.includes('email')
+    ) {
       const emCheck = await this.$checkEmail();
       if (!emCheck.result) {
         throw new BadEmailError(emCheck.message);
@@ -754,7 +763,7 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     try {
-      tilmeld.config.validatorGroup(this);
+      tilmeld.config.validatorGroup(tilmeld, this);
     } catch (e: any) {
       throw new BadDataError(e?.message);
     }

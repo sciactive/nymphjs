@@ -619,8 +619,8 @@ export default class User extends AbleObject<UserData> {
     const fromAbilities = user.abilities || [];
 
     if (
-      fromAbilities.indexOf('tilmeld/switch') === -1 &&
-      fromAbilities.indexOf('system/admin') === -1
+      !fromAbilities.includes('tilmeld/switch') &&
+      !fromAbilities.includes('system/admin')
     ) {
       return {
         result: false,
@@ -629,8 +629,8 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (
-      toAbilities.indexOf('system/admin') !== -1 ||
-      toAbilities.indexOf('tilmeld/admin') !== -1
+      toAbilities.includes('system/admin') ||
+      toAbilities.includes('tilmeld/admin')
     ) {
       return { result: false, message: "You can't switch to an admin." };
     }
@@ -886,8 +886,8 @@ export default class User extends AbleObject<UserData> {
 
     if (
       user != null &&
-      (abilities.indexOf('tilmeld/admin') !== -1 ||
-        abilities.indexOf('system/admin') !== -1)
+      (abilities.includes('tilmeld/admin') ||
+        abilities.includes('system/admin'))
     ) {
       // Users who can edit other users can see most of their data.
       this.$privateData = ['password', 'salt', 'totpSecret'];
@@ -900,16 +900,16 @@ export default class User extends AbleObject<UserData> {
         this.$allowlistData.push('username');
       }
       this.$allowlistData.push('avatar');
-      if (tilmeld.config.userFields.indexOf('name') !== -1) {
+      if (tilmeld.config.userFields.includes('name')) {
         this.$allowlistData.push('nameFirst');
         this.$allowlistData.push('nameMiddle');
         this.$allowlistData.push('nameLast');
         this.$allowlistData.push('name');
       }
-      if (tilmeld.config.userFields.indexOf('email') !== -1) {
+      if (tilmeld.config.userFields.includes('email')) {
         this.$allowlistData.push('email');
       }
-      if (tilmeld.config.userFields.indexOf('phone') !== -1) {
+      if (tilmeld.config.userFields.includes('phone')) {
         this.$allowlistData.push('phone');
       }
       this.$privateData = [
@@ -946,8 +946,8 @@ export default class User extends AbleObject<UserData> {
     if (
       user != null &&
       !isCurrentUser &&
-      (abilities.indexOf('tilmeld/switch') !== -1 ||
-        abilities.indexOf('system/admin') !== -1)
+      (abilities.includes('tilmeld/switch') ||
+        abilities.includes('system/admin'))
     ) {
       // Users with this ability can switch to other users.
       this.$clientEnabledMethods.push('$switchUser');
@@ -1733,7 +1733,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     this.$password(data.password);
-    if (tilmeld.config.regFields.indexOf('name') !== -1) {
+    if (tilmeld.config.regFields.includes('name')) {
       this.$data.name =
         this.$data.nameFirst +
         (this.$data.nameMiddle == null ? '' : ' ' + this.$data.nameMiddle) +
@@ -1781,8 +1781,12 @@ export default class User extends AbleObject<UserData> {
         generatedPrimaryGroup = await tilmeld.Group.factory();
         generatedPrimaryGroup.groupname = this.$data.username;
         generatedPrimaryGroup.avatar = this.$data.avatar;
-        generatedPrimaryGroup.name = this.$data.name;
-        generatedPrimaryGroup.email = this.$data.email;
+        if (tilmeld.config.userFields.includes('name')) {
+          generatedPrimaryGroup.name = this.$data.name;
+        }
+        if (tilmeld.config.userFields.includes('email')) {
+          generatedPrimaryGroup.email = this.$data.email;
+        }
         const parent = await tnymph.getEntity(
           { class: tilmeld.Group },
           {
@@ -1818,7 +1822,11 @@ export default class User extends AbleObject<UserData> {
       }
 
       // Add secondary groups.
-      if (tilmeld.config.verifyEmail && tilmeld.config.unverifiedAccess) {
+      if (
+        tilmeld.config.userFields.includes('email') &&
+        tilmeld.config.verifyEmail &&
+        tilmeld.config.unverifiedAccess
+      ) {
         // Add the default secondaries for unverified users.
         this.$data.groups = await tnymph.getEntities(
           { class: tilmeld.Group },
@@ -1838,7 +1846,10 @@ export default class User extends AbleObject<UserData> {
         );
       }
 
-      if (tilmeld.config.verifyEmail) {
+      if (
+        tilmeld.config.userFields.includes('email') &&
+        tilmeld.config.verifyEmail
+      ) {
         // The user will be enabled after verifying their e-mail address.
         if (!tilmeld.config.unverifiedAccess) {
           this.$data.enabled = false;
@@ -1907,7 +1918,8 @@ export default class User extends AbleObject<UserData> {
         if (
           tilmeld.config.verifyEmail &&
           !tilmeld.config.unverifiedAccess &&
-          !madeAdmin
+          !madeAdmin &&
+          tilmeld.config.userFields.includes('email')
         ) {
           message +=
             `Almost there. An email has been sent to ${this.$data.email} ` +
@@ -1915,7 +1927,8 @@ export default class User extends AbleObject<UserData> {
         } else if (
           tilmeld.config.verifyEmail &&
           tilmeld.config.unverifiedAccess &&
-          !madeAdmin
+          !madeAdmin &&
+          tilmeld.config.userFields.includes('email')
         ) {
           if (!(await tilmeld.login(this, true))) {
             throw new Error('An error occurred trying to log you in.');
@@ -2006,49 +2019,88 @@ export default class User extends AbleObject<UserData> {
     this.$data.enabled = !!this.$data.enabled;
 
     // Clear empty values.
-    if (this.$data.nameFirst === '') {
+    if (
+      this.$data.nameFirst === '' ||
+      !tilmeld.config.userFields.includes('name')
+    ) {
       delete this.$data.nameFirst;
     }
-    if (this.$data.nameMiddle === '') {
+    if (
+      this.$data.nameMiddle === '' ||
+      !tilmeld.config.userFields.includes('name')
+    ) {
       delete this.$data.nameMiddle;
     }
-    if (this.$data.nameLast === '') {
+    if (
+      this.$data.nameLast === '' ||
+      !tilmeld.config.userFields.includes('name')
+    ) {
       delete this.$data.nameLast;
     }
-    if (this.$data.name === '') {
+    if (this.$data.name === '' || !tilmeld.config.userFields.includes('name')) {
       delete this.$data.name;
     }
-    if (this.$data.email === '') {
+    if (
+      this.$data.email === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.email;
     }
     if (this.$data.avatar === '') {
       delete this.$data.avatar;
     }
-    if (this.$data.phone === '') {
+    if (
+      this.$data.phone === '' ||
+      !tilmeld.config.userFields.includes('phone')
+    ) {
       delete this.$data.phone;
     }
-    if (this.$data.secret === '') {
+    if (
+      this.$data.secret === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.secret;
     }
-    if (this.$data.emailChangeDate === 0) {
+    if (
+      this.$data.emailChangeDate === 0 ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.emailChangeDate;
     }
-    if (this.$data.newEmailSecret === '') {
+    if (
+      this.$data.newEmailSecret === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.newEmailSecret;
     }
-    if (this.$data.newEmailAddress === '') {
+    if (
+      this.$data.newEmailAddress === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.newEmailAddress;
     }
-    if (this.$data.cancelEmailSecret === '') {
+    if (
+      this.$data.cancelEmailSecret === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.cancelEmailSecret;
     }
-    if (this.$data.cancelEmailAddress === '') {
+    if (
+      this.$data.cancelEmailAddress === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.cancelEmailAddress;
     }
-    if (this.$data.recoverSecret === '') {
+    if (
+      this.$data.recoverSecret === '' ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.recoverSecret;
     }
-    if (this.$data.recoverSecretDate === 0) {
+    if (
+      this.$data.recoverSecretDate === 0 ||
+      !tilmeld.config.userFields.includes('email')
+    ) {
       delete this.$data.recoverSecretDate;
     }
     if (this.$data.password === '') {
@@ -2066,7 +2118,10 @@ export default class User extends AbleObject<UserData> {
     if (!unCheck.result) {
       throw new BadUsernameError(unCheck.message);
     }
-    if (!tilmeld.config.emailUsernames) {
+    if (
+      !tilmeld.config.emailUsernames &&
+      tilmeld.config.userFields.includes('email')
+    ) {
       const emCheck = await this.$checkEmail();
       if (!emCheck.result) {
         throw new BadEmailError(emCheck.message);
@@ -2074,7 +2129,10 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Email changes.
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (
+      !tilmeld.gatekeeper('tilmeld/admin') &&
+      tilmeld.config.userFields.includes('email')
+    ) {
       // The user isn't an admin, so email address changes should contain some
       // security measures.
       if (tilmeld.config.verifyEmail) {
@@ -2082,7 +2140,7 @@ export default class User extends AbleObject<UserData> {
         if (this.guid == null) {
           // If this is the first user, they'll be made an admin, so they don't
           // need to verify.
-          if ((this.$data.abilities?.indexOf('system/admin') ?? -1) === -1) {
+          if (!this.$data.abilities?.includes('system/admin')) {
             this.$data.secret = nanoid();
             sendVerification = true;
           }
@@ -2161,7 +2219,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     try {
-      tilmeld.config.validatorUser(this);
+      tilmeld.config.validatorUser(tilmeld, this);
     } catch (e: any) {
       throw new BadDataError(e?.message);
     }
@@ -2180,9 +2238,15 @@ export default class User extends AbleObject<UserData> {
         // Update the user's generated primary group.
         group.groupname = this.$data.username;
         group.avatar = this.$data.avatar;
-        group.email = this.$data.email;
-        group.name = this.$data.name;
-        group.phone = this.$data.phone;
+        if (tilmeld.config.userFields.includes('email')) {
+          group.email = this.$data.email;
+        }
+        if (tilmeld.config.userFields.includes('name')) {
+          group.name = this.$data.name;
+        }
+        if (tilmeld.config.userFields.includes('phone')) {
+          group.phone = this.$data.phone;
+        }
         await group.$saveSkipAC();
         this.$data.group = group;
       } catch (e: any) {

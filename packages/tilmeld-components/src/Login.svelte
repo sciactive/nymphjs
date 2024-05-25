@@ -127,7 +127,7 @@
           />
         </div>
 
-        {#if clientConfig.regFields.indexOf('name') !== -1}
+        {#if clientConfig.regFields.includes('name')}
           <div>
             <Textfield
               bind:value={name}
@@ -141,7 +141,7 @@
           </div>
         {/if}
 
-        {#if !clientConfig.emailUsernames && clientConfig.regFields.indexOf('email') !== -1}
+        {#if !clientConfig.emailUsernames && clientConfig.regFields.includes('email')}
           <div>
             <Textfield
               bind:value={email}
@@ -157,7 +157,7 @@
           </div>
         {/if}
 
-        {#if clientConfig.regFields.indexOf('phone') !== -1}
+        {#if clientConfig.regFields.includes('phone')}
           <div>
             <Textfield
               bind:value={phone}
@@ -224,7 +224,7 @@
         </div>
       {/if}
 
-      {#if !hideRecovery && clientConfig.pwRecovery && mode === 'login'}
+      {#if !hideRecovery && clientConfig.userFields.includes('email') && clientConfig.pwRecovery && mode === 'login'}
         <div class="tilmeld-login-action">
           <a
             href={'javascript:void(0);'}

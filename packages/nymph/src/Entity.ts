@@ -564,21 +564,21 @@ export default class Entity<T extends EntityData = EntityData>
     return this.$sdata;
   }
 
-  public $getOriginalAcValues() {
+  public $getOriginalAcValues(): ACProperties {
     this.$check();
 
     return this.$originalAcValues ?? this.$getCurrentAcValues();
   }
 
-  public $getCurrentAcValues() {
+  public $getCurrentAcValues(): ACProperties {
     this.$check();
 
     return {
       user: this.$getAcUid(),
       group: this.$getAcGid(),
-      acUser: this.$data.acUser,
-      acGroup: this.$data.acGroup,
-      acOther: this.$data.acOther,
+      acUser: this.$data.acUser ?? null,
+      acGroup: this.$data.acGroup ?? null,
+      acOther: this.$data.acOther ?? null,
       acRead: this.$getAcReadIds(),
       acWrite: this.$getAcWriteIds(),
       acFull: this.$getAcFullIds(),
@@ -586,25 +586,22 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $getAcUid() {
-    return this.$data.user?.guid as string | null;
+    return (this.$data.user?.guid ?? null) as string | null;
   }
   public $getAcGid() {
-    return this.$data.group?.guid as string | null;
+    return (this.$data.group?.guid ?? null) as string | null;
   }
   public $getAcReadIds() {
-    return this.$data.acRead?.map((entity: EntityInterface) => entity.guid) as
-      | string[]
-      | null;
+    return (this.$data.acRead?.map((entity: EntityInterface) => entity.guid) ??
+      null) as (string | null)[] | null;
   }
   public $getAcWriteIds() {
-    return this.$data.acWrite?.map((entity: EntityInterface) => entity.guid) as
-      | string[]
-      | null;
+    return (this.$data.acWrite?.map((entity: EntityInterface) => entity.guid) ??
+      null) as (string | null)[] | null;
   }
   public $getAcFullIds() {
-    return this.$data.acFull?.map((entity: EntityInterface) => entity.guid) as
-      | string[]
-      | null;
+    return (this.$data.acFull?.map((entity: EntityInterface) => entity.guid) ??
+      null) as (string | null)[] | null;
   }
 
   public $getValidatable() {

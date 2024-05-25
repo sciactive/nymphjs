@@ -106,16 +106,18 @@ export async function register(
   user.username = userDetails.username;
   const config = clientConfig || (await User.getClientConfig());
 
-  if (config.emailUsernames) {
-    user.email = userDetails.username;
-  } else if (config.regFields.indexOf('email') !== -1) {
-    user.email = userDetails.email;
+  if (config.regFields.includes('email')) {
+    if (config.emailUsernames) {
+      user.email = userDetails.username;
+    } else {
+      user.email = userDetails.email;
+    }
   }
-  if (config.regFields.indexOf('name') !== -1) {
+  if (config.regFields.includes('name')) {
     user.nameFirst = userDetails.nameFirst;
     user.nameLast = userDetails.nameLast;
   }
-  if (config.regFields.indexOf('phone') !== -1) {
+  if (config.regFields.includes('phone')) {
     user.phone = userDetails.phone;
   }
 

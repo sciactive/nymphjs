@@ -59,8 +59,12 @@
             {#if !clientConfig.emailUsernames}
               <Cell>Username</Cell>
             {/if}
-            <Cell>Name</Cell>
-            <Cell>Email</Cell>
+            {#if clientConfig.userFields.includes('name')}
+              <Cell>Name</Cell>
+            {/if}
+            {#if clientConfig.userFields.includes('email')}
+              <Cell>Email</Cell>
+            {/if}
             <Cell>Enabled</Cell>
           </Row>
         </Head>
@@ -76,23 +80,33 @@
                   ></Cell
                 >
               {/if}
-              <Cell
-                ><a
-                  href="#/users/edit/{encodeURIComponent(curEntity.guid || '')}"
-                  >{curEntity.name}</a
-                ></Cell
-              >
-              <Cell
-                ><a
-                  href="#/users/edit/{encodeURIComponent(curEntity.guid || '')}"
-                  >{curEntity.email}</a
-                ></Cell
-              >
+              {#if clientConfig.userFields.includes('name')}
+                <Cell
+                  ><a
+                    href="#/users/edit/{encodeURIComponent(
+                      curEntity.guid || '',
+                    )}">{curEntity.name}</a
+                  ></Cell
+                >
+              {/if}
+              {#if clientConfig.userFields.includes('email')}
+                <Cell
+                  ><a
+                    href="#/users/edit/{encodeURIComponent(
+                      curEntity.guid || '',
+                    )}">{curEntity.email}</a
+                  ></Cell
+                >
+              {/if}
               <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
             </Row>
           {:else}
             <Row>
-              <Cell colspan={!clientConfig.emailUsernames ? 4 : 3}
+              <Cell
+                colspan={1 +
+                  (!clientConfig.emailUsernames ? 1 : 0) +
+                  (clientConfig.userFields.includes('name') ? 1 : 0) +
+                  (clientConfig.userFields.includes('email') ? 1 : 0)}
                 >None found.</Cell
               >
             </Row>

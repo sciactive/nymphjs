@@ -44,7 +44,7 @@ describe('User', () => {
     const validUser = await makeNewUser();
 
     expect(() => {
-      defaults.validatorUser(validUser);
+      defaults.validatorUser({ config: defaults } as Tilmeld, validUser);
     }).not.toThrow();
   });
 
@@ -55,7 +55,7 @@ describe('User', () => {
     invalidUser.unknown = 'I should cause an error.';
 
     expect(() => {
-      defaults.validatorUser(invalidUser);
+      defaults.validatorUser({ config: defaults } as Tilmeld, invalidUser);
     }).toThrow('Invalid User:  "unknown" is not allowed');
   });
 });

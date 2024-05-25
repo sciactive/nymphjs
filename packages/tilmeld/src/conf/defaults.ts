@@ -170,25 +170,43 @@ export default {
     }
   },
   userRegisteredRecipient: null,
-  validatorGroup: (group) => {
+  validatorGroup: (tilmeld, group) => {
+    const nameFields = tilmeld.config.userFields.includes('name')
+      ? {
+          name: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .max(512)
+            .required(),
+        }
+      : {};
+    const emailFields = tilmeld.config.userFields.includes('email')
+      ? {
+          email: Joi.string()
+            .trim(false)
+            .email({ minDomainSegments: 1, tlds: false })
+            .required(),
+        }
+      : {};
+    const phoneFields = tilmeld.config.userFields.includes('phone')
+      ? {
+          phone: Joi.string()
+            .trim(false)
+            .pattern(/^[0-9]+$/, 'numbers'),
+        }
+      : {};
     Joi.attempt(
       group.$getValidatable(),
       Joi.object().keys({
         ...nymphJoiProps,
+        ...nameFields,
+        ...emailFields,
+        ...phoneFields,
         groupname: Joi.string().trim(false).required(),
         enabled: Joi.boolean().required(),
-        email: Joi.string()
-          .trim(false)
-          .email({ minDomainSegments: 1, tlds: false })
-          .required(),
-        name: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .max(512)
-          .required(),
         avatar: Joi.string()
           .trim(false)
           .uri()
@@ -197,9 +215,6 @@ export default {
             invert: true,
           })
           .max(1024),
-        phone: Joi.string()
-          .trim(false)
-          .pattern(/^[0-9]+$/, 'numbers'),
         parent: Joi.object().instance(Group),
         user: Joi.object().instance(User),
         abilities: Joi.array().items(
@@ -217,47 +232,101 @@ export default {
       'Invalid Group: ',
     );
   },
-  validatorUser: (user) => {
+  validatorUser: (tilmeld, user) => {
+    const nameFields = tilmeld.config.userFields.includes('name')
+      ? {
+          nameFirst: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .max(512)
+            .required(),
+          nameMiddle: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .max(512),
+          nameLast: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .max(512),
+          name: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .max(512)
+            .required(),
+        }
+      : {};
+    const emailFields = tilmeld.config.userFields.includes('email')
+      ? {
+          email: Joi.string()
+            .trim(false)
+            .email({ minDomainSegments: 1, tlds: false })
+            .required(),
+          secret: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .length(21),
+          emailChangeDate: Joi.number(),
+          newEmailSecret: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .length(21),
+          newEmailAddress: Joi.string()
+            .trim(false)
+            .email({ minDomainSegments: 1, tlds: false }),
+          cancelEmailSecret: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .length(21),
+          cancelEmailAddress: Joi.string()
+            .trim(false)
+            .email({ minDomainSegments: 1, tlds: false }),
+          recoverSecret: Joi.string()
+            .trim(false)
+            .pattern(/[\x01-\x1F\x7F]/, {
+              name: 'control characters',
+              invert: true,
+            })
+            .length(10),
+          recoverSecretDate: Joi.number(),
+        }
+      : {};
+    const phoneFields = tilmeld.config.userFields.includes('phone')
+      ? {
+          phone: Joi.string()
+            .trim(false)
+            .pattern(/^[0-9]+$/, 'numbers'),
+        }
+      : {};
     Joi.attempt(
       user.$getValidatable(),
       Joi.object().keys({
         ...nymphJoiProps,
+        ...nameFields,
+        ...emailFields,
+        ...phoneFields,
         username: Joi.string().trim(false).required(),
         enabled: Joi.boolean().required(),
-        email: Joi.string()
-          .trim(false)
-          .email({ minDomainSegments: 1, tlds: false })
-          .required(),
-        nameFirst: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .max(512)
-          .required(),
-        nameMiddle: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .max(512),
-        nameLast: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .max(512),
-        name: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .max(512)
-          .required(),
         avatar: Joi.string()
           .trim(false)
           .uri()
@@ -266,9 +335,6 @@ export default {
             invert: true,
           })
           .max(1024),
-        phone: Joi.string()
-          .trim(false)
-          .pattern(/^[0-9]+$/, 'numbers'),
         group: Joi.object().instance(Group),
         groups: Joi.array().items(Joi.object().instance(Group)).required(),
         abilities: Joi.array().items(
@@ -280,42 +346,6 @@ export default {
             .max(256),
         ),
         inheritAbilities: Joi.boolean(),
-        secret: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .length(21),
-        emailChangeDate: Joi.number(),
-        newEmailSecret: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .length(21),
-        newEmailAddress: Joi.string()
-          .trim(false)
-          .email({ minDomainSegments: 1, tlds: false }),
-        cancelEmailSecret: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .length(21),
-        cancelEmailAddress: Joi.string()
-          .trim(false)
-          .email({ minDomainSegments: 1, tlds: false }),
-        recoverSecret: Joi.string()
-          .trim(false)
-          .pattern(/[\x01-\x1F\x7F]/, {
-            name: 'control characters',
-            invert: true,
-          })
-          .length(10),
-        recoverSecretDate: Joi.number(),
         salt: Joi.string().trim(false),
         password: Joi.string().trim(false).required(),
         revokeTokenDate: Joi.number(),

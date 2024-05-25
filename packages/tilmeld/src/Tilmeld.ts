@@ -90,6 +90,24 @@ export default class Tilmeld implements TilmeldInterface {
    */
   public constructor(config: Partial<Config> & { jwtSecret: string }) {
     this.config = { ...defaults, ...config };
+
+    if (
+      this.config.emailUsernames &&
+      (!this.config.userFields.includes('email') ||
+        !this.config.regFields.includes('email'))
+    ) {
+      throw new Error(
+        'You must include email in userFields and regFields if you use emailUsernames.',
+      );
+    }
+
+    for (let field of this.config.regFields) {
+      if (!this.config.userFields.includes(field)) {
+        throw new Error(
+          `All fields in regFields must also be in userFields: ${field}`,
+        );
+      }
+    }
   }
 
   /**
@@ -348,10 +366,10 @@ export default class Tilmeld implements TilmeldInterface {
           }
 
           if (
-            (originalAc.user && originalAc.user !== newAc.user) ||
-            (!originalAc.user &&
-              newAc.user &&
-              newAc.user !== tilmeld.currentUser)
+            (originalAc.user != null && originalAc.user !== newAc.user) ||
+            (originalAc.user == null &&
+              newAc.user != null &&
+              newAc.user !== tilmeld.currentUser?.guid)
           ) {
             throw new AccessControlError(
               'No permission to assign to another user.',
@@ -359,11 +377,12 @@ export default class Tilmeld implements TilmeldInterface {
           }
 
           if (
-            newAc.group &&
+            newAc.group != null &&
             newAc.group !== originalAc.group &&
-            !(newAc.group =
-              tilmeld.currentUser?.$getGid() ||
-              (tilmeld.currentUser?.$getGids() ?? []).includes(newAc.group))
+            !(
+              newAc.group === tilmeld.currentUser?.$getGid() ||
+              (tilmeld.currentUser?.$getGids() ?? []).includes(newAc.group)
+            )
           ) {
             throw new AccessControlError(
               'No permission to assign to another group.',
@@ -827,21 +846,21 @@ export default class Tilmeld implements TilmeldInterface {
 
     if (type === TilmeldAccessLevels.FULL_ACCESS) {
       return (
-        this.config.clientSetabledUIDs.indexOf(name) !== -1 ||
+        this.config.clientSetabledUIDs.includes(name) ||
         (await userOrEmpty.$gatekeeper(`uid/set/${name}`))
       );
     } else if (type === TilmeldAccessLevels.WRITE_ACCESS) {
       return (
-        this.config.clientEnabledUIDs.indexOf(name) !== -1 ||
-        this.config.clientSetabledUIDs.indexOf(name) !== -1 ||
+        this.config.clientEnabledUIDs.includes(name) ||
+        this.config.clientSetabledUIDs.includes(name) ||
         (await userOrEmpty.$gatekeeper(`uid/new/${name}`)) ||
         (await userOrEmpty.$gatekeeper(`uid/set/${name}`))
       );
     } else if (type === TilmeldAccessLevels.READ_ACCESS) {
       return (
-        this.config.clientReadableUIDs.indexOf(name) !== -1 ||
-        this.config.clientEnabledUIDs.indexOf(name) !== -1 ||
-        this.config.clientSetabledUIDs.indexOf(name) !== -1 ||
+        this.config.clientReadableUIDs.includes(name) ||
+        this.config.clientEnabledUIDs.includes(name) ||
+        this.config.clientSetabledUIDs.includes(name) ||
         (await userOrEmpty.$gatekeeper(`uid/get/${name}`)) ||
         (await userOrEmpty.$gatekeeper(`uid/new/${name}`)) ||
         (await userOrEmpty.$gatekeeper(`uid/set/${name}`))

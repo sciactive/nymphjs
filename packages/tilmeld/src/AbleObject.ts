@@ -17,7 +17,7 @@ export default abstract class AbleObject<
     if (!Array.isArray(this.$data.abilities)) {
       this.$data.abilities = [];
     }
-    if (this.$data.abilities.indexOf(ability) === -1) {
+    if (!this.$data.abilities.includes(ability)) {
       this.$data.abilities.push(ability);
     }
   }

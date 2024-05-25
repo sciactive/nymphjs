@@ -2,14 +2,14 @@ import type Nymph from './Nymph';
 import type { Options } from './Nymph.types';
 
 export type ACProperties = {
-  user: any;
-  group: any;
-  acUser: any;
-  acGroup: any;
-  acOther: any;
-  acRead: any;
-  acWrite: any;
-  acFull: any;
+  user: string | null;
+  group: string | null;
+  acUser: number | null;
+  acGroup: number | null;
+  acOther: number | null;
+  acRead: (string | null)[] | null;
+  acWrite: (string | null)[] | null;
+  acFull: (string | null)[] | null;
 };
 
 export type EntityReference = ['nymph_entity_reference', string, string];
@@ -184,6 +184,12 @@ export interface EntityInterface extends DataObjectInterface {
    * @returns An object of AC properties.
    */
   $getOriginalAcValues(): ACProperties;
+  /**
+   * Get the current values of the AC properties.
+   *
+   * @returns An object of AC properties.
+   */
+  $getCurrentAcValues(): ACProperties;
   /**
    * Get an object that holds the same data as the entity.
    *

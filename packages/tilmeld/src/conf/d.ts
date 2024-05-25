@@ -308,9 +308,9 @@ export interface Config {
   /**
    * The validator used to check groups before saving.
    */
-  validatorGroup: (group: Group & GroupData) => void;
+  validatorGroup: (tilmeld: Tilmeld, group: Group & GroupData) => void;
   /**
    * The validator used to check users before saving.
    */
-  validatorUser: (user: User & UserData) => void;
+  validatorUser: (tilmeld: Tilmeld, user: User & UserData) => void;
 }

@@ -18,7 +18,7 @@
       Editing {entity.guid
         ? entity.$is(user)
           ? 'Yourself'
-          : entity.name
+          : entity.name ?? entity.username
         : 'New User'}
     </h2>
   </div>
@@ -52,7 +52,7 @@
           </a>
         </LayoutCell>
         {#if !clientConfig.emailUsernames}
-          <LayoutCell span={6}>
+          <LayoutCell span={clientConfig.userFields.includes('email') ? 6 : 12}>
             <Textfield
               bind:value={entity.username}
               label="Username"
@@ -70,51 +70,55 @@
             </Textfield>
           </LayoutCell>
         {/if}
-        <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
-          <Textfield
-            bind:value={entity.email}
-            label="Email"
-            type="email"
-            style="width: 100%;"
-            helperLine$style="width: 100%;"
-            invalid={emailVerified === false}
-            input$autocomplete="off"
-            input$autocapitalize="off"
-            input$spellcheck="false"
-          >
-            <HelperText persistent slot="helper">
-              {emailVerifiedMessage ?? ''}
-            </HelperText>
-          </Textfield>
-        </LayoutCell>
-        <LayoutCell span={4}>
-          <Textfield
-            bind:value={entity.nameFirst}
-            label="First Name"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={4}>
-          <Textfield
-            bind:value={entity.nameMiddle}
-            label="Middle Name"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={4}>
-          <Textfield
-            bind:value={entity.nameLast}
-            label="Last Name"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={8}>
+        {#if clientConfig.userFields.includes('email')}
+          <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
+            <Textfield
+              bind:value={entity.email}
+              label="Email"
+              type="email"
+              style="width: 100%;"
+              helperLine$style="width: 100%;"
+              invalid={emailVerified === false}
+              input$autocomplete="off"
+              input$autocapitalize="off"
+              input$spellcheck="false"
+            >
+              <HelperText persistent slot="helper">
+                {emailVerifiedMessage ?? ''}
+              </HelperText>
+            </Textfield>
+          </LayoutCell>
+        {/if}
+        {#if clientConfig.userFields.includes('name')}
+          <LayoutCell span={4}>
+            <Textfield
+              bind:value={entity.nameFirst}
+              label="First Name"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={4}>
+            <Textfield
+              bind:value={entity.nameMiddle}
+              label="Middle Name"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={4}>
+            <Textfield
+              bind:value={entity.nameLast}
+              label="Last Name"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+        {/if}
+        <LayoutCell span={clientConfig.userFields.includes('phone') ? 8 : 12}>
           <Textfield
             bind:value={entity.avatar}
             label="Avatar"
@@ -123,15 +127,17 @@
             input$autocomplete="off"
           />
         </LayoutCell>
-        <LayoutCell span={4}>
-          <Textfield
-            bind:value={entity.phone}
-            label="Phone"
-            type="tel"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
+        {#if clientConfig.userFields.includes('phone')}
+          <LayoutCell span={4}>
+            <Textfield
+              bind:value={entity.phone}
+              label="Phone"
+              type="tel"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+        {/if}
         <LayoutCell span={6}>
           <Textfield
             bind:value={entity.passwordTemp}
@@ -165,7 +171,9 @@
           No primary group
         {:else}
           <a href="#/groups/edit/{encodeURIComponent(entity.group.guid || '')}"
-            >{entity.group.name + ' (' + entity.group.groupname + ')'}</a
+            >{clientConfig.userFields.includes('name')
+              ? entity.group.name + ' (' + entity.group.groupname + ')'
+              : entity.group.groupname}</a
           >
 
           <IconButton
@@ -220,8 +228,12 @@
               {#if !clientConfig.emailUsernames}
                 <Cell>Groupname</Cell>
               {/if}
-              <Cell>Name</Cell>
-              <Cell>Email</Cell>
+              {#if clientConfig.userFields.includes('name')}
+                <Cell>Name</Cell>
+              {/if}
+              {#if clientConfig.userFields.includes('email')}
+                <Cell>Email</Cell>
+              {/if}
               <Cell>Enabled</Cell>
             </Row>
           </Head>
@@ -235,8 +247,12 @@
                 {#if !clientConfig.emailUsernames}
                   <Cell>{curEntity.groupname}</Cell>
                 {/if}
-                <Cell>{curEntity.name}</Cell>
-                <Cell>{curEntity.email}</Cell>
+                {#if clientConfig.userFields.includes('name')}
+                  <Cell>{curEntity.name}</Cell>
+                {/if}
+                {#if clientConfig.userFields.includes('email')}
+                  <Cell>{curEntity.email}</Cell>
+                {/if}
                 <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
               </Row>
             {/each}
@@ -255,8 +271,12 @@
             {#if !clientConfig.emailUsernames}
               <Cell>Groupname</Cell>
             {/if}
-            <Cell>Name</Cell>
-            <Cell>Email</Cell>
+            {#if clientConfig.userFields.includes('name')}
+              <Cell>Name</Cell>
+            {/if}
+            {#if clientConfig.userFields.includes('email')}
+              <Cell>Email</Cell>
+            {/if}
             <Cell>Enabled</Cell>
             <Cell>Remove</Cell>
           </Row>
@@ -274,20 +294,24 @@
                     ></Cell
                   >
                 {/if}
-                <Cell
-                  ><a
-                    href="#/groups/edit/{encodeURIComponent(
-                      curEntity.guid || '',
-                    )}">{curEntity.name}</a
-                  ></Cell
-                >
-                <Cell
-                  ><a
-                    href="#/groups/edit/{encodeURIComponent(
-                      curEntity.guid || '',
-                    )}">{curEntity.email}</a
-                  ></Cell
-                >
+                {#if clientConfig.userFields.includes('name')}
+                  <Cell
+                    ><a
+                      href="#/groups/edit/{encodeURIComponent(
+                        curEntity.guid || '',
+                      )}">{curEntity.name}</a
+                    ></Cell
+                  >
+                {/if}
+                {#if clientConfig.userFields.includes('email')}
+                  <Cell
+                    ><a
+                      href="#/groups/edit/{encodeURIComponent(
+                        curEntity.guid || '',
+                      )}">{curEntity.email}</a
+                    ></Cell
+                  >
+                {/if}
                 <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
                 <Cell>
                   <IconButton
@@ -304,7 +328,12 @@
               </Row>
             {:else}
               <Row>
-                <Cell colspan={clientConfig.emailUsernames ? 4 : 5}>
+                <Cell
+                  colspan={2 +
+                    (!clientConfig.emailUsernames ? 1 : 0) +
+                    (clientConfig.userFields.includes('name') ? 1 : 0) +
+                    (clientConfig.userFields.includes('email') ? 1 : 0)}
+                >
                   No secondary groups
                 </Cell>
               </Row>
@@ -352,8 +381,12 @@
               {#if !clientConfig.emailUsernames}
                 <Cell>Groupname</Cell>
               {/if}
-              <Cell>Name</Cell>
-              <Cell>Email</Cell>
+              {#if clientConfig.userFields.includes('name')}
+                <Cell>Name</Cell>
+              {/if}
+              {#if clientConfig.userFields.includes('email')}
+                <Cell>Email</Cell>
+              {/if}
               <Cell>Enabled</Cell>
             </Row>
           </Head>
@@ -371,8 +404,12 @@
                 {#if !clientConfig.emailUsernames}
                   <Cell>{curEntity.groupname}</Cell>
                 {/if}
-                <Cell>{curEntity.name}</Cell>
-                <Cell>{curEntity.email}</Cell>
+                {#if clientConfig.userFields.includes('name')}
+                  <Cell>{curEntity.name}</Cell>
+                {/if}
+                {#if clientConfig.userFields.includes('email')}
+                  <Cell>{curEntity.email}</Cell>
+                {/if}
                 <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
               </Row>
             {/each}
@@ -464,118 +501,120 @@
 
     {#if activeTab === 'Security'}
       <LayoutGrid style="padding: 0;">
-        <LayoutCell span={12}>
-          <h5>Verification</h5>
-          <p>
-            The email verification secret is the code emailed to the user to
-            verify their address when they first sign up.
-          </p>
-        </LayoutCell>
-        <LayoutCell span={12}>
-          <Textfield
-            bind:value={entity.secret}
-            label="Email Verification Secret"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={12}>
-          <h5>Account Recovery</h5>
-          <p>
-            The account recovery secret is the code emailed to the user to allow
-            them to change their password and recover their account. The date is
-            used to determine if the code has expired.
-          </p>
-        </LayoutCell>
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={entity.recoverSecret}
-            label="Account Recovery Secret"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={entity.recoverSecretDate}
-            label="Account Recovery Date (Timestamp)"
-            type="number"
-            style="width: 100%;"
-            input$autocomplete="off"
-          >
-            <HelperText persistent slot="helper">
-              {entity.recoverSecretDate === 0 ||
-              entity.recoverSecretDate == null
-                ? 'Unset'
-                : new Date(entity.recoverSecretDate).toLocaleString()}
-            </HelperText>
-          </Textfield>
-        </LayoutCell>
-        <LayoutCell span={12}>
-          <h5>Email Change</h5>
-          <p>
-            An email change uses all of the following properties. The email
-            change date is used to rate limit email changes and to allow the
-            user to cancel the change within the rate limit time. The new secret
-            is emailed to the new address, and when the user clicks the link,
-            that email address is set for their account. The cancel secret is
-            emailed to the old address and will reset the user's email to the
-            cancel address if the link is clicked in time.
-          </p>
-        </LayoutCell>
-        <LayoutCell span={12}>
-          <Textfield
-            bind:value={entity.emailChangeDate}
-            label="Email Change Date (Timestamp)"
-            type="number"
-            style="width: 100%;"
-            input$autocomplete="off"
-          >
-            <HelperText persistent slot="helper">
-              {entity.emailChangeDate === 0 || entity.emailChangeDate == null
-                ? 'Unset'
-                : new Date(entity.emailChangeDate).toLocaleString()}
-            </HelperText>
-          </Textfield>
-        </LayoutCell>
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={entity.newEmailSecret}
-            label="New Email Verification Secret"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={entity.newEmailAddress}
-            label="New Email Address"
-            type="email"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={entity.cancelEmailSecret}
-            label="Cancel Email Verification Secret"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={entity.cancelEmailAddress}
-            label="Cancel Email Address"
-            type="email"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
+        {#if clientConfig.userFields.includes('email')}
+          <LayoutCell span={12}>
+            <h5>Verification</h5>
+            <p>
+              The email verification secret is the code emailed to the user to
+              verify their address when they first sign up.
+            </p>
+          </LayoutCell>
+          <LayoutCell span={12}>
+            <Textfield
+              bind:value={entity.secret}
+              label="Email Verification Secret"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={12}>
+            <h5>Account Recovery</h5>
+            <p>
+              The account recovery secret is the code emailed to the user to
+              allow them to change their password and recover their account. The
+              date is used to determine if the code has expired.
+            </p>
+          </LayoutCell>
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={entity.recoverSecret}
+              label="Account Recovery Secret"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={entity.recoverSecretDate}
+              label="Account Recovery Date (Timestamp)"
+              type="number"
+              style="width: 100%;"
+              input$autocomplete="off"
+            >
+              <HelperText persistent slot="helper">
+                {entity.recoverSecretDate === 0 ||
+                entity.recoverSecretDate == null
+                  ? 'Unset'
+                  : new Date(entity.recoverSecretDate).toLocaleString()}
+              </HelperText>
+            </Textfield>
+          </LayoutCell>
+          <LayoutCell span={12}>
+            <h5>Email Change</h5>
+            <p>
+              An email change uses all of the following properties. The email
+              change date is used to rate limit email changes and to allow the
+              user to cancel the change within the rate limit time. The new
+              secret is emailed to the new address, and when the user clicks the
+              link, that email address is set for their account. The cancel
+              secret is emailed to the old address and will reset the user's
+              email to the cancel address if the link is clicked in time.
+            </p>
+          </LayoutCell>
+          <LayoutCell span={12}>
+            <Textfield
+              bind:value={entity.emailChangeDate}
+              label="Email Change Date (Timestamp)"
+              type="number"
+              style="width: 100%;"
+              input$autocomplete="off"
+            >
+              <HelperText persistent slot="helper">
+                {entity.emailChangeDate === 0 || entity.emailChangeDate == null
+                  ? 'Unset'
+                  : new Date(entity.emailChangeDate).toLocaleString()}
+              </HelperText>
+            </Textfield>
+          </LayoutCell>
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={entity.newEmailSecret}
+              label="New Email Verification Secret"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={entity.newEmailAddress}
+              label="New Email Address"
+              type="email"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={entity.cancelEmailSecret}
+              label="Cancel Email Verification Secret"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={entity.cancelEmailAddress}
+              label="Cancel Email Address"
+              type="email"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+        {/if}
         <LayoutCell span={12}>
           <h5>Auth Token Revocation</h5>
           <p>

@@ -15,7 +15,7 @@
       </Icon>
     </IconButton>
     <h2 style="margin: 0px 12px 0px;" class="mdc-typography--headline5">
-      Editing {entity.guid ? entity.name : 'New Group'}
+      Editing {entity.guid ? entity.name ?? entity.groupname : 'New Group'}
     </h2>
   </div>
 
@@ -24,7 +24,9 @@
       <div style="padding: 12px;" class="mdc-typography--subtitle1">
         Generated primary group for <a
           href="#/users/edit/{encodeURIComponent(entity.user.guid || '')}"
-          >{entity.user.name} ({entity.user.username})</a
+          >{clientConfig.userFields.includes('name')
+            ? entity.user.name + ' (' + entity.user.username + ')'
+            : entity.user.username}</a
         >
       </div>
     {/await}
@@ -65,7 +67,7 @@
           </a>
         </LayoutCell>
         {#if !clientConfig.emailUsernames}
-          <LayoutCell span={6}>
+          <LayoutCell span={clientConfig.userFields.includes('email') ? 6 : 12}>
             <Textfield
               bind:value={entity.groupname}
               label="Groupname"
@@ -84,35 +86,39 @@
             </Textfield>
           </LayoutCell>
         {/if}
-        <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
-          <Textfield
-            bind:value={entity.email}
-            label="Email"
-            type="email"
-            style="width: 100%;"
-            helperLine$style="width: 100%;"
-            invalid={emailVerified === false}
-            input$autocomplete="off"
-            input$autocapitalize="off"
-            input$spellcheck="false"
-            disabled={entity.user != null}
-          >
-            <HelperText persistent slot="helper">
-              {emailVerifiedMessage ?? ''}
-            </HelperText>
-          </Textfield>
-        </LayoutCell>
-        <LayoutCell span={12}>
-          <Textfield
-            bind:value={entity.name}
-            label="Display Name"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="off"
-            disabled={entity.user != null}
-          />
-        </LayoutCell>
-        <LayoutCell span={8}>
+        {#if clientConfig.userFields.includes('email')}
+          <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
+            <Textfield
+              bind:value={entity.email}
+              label="Email"
+              type="email"
+              style="width: 100%;"
+              helperLine$style="width: 100%;"
+              invalid={emailVerified === false}
+              input$autocomplete="off"
+              input$autocapitalize="off"
+              input$spellcheck="false"
+              disabled={entity.user != null}
+            >
+              <HelperText persistent slot="helper">
+                {emailVerifiedMessage ?? ''}
+              </HelperText>
+            </Textfield>
+          </LayoutCell>
+        {/if}
+        {#if clientConfig.userFields.includes('name')}
+          <LayoutCell span={12}>
+            <Textfield
+              bind:value={entity.name}
+              label="Display Name"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="off"
+              disabled={entity.user != null}
+            />
+          </LayoutCell>
+        {/if}
+        <LayoutCell span={clientConfig.userFields.includes('phone') ? 8 : 12}>
           <Textfield
             bind:value={entity.avatar}
             label="Avatar"
@@ -122,16 +128,18 @@
             disabled={entity.user != null}
           />
         </LayoutCell>
-        <LayoutCell span={4}>
-          <Textfield
-            bind:value={entity.phone}
-            label="Phone"
-            type="tel"
-            style="width: 100%;"
-            input$autocomplete="off"
-            disabled={entity.user != null}
-          />
-        </LayoutCell>
+        {#if clientConfig.userFields.includes('phone')}
+          <LayoutCell span={4}>
+            <Textfield
+              bind:value={entity.phone}
+              label="Phone"
+              type="tel"
+              style="width: 100%;"
+              input$autocomplete="off"
+              disabled={entity.user != null}
+            />
+          </LayoutCell>
+        {/if}
         <LayoutCell span={12}>
           <FormField>
             <Checkbox bind:checked={entity.defaultPrimary} />
@@ -147,14 +155,17 @@
           <FormField>
             <Checkbox bind:checked={entity.defaultSecondary} />
             <span slot="label"
-              >Default secondary group for newly registered{clientConfig.verifyEmail &&
+              >Default secondary group for newly registered{clientConfig.userFields.includes(
+                'email',
+              ) &&
+              clientConfig.verifyEmail &&
               clientConfig.unverifiedAccess
                 ? ', verified'
                 : ''} users.</span
             >
           </FormField>
         </LayoutCell>
-        {#if clientConfig.verifyEmail && clientConfig.unverifiedAccess}
+        {#if clientConfig.userFields.includes('email') && clientConfig.verifyEmail && clientConfig.unverifiedAccess}
           <LayoutCell span={12}>
             <FormField>
               <Checkbox bind:checked={entity.unverifiedSecondary} />
@@ -177,7 +188,9 @@
           No parent
         {:else}
           <a href="#/groups/edit/{encodeURIComponent(entity.parent.guid || '')}"
-            >{entity.parent.name + ' (' + entity.parent.groupname + ')'}</a
+            >{clientConfig.userFields.includes('name')
+              ? entity.parent.name + ' (' + entity.parent.groupname + ')'
+              : entity.parent.groupname}</a
           >
 
           <IconButton
@@ -232,8 +245,12 @@
               {#if !clientConfig.emailUsernames}
                 <Cell>Groupname</Cell>
               {/if}
-              <Cell>Name</Cell>
-              <Cell>Email</Cell>
+              {#if clientConfig.userFields.includes('name')}
+                <Cell>Name</Cell>
+              {/if}
+              {#if clientConfig.userFields.includes('email')}
+                <Cell>Email</Cell>
+              {/if}
               <Cell>Enabled</Cell>
             </Row>
           </Head>
@@ -247,8 +264,12 @@
                 {#if !clientConfig.emailUsernames}
                   <Cell>{curEntity.groupname}</Cell>
                 {/if}
-                <Cell>{curEntity.name}</Cell>
-                <Cell>{curEntity.email}</Cell>
+                {#if clientConfig.userFields.includes('name')}
+                  <Cell>{curEntity.name}</Cell>
+                {/if}
+                {#if clientConfig.userFields.includes('email')}
+                  <Cell>{curEntity.email}</Cell>
+                {/if}
                 <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
               </Row>
             {/each}
