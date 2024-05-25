@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.52](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.51...v1.0.0-beta.52) (2024-05-25)
+
+### Bug Fixes
+
+- support setup app and users and groups when userFields is limited ([20e25a2](https://github.com/sciactive/nymphjs/commit/20e25a2bcc35f96b3146fd9d973e34083a85f854))
+
 # [1.0.0-beta.51](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.50...v1.0.0-beta.51) (2024-04-12)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-client
