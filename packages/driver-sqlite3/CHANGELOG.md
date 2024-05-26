@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.54](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.53...v1.0.0-beta.54) (2024-05-26)
+
+### Features
+
+- add index to comparison string column in sqlite3 ([330a3e1](https://github.com/sciactive/nymphjs/commit/330a3e16997b8f6a69dc85fe124ac3a826a3abd9))
+
 # [1.0.0-beta.53](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.52...v1.0.0-beta.53) (2024-05-26)
 
 ### Features
