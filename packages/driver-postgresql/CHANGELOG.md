@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.53](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.52...v1.0.0-beta.53) (2024-05-26)
+
+### Features
+
+- add pragma statements config to sqlite3 driver ([b0f27e2](https://github.com/sciactive/nymphjs/commit/b0f27e24df85663ea777565e5d352775efcad858))
+
 # [1.0.0-beta.52](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.51...v1.0.0-beta.52) (2024-05-25)
 
 **Note:** Version bump only for package @nymphjs/driver-postgresql
