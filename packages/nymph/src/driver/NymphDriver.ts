@@ -806,6 +806,7 @@ export default abstract class NymphDriver {
     if (
       this.nymph.config.cache &&
       !options.skipCache &&
+      selectors.length &&
       'guid' in selectors[0] &&
       typeof selectors[0].guid === 'number'
     ) {
