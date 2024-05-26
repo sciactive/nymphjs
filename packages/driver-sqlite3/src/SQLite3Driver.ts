@@ -325,6 +325,13 @@ export default class SQLite3Driver extends NymphDriver {
             `${this.prefix}comparisons_${etype}`,
           )} ("name") WHERE "truthy" = 1;`,
         );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}comparisons_${etype}_id_string`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}comparisons_${etype}`,
+          )} ("string");`,
+        );
         // Create the references table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
