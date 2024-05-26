@@ -103,6 +103,9 @@ export default class SQLite3Driver extends NymphDriver {
         link.pragma('encoding = "UTF-8";');
         link.pragma('foreign_keys = 1;');
         link.pragma('case_sensitive_like = 1;');
+        for (let pragma of this.config.pragmas) {
+          link.pragma(pragma);
+        }
         // Create the preg_match and regexp functions.
         link.function('regexp', { deterministic: true }, ((
           pattern: string,
@@ -1652,7 +1655,7 @@ export default class SQLite3Driver extends NymphDriver {
     options: Options<T> = {},
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
-    const { result, process } = this.getEntitesRowLike<T>(
+    const { result, process } = this.getEntitiesRowLike<T>(
       options,
       selectors,
       (options, formattedSelectors, etype) =>

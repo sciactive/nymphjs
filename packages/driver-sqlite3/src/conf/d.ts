@@ -46,6 +46,20 @@ export interface SQLite3DriverConfig {
    */
   wal: boolean;
   /**
+   * Additional pragma statements to run upon connection.
+   *
+   * The default pragmas:
+   *
+   * - journal_mode = WAL;
+   *   (if wal is set to true)
+   * - encoding = "UTF-8";
+   * - foreign_keys = 1;
+   * - case_sensitive_like = 1;
+   *
+   * (Don't include the PRAGMA keyword, but do include the semicolon.)
+   */
+  pragmas: string[];
+  /**
    * Function that gets called with every SQL string executed.
    */
   verbose: ((message?: any, ...additionalArgs: any[]) => void) | undefined;

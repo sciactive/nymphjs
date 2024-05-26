@@ -1722,7 +1722,7 @@ export default class MySQLDriver extends NymphDriver {
     options: Options<T> = {},
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
-    const { result: resultPromise, process } = this.getEntitesRowLike<T>(
+    const { result: resultPromise, process } = this.getEntitiesRowLike<T>(
       // @ts-ignore: options is correct here.
       options,
       selectors,

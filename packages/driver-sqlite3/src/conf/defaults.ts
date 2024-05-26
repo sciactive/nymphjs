@@ -7,5 +7,6 @@ export default {
   timeout: 10000,
   explicitWrite: false,
   wal: false,
+  pragmas: [],
   verbose: undefined,
 } as SQLite3DriverConfig;

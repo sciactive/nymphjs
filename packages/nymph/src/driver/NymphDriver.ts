@@ -681,7 +681,7 @@ export default abstract class NymphDriver {
     return queryParts;
   }
 
-  protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
+  protected getEntitiesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
     selectors: Selector[],
     performQueryCallback: (
@@ -705,7 +705,7 @@ export default abstract class NymphDriver {
       svalue: string;
     },
   ): { result: any; process: () => number | Error };
-  protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
+  protected getEntitiesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     selectors: Selector[],
     performQueryCallback: (
@@ -729,7 +729,7 @@ export default abstract class NymphDriver {
       svalue: string;
     },
   ): { result: any; process: () => string[] | Error };
-  protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
+  protected getEntitiesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
     performQueryCallback: (
@@ -753,7 +753,7 @@ export default abstract class NymphDriver {
       svalue: string;
     },
   ): { result: any; process: () => ReturnType<T['factorySync']>[] | Error };
-  protected getEntitesRowLike<T extends EntityConstructor = EntityConstructor>(
+  protected getEntitiesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
     performQueryCallback: (
