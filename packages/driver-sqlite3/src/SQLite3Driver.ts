@@ -1713,7 +1713,7 @@ export default class SQLite3Driver extends NymphDriver {
     return (result?.cur_uid as number | null) ?? null;
   }
 
-  public async import(filename: string) {
+  public async import(filename: string, transaction?: boolean) {
     try {
       return this.importFromFile(
         filename,
@@ -1860,14 +1860,20 @@ export default class SQLite3Driver extends NymphDriver {
           );
         },
         async () => {
-          await this.startTransaction('nymph-import');
+          if (transaction) {
+            await this.startTransaction('nymph-import');
+          }
         },
         async () => {
-          await this.commit('nymph-import');
+          if (transaction) {
+            await this.commit('nymph-import');
+          }
         },
       );
     } catch (e: any) {
-      await this.rollback('nymph-import');
+      if (transaction) {
+        await this.rollback('nymph-import');
+      }
       throw e;
     }
   }

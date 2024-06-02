@@ -1960,7 +1960,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     return result?.cur_uid == null ? null : Number(result.cur_uid);
   }
 
-  public async import(filename: string) {
+  public async import(filename: string, transaction?: boolean) {
     try {
       const result = await this.importFromFile(
         filename,
@@ -2127,16 +2127,22 @@ export default class PostgreSQLDriver extends NymphDriver {
           );
         },
         async () => {
-          await this.internalTransaction('nymph-import');
+          if (transaction) {
+            await this.internalTransaction('nymph-import');
+          }
         },
         async () => {
-          await this.commit('nymph-import');
+          if (transaction) {
+            await this.commit('nymph-import');
+          }
         },
       );
 
       return result;
     } catch (e: any) {
-      await this.rollback('nymph-import');
+      if (transaction) {
+        await this.rollback('nymph-import');
+      }
       return false;
     }
   }

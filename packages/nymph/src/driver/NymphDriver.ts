@@ -103,7 +103,7 @@ export default abstract class NymphDriver {
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number>;
   abstract getUID(name: string): Promise<number | null>;
-  abstract import(filename: string): Promise<boolean>;
+  abstract import(filename: string, transaction?: boolean): Promise<boolean>;
   abstract newUID(name: string): Promise<number | null>;
   abstract renameUID(oldName: string, newName: string): Promise<boolean>;
   abstract saveEntity(entity: EntityInterface): Promise<boolean>;

@@ -1776,7 +1776,7 @@ export default class MySQLDriver extends NymphDriver {
     return (result?.cur_uid as number | null) ?? null;
   }
 
-  public async import(filename: string) {
+  public async import(filename: string, transaction?: boolean) {
     try {
       const result = await this.importFromFile(
         filename,
@@ -1922,16 +1922,22 @@ export default class MySQLDriver extends NymphDriver {
           );
         },
         async () => {
-          await this.internalTransaction('nymph-import');
+          if (transaction) {
+            await this.internalTransaction('nymph-import');
+          }
         },
         async () => {
-          await this.commit('nymph-import');
+          if (transaction) {
+            await this.commit('nymph-import');
+          }
         },
       );
 
       return result;
     } catch (e: any) {
-      await this.rollback('nymph-import');
+      if (transaction) {
+        await this.rollback('nymph-import');
+      }
       return false;
     }
   }
