@@ -1965,40 +1965,11 @@ export default class PostgreSQLDriver extends NymphDriver {
       const result = await this.importFromFile(
         filename,
         async (guid, tags, sdata, etype) => {
-          await this.queryRun(
-            `DELETE FROM ${PostgreSQLDriver.escape(
-              `${this.prefix}entities_${etype}`,
-            )} WHERE "guid"=decode(@guid, 'hex');`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-              },
-            },
-          );
-          await this.queryRun(
-            `INSERT INTO ${PostgreSQLDriver.escape(
-              `${this.prefix}entities_${etype}`,
-            )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @mdate);`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-                tags,
-                cdate: isNaN(Number(JSON.parse(sdata.cdate)))
-                  ? null
-                  : Number(JSON.parse(sdata.cdate)),
-                mdate: isNaN(Number(JSON.parse(sdata.mdate)))
-                  ? null
-                  : Number(JSON.parse(sdata.mdate)),
-              },
-            },
-          );
-          const promises = [];
-          promises.push(
-            this.queryRun(
+          try {
+            await this.internalTransaction(`nymph-import-entity-${guid}`);
+            await this.queryRun(
               `DELETE FROM ${PostgreSQLDriver.escape(
-                `${this.prefix}data_${etype}`,
+                `${this.prefix}entities_${etype}`,
               )} WHERE "guid"=decode(@guid, 'hex');`,
               {
                 etypes: [etype],
@@ -2006,125 +1977,168 @@ export default class PostgreSQLDriver extends NymphDriver {
                   guid,
                 },
               },
-            ),
-          );
-          promises.push(
-            this.queryRun(
-              `DELETE FROM ${PostgreSQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`,
-              )} WHERE "guid"=decode(@guid, 'hex');`,
+            );
+            await this.queryRun(
+              `INSERT INTO ${PostgreSQLDriver.escape(
+                `${this.prefix}entities_${etype}`,
+              )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @mdate);`,
               {
                 etypes: [etype],
                 params: {
                   guid,
+                  tags,
+                  cdate: isNaN(Number(JSON.parse(sdata.cdate)))
+                    ? null
+                    : Number(JSON.parse(sdata.cdate)),
+                  mdate: isNaN(Number(JSON.parse(sdata.mdate)))
+                    ? null
+                    : Number(JSON.parse(sdata.mdate)),
                 },
               },
-            ),
-          );
-          promises.push(
-            this.queryRun(
-              `DELETE FROM ${PostgreSQLDriver.escape(
-                `${this.prefix}references_${etype}`,
-              )} WHERE "guid"=decode(@guid, 'hex');`,
-              {
-                etypes: [etype],
-                params: {
-                  guid,
-                },
-              },
-            ),
-          );
-          await Promise.all(promises);
-          delete sdata.cdate;
-          delete sdata.mdate;
-          for (const name in sdata) {
-            const value = sdata[name];
-            const uvalue = JSON.parse(value);
-            if (value === undefined) {
-              continue;
-            }
-            const storageValue =
-              typeof uvalue === 'number'
-                ? 'N'
-                : typeof uvalue === 'string'
-                ? 'S'
-                : value;
+            );
             const promises = [];
             promises.push(
               this.queryRun(
-                `INSERT INTO ${PostgreSQLDriver.escape(
+                `DELETE FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}data_${etype}`,
-                )} ("guid", "name", "value") VALUES (decode(@guid, 'hex'), @name, @storageValue);`,
+                )} WHERE "guid"=decode(@guid, 'hex');`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
-                    name,
-                    storageValue,
                   },
                 },
               ),
             );
             promises.push(
               this.queryRun(
-                `INSERT INTO ${PostgreSQLDriver.escape(
+                `DELETE FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}comparisons_${etype}`,
-                )} ("guid", "name", "truthy", "string", "number") VALUES (decode(@guid, 'hex'), @name, @truthy, @string, @number);`,
+                )} WHERE "guid"=decode(@guid, 'hex');`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
-                    name,
-                    truthy: !!uvalue,
-                    string: `${uvalue}`,
-                    number: isNaN(Number(uvalue)) ? null : Number(uvalue),
                   },
                 },
               ),
             );
-            const references = this.findReferences(value);
-            for (const reference of references) {
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${PostgreSQLDriver.escape(
+                  `${this.prefix}references_${etype}`,
+                )} WHERE "guid"=decode(@guid, 'hex');`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                  },
+                },
+              ),
+            );
+            await Promise.all(promises);
+            delete sdata.cdate;
+            delete sdata.mdate;
+            for (const name in sdata) {
+              const value = sdata[name];
+              const uvalue = JSON.parse(value);
+              if (value === undefined) {
+                continue;
+              }
+              const storageValue =
+                typeof uvalue === 'number'
+                  ? 'N'
+                  : typeof uvalue === 'string'
+                  ? 'S'
+                  : value;
+              const promises = [];
               promises.push(
                 this.queryRun(
                   `INSERT INTO ${PostgreSQLDriver.escape(
-                    `${this.prefix}references_${etype}`,
-                  )} ("guid", "name", "reference") VALUES (decode(@guid, 'hex'), @name, decode(@reference, 'hex'));`,
+                    `${this.prefix}data_${etype}`,
+                  )} ("guid", "name", "value") VALUES (decode(@guid, 'hex'), @name, @storageValue);`,
                   {
                     etypes: [etype],
                     params: {
                       guid,
                       name,
-                      reference,
+                      storageValue,
                     },
                   },
                 ),
               );
+              promises.push(
+                this.queryRun(
+                  `INSERT INTO ${PostgreSQLDriver.escape(
+                    `${this.prefix}comparisons_${etype}`,
+                  )} ("guid", "name", "truthy", "string", "number") VALUES (decode(@guid, 'hex'), @name, @truthy, @string, @number);`,
+                  {
+                    etypes: [etype],
+                    params: {
+                      guid,
+                      name,
+                      truthy: !!uvalue,
+                      string: `${uvalue}`,
+                      number: isNaN(Number(uvalue)) ? null : Number(uvalue),
+                    },
+                  },
+                ),
+              );
+              const references = this.findReferences(value);
+              for (const reference of references) {
+                promises.push(
+                  this.queryRun(
+                    `INSERT INTO ${PostgreSQLDriver.escape(
+                      `${this.prefix}references_${etype}`,
+                    )} ("guid", "name", "reference") VALUES (decode(@guid, 'hex'), @name, decode(@reference, 'hex'));`,
+                    {
+                      etypes: [etype],
+                      params: {
+                        guid,
+                        name,
+                        reference,
+                      },
+                    },
+                  ),
+                );
+              }
             }
+            await Promise.all(promises);
+            await this.commit(`nymph-import-entity-${guid}`);
+          } catch (e: any) {
+            await this.rollback(`nymph-import-entity-${guid}`);
+            throw e;
           }
-          await Promise.all(promises);
         },
         async (name, curUid) => {
-          await this.queryRun(
-            `DELETE FROM ${PostgreSQLDriver.escape(
-              `${this.prefix}uids`,
-            )} WHERE "name"=@name;`,
-            {
-              params: {
-                name,
+          try {
+            await this.internalTransaction(`nymph-import-uid-${name}`);
+            await this.queryRun(
+              `DELETE FROM ${PostgreSQLDriver.escape(
+                `${this.prefix}uids`,
+              )} WHERE "name"=@name;`,
+              {
+                params: {
+                  name,
+                },
               },
-            },
-          );
-          await this.queryRun(
-            `INSERT INTO ${PostgreSQLDriver.escape(
-              `${this.prefix}uids`,
-            )} ("name", "cur_uid") VALUES (@name, @curUid);`,
-            {
-              params: {
-                name,
-                curUid,
+            );
+            await this.queryRun(
+              `INSERT INTO ${PostgreSQLDriver.escape(
+                `${this.prefix}uids`,
+              )} ("name", "cur_uid") VALUES (@name, @curUid);`,
+              {
+                params: {
+                  name,
+                  curUid,
+                },
               },
-            },
-          );
+            );
+            await this.commit(`nymph-import-uid-${name}`);
+          } catch (e: any) {
+            await this.rollback(`nymph-import-uid-${name}`);
+            throw e;
+          }
         },
         async () => {
           if (transaction) {

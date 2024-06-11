@@ -1718,146 +1718,160 @@ export default class SQLite3Driver extends NymphDriver {
       return this.importFromFile(
         filename,
         async (guid, tags, sdata, etype) => {
-          this.queryRun(
-            `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}entities_${etype}`,
-            )} WHERE "guid"=@guid;`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-              },
-            },
-          );
-          this.queryRun(
-            `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}`,
-            )} WHERE "guid"=@guid;`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-              },
-            },
-          );
-          this.queryRun(
-            `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}comparisons_${etype}`,
-            )} WHERE "guid"=@guid;`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-              },
-            },
-          );
-          this.queryRun(
-            `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}references_${etype}`,
-            )} WHERE "guid"=@guid;`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-              },
-            },
-          );
-          this.queryRun(
-            `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}entities_${etype}`,
-            )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-                tags: ',' + tags.join(',') + ',',
-                cdate: Number(JSON.parse(sdata.cdate)),
-                mdate: Number(JSON.parse(sdata.mdate)),
-              },
-            },
-          );
-          delete sdata.cdate;
-          delete sdata.mdate;
-          for (const name in sdata) {
-            const value = sdata[name];
-            const uvalue = JSON.parse(value);
-            if (value === undefined) {
-              continue;
-            }
-            const storageValue =
-              typeof uvalue === 'number'
-                ? 'N'
-                : typeof uvalue === 'string'
-                ? 'S'
-                : value;
+          try {
+            await this.startTransaction(`nymph-import-entity-${guid}`);
             this.queryRun(
-              `INSERT INTO ${SQLite3Driver.escape(
+              `DELETE FROM ${SQLite3Driver.escape(
+                `${this.prefix}entities_${etype}`,
+              )} WHERE "guid"=@guid;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              },
+            );
+            this.queryRun(
+              `DELETE FROM ${SQLite3Driver.escape(
                 `${this.prefix}data_${etype}`,
-              )} ("guid", "name", "value") VALUES (@guid, @name, @storageValue);`,
+              )} WHERE "guid"=@guid;`,
               {
                 etypes: [etype],
                 params: {
                   guid,
-                  name,
-                  storageValue,
+                },
+              },
+            );
+            this.queryRun(
+              `DELETE FROM ${SQLite3Driver.escape(
+                `${this.prefix}comparisons_${etype}`,
+              )} WHERE "guid"=@guid;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              },
+            );
+            this.queryRun(
+              `DELETE FROM ${SQLite3Driver.escape(
+                `${this.prefix}references_${etype}`,
+              )} WHERE "guid"=@guid;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
                 },
               },
             );
             this.queryRun(
               `INSERT INTO ${SQLite3Driver.escape(
-                `${this.prefix}comparisons_${etype}`,
-              )} ("guid", "name", "truthy", "string", "number") VALUES (@guid, @name, @truthy, @string, @number);`,
+                `${this.prefix}entities_${etype}`,
+              )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
               {
                 etypes: [etype],
                 params: {
                   guid,
-                  name,
-                  truthy: uvalue ? 1 : 0,
-                  string: `${uvalue}`,
-                  number: Number(uvalue),
+                  tags: ',' + tags.join(',') + ',',
+                  cdate: Number(JSON.parse(sdata.cdate)),
+                  mdate: Number(JSON.parse(sdata.mdate)),
                 },
               },
             );
-            const references = this.findReferences(value);
-            for (const reference of references) {
+            delete sdata.cdate;
+            delete sdata.mdate;
+            for (const name in sdata) {
+              const value = sdata[name];
+              const uvalue = JSON.parse(value);
+              if (value === undefined) {
+                continue;
+              }
+              const storageValue =
+                typeof uvalue === 'number'
+                  ? 'N'
+                  : typeof uvalue === 'string'
+                  ? 'S'
+                  : value;
               this.queryRun(
                 `INSERT INTO ${SQLite3Driver.escape(
-                  `${this.prefix}references_${etype}`,
-                )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
+                  `${this.prefix}data_${etype}`,
+                )} ("guid", "name", "value") VALUES (@guid, @name, @storageValue);`,
                 {
                   etypes: [etype],
                   params: {
                     guid,
                     name,
-                    reference,
+                    storageValue,
                   },
                 },
               );
+              this.queryRun(
+                `INSERT INTO ${SQLite3Driver.escape(
+                  `${this.prefix}comparisons_${etype}`,
+                )} ("guid", "name", "truthy", "string", "number") VALUES (@guid, @name, @truthy, @string, @number);`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                    name,
+                    truthy: uvalue ? 1 : 0,
+                    string: `${uvalue}`,
+                    number: Number(uvalue),
+                  },
+                },
+              );
+              const references = this.findReferences(value);
+              for (const reference of references) {
+                this.queryRun(
+                  `INSERT INTO ${SQLite3Driver.escape(
+                    `${this.prefix}references_${etype}`,
+                  )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
+                  {
+                    etypes: [etype],
+                    params: {
+                      guid,
+                      name,
+                      reference,
+                    },
+                  },
+                );
+              }
             }
+            await this.commit(`nymph-import-entity-${guid}`);
+          } catch (e: any) {
+            await this.rollback(`nymph-import-entity-${guid}`);
+            throw e;
           }
         },
         async (name, curUid) => {
-          this.queryRun(
-            `DELETE FROM ${SQLite3Driver.escape(
-              `${this.prefix}uids`,
-            )} WHERE "name"=@name;`,
-            {
-              params: {
-                name,
+          try {
+            await this.startTransaction(`nymph-import-uid-${name}`);
+            this.queryRun(
+              `DELETE FROM ${SQLite3Driver.escape(
+                `${this.prefix}uids`,
+              )} WHERE "name"=@name;`,
+              {
+                params: {
+                  name,
+                },
               },
-            },
-          );
-          this.queryRun(
-            `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}uids`,
-            )} ("name", "cur_uid") VALUES (@name, @curUid);`,
-            {
-              params: {
-                name,
-                curUid,
+            );
+            this.queryRun(
+              `INSERT INTO ${SQLite3Driver.escape(
+                `${this.prefix}uids`,
+              )} ("name", "cur_uid") VALUES (@name, @curUid);`,
+              {
+                params: {
+                  name,
+                  curUid,
+                },
               },
-            },
-          );
+            );
+            await this.commit(`nymph-import-uid-${name}`);
+          } catch (e: any) {
+            await this.rollback(`nymph-import-uid-${name}`);
+            throw e;
+          }
         },
         async () => {
           if (transaction) {
