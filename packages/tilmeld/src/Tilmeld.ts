@@ -938,9 +938,10 @@ export default class Tilmeld implements TilmeldInterface {
    * successful authentication.
    *
    * @param skipXsrfToken Skip the XSRF token check.
+   * @param skipRenew Skip the token renewal step, even if the token is close to expiration.
    * @returns True if a user was authenticated, false on any failure.
    */
-  public async authenticate(skipXsrfToken = false) {
+  public async authenticate(skipXsrfToken = false, skipRenew = false) {
     if (this.request == null) {
       return false;
     }
@@ -1043,7 +1044,10 @@ export default class Tilmeld implements TilmeldInterface {
       }
     }
 
-    if (expire.getTime() < Date.now() + this.config.jwtRenew * 1000) {
+    if (
+      !skipRenew &&
+      expire.getTime() < Date.now() + this.config.jwtRenew * 1000
+    ) {
       // If the user is less than renew time from needing a new token, give them
       // a new one.
       await this.login(user, fromAuthHeader);
@@ -1193,7 +1197,7 @@ export default class Tilmeld implements TilmeldInterface {
       }
       this.response.locals.user = null;
 
-      await this.authenticate();
+      await this.authenticate(false, true);
     }
   }
 

@@ -44,6 +44,16 @@ export type NymphOptions = {
    * can help to synchronize them correctly and avoid data conflicts.
    */
   weakCache?: boolean;
+  /**
+   * Whether to renew tokens when a request is made.
+   *
+   * If you turn this off, the client will request that the server not renew an
+   * authentication token, even if it is within the renewal time of the
+   * expiration date.
+   *
+   * This defaults to true.
+   */
+  renewTokens?: boolean;
 };
 
 export type EventType = 'request' | 'response';

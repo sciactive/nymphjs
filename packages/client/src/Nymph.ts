@@ -42,6 +42,15 @@ export default class Nymph {
   private responseCallbacks: ResponseCallback[] = [];
   private restUrl: string = '';
   private weakCache = false;
+  /**
+   * Headers that will be sent with every request.
+   *
+   * These are used by Tilmeld for authentication.
+   */
+  public headers: { [k: string]: string } = {};
+  /**
+   * The entity cache.
+   */
   public cache = new EntityWeakCache();
 
   public constructor(NymphOptions: NymphOptions) {
@@ -54,6 +63,10 @@ export default class Nymph {
     requester = new HttpRequester(
       'fetch' in NymphOptions ? NymphOptions.fetch : undefined,
     );
+
+    if ('renewTokens' in NymphOptions && !NymphOptions.renewTokens) {
+      this.headers['X-Tilmeld-Token-Renewal'] = 'off';
+    }
 
     requester.on('request', (_requester, url, options) => {
       for (let i = 0; i < this.requestCallbacks.length; i++) {
@@ -111,6 +124,7 @@ export default class Nymph {
   public async newUID(name: string) {
     const data = await requester.POST({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'text',
       data: { action: 'uid', data: name },
     });
@@ -120,6 +134,7 @@ export default class Nymph {
   public async setUID(name: string, value: number) {
     return await requester.PUT({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: { action: 'uid', data: { name, value } },
     });
@@ -128,6 +143,7 @@ export default class Nymph {
   public async getUID(name: string) {
     const data = await requester.GET({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'text',
       data: { action: 'uid', data: name },
     });
@@ -137,6 +153,7 @@ export default class Nymph {
   public async deleteUID(name: string) {
     return await requester.DELETE({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'text',
       data: { action: 'uid', data: name },
     });
@@ -215,6 +232,7 @@ export default class Nymph {
   ): Promise<T | T[]> {
     const response = await requester[method]({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: {
         action: plural ? 'entities' : 'entity',
@@ -323,6 +341,7 @@ export default class Nymph {
     }
     const data = await requester.GET({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: {
         action: 'entity',
@@ -357,6 +376,7 @@ export default class Nymph {
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
     const data = await requester.GET({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: {
         action: 'entities',
@@ -453,6 +473,7 @@ export default class Nymph {
   ) {
     return await requester.DELETE({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: {
         action: _plural ? 'entities' : 'entity',
@@ -482,6 +503,7 @@ export default class Nymph {
   ): Promise<ServerCallResponse> {
     const data = await requester.POST({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: {
         action: 'method',
@@ -507,6 +529,7 @@ export default class Nymph {
   ): Promise<ServerCallStaticResponse> {
     const data = await requester.POST({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: {
         action: 'method',
@@ -529,6 +552,7 @@ export default class Nymph {
   ): Promise<AbortableAsyncIterator<ServerCallStaticResponse>> {
     const iterable = await requester.POST_ITERATOR({
       url: this.restUrl,
+      headers: { ...this.headers },
       dataType: 'json',
       data: {
         action: 'method',
@@ -603,10 +627,6 @@ export default class Nymph {
       this[prop].splice(i, 1);
     }
     return true;
-  }
-
-  public setXsrfToken(token: string | null) {
-    requester.setXsrfToken(token);
   }
 }
 

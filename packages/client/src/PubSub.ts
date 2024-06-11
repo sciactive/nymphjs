@@ -786,7 +786,10 @@ export default class PubSub {
     return true;
   }
 
-  public setToken(authToken: string | null, switchToken: string | null = null) {
+  public authenticate(
+    authToken: string | null,
+    switchToken: string | null = null,
+  ) {
     this.authToken = authToken;
     this.switchToken = switchToken;
     if (this.isConnectionOpen()) {

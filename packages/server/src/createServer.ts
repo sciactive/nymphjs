@@ -67,7 +67,10 @@ export function createServer(
       response.locals.nymph.tilmeld.request = request;
       response.locals.nymph.tilmeld.response = response;
       try {
-        await response.locals.nymph.tilmeld.authenticate();
+        await response.locals.nymph.tilmeld.authenticate(
+          false,
+          request.header('x-tilmeld-token-renewal') === 'off',
+        );
       } catch (e: any) {
         httpError(response, 500, e);
         return;

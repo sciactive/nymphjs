@@ -1,7 +1,7 @@
 // Nymph expects fetch and WebSocket.
 import { w3cwebsocket } from 'websocket';
 import fetch from 'node-fetch';
-import { Nymph, PubSub, NymphOptions } from '@nymphjs/client';
+import { Nymph, PubSub, type NymphOptions } from '@nymphjs/client';
 
 // Make a shortcut for PubSub init.
 class NodeNymph extends Nymph {

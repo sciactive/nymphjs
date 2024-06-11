@@ -377,7 +377,7 @@ export interface TilmeldInterface {
   init(nymph: Nymph): void;
   clone(): TilmeldInterface;
   gatekeeper(ability?: string): boolean;
-  authenticate(): Promise<boolean>;
+  authenticate(skipXsrfToken?: boolean, skipRenew?: boolean): Promise<boolean>;
   clearSession(): void;
   extractToken(token: string): Promise<any>;
   fillSession(user: any): Promise<void>;

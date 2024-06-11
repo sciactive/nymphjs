@@ -21,6 +21,7 @@ export type HttpRequesterIteratorCallback = (
 ) => void;
 export type HttpRequesterRequestOptions = {
   url: string;
+  headers?: { [k: string]: any };
   data: { [k: string]: any };
   dataType: string;
 };
@@ -32,7 +33,6 @@ export interface AbortableAsyncIterator<T extends any = any>
 
 export default class HttpRequester {
   private fetch: WindowOrWorkerGlobalScope['fetch'];
-  private xsrfToken: string | null = null;
   private requestCallbacks: HttpRequesterRequestCallback[] = [];
   private responseCallbacks: HttpRequesterResponseCallback[] = [];
   private iteratorCallbacks: HttpRequesterIteratorCallback[] = [];
@@ -110,10 +110,6 @@ export default class HttpRequester {
     return true;
   }
 
-  setXsrfToken(xsrfToken: string | null) {
-    this.xsrfToken = xsrfToken;
-  }
-
   async GET(opt: HttpRequesterRequestOptions) {
     return await this._httpRequest('GET', opt);
   }
@@ -151,7 +147,7 @@ export default class HttpRequester {
     }
     const options: RequestInit = {
       method,
-      headers: {},
+      headers: opt.headers ?? {},
       credentials: 'include',
     };
 
@@ -163,11 +159,6 @@ export default class HttpRequester {
 
     for (let i = 0; i < this.requestCallbacks.length; i++) {
       this.requestCallbacks[i] && this.requestCallbacks[i](this, url, options);
-    }
-
-    if (this.xsrfToken !== null) {
-      (options.headers as Record<string, string>)['X-Xsrf-Token'] =
-        this.xsrfToken;
     }
 
     const response = await this.fetch(url, options);
@@ -240,7 +231,7 @@ export default class HttpRequester {
       url = HttpRequester.makeUrl(opt.url, opt.data);
     }
     const hasBody = method !== 'GET' && opt.data;
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = opt.headers ?? {};
 
     if (hasBody) {
       headers['Content-Type'] = 'application/json';
@@ -249,10 +240,6 @@ export default class HttpRequester {
     for (let i = 0; i < this.iteratorCallbacks.length; i++) {
       this.iteratorCallbacks[i] &&
         this.iteratorCallbacks[i](this, url, headers);
-    }
-
-    if (this.xsrfToken !== null) {
-      headers['X-Xsrf-Token'] = this.xsrfToken;
     }
 
     const responses: any[] = [];

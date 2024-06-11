@@ -458,9 +458,9 @@ export default class User extends Entity<UserData> {
     if (currentToken !== token) {
       if (token == null || token === '') {
         if (currentToken != null) {
-          this.nymph.setXsrfToken(null);
+          delete this.nymph.headers['X-Xsrf-Token'];
           if (this.nymph.pubsub) {
-            this.nymph.pubsub.setToken(null);
+            this.nymph.pubsub.authenticate(null);
           }
           currentToken = null;
         }
@@ -472,9 +472,9 @@ export default class User extends Entity<UserData> {
             ? Buffer.from(base64, 'base64').toString('binary') // node
             : atob(base64); // browser
         const jwt = JSON.parse(json);
-        this.nymph.setXsrfToken(jwt.xsrfToken);
+        this.nymph.headers['X-Xsrf-Token'] = jwt.xsrfToken;
         if (this.nymph.pubsub) {
-          this.nymph.pubsub.setToken(token, switchToken);
+          this.nymph.pubsub.authenticate(token, switchToken);
         }
         currentToken = token;
       }
