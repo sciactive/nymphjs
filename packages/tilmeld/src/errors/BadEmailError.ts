@@ -1,6 +1,8 @@
-export class BadEmailError extends Error {
+import { HttpError } from '@nymphjs/server';
+
+export class BadEmailError extends HttpError {
   constructor(message: string) {
-    super(message);
+    super(message, 400);
     this.name = 'BadEmailError';
   }
 }
