@@ -5,7 +5,7 @@
     "lib": ["ES2021"],
     "target": "ES2021",
     "noImplicitAny": true,
-    "removeComments": true,
+    "removeComments": false,
     "sourceMap": true,
     "outDir": "dist",
     "resolveJsonModule": true,
