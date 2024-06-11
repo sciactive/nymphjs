@@ -24,7 +24,7 @@ const sqliteConfig = {
 
 const pubSubConfig = {
   originIsAllowed: () => true,
-  entries: ['ws://localhost:5081/'],
+  entries: ['ws://localhost:5083/'],
   logger: () => {},
 };
 
@@ -38,13 +38,13 @@ PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
 const app = express();
 app.use(createRestServer(nymphServer));
-const server = app.listen(5080);
+const server = app.listen(5082);
 
-const pubsubServer = createServer(5081, pubSubConfig, nymphServer);
+const pubsubServer = createServer(5083, pubSubConfig, nymphServer);
 
 const nymphOptions = {
-  restUrl: 'http://localhost:5080/',
-  pubsubUrl: 'ws://localhost:5081/',
+  restUrl: 'http://localhost:5082/',
+  pubsubUrl: 'ws://localhost:5083/',
   noConsole: true,
 };
 const nymph = new Nymph(nymphOptions);
