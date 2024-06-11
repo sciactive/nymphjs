@@ -275,203 +275,218 @@ export default abstract class NymphDriver {
     guid: string | null = null,
     tags: string[] | null = null,
   ) {
-    const formattedSelectors = this.formatSelectors(selectors).selectors;
+    try {
+      const formattedSelectors = this.formatSelectors(selectors).selectors;
 
-    for (const curSelector of formattedSelectors) {
-      const type = curSelector.type;
-      const typeIsNot = type === '!&' || type === '!|';
-      const typeIsOr = type === '|' || type === '!|';
-      let pass = !typeIsOr;
-      for (const k in curSelector) {
-        const key = k as keyof Selector;
-        const value = curSelector[key];
+      for (const curSelector of formattedSelectors) {
+        const type = curSelector.type;
+        const typeIsNot = type === '!&' || type === '!|';
+        const typeIsOr = type === '|' || type === '!|';
+        let pass = !typeIsOr;
+        for (const k in curSelector) {
+          const key = k as keyof Selector;
+          const value = curSelector[key];
 
-        if (key === 'type' || value == null) {
-          continue;
-        }
+          if (key === 'type' || value == null) {
+            continue;
+          }
 
-        const clauseNot = key.substring(0, 1) === '!';
-        if (key === 'selector' || key === '!selector') {
-          const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-          pass = xor(
-            this.checkData(data, sdata, tmpArr, guid, tags),
-            xor(typeIsNot, clauseNot),
-          );
-        } else {
-          if (key === 'qref' || key === '!qref') {
-            throw new Error("Can't use checkData on qref clauses.");
+          const clauseNot = key.substring(0, 1) === '!';
+          if (key === 'selector' || key === '!selector') {
+            const tmpArr = (
+              Array.isArray(value) ? value : [value]
+            ) as Selector[];
+            pass = xor(
+              this.checkData(data, sdata, tmpArr, guid, tags),
+              xor(typeIsNot, clauseNot),
+            );
           } else {
-            // Check if it doesn't pass any for &, check if it passes any for |.
-            for (const curValue of value) {
-              if (curValue == null) {
-                continue;
-              }
+            if (key === 'qref' || key === '!qref') {
+              throw new Error("Can't use checkData on qref clauses.");
+            } else {
+              // Check if it doesn't pass any for &, check if it passes any for |.
+              for (const curValue of value) {
+                if (curValue == null) {
+                  continue;
+                }
 
-              const propName = (curValue as string[])[0];
+                const propName = (curValue as string[])[0];
 
-              // Unserialize the data for this variable.
-              if (propName in sdata) {
-                data[propName] = JSON.parse(sdata[propName]);
-                delete sdata[propName];
-              }
+                // Unserialize the data for this variable.
+                if (propName in sdata) {
+                  data[propName] = JSON.parse(sdata[propName]);
+                  delete sdata[propName];
+                }
 
-              switch (key) {
-                case 'guid':
-                case '!guid':
-                  pass = xor(guid == propName, xor(typeIsNot, clauseNot));
-                  break;
-                case 'tag':
-                case '!tag':
-                  pass = xor(
-                    (tags ?? []).indexOf(propName) !== -1,
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'defined':
-                case '!defined':
-                  pass = xor(propName in data, xor(typeIsNot, clauseNot));
-                  break;
-                case 'truthy':
-                case '!truthy':
-                  pass = xor(
-                    propName in data && data[propName],
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'ref':
-                case '!ref':
-                  const testRefValue = (curValue as [string, any])[1] as any;
-                  pass = xor(
-                    propName in data &&
-                      this.entityReferenceSearch(data[propName], testRefValue),
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'equal':
-                case '!equal':
-                  const testEqualValue = (curValue as [string, any])[1] as any;
-                  pass = xor(
-                    propName in data &&
-                      JSON.stringify(data[propName]) ===
-                        JSON.stringify(testEqualValue),
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'contain':
-                case '!contain':
-                  const testContainValue = (
-                    curValue as [string, any]
-                  )[1] as any;
-                  pass = xor(
-                    propName in data &&
-                      JSON.stringify(data[propName]).indexOf(
-                        JSON.stringify(testContainValue),
-                      ) !== -1,
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'like':
-                case '!like':
-                  const testLikeValue = (
-                    curValue as [string, string]
-                  )[1] as string;
-                  pass = xor(
-                    propName in data &&
-                      new RegExp(
-                        '^' +
-                          escapeRegExp(testLikeValue)
-                            .replace('%', () => '.*')
-                            .replace('_', () => '.') +
-                          '$',
-                      ).test(data[propName]),
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'match':
-                case '!match':
-                  const testMatchValue = (
-                    curValue as [string, string]
-                  )[1] as string;
-                  // Convert a POSIX regex to a JS regex.
-                  pass = xor(
-                    propName in data &&
-                      this.posixRegexMatch(testMatchValue, data[propName]),
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'imatch':
-                case '!imatch':
-                  const testIMatchValue = (
-                    curValue as [string, string]
-                  )[1] as string;
-                  // Convert a POSIX regex to a JS regex.
-                  pass = xor(
-                    propName in data &&
-                      this.posixRegexMatch(
-                        testIMatchValue,
-                        data[propName],
-                        true,
-                      ),
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'gt':
-                case '!gt':
-                  const testGTValue = (
-                    curValue as [string, number]
-                  )[1] as number;
-                  pass = xor(
-                    propName in data && data[propName] > testGTValue,
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'gte':
-                case '!gte':
-                  const testGTEValue = (
-                    curValue as [string, number]
-                  )[1] as number;
-                  pass = xor(
-                    propName in data && data[propName] >= testGTEValue,
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'lt':
-                case '!lt':
-                  const testLTValue = (
-                    curValue as [string, number]
-                  )[1] as number;
-                  pass = xor(
-                    propName in data && data[propName] < testLTValue,
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-                case 'lte':
-                case '!lte':
-                  const testLTEValue = (
-                    curValue as [string, number]
-                  )[1] as number;
-                  pass = xor(
-                    propName in data && data[propName] <= testLTEValue,
-                    xor(typeIsNot, clauseNot),
-                  );
-                  break;
-              }
+                switch (key) {
+                  case 'guid':
+                  case '!guid':
+                    pass = xor(guid == propName, xor(typeIsNot, clauseNot));
+                    break;
+                  case 'tag':
+                  case '!tag':
+                    pass = xor(
+                      (tags ?? []).indexOf(propName) !== -1,
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'defined':
+                  case '!defined':
+                    pass = xor(propName in data, xor(typeIsNot, clauseNot));
+                    break;
+                  case 'truthy':
+                  case '!truthy':
+                    pass = xor(
+                      propName in data && data[propName],
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'ref':
+                  case '!ref':
+                    const testRefValue = (curValue as [string, any])[1] as any;
+                    pass = xor(
+                      propName in data &&
+                        this.entityReferenceSearch(
+                          data[propName],
+                          testRefValue,
+                        ),
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'equal':
+                  case '!equal':
+                    const testEqualValue = (
+                      curValue as [string, any]
+                    )[1] as any;
+                    pass = xor(
+                      propName in data &&
+                        JSON.stringify(data[propName]) ===
+                          JSON.stringify(testEqualValue),
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'contain':
+                  case '!contain':
+                    const testContainValue = (
+                      curValue as [string, any]
+                    )[1] as any;
+                    pass = xor(
+                      propName in data &&
+                        JSON.stringify(data[propName]).indexOf(
+                          JSON.stringify(testContainValue),
+                        ) !== -1,
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'like':
+                  case '!like':
+                    const testLikeValue = (
+                      curValue as [string, string]
+                    )[1] as string;
+                    pass = xor(
+                      propName in data &&
+                        new RegExp(
+                          '^' +
+                            escapeRegExp(testLikeValue)
+                              .replace('%', () => '.*')
+                              .replace('_', () => '.') +
+                            '$',
+                        ).test(data[propName]),
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'match':
+                  case '!match':
+                    const testMatchValue = (
+                      curValue as [string, string]
+                    )[1] as string;
+                    // Convert a POSIX regex to a JS regex.
+                    pass = xor(
+                      propName in data &&
+                        this.posixRegexMatch(testMatchValue, data[propName]),
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'imatch':
+                  case '!imatch':
+                    const testIMatchValue = (
+                      curValue as [string, string]
+                    )[1] as string;
+                    // Convert a POSIX regex to a JS regex.
+                    pass = xor(
+                      propName in data &&
+                        this.posixRegexMatch(
+                          testIMatchValue,
+                          data[propName],
+                          true,
+                        ),
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'gt':
+                  case '!gt':
+                    const testGTValue = (
+                      curValue as [string, number]
+                    )[1] as number;
+                    pass = xor(
+                      propName in data && data[propName] > testGTValue,
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'gte':
+                  case '!gte':
+                    const testGTEValue = (
+                      curValue as [string, number]
+                    )[1] as number;
+                    pass = xor(
+                      propName in data && data[propName] >= testGTEValue,
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'lt':
+                  case '!lt':
+                    const testLTValue = (
+                      curValue as [string, number]
+                    )[1] as number;
+                    pass = xor(
+                      propName in data && data[propName] < testLTValue,
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                  case 'lte':
+                  case '!lte':
+                    const testLTEValue = (
+                      curValue as [string, number]
+                    )[1] as number;
+                    pass = xor(
+                      propName in data && data[propName] <= testLTEValue,
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
+                }
 
-              if (!xor(typeIsOr, pass)) {
-                break;
+                if (!xor(typeIsOr, pass)) {
+                  break;
+                }
               }
             }
           }
+          if (!xor(typeIsOr, pass)) {
+            break;
+          }
         }
-        if (!xor(typeIsOr, pass)) {
-          break;
+        if (!pass) {
+          return false;
         }
       }
-      if (!pass) {
-        return false;
-      }
+      return true;
+    } catch (e: any) {
+      this.nymph.config.debugError(
+        'nymph',
+        `Failed to check entity data: ${e}`,
+      );
+      throw e;
     }
-    return true;
   }
 
   /**

@@ -21,4 +21,12 @@ export interface Config {
    * return a 404 error.
    */
   emptyListError: boolean;
+  /**
+   * A function to log debug messages. By default, uses the `debug` package.
+   */
+  debugLog: (source: string, message: string) => void;
+  /**
+   * A function to log error messages. By default, uses the `debug` package.
+   */
+  debugError: (source: string, message: string) => void;
 }

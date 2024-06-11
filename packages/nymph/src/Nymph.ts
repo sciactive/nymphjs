@@ -205,13 +205,17 @@ export default class Nymph {
       }
     }
 
+    this.config.debugLog('nymph', 'Nymph loaded.');
+
     if (tilmeld != null) {
       this.tilmeld = tilmeld;
     }
 
     this.driver.init(this);
     if (this.tilmeld) {
+      this.config.debugLog('nymph', 'Tilmeld initializing.');
       this.tilmeld.init(this);
+      this.config.debugLog('nymph', 'Tilmeld initialized.');
     }
   }
 
@@ -235,6 +239,7 @@ export default class Nymph {
       }
     }
     this.entityClasses[entityClass.class] = NymphEntity;
+    this.config.debugLog('nymph', `Added entity class "${entityClass.class}".`);
     return NymphEntity;
   }
 
@@ -255,7 +260,8 @@ export default class Nymph {
     if (key in this.entityClasses) {
       return this.entityClasses[key];
     }
-    throw new ClassNotAvailableError('Tried to use class: ' + key);
+    this.config.debugError('nymph', `Tried to use missing class "${key}".`);
+    throw new ClassNotAvailableError(`Tried to use missing class "${key}".`);
   }
 
   /**
@@ -278,13 +284,19 @@ export default class Nymph {
    * @returns Whether the instance is connected to the database.
    */
   public async connect(): Promise<boolean> {
-    const result = this.driver.connect();
-    for (let callback of this.connectCallbacks) {
-      if (callback) {
-        await callback(this, result);
+    try {
+      const result = this.driver.connect();
+      for (let callback of this.connectCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
       }
+      this.config.debugLog('nymph', 'Driver connected.');
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to connect: ${e}`);
+      throw e;
     }
-    return await result;
   }
 
   /**
@@ -293,13 +305,19 @@ export default class Nymph {
    * @returns Whether the instance is connected to the database.
    */
   public async disconnect(): Promise<boolean> {
-    const result = this.driver.disconnect();
-    for (let callback of this.disconnectCallbacks) {
-      if (callback) {
-        await callback(this, result);
+    try {
+      const result = this.driver.disconnect();
+      for (let callback of this.disconnectCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
       }
+      this.config.debugLog('nymph', 'Driver disconnected.');
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to disconnect: ${e}`);
+      throw e;
     }
-    return await result;
   }
 
   /**
@@ -326,18 +344,24 @@ export default class Nymph {
    * @returns A new instance of Nymph that should be used for the transaction.
    */
   public async startTransaction(name: string): Promise<Nymph> {
-    for (let callback of this.beforeStartTransactionCallbacks) {
-      if (callback) {
-        await callback(this, name);
+    try {
+      for (let callback of this.beforeStartTransactionCallbacks) {
+        if (callback) {
+          await callback(this, name);
+        }
       }
-    }
-    const result = await this.driver.startTransaction(name);
-    for (let callback of this.afterStartTransactionCallbacks) {
-      if (callback) {
-        await callback(this, name, result);
+      this.config.debugLog('nymph', `Starting transaction "${name}".`);
+      const result = await this.driver.startTransaction(name);
+      for (let callback of this.afterStartTransactionCallbacks) {
+        if (callback) {
+          await callback(this, name, result);
+        }
       }
+      return result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to start transaction: ${e}`);
+      throw e;
     }
-    return result;
   }
 
   /**
@@ -348,18 +372,24 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async commit(name: string): Promise<boolean> {
-    for (let callback of this.beforeCommitTransactionCallbacks) {
-      if (callback) {
-        await callback(this, name);
+    try {
+      for (let callback of this.beforeCommitTransactionCallbacks) {
+        if (callback) {
+          await callback(this, name);
+        }
       }
-    }
-    const result = await this.driver.commit(name);
-    for (let callback of this.afterCommitTransactionCallbacks) {
-      if (callback) {
-        await callback(this, name, result);
+      this.config.debugLog('nymph', `Committing transaction "${name}".`);
+      const result = await this.driver.commit(name);
+      for (let callback of this.afterCommitTransactionCallbacks) {
+        if (callback) {
+          await callback(this, name, result);
+        }
       }
+      return result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to commit transaction: ${e}`);
+      throw e;
     }
-    return result;
   }
 
   /**
@@ -370,18 +400,24 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async rollback(name: string): Promise<boolean> {
-    for (let callback of this.beforeRollbackTransactionCallbacks) {
-      if (callback) {
-        await callback(this, name);
+    try {
+      for (let callback of this.beforeRollbackTransactionCallbacks) {
+        if (callback) {
+          await callback(this, name);
+        }
       }
-    }
-    const result = await this.driver.rollback(name);
-    for (let callback of this.afterRollbackTransactionCallbacks) {
-      if (callback) {
-        await callback(this, name, result);
+      this.config.debugLog('nymph', `Rolling back transaction "${name}".`);
+      const result = await this.driver.rollback(name);
+      for (let callback of this.afterRollbackTransactionCallbacks) {
+        if (callback) {
+          await callback(this, name, result);
+        }
       }
+      return result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to roll back transaction: ${e}`);
+      throw e;
     }
-    return result;
   }
 
   /**
@@ -415,28 +451,33 @@ export default class Nymph {
    * @returns The UID's new value, or null on failure.
    */
   public async newUID(name: string): Promise<number | null> {
-    for (let callback of this.beforeNewUIDCallbacks) {
-      if (callback) {
-        await callback(this, name);
-      }
-    }
-    let result: Promise<number | null>;
     try {
-      result = this.driver.newUID(name);
-    } catch (e: any) {
-      for (let callback of this.failedNewUIDCallbacks) {
+      for (let callback of this.beforeNewUIDCallbacks) {
         if (callback) {
-          await callback(this, e);
+          await callback(this, name);
         }
       }
+      let result: Promise<number | null>;
+      try {
+        result = this.driver.newUID(name);
+      } catch (e: any) {
+        for (let callback of this.failedNewUIDCallbacks) {
+          if (callback) {
+            await callback(this, e);
+          }
+        }
+        throw e;
+      }
+      for (let callback of this.afterNewUIDCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to create UID "${name}": ${e}`);
       throw e;
     }
-    for (let callback of this.afterNewUIDCallbacks) {
-      if (callback) {
-        await callback(this, result);
-      }
-    }
-    return await result;
   }
 
   /**
@@ -445,7 +486,12 @@ export default class Nymph {
    * @returns The UID's value, or null on failure and if it doesn't exist.
    */
   public async getUID(name: string): Promise<number | null> {
-    return await this.driver.getUID(name);
+    try {
+      return await this.driver.getUID(name);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to get UID "${name}": ${e}`);
+      throw e;
+    }
   }
 
   /**
@@ -456,28 +502,33 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async setUID(name: string, value: number): Promise<boolean> {
-    for (let callback of this.beforeSetUIDCallbacks) {
-      if (callback) {
-        await callback(this, name, value);
-      }
-    }
-    let result: Promise<boolean>;
     try {
-      result = this.driver.setUID(name, value);
-    } catch (e: any) {
-      for (let callback of this.failedSetUIDCallbacks) {
+      for (let callback of this.beforeSetUIDCallbacks) {
         if (callback) {
-          await callback(this, e);
+          await callback(this, name, value);
         }
       }
+      let result: Promise<boolean>;
+      try {
+        result = this.driver.setUID(name, value);
+      } catch (e: any) {
+        for (let callback of this.failedSetUIDCallbacks) {
+          if (callback) {
+            await callback(this, e);
+          }
+        }
+        throw e;
+      }
+      for (let callback of this.afterSetUIDCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to set UID "${name}": ${e}`);
       throw e;
     }
-    for (let callback of this.afterSetUIDCallbacks) {
-      if (callback) {
-        await callback(this, result);
-      }
-    }
-    return await result;
   }
 
   /**
@@ -487,28 +538,33 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async deleteUID(name: string): Promise<boolean> {
-    for (let callback of this.beforeDeleteUIDCallbacks) {
-      if (callback) {
-        await callback(this, name);
-      }
-    }
-    let result: Promise<boolean>;
     try {
-      result = this.driver.deleteUID(name);
-    } catch (e: any) {
-      for (let callback of this.failedDeleteUIDCallbacks) {
+      for (let callback of this.beforeDeleteUIDCallbacks) {
         if (callback) {
-          await callback(this, e);
+          await callback(this, name);
         }
       }
+      let result: Promise<boolean>;
+      try {
+        result = this.driver.deleteUID(name);
+      } catch (e: any) {
+        for (let callback of this.failedDeleteUIDCallbacks) {
+          if (callback) {
+            await callback(this, e);
+          }
+        }
+        throw e;
+      }
+      for (let callback of this.afterDeleteUIDCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to delete UID "${name}": ${e}`);
       throw e;
     }
-    for (let callback of this.afterDeleteUIDCallbacks) {
-      if (callback) {
-        await callback(this, result);
-      }
-    }
-    return await result;
   }
 
   /**
@@ -519,28 +575,36 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async renameUID(oldName: string, newName: string): Promise<boolean> {
-    for (let callback of this.beforeRenameUIDCallbacks) {
-      if (callback) {
-        await callback(this, oldName, newName);
-      }
-    }
-    let result: Promise<boolean>;
     try {
-      result = this.driver.renameUID(oldName, newName);
-    } catch (e: any) {
-      for (let callback of this.failedRenameUIDCallbacks) {
+      for (let callback of this.beforeRenameUIDCallbacks) {
         if (callback) {
-          await callback(this, e);
+          await callback(this, oldName, newName);
         }
       }
+      let result: Promise<boolean>;
+      try {
+        result = this.driver.renameUID(oldName, newName);
+      } catch (e: any) {
+        for (let callback of this.failedRenameUIDCallbacks) {
+          if (callback) {
+            await callback(this, e);
+          }
+        }
+        throw e;
+      }
+      for (let callback of this.afterRenameUIDCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+      return await result;
+    } catch (e: any) {
+      this.config.debugError(
+        'nymph',
+        `Failed to rename UID "${oldName}" to "${newName}": ${e}`,
+      );
       throw e;
     }
-    for (let callback of this.afterRenameUIDCallbacks) {
-      if (callback) {
-        await callback(this, result);
-      }
-    }
-    return await result;
   }
 
   /**
@@ -555,28 +619,33 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async saveEntity(entity: EntityInterface): Promise<boolean> {
-    for (let callback of this.beforeSaveEntityCallbacks) {
-      if (callback) {
-        await callback(this, entity);
-      }
-    }
-    let result: Promise<boolean>;
     try {
-      result = this.driver.saveEntity(entity);
-    } catch (e: any) {
-      for (let callback of this.failedSaveEntityCallbacks) {
+      for (let callback of this.beforeSaveEntityCallbacks) {
         if (callback) {
-          await callback(this, e);
+          await callback(this, entity);
         }
       }
+      let result: Promise<boolean>;
+      try {
+        result = this.driver.saveEntity(entity);
+      } catch (e: any) {
+        for (let callback of this.failedSaveEntityCallbacks) {
+          if (callback) {
+            await callback(this, e);
+          }
+        }
+        throw e;
+      }
+      for (let callback of this.afterSaveEntityCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to save entity: ${e}`);
       throw e;
     }
-    for (let callback of this.afterSaveEntityCallbacks) {
-      if (callback) {
-        await callback(this, result);
-      }
-    }
-    return await result;
   }
 
   /**
@@ -756,12 +825,17 @@ export default class Nymph {
     options: Options<T> = {},
     ...selectors: Selector[]
   ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
-    for (let callback of this.beforeGetEntitiesCallbacks) {
-      if (callback) {
-        await callback(this, options, selectors);
+    try {
+      for (let callback of this.beforeGetEntitiesCallbacks) {
+        if (callback) {
+          await callback(this, options, selectors);
+        }
       }
+      return await this.driver.getEntities(options, ...selectors);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to get entities: ${e}`);
+      throw e;
     }
-    return await this.driver.getEntities(options, ...selectors);
   }
 
   /**
@@ -801,27 +875,32 @@ export default class Nymph {
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
   ): Promise<ReturnType<T['factorySync']> | string | number | null> {
-    // Set up options and selectors.
-    if (typeof selectors[0] === 'string') {
-      selectors = [{ type: '&', guid: selectors[0] }];
-    }
-    options.limit = 1;
-    for (let callback of this.beforeGetEntityCallbacks) {
-      if (callback) {
-        await callback(this, options, selectors as Selector[]);
+    try {
+      // Set up options and selectors.
+      if (typeof selectors[0] === 'string') {
+        selectors = [{ type: '&', guid: selectors[0] }];
       }
+      options.limit = 1;
+      for (let callback of this.beforeGetEntityCallbacks) {
+        if (callback) {
+          await callback(this, options, selectors as Selector[]);
+        }
+      }
+      const entities = await this.driver.getEntities(
+        options,
+        ...(selectors as Selector[]),
+      );
+      if (options.return === 'count') {
+        return entities as unknown as number;
+      }
+      if (!entities || !entities.length) {
+        return null;
+      }
+      return entities[0];
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to get entity: ${e}`);
+      throw e;
     }
-    const entities = await this.driver.getEntities(
-      options,
-      ...(selectors as Selector[]),
-    );
-    if (options.return === 'count') {
-      return entities as unknown as number;
-    }
-    if (!entities || !entities.length) {
-      return null;
-    }
-    return entities[0];
   }
 
   /**
@@ -831,28 +910,33 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async deleteEntity(entity: EntityInterface): Promise<boolean> {
-    for (let callback of this.beforeDeleteEntityCallbacks) {
-      if (callback) {
-        await callback(this, entity);
-      }
-    }
-    let result: Promise<boolean>;
     try {
-      result = this.driver.deleteEntity(entity);
-    } catch (e: any) {
-      for (let callback of this.failedDeleteEntityCallbacks) {
+      for (let callback of this.beforeDeleteEntityCallbacks) {
         if (callback) {
-          await callback(this, e);
+          await callback(this, entity);
         }
       }
+      let result: Promise<boolean>;
+      try {
+        result = this.driver.deleteEntity(entity);
+      } catch (e: any) {
+        for (let callback of this.failedDeleteEntityCallbacks) {
+          if (callback) {
+            await callback(this, e);
+          }
+        }
+        throw e;
+      }
+      for (let callback of this.afterDeleteEntityCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to delete entity: ${e}`);
       throw e;
     }
-    for (let callback of this.afterDeleteEntityCallbacks) {
-      if (callback) {
-        await callback(this, result);
-      }
-    }
-    return await result;
   }
 
   /**
@@ -866,28 +950,33 @@ export default class Nymph {
     guid: string,
     className?: string,
   ): Promise<boolean> {
-    for (let callback of this.beforeDeleteEntityByIDCallbacks) {
-      if (callback) {
-        await callback(this, guid, className);
-      }
-    }
-    let result: Promise<boolean>;
     try {
-      result = this.driver.deleteEntityByID(guid, className);
-    } catch (e: any) {
-      for (let callback of this.failedDeleteEntityByIDCallbacks) {
+      for (let callback of this.beforeDeleteEntityByIDCallbacks) {
         if (callback) {
-          await callback(this, e);
+          await callback(this, guid, className);
         }
       }
+      let result: Promise<boolean>;
+      try {
+        result = this.driver.deleteEntityByID(guid, className);
+      } catch (e: any) {
+        for (let callback of this.failedDeleteEntityByIDCallbacks) {
+          if (callback) {
+            await callback(this, e);
+          }
+        }
+        throw e;
+      }
+      for (let callback of this.afterDeleteEntityByIDCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+      return await result;
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to delete entity by ID: ${e}`);
       throw e;
     }
-    for (let callback of this.afterDeleteEntityByIDCallbacks) {
-      if (callback) {
-        await callback(this, result);
-      }
-    }
-    return await result;
   }
 
   /**
@@ -927,7 +1016,12 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async export(filename: string): Promise<boolean> {
-    return await this.driver.export(filename);
+    try {
+      return await this.driver.export(filename);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to export: ${e}`);
+      throw e;
+    }
   }
 
   /**
@@ -936,7 +1030,12 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async exportPrint(): Promise<boolean> {
-    return await this.driver.exportPrint();
+    try {
+      return await this.driver.exportPrint();
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to export: ${e}`);
+      throw e;
+    }
   }
 
   /**
@@ -946,7 +1045,12 @@ export default class Nymph {
    * @returns True on success, false on failure.
    */
   public async import(filename: string): Promise<boolean> {
-    return await this.driver.import(filename);
+    try {
+      return await this.driver.import(filename);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to import: ${e}`);
+      throw e;
+    }
   }
 
   public on<T extends NymphEventType>(
