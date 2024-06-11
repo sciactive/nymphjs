@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.56](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.55...v1.0.0-beta.56) (2024-06-11)
+
+### Bug Fixes
+
+- import entities without transaction ([db56609](https://github.com/sciactive/nymphjs/commit/db56609efaadc16d5d1bbc8e9b50084aa8a076b9))
+
+### Features
+
+- make transaction optional during import and off by default ([08d79f8](https://github.com/sciactive/nymphjs/commit/08d79f8f803c846ac79c0c489fc754437dae082b))
+
 # [1.0.0-beta.55](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.54...v1.0.0-beta.55) (2024-05-26)
 
 **Note:** Version bump only for package @nymphjs/driver-postgresql

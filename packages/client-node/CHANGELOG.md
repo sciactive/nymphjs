@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.56](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.55...v1.0.0-beta.56) (2024-06-11)
+
+### Features
+
+- allow connections where tokens are not renewed ([39071a5](https://github.com/sciactive/nymphjs/commit/39071a545644075190bd8213be25e0a0c46d2b5d))
+
 # [1.0.0-beta.55](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.54...v1.0.0-beta.55) (2024-05-26)
 
 **Note:** Version bump only for package @nymphjs/client-node

@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.56](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.55...v1.0.0-beta.56) (2024-06-11)
+
+### Features
+
+- add debug and error logging feature ([95680ef](https://github.com/sciactive/nymphjs/commit/95680efad0a260589f32e3d8cff0f4c4e7de413b))
+- allow connections where tokens are not renewed ([39071a5](https://github.com/sciactive/nymphjs/commit/39071a545644075190bd8213be25e0a0c46d2b5d))
+- make transaction optional during import and off by default ([08d79f8](https://github.com/sciactive/nymphjs/commit/08d79f8f803c846ac79c0c489fc754437dae082b))
+
 # [1.0.0-beta.55](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.54...v1.0.0-beta.55) (2024-05-26)
 
 ### Bug Fixes
