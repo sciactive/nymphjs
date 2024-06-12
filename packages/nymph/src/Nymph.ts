@@ -212,10 +212,10 @@ export default class Nymph {
     }
 
     this.driver.init(this);
+    this.config.debugLog('nymph', 'Nymph driver loaded.');
     if (this.tilmeld) {
-      this.config.debugLog('nymph', 'Tilmeld initializing.');
       this.tilmeld.init(this);
-      this.config.debugLog('nymph', 'Tilmeld initialized.');
+      this.config.debugLog('nymph', 'Tilmeld loaded.');
     }
   }
 
@@ -239,7 +239,6 @@ export default class Nymph {
       }
     }
     this.entityClasses[entityClass.class] = NymphEntity;
-    this.config.debugLog('nymph', `Added entity class "${entityClass.class}".`);
     return NymphEntity;
   }
 
