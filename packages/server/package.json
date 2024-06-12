@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/server",
-  "version": "1.0.0-beta.56",
+  "version": "1.0.0-beta.57",
   "description": "Nymph.js - REST Server",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -31,14 +31,14 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/nymph": "^1.0.0-beta.56",
+    "@nymphjs/nymph": "^1.0.0-beta.57",
     "cookie-parser": "^1.4.6",
     "express": "^4.18.3"
   },
   "devDependencies": {
-    "@nymphjs/client": "^1.0.0-beta.56",
-    "@nymphjs/client-node": "^1.0.0-beta.56",
-    "@nymphjs/driver-sqlite3": "^1.0.0-beta.56",
+    "@nymphjs/client": "^1.0.0-beta.57",
+    "@nymphjs/client-node": "^1.0.0-beta.57",
+    "@nymphjs/driver-sqlite3": "^1.0.0-beta.57",
     "@tsconfig/recommended": "^1.0.3",
     "@types/cookie-parser": "^1.4.7",
     "@types/express": "^4.17.21",

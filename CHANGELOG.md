@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.57](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.56...v1.0.0-beta.57) (2024-06-12)
+
+### Features
+
+- add debug logs to tilmeld ([52dfc26](https://github.com/sciactive/nymphjs/commit/52dfc26f41401b5fe17807158d79e8ccba3ed280))
+
 # [1.0.0-beta.56](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.55...v1.0.0-beta.56) (2024-06-11)
 
 ### Bug Fixes
