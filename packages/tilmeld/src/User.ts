@@ -426,6 +426,11 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: 'Invalid recovery type.' };
     }
 
+    this.nymph.config.debugLog(
+      'tilmeld',
+      `User account recovery (${options.template}) request for "${user.username}".`,
+    );
+
     // Send the email.
     if (await tilmeld.config.sendEmail(tilmeld, options, user)) {
       return {
@@ -480,6 +485,11 @@ export default class User extends AbleObject<UserData> {
     if (!('password' in data) || !data.password.length) {
       return { result: false, message: 'Password cannot be empty.' };
     }
+
+    this.nymph.config.debugLog(
+      'tilmeld',
+      `User account recovery for "${user.username}".`,
+    );
 
     user.$password(data.password);
     delete user.recoverSecret;
@@ -581,6 +591,11 @@ export default class User extends AbleObject<UserData> {
       };
     }
 
+    this.$nymph.config.debugLog(
+      'tilmeld',
+      `User login for "${this.$data.username}".`,
+    );
+
     // Authentication was successful, attempt to login.
     if (!(await tilmeld.login(this, true))) {
       return { result: false, message: 'Incorrect login/password.' };
@@ -653,6 +668,11 @@ export default class User extends AbleObject<UserData> {
       };
     }
 
+    this.$nymph.config.debugLog(
+      'tilmeld',
+      `User login switch for "${user.username}" to "${this.$data.username}".`,
+    );
+
     // Authentication was successful, attempt to login.
     if (!(await tilmeld.loginSwitch(this, true))) {
       return { result: false, message: 'Incorrect login/password.' };
@@ -689,6 +709,11 @@ export default class User extends AbleObject<UserData> {
         message: e.message,
       };
     }
+
+    this.$nymph.config.debugLog(
+      'tilmeld',
+      `User logout for "${this.$data.username}".`,
+    );
 
     await tilmeld.logout();
 
@@ -1244,10 +1269,18 @@ export default class User extends AbleObject<UserData> {
     currentPassword: string;
     revokeCurrentTokens?: boolean;
   }): Promise<{ result: boolean; message: string }> {
+    this.$nymph.config.debugLog(
+      'tilmeld',
+      `Password change request for "${this.$data.username}".`,
+    );
     if (!('newPassword' in data) || !data.newPassword.length) {
       return { result: false, message: 'Please specify a password.' };
     }
     if (!this.$checkPassword(data.currentPassword ?? '')) {
+      this.$nymph.config.debugLog(
+        'tilmeld',
+        `Incorrect password for change request for "${this.$data.username}".`,
+      );
       return { result: false, message: 'Incorrect password.' };
     }
     this.$data.passwordTemp = data.newPassword;
@@ -1510,6 +1543,12 @@ export default class User extends AbleObject<UserData> {
    */
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
+
+    this.$nymph.config.debugLog(
+      'tilmeld',
+      `Username check "${this.$data.username}".`,
+    );
+
     if (!tilmeld.config.emailUsernames) {
       if (this.$data.username == null || !this.$data.username.length) {
         return { result: false, message: 'Please specify a username.' };
@@ -1621,6 +1660,12 @@ export default class User extends AbleObject<UserData> {
    */
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
+
+    this.$nymph.config.debugLog(
+      'tilmeld',
+      `Email check "${this.$data.email}".`,
+    );
+
     if (this.$data.email == null || !this.$data.email.length) {
       if (tilmeld.config.verifyEmail) {
         return { result: false, message: 'Please specify an email.' };
@@ -1666,6 +1711,12 @@ export default class User extends AbleObject<UserData> {
    */
   public async $checkPhone(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
+
+    this.$nymph.config.debugLog(
+      'tilmeld',
+      `Phone check "${this.$data.phone}".`,
+    );
+
     if (this.$data.phone == null || !this.$data.phone.length) {
       return { result: false, message: 'Please specify a phone number.' };
     }
@@ -1876,7 +1927,15 @@ export default class User extends AbleObject<UserData> {
         }
       }
 
+      this.$nymph.config.debugLog(
+        'tilmeld',
+        `Registering new user "${this.$data.username}".`,
+      );
       if (await this.$saveSkipAC()) {
+        this.$nymph.config.debugLog(
+          'tilmeld',
+          `New user registered "${this.$data.username}".`,
+        );
         // Send the new user registered email.
         if (tilmeld.config.userRegisteredRecipient != null) {
           await tilmeld.config.sendEmail(
@@ -1958,6 +2017,10 @@ export default class User extends AbleObject<UserData> {
       } else {
         await tnymph.rollback(transaction);
         this.$nymph = nymph;
+        this.$nymph.config.debugError(
+          'tilmeld',
+          `Error registering new user "${this.$data.username}".`,
+        );
         return {
           result: false,
           loggedin: false,
@@ -1967,6 +2030,10 @@ export default class User extends AbleObject<UserData> {
     } catch (e: any) {
       await tnymph.rollback(transaction);
       this.$nymph = nymph;
+      this.$nymph.config.debugError(
+        'tilmeld',
+        `Error registering new user "${this.$data.username}": ${e}`,
+      );
       throw e;
     }
 

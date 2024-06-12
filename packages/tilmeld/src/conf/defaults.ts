@@ -166,6 +166,7 @@ export default {
       });
       return !!result;
     } catch (e: any) {
+      tilmeld.nymph.config.debugError('tilmeld', `Failed to send email: ${e}`);
       return false;
     }
   },

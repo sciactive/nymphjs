@@ -171,6 +171,7 @@ export default class Tilmeld implements TilmeldInterface {
     }
 
     // Set up access control hooks when Nymph is called.
+    this.nymph.config.debugLog('tilmeld', 'Initializing access controls.');
     this.initAccessControl();
   }
 
@@ -904,6 +905,7 @@ export default class Tilmeld implements TilmeldInterface {
    * @returns The user on success, null on failure.
    */
   public async extractToken(token: string) {
+    this.nymph.config.debugLog('tilmeld', 'Extracting and validating token.');
     const extract = this.config.jwtExtract(this.config, token);
     if (extract == null) {
       return null;
