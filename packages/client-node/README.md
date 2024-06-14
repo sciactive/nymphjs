@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-The Nymph Node Client let's you do everything the Nymph Client does, but from Node.JS instead of the browser.
+The Nymph Node Client lets you do everything the Nymph Client does, but from Node.JS instead of the browser.
 
 ## Installation
 

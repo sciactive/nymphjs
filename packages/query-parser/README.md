@@ -134,7 +134,7 @@ Check for a reference to another entity.
 Check for a reference to another entity using a query.
 
 - `name<{refclassname inner query}>` or `name!<{refclassname inner query}>`
-  - (Esacpe curly brackets with a leading backslash.)
+  - (Escape curly brackets with a leading backslash.)
   - (Requires a map of refclassname to their actual class and default fields.)
 
 ### contain and !contain
