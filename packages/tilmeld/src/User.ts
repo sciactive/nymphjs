@@ -2007,12 +2007,12 @@ export default class User extends AbleObject<UserData> {
           }
         }
       } else {
-        await tnymph.rollback(transaction);
-        this.$nymph = nymph;
         this.$nymph.config.debugError(
           'tilmeld',
           `Error registering new user "${this.$data.username}".`,
         );
+        await tnymph.rollback(transaction);
+        this.$nymph = nymph;
         return {
           result: false,
           loggedin: false,
@@ -2020,12 +2020,12 @@ export default class User extends AbleObject<UserData> {
         };
       }
     } catch (e: any) {
-      await tnymph.rollback(transaction);
-      this.$nymph = nymph;
       this.$nymph.config.debugError(
         'tilmeld',
         `Error registering new user "${this.$data.username}": ${e}`,
       );
+      await tnymph.rollback(transaction);
+      this.$nymph = nymph;
       throw e;
     }
 

@@ -566,6 +566,7 @@ export default class MySQLDriver extends NymphDriver {
         },
       );
     } catch (e: any) {
+      this.nymph.config.debugError('mysql', `Delete entity error: "${e}"`);
       await this.rollback('nymph-delete');
       throw e;
     }
@@ -1986,6 +1987,10 @@ export default class MySQLDriver extends NymphDriver {
             await Promise.all(promises);
             await this.commit(`nymph-import-entity-${guid}`);
           } catch (e: any) {
+            this.nymph.config.debugError(
+              'mysql',
+              `Import entity error: "${e}"`,
+            );
             await this.rollback(`nymph-import-entity-${guid}`);
             throw e;
           }
@@ -2006,6 +2011,7 @@ export default class MySQLDriver extends NymphDriver {
             );
             await this.commit(`nymph-import-uid-${name}`);
           } catch (e: any) {
+            this.nymph.config.debugError('mysql', `Import UID error: "${e}"`);
             await this.rollback(`nymph-import-uid-${name}`);
             throw e;
           }
@@ -2024,6 +2030,7 @@ export default class MySQLDriver extends NymphDriver {
 
       return result;
     } catch (e: any) {
+      this.nymph.config.debugError('mysql', `Import error: "${e}"`);
       if (transaction) {
         await this.rollback('nymph-import');
       }
@@ -2073,6 +2080,7 @@ export default class MySQLDriver extends NymphDriver {
       );
       curUid = result.cur_uid ?? null;
     } catch (e: any) {
+      this.nymph.config.debugError('mysql', `New UID error: "${e}"`);
       if (e?.message !== "Couldn't get lock for UID: " + name) {
         await this.queryRun(
           `SELECT RELEASE_LOCK(${MySQLDriver.escapeValue(
@@ -2450,6 +2458,7 @@ export default class MySQLDriver extends NymphDriver {
 
       return result;
     } catch (e: any) {
+      this.nymph.config.debugError('mysql', `Save entity error: "${e}"`);
       if (inTransaction) {
         await this.rollback('nymph-save');
       }

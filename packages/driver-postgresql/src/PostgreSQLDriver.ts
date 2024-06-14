@@ -737,6 +737,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         },
       );
     } catch (e: any) {
+      this.nymph.config.debugError('postgresql', `Delete entity error: "${e}"`);
       await this.rollback('nymph-delete');
       throw e;
     }
@@ -2178,6 +2179,10 @@ export default class PostgreSQLDriver extends NymphDriver {
             await Promise.all(promises);
             await this.commit(`nymph-import-entity-${guid}`);
           } catch (e: any) {
+            this.nymph.config.debugError(
+              'postgresql',
+              `Import entity error: "${e}"`,
+            );
             await this.rollback(`nymph-import-entity-${guid}`);
             throw e;
           }
@@ -2208,6 +2213,10 @@ export default class PostgreSQLDriver extends NymphDriver {
             );
             await this.commit(`nymph-import-uid-${name}`);
           } catch (e: any) {
+            this.nymph.config.debugError(
+              'postgresql',
+              `Import UID error: "${e}"`,
+            );
             await this.rollback(`nymph-import-uid-${name}`);
             throw e;
           }
@@ -2226,6 +2235,7 @@ export default class PostgreSQLDriver extends NymphDriver {
 
       return result;
     } catch (e: any) {
+      this.nymph.config.debugError('postgresql', `Import error: "${e}"`);
       if (transaction) {
         await this.rollback('nymph-import');
       }
@@ -2279,6 +2289,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         );
       }
     } catch (e: any) {
+      this.nymph.config.debugError('postgresql', `New UID error: "${e}"`);
       await this.rollback('nymph-newuid');
       throw e;
     }
@@ -2629,6 +2640,7 @@ export default class PostgreSQLDriver extends NymphDriver {
 
       return result;
     } catch (e: any) {
+      this.nymph.config.debugError('postgresql', `Save entity error: "${e}"`);
       if (inTransaction) {
         await this.rollback('nymph-save');
       }
