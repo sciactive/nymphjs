@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.61](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.60...v1.0.0-beta.61) (2024-06-14)
+
+### Bug Fixes
+
+- clear transaction in mysql when tables are created ([9fd8d8f](https://github.com/sciactive/nymphjs/commit/9fd8d8fa219e47a08fcf4a69235521858de1b751))
+
 # [1.0.0-beta.60](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.59...v1.0.0-beta.60) (2024-06-14)
 
 **Note:** Version bump only for package nymphjs
