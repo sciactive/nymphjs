@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.59](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.58...v1.0.0-beta.59) (2024-06-14)
+
+### Features
+
+- add uniqueness constraint feature, refactor some types ([8133d32](https://github.com/sciactive/nymphjs/commit/8133d32b2c04907182dca2e9171b8217ed1b57e4))
+
 # [1.0.0-beta.58](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.57...v1.0.0-beta.58) (2024-06-12)
 
 **Note:** Version bump only for package nymphjs
