@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.60](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.59...v1.0.0-beta.60) (2024-06-14)
+
+**Note:** Version bump only for package @nymphjs/driver-sqlite3
+
 # [1.0.0-beta.59](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.58...v1.0.0-beta.59) (2024-06-14)
 
 ### Features
