@@ -17,8 +17,10 @@ export type TestModelData = {
     [k: string]: TestModel & TestModelData;
   };
   parent?: TestModel & TestModelData;
-  // For Import/Export Tests.
+  // For import/export tests.
   index?: string;
+  // For uniqueness tests.
+  uniques?: string[];
 };
 
 /**
@@ -34,19 +36,16 @@ export class TestModel extends Entity<TestModelData> {
   protected $protectedTags = ['test', 'notag'];
   protected $allowlistTags? = ['newtag'];
 
-  static async factory(guid?: string): Promise<TestModel & TestModelData> {
-    return (await super.factory(guid)) as TestModel & TestModelData;
-  }
-
-  static factorySync(): TestModel & TestModelData {
-    return super.factorySync() as TestModel & TestModelData;
-  }
-
   constructor() {
     super();
 
     this.$addTag('test');
     this.$data.boolean = true;
+    this.$data.uniques = [];
+  }
+
+  public async $getUniques() {
+    return this.$data.uniques ?? [];
   }
 
   public $useProtectedData() {
@@ -75,14 +74,6 @@ export class TestModel extends Entity<TestModelData> {
 export class TestBModel extends TestModel {
   static ETYPE = 'test_b_model';
   static class = 'TestBModel';
-
-  static async factory(guid?: string): Promise<TestBModel & TestModelData> {
-    return (await super.factory(guid)) as TestBModel & TestModelData;
-  }
-
-  static factorySync(): TestBModel & TestModelData {
-    return super.factorySync() as TestBModel & TestModelData;
-  }
 }
 
 export type TestEmptyModelData = {};
@@ -93,14 +84,4 @@ export type TestEmptyModelData = {};
 export class TestEmptyModel extends Entity<TestEmptyModelData> {
   static ETYPE = 'test_empty_model';
   static class = 'TestEmptyModel';
-
-  static async factory(
-    guid?: string,
-  ): Promise<TestEmptyModel & TestEmptyModelData> {
-    return (await super.factory(guid)) as TestEmptyModel & TestEmptyModelData;
-  }
-
-  static factorySync(): TestEmptyModel & TestEmptyModelData {
-    return super.factorySync() as TestEmptyModel & TestEmptyModelData;
-  }
 }

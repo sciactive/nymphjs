@@ -3,6 +3,7 @@ import strtotime from 'locutus/php/datetime/strtotime';
 import { guid } from '@nymphjs/guid';
 
 import type Nymph from '../Nymph';
+import { EntityUniqueConstraintError } from '../errors';
 import {
   TestBModel as TestBModelClass,
   TestModel as TestModelClass,
@@ -10,7 +11,7 @@ import {
   TestEmptyModel as TestEmptyModelClass,
 } from '../testArtifacts';
 
-export function QueriesTest(
+export function EntitiesTest(
   nymph: Nymph,
   it: (name: string, fn: () => void) => void,
 ) {
@@ -1803,6 +1804,106 @@ These hats are absolutely fantastic.`;
     );
 
     expect(entity).toBeNull();
+  });
+
+  it('allows non-duplicate unique strings', async () => {
+    // Creating entity...
+    const uniqueEntityA = await TestModel.factory();
+    uniqueEntityA.name = 'Entity Test ' + new Date().toLocaleString();
+    uniqueEntityA.uniques = ['test a'];
+
+    // Saving entity...
+    expect(await uniqueEntityA.$save()).toEqual(true);
+    expect(uniqueEntityA.guid).not.toBeNull();
+
+    // Creating entity...
+    const uniqueEntityB = await TestModel.factory();
+    uniqueEntityB.name = 'Entity Test ' + new Date().toLocaleString();
+    uniqueEntityB.uniques = ['test b'];
+
+    // Saving entity...
+    expect(await uniqueEntityB.$save()).toEqual(true);
+    expect(uniqueEntityB.guid).not.toBeNull();
+
+    expect(uniqueEntityA.guid).not.toEqual(uniqueEntityB.guid);
+
+    expect(await uniqueEntityA.$delete()).toEqual(true);
+    expect(await uniqueEntityB.$delete()).toEqual(true);
+  });
+
+  it('throws on duplicate unique strings', async () => {
+    // Creating entity...
+    const uniqueEntityA = await TestModel.factory();
+    uniqueEntityA.name = 'Entity Test ' + new Date().toLocaleString();
+    uniqueEntityA.uniques = ['test a'];
+
+    // Saving entity...
+    expect(await uniqueEntityA.$save()).toEqual(true);
+    expect(uniqueEntityA.guid).not.toBeNull();
+
+    // Creating entity...
+    const uniqueEntityB = await TestModel.factory();
+    uniqueEntityB.name = 'Entity Test ' + new Date().toLocaleString();
+    uniqueEntityB.uniques = ['test a'];
+
+    // Saving entity...
+    try {
+      await uniqueEntityB.$save();
+
+      throw Error("Shouldn't get past the uniqueness check.");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(EntityUniqueConstraintError);
+    }
+    expect(uniqueEntityB.guid).toBeNull();
+
+    expect(await uniqueEntityA.$delete()).toEqual(true);
+  });
+
+  it('allows duplicate unique string if first transaction is rolled back', async () => {
+    // Creating transaction entity...
+    const tnymphA = await nymph.startTransaction('test-unique-a');
+    const TestModelA = tnymphA.getEntityClass(TestModel);
+    const uniqueEntityA = await TestModelA.factory();
+    uniqueEntityA.name = 'Entity Test ' + new Date().toLocaleString();
+    uniqueEntityA.uniques = ['test a'];
+
+    // Saving entity...
+    expect(await uniqueEntityA.$save()).toEqual(true);
+    expect(uniqueEntityA.guid).not.toBeNull();
+
+    // Rolling back transaction...
+    expect(await tnymphA.rollback('test-unique-a')).toEqual(true);
+
+    // Creating transaction entity...
+    const tnymphB = await nymph.startTransaction('test-unique-b');
+    const TestModelB = tnymphB.getEntityClass(TestModel);
+    const uniqueEntityB = await TestModelB.factory();
+    uniqueEntityB.name = 'Entity Test ' + new Date().toLocaleString();
+    uniqueEntityB.uniques = ['test a'];
+
+    // Saving entity...
+    expect(await uniqueEntityB.$save()).toEqual(true);
+    expect(uniqueEntityB.guid).not.toBeNull();
+
+    expect(uniqueEntityA.guid).not.toEqual(uniqueEntityB.guid);
+
+    expect(await tnymphB.commit('test-unique-b')).toEqual(true);
+
+    const uniqueEntityACheck = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: uniqueEntityA.guid ?? '' },
+    );
+    expect(uniqueEntityACheck).toBeNull();
+
+    const uniqueEntityBCheck = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: uniqueEntityB.guid ?? '' },
+    );
+    expect(uniqueEntityBCheck).not.toBeNull();
+
+    if (uniqueEntityBCheck != null) {
+      expect(await uniqueEntityBCheck.$delete()).toEqual(true);
+    }
   });
 }
 

@@ -1,5 +1,6 @@
 import Nymph, { InvalidRequestError } from './Nymph';
 import type { NymphOptions, Options, Selector } from './Nymph.types';
+import type { EntityInstanceType } from './Entity';
 import type {
   EntityConstructor,
   EntityInterface,
@@ -75,13 +76,13 @@ export default class PubSub {
   public subscribeEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<PubSubUpdate<ReturnType<T['factorySync']>[]>>;
+  ): PubSubSubscribable<PubSubUpdate<EntityInstanceType<T>[]>>;
   public subscribeEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<
-    PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
-  > {
+  ):
+    | PubSubSubscribable<PubSubUpdate<EntityInstanceType<T>[]>>
+    | PubSubSubscribable<PubSubUpdate<string[]>> {
     const query = [
       entityConstructorsToClassNames(options),
       ...entityConstructorsToClassNames(selectors),
@@ -90,15 +91,14 @@ export default class PubSub {
     const subscribe = (
       resolve?:
         | PubSubResolveCallback<
-            | PubSubUpdate<ReturnType<T['factorySync']>[]>
-            | PubSubUpdate<string[]>
+            PubSubUpdate<EntityInstanceType<T>[]> | PubSubUpdate<string[]>
           >
         | undefined,
       reject?: PubSubRejectCallback | undefined,
       count?: PubSubCountCallback | undefined,
     ) => {
       const callbacks: PubSubCallbacks<
-        PubSubUpdate<ReturnType<T['factorySync']>[]> | PubSubUpdate<string[]>
+        PubSubUpdate<EntityInstanceType<T>[]> | PubSubUpdate<string[]>
       > = [resolve, reject, count];
 
       if (!this.isConnection()) {
@@ -123,14 +123,13 @@ export default class PubSub {
   public subscribeEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<PubSubUpdate<ReturnType<T['factorySync']> | null>>;
+  ): PubSubSubscribable<PubSubUpdate<EntityInstanceType<T> | null>>;
   public subscribeEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): PubSubSubscribable<
-    | PubSubUpdate<ReturnType<T['factorySync']> | null>
-    | PubSubUpdate<string | null>
-  > {
+  ):
+    | PubSubSubscribable<PubSubUpdate<EntityInstanceType<T> | null>>
+    | PubSubSubscribable<PubSubUpdate<string | null>> {
     const query = [
       { ...entityConstructorsToClassNames(options), limit: 1 },
       ...entityConstructorsToClassNames(selectors),
@@ -139,7 +138,7 @@ export default class PubSub {
     const subscribe = (
       resolve?:
         | PubSubResolveCallback<
-            | PubSubUpdate<ReturnType<T['factorySync']> | null>
+            | PubSubUpdate<EntityInstanceType<T> | null>
             | PubSubUpdate<string | null>
           >
         | undefined,
@@ -158,8 +157,7 @@ export default class PubSub {
         }
       };
       const callbacks: PubSubCallbacks<
-        | PubSubUpdate<ReturnType<T['factorySync']> | null>
-        | PubSubUpdate<string | null>
+        PubSubUpdate<EntityInstanceType<T> | null> | PubSubUpdate<string | null>
       > = [newResolve, reject, count];
 
       if (!this.isConnection()) {

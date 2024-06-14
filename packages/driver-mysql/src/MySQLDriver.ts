@@ -3,17 +3,19 @@ import mysql from 'mysql2';
 import SqlString from 'sqlstring';
 import {
   NymphDriver,
-  EntityConstructor,
-  EntityData,
-  EntityInterface,
-  SerializedEntityData,
+  type EntityConstructor,
+  type EntityData,
+  type EntityInterface,
+  type EntityInstanceType,
+  type SerializedEntityData,
+  type FormattedSelector,
+  type Options,
+  type Selector,
+  EntityUniqueConstraintError,
   InvalidParametersError,
   NotConfiguredError,
   QueryFailedError,
   UnableToConnectError,
-  FormattedSelector,
-  Options,
-  Selector,
   xor,
 } from '@nymphjs/nymph';
 import { makeTableSuffix } from '@nymphjs/guid';
@@ -183,6 +185,7 @@ export default class MySQLDriver extends NymphDriver {
     let foreignKeyDataTableGuid = '';
     let foreignKeyDataComparisonsTableGuid = '';
     let foreignKeyReferencesTableGuid = '';
+    let foreignKeyUniquesTableGuid = '';
     if (this.config.foreignKeys) {
       foreignKeyDataTableGuid = ` REFERENCES ${MySQLDriver.escape(
         `${this.prefix}entities_${etype}`,
@@ -191,6 +194,9 @@ export default class MySQLDriver extends NymphDriver {
         `${this.prefix}entities_${etype}`,
       )}(\`guid\`) ON DELETE CASCADE`;
       foreignKeyReferencesTableGuid = ` REFERENCES ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )}(\`guid\`) ON DELETE CASCADE`;
+      foreignKeyUniquesTableGuid = ` REFERENCES ${MySQLDriver.escape(
         `${this.prefix}entities_${etype}`,
       )}(\`guid\`) ON DELETE CASCADE`;
     }
@@ -253,6 +259,19 @@ export default class MySQLDriver extends NymphDriver {
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
+      // Create the unique strings table.
+      // 255 key is max length for charset UTF8.
+      await this.queryRun(
+        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+          `${this.prefix}uniques_${etype}`,
+        )} (
+          \`guid\` BINARY(12) NOT NULL${foreignKeyUniquesTableGuid},
+          \`unique\` TEXT NOT NULL,
+          PRIMARY KEY (\`guid\`, \`unique\`(255)),
+          CONSTRAINT \`uc_unique\` UNIQUE (\`unique\`(255))
+        ) ENGINE ${this.config.engine}
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
+      );
     } else {
       // Create the UID table.
       await this.queryRun(
@@ -310,6 +329,8 @@ export default class MySQLDriver extends NymphDriver {
             query,
           );
         }
+      } else if (errorCode === 1062) {
+        throw new EntityUniqueConstraintError(`Unique constraint violation.`);
       } else if (errorCode === 2006) {
         // If the MySQL server disconnected, reconnect to it.
         if (!this.connect()) {
@@ -327,7 +348,10 @@ export default class MySQLDriver extends NymphDriver {
           );
         }
       } else {
-        throw e;
+        throw new QueryFailedError(
+          'Query failed: ' + e?.errno + ' - ' + e?.message,
+          query,
+        );
       }
     }
   }
@@ -530,6 +554,17 @@ export default class MySQLDriver extends NymphDriver {
           },
         },
       );
+      await this.queryRun(
+        `DELETE FROM ${MySQLDriver.escape(
+          `${this.prefix}uniques_${etype}`,
+        )} WHERE \`guid\`=UNHEX(@guid);`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+          },
+        },
+      );
     } catch (e: any) {
       await this.rollback('nymph-delete');
       throw e;
@@ -679,7 +714,7 @@ export default class MySQLDriver extends NymphDriver {
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
-      (key, value, typeIsOr, typeIsNot) => {
+      ({ key, value, typeIsOr, typeIsNot }) => {
         const clauseNot = key.startsWith('!');
         let curQuery = '';
         for (const curValue of value) {
@@ -1717,17 +1752,17 @@ export default class MySQLDriver extends NymphDriver {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[]>;
+  ): Promise<EntityInstanceType<T>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
+  ): Promise<EntityInstanceType<T>[] | string[] | number> {
     const { result: resultPromise, process } = this.getEntitiesRowLike<T>(
       // @ts-ignore: options is correct here.
       options,
       selectors,
-      (options, formattedSelectors, etype) =>
-        this.performQuery(options, formattedSelectors, etype),
+      ({ options, selectors, etype }) =>
+        this.performQuery(options, selectors, etype),
       () => {
         const next: any = result.next();
         return next.done ? null : next.value;
@@ -1783,6 +1818,12 @@ export default class MySQLDriver extends NymphDriver {
         async (guid, tags, sdata, etype) => {
           try {
             await this.internalTransaction(`nymph-import-entity-${guid}`);
+
+            const cdate = Number(JSON.parse(sdata.cdate));
+            delete sdata.cdate;
+            const mdate = Number(JSON.parse(sdata.mdate));
+            delete sdata.mdate;
+
             await this.queryRun(
               `REPLACE INTO ${MySQLDriver.escape(
                 `${this.prefix}entities_${etype}`,
@@ -1792,12 +1833,8 @@ export default class MySQLDriver extends NymphDriver {
                 params: {
                   guid,
                   tags: ' ' + tags.join(' ') + ' ',
-                  cdate: isNaN(Number(JSON.parse(sdata.cdate)))
-                    ? null
-                    : Number(JSON.parse(sdata.cdate)),
-                  mdate: isNaN(Number(JSON.parse(sdata.mdate)))
-                    ? null
-                    : Number(JSON.parse(sdata.mdate)),
+                  cdate: isNaN(cdate) ? null : cdate,
+                  mdate: isNaN(mdate) ? null : mdate,
                 },
               },
             );
@@ -1841,9 +1878,20 @@ export default class MySQLDriver extends NymphDriver {
                 },
               ),
             );
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${MySQLDriver.escape(
+                  `${this.prefix}uniques_${etype}`,
+                )} WHERE \`guid\`=UNHEX(@guid);`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                  },
+                },
+              ),
+            );
             await Promise.all(promises);
-            delete sdata.cdate;
-            delete sdata.mdate;
             for (const name in sdata) {
               const value = sdata[name];
               const uvalue = JSON.parse(value);
@@ -1907,6 +1955,33 @@ export default class MySQLDriver extends NymphDriver {
                   ),
                 );
               }
+            }
+            const uniques = await this.nymph
+              .getEntityClassByEtype(etype)
+              .getUniques({ guid, cdate, mdate, tags, data: {}, sdata });
+            for (const unique of uniques) {
+              promises.push(
+                this.queryRun(
+                  `INSERT INTO ${MySQLDriver.escape(
+                    `${this.prefix}uniques_${etype}`,
+                  )} (\`guid\`, \`unique\`) VALUES (UNHEX(@guid), @unique);`,
+                  {
+                    etypes: [etype],
+                    params: {
+                      guid,
+                      unique,
+                    },
+                  },
+                ).catch((e: any) => {
+                  if (e instanceof EntityUniqueConstraintError) {
+                    this.nymph.config.debugError(
+                      'mysql',
+                      `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
+                    );
+                  }
+                  return e;
+                }),
+              );
             }
             await Promise.all(promises);
             await this.commit(`nymph-import-entity-${guid}`);
@@ -2059,6 +2134,7 @@ export default class MySQLDriver extends NymphDriver {
       guid: string,
       data: EntityData,
       sdata: SerializedEntityData,
+      uniques: string[],
       etype: string,
     ) => {
       const runInsertQuery = async (
@@ -2128,6 +2204,30 @@ export default class MySQLDriver extends NymphDriver {
         }
         await Promise.all(promises);
       };
+      for (const unique of uniques) {
+        try {
+          await this.queryRun(
+            `INSERT INTO ${MySQLDriver.escape(
+              `${this.prefix}uniques_${etype}`,
+            )} (\`guid\`, \`unique\`) VALUES (UNHEX(@guid), @unique);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+                unique,
+              },
+            },
+          );
+        } catch (e: any) {
+          if (e instanceof EntityUniqueConstraintError) {
+            this.nymph.config.debugError(
+              'mysql',
+              `Save entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
+            );
+          }
+          throw e;
+        }
+      }
       for (const name in data) {
         await runInsertQuery(name, data[name], JSON.stringify(data[name]));
       }
@@ -2139,7 +2239,7 @@ export default class MySQLDriver extends NymphDriver {
     try {
       const result = await this.saveEntityRowLike(
         entity,
-        async (_entity, guid, tags, data, sdata, cdate, etype) => {
+        async ({ guid, tags, data, sdata, uniques, cdate, etype }) => {
           if (
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
@@ -2159,10 +2259,10 @@ export default class MySQLDriver extends NymphDriver {
               },
             },
           );
-          await insertData(guid, data, sdata, etype);
+          await insertData(guid, data, sdata, uniques, etype);
           return true;
         },
-        async (entity, guid, tags, data, sdata, mdate, etype) => {
+        async ({ entity, guid, tags, data, sdata, uniques, mdate, etype }) => {
           if (
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
@@ -2223,6 +2323,19 @@ export default class MySQLDriver extends NymphDriver {
                 },
               ),
             );
+            promises.push(
+              this.queryRun(
+                `SELECT 1 FROM ${MySQLDriver.escape(
+                  `${this.prefix}uniques_${etype}`,
+                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                  },
+                },
+              ),
+            );
             await Promise.all(promises);
           }
           if (this.config.tableLocking) {
@@ -2235,6 +2348,8 @@ export default class MySQLDriver extends NymphDriver {
                 `${this.prefix}comparisons_${etype}`,
               )} WRITE, ${MySQLDriver.escape(
                 `${this.prefix}references_${etype}`,
+              )} WRITE, ${MySQLDriver.escape(
+                `${this.prefix}uniques_${etype}`,
               )} WRITE;`,
             );
           }
@@ -2294,8 +2409,21 @@ export default class MySQLDriver extends NymphDriver {
                 },
               ),
             );
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${MySQLDriver.escape(
+                  `${this.prefix}uniques_${etype}`,
+                )} WHERE \`guid\`=UNHEX(@guid);`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                  },
+                },
+              ),
+            );
             await Promise.all(promises);
-            await insertData(guid, data, sdata, etype);
+            await insertData(guid, data, sdata, uniques, etype);
             success = true;
           }
           if (this.config.tableLocking) {

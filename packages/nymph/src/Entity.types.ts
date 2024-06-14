@@ -1,5 +1,5 @@
 import type Nymph from './Nymph';
-import type { Options } from './Nymph.types';
+import type Entity from './Entity';
 
 export type ACProperties = {
   user: string | null;
@@ -179,6 +179,18 @@ export interface EntityInterface extends DataObjectInterface {
    */
   $getSData(): SerializedEntityData;
   /**
+   * Get an array of strings that **must** be unique across the current etype.
+   *
+   * When you try to save another entity with any of the same unique strings,
+   * Nymph will throw an error.
+   *
+   * The default implementation of this method returns an empty array, meaning
+   * there are no uniqueness constraints applied to its etype.
+   *
+   * @returns Resolves to an array of entity's unique constraint strings.
+   */
+  $getUniques(): Promise<string[]>;
+  /**
    * Get the original values of the AC properties.
    *
    * @returns An object of AC properties.
@@ -277,73 +289,9 @@ export interface EntityInterface extends DataObjectInterface {
   $useSkipAc(useSkipAc: boolean): void;
 }
 
-export type EntityConstructor = (new (...args: any[]) => EntityInterface) & {
-  /**
-   * The instance of Nymph to use for queries.
-   */
-  nymph: Nymph;
-  /**
-   * A unique name for this type of entity used to separate its data from other
-   * types of entities in the database.
-   */
-  ETYPE: string;
-  /**
-   * The lookup name for this entity.
-   *
-   * This is used for reference arrays (and sleeping references) and client
-   * requests.
-   */
-  class: string;
-  /**
-   * Whether this entity should publish changes to PubSub servers.
-   */
-  pubSubEnabled: boolean;
-  /**
-   * Whether this entity should be accessible on the frontend through the REST
-   * server.
-   *
-   * If this is false, any request from the client that attempts to use this
-   * entity will fail.
-   */
-  restEnabled: boolean;
-  /**
-   * Properties that will not be searchable from the frontend. If the frontend
-   * includes any of these properties in any of their clauses, they will be
-   * filtered out before the search is executed.
-   */
-  searchRestrictedData: string[];
-  /**
-   * The names of static methods allowed to be called by the frontend with
-   * serverCallStatic.
-   */
-  clientEnabledStaticMethods: string[];
-  /**
-   * Create a new entity instance.
-   *
-   * @param guid An optional GUID to retrieve.
-   */
-  factory(guid?: string): Promise<EntityInterface>;
-  /**
-   * Create a new entity instance.
-   *
-   * @param guid An optional GUID to retrieve.
-   */
-  factorySync(guid?: string): EntityInterface;
-  /**
-   * Create a new sleeping reference instance.
-   *
-   * Sleeping references won't retrieve their data from the database until it
-   * is actually used.
-   *
-   * @param reference The Nymph Entity Reference to use to wake.
-   * @returns The new instance.
-   */
-  factoryReference(reference: EntityReference): EntityInterface;
-  /**
-   * Alter the options for a query for this entity.
-   *
-   * @param options The current options.
-   * @returns The altered options.
-   */
-  alterOptions?<T extends Options>(options: T): T;
+export type EntityConstructor<
+  D extends EntityData = EntityData,
+  E extends Entity<D> = Entity<D>,
+> = (new (...args: any[]) => E) & {
+  [k in keyof typeof Entity]: (typeof Entity)[k];
 };

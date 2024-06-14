@@ -249,6 +249,7 @@ describe('Entity', () => {
         array: ['full', 'of', 'values', 500],
         string: 'test',
         null: null,
+        uniques: [],
       },
       class: 'TestModel',
     });

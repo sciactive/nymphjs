@@ -1,17 +1,19 @@
 import SQLite3 from 'better-sqlite3';
 import {
   NymphDriver,
-  EntityConstructor,
-  EntityData,
-  EntityInterface,
-  SerializedEntityData,
+  type EntityConstructor,
+  type EntityData,
+  type EntityInterface,
+  type EntityInstanceType,
+  type SerializedEntityData,
+  type FormattedSelector,
+  type Options,
+  type Selector,
+  EntityUniqueConstraintError,
   InvalidParametersError,
   NotConfiguredError,
   QueryFailedError,
   UnableToConnectError,
-  FormattedSelector,
-  Options,
-  Selector,
   xor,
 } from '@nymphjs/nymph';
 import { makeTableSuffix } from '@nymphjs/guid';
@@ -361,6 +363,14 @@ export default class SQLite3Driver extends NymphDriver {
             `${this.prefix}references_${etype}`,
           )} ("reference");`,
         );
+        // Create the unique strings table.
+        this.queryRun(
+          `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}uniques_${etype}`,
+          )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} ("guid") ON DELETE CASCADE, "unique" TEXT NOT NULL UNIQUE, PRIMARY KEY("guid", "unique"));`,
+        );
       } else {
         // Create the UID table.
         this.queryRun(
@@ -404,6 +414,11 @@ export default class SQLite3Driver extends NymphDriver {
             query,
           );
         }
+      } else if (
+        errorCode === 'SQLITE_CONSTRAINT_UNIQUE' &&
+        errorMsg.match(/^UNIQUE constraint failed: /)
+      ) {
+        throw new EntityUniqueConstraintError(`Unique constraint violation.`);
       } else {
         throw new QueryFailedError(
           'Query failed: ' + e?.code + ' - ' + e?.message,
@@ -535,6 +550,17 @@ export default class SQLite3Driver extends NymphDriver {
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
           `${this.prefix}references_${etype}`,
+        )} WHERE "guid"=@guid;`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+          },
+        },
+      );
+      this.queryRun(
+        `DELETE FROM ${SQLite3Driver.escape(
+          `${this.prefix}uniques_${etype}`,
         )} WHERE "guid"=@guid;`,
         {
           etypes: [etype],
@@ -690,7 +716,7 @@ export default class SQLite3Driver extends NymphDriver {
     const sort = options.sort ?? 'cdate';
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
-      (key, value, typeIsOr, typeIsNot) => {
+      ({ key, value, typeIsOr, typeIsNot }) => {
         const clauseNot = key.startsWith('!');
         let curQuery = '';
         for (const curValue of value) {
@@ -1657,16 +1683,16 @@ export default class SQLite3Driver extends NymphDriver {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[]>;
+  ): Promise<EntityInstanceType<T>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
+  ): Promise<EntityInstanceType<T>[] | string[] | number> {
     const { result, process } = this.getEntitiesRowLike<T>(
       options,
       selectors,
-      (options, formattedSelectors, etype) =>
-        this.performQuery(options, formattedSelectors, etype),
+      ({ options, selectors, etype }) =>
+        this.performQuery(options, selectors, etype),
       () => {
         const next: any = result.next();
         return next.done ? null : next.value;
@@ -1720,6 +1746,12 @@ export default class SQLite3Driver extends NymphDriver {
         async (guid, tags, sdata, etype) => {
           try {
             await this.startTransaction(`nymph-import-entity-${guid}`);
+
+            const cdate = Number(JSON.parse(sdata.cdate));
+            delete sdata.cdate;
+            const mdate = Number(JSON.parse(sdata.mdate));
+            delete sdata.mdate;
+
             this.queryRun(
               `DELETE FROM ${SQLite3Driver.escape(
                 `${this.prefix}entities_${etype}`,
@@ -1765,6 +1797,18 @@ export default class SQLite3Driver extends NymphDriver {
               },
             );
             this.queryRun(
+              `DELETE FROM ${SQLite3Driver.escape(
+                `${this.prefix}uniques_${etype}`,
+              )} WHERE "guid"=@guid;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              },
+            );
+
+            this.queryRun(
               `INSERT INTO ${SQLite3Driver.escape(
                 `${this.prefix}entities_${etype}`,
               )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
@@ -1773,13 +1817,11 @@ export default class SQLite3Driver extends NymphDriver {
                 params: {
                   guid,
                   tags: ',' + tags.join(',') + ',',
-                  cdate: Number(JSON.parse(sdata.cdate)),
-                  mdate: Number(JSON.parse(sdata.mdate)),
+                  cdate,
+                  mdate,
                 },
               },
             );
-            delete sdata.cdate;
-            delete sdata.mdate;
             for (const name in sdata) {
               const value = sdata[name];
               const uvalue = JSON.parse(value);
@@ -1835,6 +1877,33 @@ export default class SQLite3Driver extends NymphDriver {
                     },
                   },
                 );
+              }
+            }
+            const uniques = await this.nymph
+              .getEntityClassByEtype(etype)
+              .getUniques({ guid, cdate, mdate, tags, data: {}, sdata });
+            for (const unique of uniques) {
+              try {
+                this.queryRun(
+                  `INSERT INTO ${SQLite3Driver.escape(
+                    `${this.prefix}uniques_${etype}`,
+                  )} ("guid", "unique") VALUES (@guid, @unique);`,
+                  {
+                    etypes: [etype],
+                    params: {
+                      guid,
+                      unique,
+                    },
+                  },
+                );
+              } catch (e: any) {
+                if (e instanceof EntityUniqueConstraintError) {
+                  this.nymph.config.debugError(
+                    'sqlite3',
+                    `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
+                  );
+                }
+                throw e;
               }
             }
             await this.commit(`nymph-import-entity-${guid}`);
@@ -1998,6 +2067,7 @@ export default class SQLite3Driver extends NymphDriver {
       guid: string,
       data: EntityData,
       sdata: SerializedEntityData,
+      uniques: string[],
       etype: string,
     ) => {
       const runInsertQuery = (name: string, value: any, svalue: string) => {
@@ -2055,6 +2125,30 @@ export default class SQLite3Driver extends NymphDriver {
           );
         }
       };
+      for (const unique of uniques) {
+        try {
+          this.queryRun(
+            `INSERT INTO ${SQLite3Driver.escape(
+              `${this.prefix}uniques_${etype}`,
+            )} ("guid", "unique") VALUES (@guid, @unique);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+                unique,
+              },
+            },
+          );
+        } catch (e: any) {
+          if (e instanceof EntityUniqueConstraintError) {
+            this.nymph.config.debugError(
+              'sqlite3',
+              `Save entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
+            );
+          }
+          throw e;
+        }
+      }
       for (const name in data) {
         runInsertQuery(name, data[name], JSON.stringify(data[name]));
       }
@@ -2066,7 +2160,7 @@ export default class SQLite3Driver extends NymphDriver {
     try {
       return this.saveEntityRowLike(
         entity,
-        async (_entity, guid, tags, data, sdata, cdate, etype) => {
+        async ({ guid, tags, data, sdata, uniques, cdate, etype }) => {
           if (
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
@@ -2086,10 +2180,10 @@ export default class SQLite3Driver extends NymphDriver {
               },
             },
           );
-          insertData(guid, data, sdata, etype);
+          insertData(guid, data, sdata, uniques, etype);
           return true;
         },
-        async (entity, guid, tags, data, sdata, mdate, etype) => {
+        async ({ entity, guid, tags, data, sdata, uniques, mdate, etype }) => {
           if (
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
@@ -2145,7 +2239,18 @@ export default class SQLite3Driver extends NymphDriver {
                 },
               },
             );
-            insertData(guid, data, sdata, etype);
+            this.queryRun(
+              `DELETE FROM ${SQLite3Driver.escape(
+                `${this.prefix}uniques_${etype}`,
+              )} WHERE "guid"=@guid;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              },
+            );
+            insertData(guid, data, sdata, uniques, etype);
             success = true;
           }
           return success;

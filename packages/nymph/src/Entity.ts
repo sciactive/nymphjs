@@ -1,7 +1,8 @@
 import { difference, intersection, isEqual } from 'lodash';
 
 import type Nymph from './Nymph';
-import {
+import type { Options } from './Nymph.types';
+import type {
   ACProperties,
   EntityConstructor,
   EntityData,
@@ -22,6 +23,13 @@ import {
   referencesToEntities,
   uniqueStrings,
 } from './utils';
+
+export type EntityDataType<T> = T extends Entity<infer DataType>
+  ? DataType
+  : never;
+
+export type EntityInstanceType<T extends EntityConstructor> =
+  T extends new () => infer E ? E & EntityDataType<E> : never;
 
 /**
  * Database abstraction object.
@@ -231,9 +239,17 @@ export default class Entity<T extends EntityData = EntityData>
   private $originalAcValues: ACProperties | null = null;
 
   /**
+   * Alter the options for a query for this entity.
+   *
+   * @param options The current options.
+   * @returns The altered options.
+   */
+  static alterOptions?<T extends Options>(options: T): T;
+
+  /**
    * Initialize an entity.
    */
-  public constructor() {
+  public constructor(..._rest: any[]) {
     this.$nymph = (this.constructor as EntityConstructor).nymph;
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
@@ -432,30 +448,108 @@ export default class Entity<T extends EntityData = EntityData>
     }) as Entity<T>;
   }
 
-  public static async factory(guid?: string) {
+  /**
+   * Create or retrieve a new entity instance.
+   *
+   * Note that this will always return an entity, even if the GUID is not found.
+   *
+   * @param guid An optional GUID to retrieve.
+   */
+  public static async factory<E extends Entity>(
+    this: {
+      new (): E;
+    },
+    guid?: string,
+  ): Promise<E & EntityDataType<E>> {
     const entity = new this();
     if (guid != null) {
-      const entity = await this.nymph.getEntity(
+      const entity = await (
+        this as unknown as EntityConstructor
+      ).nymph.getEntity(
         {
-          class: this as any as EntityConstructor,
+          class: this as unknown as EntityConstructor,
         },
         { type: '&', guid },
       );
       if (entity != null) {
-        return entity;
+        return entity as E & EntityDataType<E>;
       }
     }
-    return entity;
+    return entity as E & EntityDataType<E>;
   }
 
-  public static factorySync() {
-    return new this();
+  /**
+   * Create a new entity instance.
+   */
+  public static factorySync<E extends Entity>(this: {
+    new (): E;
+  }): E & EntityDataType<E> {
+    return new this() as E & EntityDataType<E>;
   }
 
-  public static factoryReference(reference: EntityReference) {
+  /**
+   * Create a new sleeping reference instance.
+   *
+   * Sleeping references won't retrieve their data from the database until they
+   * are readied with `$wake()` or a parent's `$wakeAll()`.
+   *
+   * @param reference The Nymph Entity Reference to use to wake.
+   * @returns The new instance.
+   */
+  public static factoryReference<E extends Entity>(
+    this: {
+      new (): E;
+    },
+    reference: EntityReference,
+  ): E & EntityDataType<E> {
     const entity = new this();
     entity.$referenceSleep(reference);
-    return entity;
+    return entity as E & EntityDataType<E>;
+  }
+
+  /**
+   * Get an array of strings that **must** be unique across the current etype.
+   *
+   * When you try to save another entity with any of the same unique strings,
+   * Nymph will throw an error.
+   *
+   * The default implementation of this static method instantiates the entity,
+   * assigns all of the given data, then calls `$getUniques` and returns its
+   * output. This can have a performance impact if a lot of extra processing
+   * happens during any of these steps. You can override this method to
+   * calculate the unique strings faster, but you must return the same strings
+   * that would be returned by `$getUniques`.
+   *
+   * @returns Resolves to an array of entity's unique constraint strings.
+   */
+  public static async getUniques({
+    guid,
+    cdate,
+    mdate,
+    tags,
+    data,
+    sdata,
+  }: {
+    guid?: string;
+    cdate?: number;
+    mdate?: number;
+    tags: string[];
+    data: EntityData;
+    sdata?: SerializedEntityData;
+  }) {
+    const entity = new this();
+    if (guid != null) {
+      entity.guid = guid;
+    }
+    if (cdate != null) {
+      entity.cdate = cdate;
+    }
+    if (mdate != null) {
+      entity.mdate = mdate;
+    }
+    entity.tags = tags;
+    entity.$putData(data, sdata);
+    return await entity.$getUniques();
   }
 
   public toJSON() {
@@ -562,6 +656,10 @@ export default class Entity<T extends EntityData = EntityData>
     this.$check();
 
     return this.$sdata;
+  }
+
+  public async $getUniques(): Promise<string[]> {
+    return [];
   }
 
   public $getOriginalAcValues(): ACProperties {
@@ -719,8 +817,8 @@ export default class Entity<T extends EntityData = EntityData>
       protectedProps.push('acWrite');
       protectedProps.push('acFull');
       if (
-        ((this.constructor as typeof Entity).class !== 'User' &&
-          (this.constructor as typeof Entity).class !== 'Group') ||
+        ((this.constructor as EntityConstructor).class !== 'User' &&
+          (this.constructor as EntityConstructor).class !== 'Group') ||
         !(this.$nymph.tilmeld as any).currentUser ||
         (!(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
           'tilmeld/admin',
@@ -789,8 +887,8 @@ export default class Entity<T extends EntityData = EntityData>
       protectedProps.push('acWrite');
       protectedProps.push('acFull');
       if (
-        ((this.constructor as typeof Entity).class !== 'User' &&
-          (this.constructor as typeof Entity).class !== 'Group') ||
+        ((this.constructor as EntityConstructor).class !== 'User' &&
+          (this.constructor as EntityConstructor).class !== 'Group') ||
         !(this.$nymph.tilmeld as any).currentUser ||
         (!(this.$nymph.tilmeld as any).currentUser.abilities?.includes(
           'tilmeld/admin',

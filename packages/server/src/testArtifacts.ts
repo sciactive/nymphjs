@@ -63,16 +63,6 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     'building',
   ];
 
-  static async factory(
-    guid?: string,
-  ): Promise<EmployeeModel & EmployeeModelData> {
-    return (await super.factory(guid)) as EmployeeModel & EmployeeModelData;
-  }
-
-  static factorySync(): EmployeeModel & EmployeeModelData {
-    return super.factorySync() as EmployeeModel & EmployeeModelData;
-  }
-
   constructor() {
     super();
 
@@ -186,14 +176,6 @@ export class Employee extends Entity<EmployeeData> {
     this.$data.subordinates = [];
   }
 
-  static async factory(guid?: string): Promise<Employee & EmployeeData> {
-    return (await super.factory(guid)) as Employee & EmployeeData;
-  }
-
-  static factorySync(): Employee & EmployeeData {
-    return super.factorySync() as Employee & EmployeeData;
-  }
-
   $testMethod(value: number) {
     return this.$serverCall('$testMethod', [value]);
   }
@@ -252,16 +234,6 @@ export class RestrictedModel extends EntityServer<RestrictedModelData> {
 
   public static restEnabled = false;
 
-  static async factory(
-    guid?: string,
-  ): Promise<RestrictedModel & RestrictedModelData> {
-    return (await super.factory(guid)) as RestrictedModel & RestrictedModelData;
-  }
-
-  static factorySync(): RestrictedModel & RestrictedModelData {
-    return super.factorySync() as RestrictedModel & RestrictedModelData;
-  }
-
   constructor() {
     super();
 
@@ -303,14 +275,6 @@ export class Restricted extends Entity<RestrictedData> {
     this.$data.name = '';
   }
 
-  static async factory(guid?: string): Promise<Restricted & RestrictedData> {
-    return (await super.factory(guid)) as Restricted & RestrictedData;
-  }
-
-  static factorySync(): Restricted & RestrictedData {
-    return super.factorySync() as Restricted & RestrictedData;
-  }
-
   $testMethod(value: number) {
     return this.$serverCall('$testMethod', [value]);
   }
@@ -332,17 +296,6 @@ export class PubSubDisabledModel extends EntityServer<PubSubDisabledModelData> {
   static class = 'PubSubDisabled';
 
   public static pubSubEnabled = false;
-
-  static async factory(
-    guid?: string,
-  ): Promise<PubSubDisabledModel & PubSubDisabledModelData> {
-    return (await super.factory(guid)) as PubSubDisabledModel &
-      PubSubDisabledModelData;
-  }
-
-  static factorySync(): PubSubDisabledModel & PubSubDisabledModelData {
-    return super.factorySync() as PubSubDisabledModel & PubSubDisabledModelData;
-  }
 
   constructor() {
     super();
@@ -375,15 +328,5 @@ export class PubSubDisabled extends Entity<PubSubDisabledData> {
     super();
 
     this.$data.name = '';
-  }
-
-  static async factory(
-    guid?: string,
-  ): Promise<PubSubDisabled & PubSubDisabledData> {
-    return (await super.factory(guid)) as PubSubDisabled & PubSubDisabledData;
-  }
-
-  static factorySync(): PubSubDisabled & PubSubDisabledData {
-    return super.factorySync() as PubSubDisabled & PubSubDisabledData;
   }
 }

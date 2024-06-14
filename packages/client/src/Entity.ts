@@ -16,6 +16,13 @@ import {
   sortObj,
 } from './utils';
 
+export type EntityDataType<T> = T extends Entity<infer DataType>
+  ? DataType
+  : never;
+
+export type EntityInstanceType<T extends EntityConstructor> =
+  T extends new () => infer E ? E & EntityDataType<E> : never;
+
 export default class Entity<T extends EntityData = EntityData>
   implements EntityInterface
 {
@@ -87,7 +94,7 @@ export default class Entity<T extends EntityData = EntityData>
   /**
    * Initialize an entity.
    */
-  public constructor() {
+  public constructor(..._rest: any[]) {
     this.$nymph = (this.constructor as EntityConstructor).nymph;
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
@@ -263,39 +270,91 @@ export default class Entity<T extends EntityData = EntityData>
     }) as Entity<T>;
   }
 
-  public static async factory(guid?: string) {
+  /**
+   * Create or retrieve a new entity instance.
+   *
+   * Note that this will always return an entity, even if the GUID is not found.
+   *
+   * @param guid An optional GUID to retrieve.
+   */
+  public static async factory<E extends Entity>(
+    this: {
+      new (): E;
+    },
+    guid?: string,
+  ): Promise<E & EntityDataType<E>> {
     const cacheEntity = (
-      guid ? this.nymph.getEntityFromCache(this, guid) : null
+      guid
+        ? (this as unknown as EntityConstructor).nymph.getEntityFromCache(
+            this as unknown as EntityConstructor,
+            guid,
+          )
+        : null
     ) as Entity | null;
     if (cacheEntity) {
-      return cacheEntity;
+      return cacheEntity as E & EntityDataType<E>;
     }
     const entity = new this();
     if (guid != null) {
       entity.guid = guid;
       entity.$isASleepingReference = true;
-      entity.$sleepingReference = ['nymph_entity_reference', guid, this.class];
+      entity.$sleepingReference = [
+        'nymph_entity_reference',
+        guid,
+        (this as unknown as EntityConstructor).class,
+      ];
       await entity.$wake();
     }
-    return entity;
+    return entity as E & EntityDataType<E>;
   }
 
-  public static factorySync() {
-    return new this();
+  /**
+   * Create a new entity instance.
+   */
+  public static factorySync<E extends Entity>(this: {
+    new (): E;
+  }): E & EntityDataType<E> {
+    return new this() as E & EntityDataType<E>;
   }
 
-  public static factoryReference(reference: EntityReference) {
+  /**
+   * Create a new sleeping reference instance.
+   *
+   * Sleeping references won't retrieve their data from the server until they
+   * are readied with `$wake()` or a parent's `$wakeAll()`.
+   *
+   * @param reference The Nymph Entity Reference to use to wake.
+   * @returns The new instance.
+   */
+  public static factoryReference<E extends Entity>(
+    this: {
+      new (): E;
+    },
+    reference: EntityReference,
+  ): E & EntityDataType<E> {
     const cacheEntity = (
-      reference[1] ? this.nymph.getEntityFromCache(this, reference[1]) : null
+      reference[1]
+        ? (this as unknown as EntityConstructor).nymph.getEntityFromCache(
+            this as unknown as EntityConstructor,
+            reference[1],
+          )
+        : null
     ) as Entity | null;
 
     const entity = cacheEntity || new this();
     if (!cacheEntity) {
       entity.$referenceSleep(reference);
     }
-    return entity;
+    return entity as E & EntityDataType<E>;
   }
 
+  /**
+   * Call a static method on the server version of this entity.
+   *
+   * @param method The name of the method.
+   * @param params The parameters to call the method with.
+   * @returns The value that the method on the server returned.
+   */
   public static async serverCallStatic(method: string, params: Iterable<any>) {
     const data = await this.nymph.serverCallStatic(
       this.class,
@@ -307,6 +366,13 @@ export default class Entity<T extends EntityData = EntityData>
     return data.return;
   }
 
+  /**
+   * Call a static iterator method on the server version of this entity.
+   *
+   * @param method The name of the method.
+   * @param params The parameters to call the method with.
+   * @returns An iterator that iterates over values that the method on the server yields.
+   */
   public static async serverCallStaticIterator(
     method: string,
     params: Iterable<any>,

@@ -1,7 +1,7 @@
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import fs from 'node:fs';
-import { Nymph, QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
 import SQLite3Driver from './SQLite3Driver';
 
@@ -15,7 +15,7 @@ describe('SQLite3Driver In-Memory', () => {
     nymph.driver.disconnect();
     nymph.driver.connect();
   }
-  QueriesTest(nymph, it);
+  EntitiesTest(nymph, it);
   UIDTest(nymph, it);
   ExportImportTest(nymph, it);
 });
@@ -31,7 +31,7 @@ describe('SQLite3Driver DB File', () => {
     nymph.driver.disconnect();
     nymph.driver.connect();
   }
-  QueriesTest(nymph, it);
+  EntitiesTest(nymph, it);
   UIDTest(nymph, it);
   ExportImportTest(nymph, it);
 

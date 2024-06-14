@@ -1,4 +1,4 @@
-import { Nymph, QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
 import MySQLDriver from './MySQLDriver';
 
@@ -15,7 +15,7 @@ const mysqlConfig = {
 const nymph = new Nymph({}, new MySQLDriver(mysqlConfig));
 
 describe('MySQLDriver', () => {
-  QueriesTest(nymph, it);
+  EntitiesTest(nymph, it);
   UIDTest(nymph, it);
   ExportImportTest(nymph, it);
 

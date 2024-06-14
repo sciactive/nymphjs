@@ -76,7 +76,7 @@ describe('Tilmeld Client', () => {
   }
 
   async function createAdmin(User: typeof UserClass) {
-    const admin = User.factorySync() as UserClass & UserData & CurrentUserData;
+    const admin = User.factorySync() as UserClass & CurrentUserData;
     admin.username = 'admin';
     admin.email = 'root@localhost';
     admin.nameFirst = 'Admin';
@@ -90,7 +90,7 @@ describe('Tilmeld Client', () => {
   }
 
   async function createUser(User: typeof UserClass) {
-    const user = User.factorySync() as UserClass & UserData & CurrentUserData;
+    const user = User.factorySync() as UserClass & CurrentUserData;
     user.username = 'user';
     user.email = 'user@localhost';
     user.nameFirst = 'Some';
@@ -116,9 +116,7 @@ describe('Tilmeld Client', () => {
     const { User } = createNymphTilmeldServer();
 
     try {
-      const admin = User.factorySync() as UserClass &
-        UserData &
-        CurrentUserData;
+      const admin = User.factorySync() as UserClass & CurrentUserData;
 
       let result = await admin.$register({
         password: 'supersecretadminpassword',

@@ -1,7 +1,12 @@
 import { guid } from '@nymphjs/guid';
 
 import type Nymph from './Nymph';
-import { EntityConstructor, EntityInterface, EntityJson } from './Entity.types';
+import type { EntityInstanceType } from './Entity';
+import type {
+  EntityConstructor,
+  EntityInterface,
+  EntityJson,
+} from './Entity.types';
 import { Options, Selector } from './Nymph.types';
 import { ClassNotAvailableError } from './errors';
 import Entity from './Entity';
@@ -22,7 +27,7 @@ export class MockNymphDriver {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string,
@@ -30,19 +35,19 @@ export class MockNymphDriver {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string,
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<ReturnType<T['factorySync']> | string | null> {
+  ): Promise<EntityInstanceType<T> | string | null> {
     const guid =
       typeof selectors[0] === 'string' ? selectors[0] : selectors[0].guid;
     if (!options || !guid || typeof guid !== 'string' || !(guid in entities)) {
       return null;
     }
 
-    const entity: EntityInterface = (
-      (options.class as T) ?? this.nymph.getEntityClass('Entity')
+    const entity = (
+      (options.class ?? this.nymph.getEntityClass('Entity')) as T
     ).factorySync();
     const entityJson = entities[guid];
     entity.guid = guid;
@@ -51,7 +56,7 @@ export class MockNymphDriver {
     entity.tags = entityJson.tags;
     entity.$putData(entityJson.data, {});
 
-    return entity as ReturnType<T['factorySync']>;
+    return entity as EntityInstanceType<T>;
   }
 }
 
@@ -68,21 +73,20 @@ export class MockNymph {
     this.Entity = this.addEntityClass(Entity);
   }
 
-  public addEntityClass<T extends EntityConstructor>(entityClass: T): T {
+  public addEntityClass<T extends EntityConstructor>(EntityClass: T): T {
     const nymph = this;
-    class NymphEntity extends entityClass {
+    this.entityClasses[EntityClass.class] = class extends EntityClass {
       static nymph: Nymph = nymph as unknown as Nymph;
 
       constructor(...args: any[]) {
         super(...args);
       }
-    }
-    this.entityClasses[entityClass.class] = NymphEntity;
-    return NymphEntity;
+    };
+    return this.entityClasses[EntityClass.class] as T;
   }
 
-  public getEntityClass<T extends EntityConstructor>(className: T): T;
   public getEntityClass(className: string): EntityConstructor;
+  public getEntityClass<T extends EntityConstructor>(className: T): T;
   public getEntityClass<T extends EntityConstructor = EntityConstructor>(
     className: T | string,
   ): T | EntityConstructor {
@@ -95,7 +99,18 @@ export class MockNymph {
     if (key in this.entityClasses) {
       return this.entityClasses[key];
     }
-    throw new ClassNotAvailableError('Tried to use class: ' + key);
+    throw new ClassNotAvailableError(`Tried to use missing class "${key}".`);
+  }
+
+  public getEntityClassByEtype(etype: string): EntityConstructor {
+    for (const EntityClass of Object.values(this.entityClasses)) {
+      if (EntityClass.ETYPE === etype) {
+        return EntityClass;
+      }
+    }
+    throw new ClassNotAvailableError(
+      `Tried to use missing class by etype "${etype}".`,
+    );
   }
 
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
@@ -105,7 +120,7 @@ export class MockNymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string,
@@ -113,11 +128,11 @@ export class MockNymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string,
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<ReturnType<T['factorySync']> | string | null> {
+  ): Promise<EntityInstanceType<T> | string | null> {
     // @ts-ignore: The selector type is correct here.
     return await this.driver.getEntity(options, ...selectors);
   }

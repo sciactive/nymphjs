@@ -289,10 +289,6 @@ export default class User extends AbleObject<UserData> {
    */
   public $originalEmail?: string;
 
-  static async factory(guid?: string): Promise<User & UserData> {
-    return (await super.factory(guid)) as User & UserData;
-  }
-
   static async factoryUsername(username?: string): Promise<User & UserData> {
     const entity = new this();
     if (username != null) {
@@ -310,10 +306,6 @@ export default class User extends AbleObject<UserData> {
       }
     }
     return entity;
-  }
-
-  static factorySync(): User & UserData {
-    return super.factorySync() as User & UserData;
   }
 
   constructor() {

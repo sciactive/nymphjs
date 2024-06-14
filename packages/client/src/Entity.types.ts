@@ -1,4 +1,5 @@
 import type Nymph from './Nymph';
+import type Entity from './Entity';
 
 export type ServerCallResponse = {
   return: any;
@@ -208,44 +209,9 @@ export interface EntityInterface extends DataObjectInterface {
   $toReference(): EntityReference | EntityInterface;
 }
 
-export type EntityConstructor = (new (...args: any[]) => EntityInterface) & {
-  /**
-   * The instance of Nymph to use for queries.
-   */
-  nymph: Nymph;
-  /**
-   * The lookup name for this entity.
-   *
-   * This is used for reference arrays (and sleeping references) and client
-   * requests.
-   */
-  class: string;
-  /**
-   * Create a new entity instance.
-   *
-   * @param guid An optional GUID to retrieve.
-   */
-  factory(guid?: string): Promise<EntityInterface>;
-  /**
-   * Create a new entity instance.
-   */
-  factorySync(): EntityInterface;
-  /**
-   * Create a new sleeping reference instance.
-   *
-   * Sleeping references won't retrieve their data from the server until they
-   * are readied with `$wake()` or a parent's `$wakeAll()`.
-   *
-   * @param reference The Nymph Entity Reference to use to wake.
-   * @returns The new instance.
-   */
-  factoryReference(reference: EntityReference): EntityInterface;
-  /**
-   * Call a static method on the server version of this entity.
-   *
-   * @param method The name of the method.
-   * @param params The parameters to call the method with.
-   * @returns The value that the method on the server returned.
-   */
-  serverCallStatic(method: string, params: Iterable<any>): Promise<any>;
+export type EntityConstructor<
+  D extends EntityData = EntityData,
+  E extends Entity<D> = Entity<D>,
+> = (new (...args: any[]) => E) & {
+  [k in keyof typeof Entity]: (typeof Entity)[k];
 };

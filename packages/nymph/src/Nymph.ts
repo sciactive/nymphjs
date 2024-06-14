@@ -1,6 +1,6 @@
 import { Config, ConfigDefaults as defaults } from './conf';
 import type { NymphDriver } from './driver';
-import Entity from './Entity';
+import Entity, { type EntityInstanceType } from './Entity';
 import type { EntityConstructor, EntityInterface } from './Entity.types';
 import { ClassNotAvailableError } from './errors';
 import type {
@@ -229,24 +229,43 @@ export default class Nymph {
    * Because this creates a subclass, don't use the class
    * returned from `getEntityClass` to check with `instanceof`.
    */
-  public addEntityClass<T extends EntityConstructor>(entityClass: T): T {
+  public addEntityClass<T extends EntityConstructor>(EntityClass: T): T {
+    if (EntityClass.class in this.entityClasses) {
+      this.config.debugLog(
+        'nymph',
+        `Adding duplicate class "${EntityClass.class}". This may be a mistake.`,
+      );
+    }
+
+    // Check that it doesn't have the same etype as any other class.
+    for (const ExistingClass of Object.values(this.entityClasses)) {
+      if (
+        EntityClass.ETYPE === ExistingClass.ETYPE &&
+        EntityClass.class !== EntityClass.class
+      ) {
+        this.config.debugLog(
+          'nymph',
+          `Adding class "${EntityClass.class}" with same etype as existing class "${ExistingClass.class}". This may be a mistake.`,
+        );
+      }
+    }
+
     const nymph = this;
-    class NymphEntity extends entityClass {
+    this.entityClasses[EntityClass.class] = class extends EntityClass {
       static nymph: Nymph = nymph;
 
       constructor(...args: any[]) {
         super(...args);
       }
-    }
-    this.entityClasses[entityClass.class] = NymphEntity;
-    return NymphEntity;
+    };
+    return this.entityClasses[EntityClass.class] as T;
   }
 
   /**
    * Get the class that uses the specified class name.
    */
-  public getEntityClass<T extends EntityConstructor>(className: T): T;
   public getEntityClass(className: string): EntityConstructor;
+  public getEntityClass<T extends EntityConstructor>(className: T): T;
   public getEntityClass<T extends EntityConstructor = EntityConstructor>(
     className: T | string,
   ): T | EntityConstructor {
@@ -261,6 +280,28 @@ export default class Nymph {
     }
     this.config.debugError('nymph', `Tried to use missing class "${key}".`);
     throw new ClassNotAvailableError(`Tried to use missing class "${key}".`);
+  }
+
+  /**
+   * Get the class that uses the specified etype.
+   *
+   * Note that it is fine, though unusual, for two classes to use the same
+   * etype. However, this can lead to very hard to diagnose bugs, so is
+   * generally discouraged.
+   */
+  public getEntityClassByEtype(etype: string): EntityConstructor {
+    for (const EntityClass of Object.values(this.entityClasses)) {
+      if (EntityClass.ETYPE === etype) {
+        return EntityClass;
+      }
+    }
+    this.config.debugError(
+      'nymph',
+      `Tried to use missing class by etype "${etype}".`,
+    );
+    throw new ClassNotAvailableError(
+      `Tried to use missing class by etype "${etype}".`,
+    );
   }
 
   /**
@@ -819,11 +860,11 @@ export default class Nymph {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[]>;
+  ): Promise<EntityInstanceType<T>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
+  ): Promise<EntityInstanceType<T>[] | string[] | number> {
     try {
       for (let callback of this.beforeGetEntitiesCallbacks) {
         if (callback) {
@@ -861,7 +902,7 @@ export default class Nymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'guid' },
     guid: string,
@@ -869,11 +910,11 @@ export default class Nymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string,
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<ReturnType<T['factorySync']> | string | number | null> {
+  ): Promise<EntityInstanceType<T> | string | number | null> {
     try {
       // Set up options and selectors.
       if (typeof selectors[0] === 'string') {

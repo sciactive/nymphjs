@@ -64,19 +64,32 @@ export default class Group extends Entity<GroupData> {
   // The name of the server class
   public static class = 'Group';
 
+  static async factoryGroupname(
+    groupname?: string,
+  ): Promise<Group & GroupData> {
+    const entity = new this();
+    if (groupname != null) {
+      const entity = await this.nymph.getEntity(
+        {
+          class: this,
+        },
+        {
+          type: '&',
+          ilike: ['groupname', groupname.replace(/([\\%_])/g, (s) => `\\${s}`)],
+        },
+      );
+      if (entity != null) {
+        return entity;
+      }
+    }
+    return entity;
+  }
+
   constructor() {
     super();
 
     this.$data.enabled = true;
     (this.$data as CurrentGroupData).abilities = [];
-  }
-
-  static async factory(guid?: string): Promise<Group & GroupData> {
-    return (await super.factory(guid)) as Group & GroupData;
-  }
-
-  static factorySync(): Group & GroupData {
-    return super.factorySync() as Group & GroupData;
   }
 
   public async $checkGroupname(): Promise<{

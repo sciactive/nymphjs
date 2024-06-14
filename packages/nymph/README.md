@@ -72,14 +72,6 @@ export default class Todo extends Entity<TodoData> {
   static ETYPE = 'todo'; // This is used for the table name(s) in the DB.
   static class = 'Todo'; // This is used to map references to their class.
 
-  static async factory(guid?: string): Promise<Todo & TodoData> {
-    return (await super.factory(guid)) as Todo & TodoData;
-  }
-
-  static factorySync(): Todo & TodoData {
-    return super.factorySync() as Todo & TodoData;
-  }
-
   constructor() {
     super();
 

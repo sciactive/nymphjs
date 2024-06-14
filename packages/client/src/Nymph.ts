@@ -1,4 +1,4 @@
-import Entity from './Entity';
+import Entity, { type EntityInstanceType } from './Entity';
 import type {
   EntityConstructor,
   EntityInterface,
@@ -264,7 +264,7 @@ export default class Nymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
     guid: string,
@@ -276,11 +276,11 @@ export default class Nymph {
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string,
-  ): Promise<ReturnType<T['factorySync']> | null>;
+  ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[] | string[]
-  ): Promise<ReturnType<T['factorySync']> | string | number | null> {
+  ): Promise<EntityInstanceType<T> | string | number | null> {
     // @ts-ignore: Implementation signatures of overloads are not externally visible.
     const data = (await this.getEntityData(options, ...selectors)) as
       | EntityJson<T>
@@ -369,11 +369,11 @@ export default class Nymph {
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[]>;
+  ): Promise<EntityInstanceType<T>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
-  ): Promise<ReturnType<T['factorySync']>[] | string[] | number> {
+  ): Promise<EntityInstanceType<T>[] | string[] | number> {
     const data = await requester.GET({
       url: this.restUrl,
       headers: { ...this.headers },
@@ -398,7 +398,7 @@ export default class Nymph {
 
   public initEntity<T extends EntityConstructor = EntityConstructor>(
     entityJSON: EntityJson<T>,
-  ): ReturnType<T['factorySync']> {
+  ): EntityInstanceType<T> {
     const EntityClass = this.getEntityClass(entityJSON.class);
     if (!EntityClass) {
       throw new ClassNotAvailableError(
@@ -413,22 +413,20 @@ export default class Nymph {
         entityJSON.guid || '',
       );
       if (entityFromCache != null) {
-        entity = entityFromCache;
+        entity = entityFromCache as EntityInstanceType<T>;
       }
     }
-    return entity.$init(entityJSON) as ReturnType<T['factorySync']>;
+    return entity.$init(entityJSON) as EntityInstanceType<T>;
   }
 
   public getEntityFromCache<T extends EntityConstructor = EntityConstructor>(
     EntityClass: EntityConstructor,
     guid: string,
-  ): ReturnType<T['factorySync']> | null {
+  ): EntityInstanceType<T> | null {
     if (!this.weakCache) {
       return null;
     }
-    return this.cache.get(EntityClass, guid) as ReturnType<
-      T['factorySync']
-    > | null;
+    return this.cache.get(EntityClass, guid) as EntityInstanceType<T> | null;
   }
 
   public setEntityToCache(

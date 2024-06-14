@@ -114,10 +114,6 @@ export default class Group extends AbleObject<GroupData> {
    */
   private $skipAcWhenSaving = false;
 
-  static async factory(guid?: string): Promise<Group & GroupData> {
-    return (await super.factory(guid)) as Group & GroupData;
-  }
-
   static async factoryGroupname(
     groupname?: string,
   ): Promise<Group & GroupData> {
@@ -137,10 +133,6 @@ export default class Group extends AbleObject<GroupData> {
       }
     }
     return entity;
-  }
-
-  static factorySync(): Group & GroupData {
-    return super.factorySync() as Group & GroupData;
   }
 
   constructor() {

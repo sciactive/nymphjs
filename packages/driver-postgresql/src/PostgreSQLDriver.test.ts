@@ -1,4 +1,4 @@
-import { Nymph, QueriesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
 import PostgreSQLDriver from './PostgreSQLDriver';
 
@@ -15,7 +15,7 @@ const postgresqlConfig = {
 const nymph = new Nymph({}, new PostgreSQLDriver(postgresqlConfig));
 
 describe('PostgreSQLDriver', () => {
-  QueriesTest(nymph, it);
+  EntitiesTest(nymph, it);
   UIDTest(nymph, it);
   ExportImportTest(nymph, it);
 
