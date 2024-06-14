@@ -285,6 +285,16 @@ export default class MySQLDriver extends NymphDriver {
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
     }
+    if (
+      this.transaction &&
+      this.transaction.count > 0 &&
+      this.config.transactions
+    ) {
+      this.transaction.count = 0;
+      this.transaction.connection?.release();
+      this.transaction.connection = null;
+      this.transaction = null;
+    }
     return true;
   }
 
