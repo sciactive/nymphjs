@@ -148,7 +148,7 @@ describe('Tilmeld Client', () => {
         ).toThrow();
       } catch (e: any) {
         expect(e.status).toEqual(400);
-        expect(e.message).toEqual('Invalid User:  "nameFirst" is required');
+        expect(e.message).toEqual('Invalid Group:  "name" is required');
       }
 
       expect(admin.guid).toBeNull();
