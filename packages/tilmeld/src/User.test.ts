@@ -1,5 +1,5 @@
 import { SQLite3Driver } from '@nymphjs/driver-sqlite3';
-import { Nymph } from '@nymphjs/nymph';
+import { Nymph, EntityUniqueConstraintError } from '@nymphjs/nymph';
 
 import Tilmeld from './Tilmeld';
 import defaults from './conf/defaults';
@@ -57,5 +57,81 @@ describe('User', () => {
     expect(() => {
       defaults.validatorUser({ config: defaults } as Tilmeld, invalidUser);
     }).toThrow('Invalid User:  "unknown" is not allowed');
+  });
+
+  it("doesn't allow duplicate usernames", async () => {
+    const newUserA = await User.factory();
+
+    newUserA.username = 'new-user';
+    newUserA.email = 'newusera@localhost';
+    newUserA.nameFirst = 'New';
+    newUserA.nameLast = 'User';
+    newUserA.name = 'New User';
+    newUserA.$password('password');
+
+    const newUserB = await User.factory();
+
+    newUserB.username = 'new-user';
+    newUserB.email = 'newuserb@localhost';
+    newUserB.nameFirst = 'New';
+    newUserB.nameLast = 'User';
+    newUserB.name = 'New User';
+    newUserB.$password('password');
+
+    const promises = [newUserA.$saveSkipAC(), newUserB.$saveSkipAC()];
+
+    try {
+      await Promise.all(promises);
+
+      throw new Error("Shouldn't get here because of unique constraint.");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(EntityUniqueConstraintError);
+    }
+
+    await Promise.allSettled(promises);
+
+    for (const user of [newUserA, newUserB]) {
+      if (user.guid != null) {
+        expect(await user.$deleteSkipAC()).toEqual(true);
+      }
+    }
+  });
+
+  it("doesn't allow duplicate emails", async () => {
+    const newUserA = await User.factory();
+
+    newUserA.username = 'new-user-a';
+    newUserA.email = 'newuser@localhost';
+    newUserA.nameFirst = 'New';
+    newUserA.nameLast = 'User';
+    newUserA.name = 'New User';
+    newUserA.$password('password');
+
+    const newUserB = await User.factory();
+
+    newUserB.username = 'new-user-b';
+    newUserB.email = 'newuser@localhost';
+    newUserB.nameFirst = 'New';
+    newUserB.nameLast = 'User';
+    newUserB.name = 'New User';
+    newUserB.$password('password');
+
+    const promises = [newUserA.$saveSkipAC(), newUserB.$saveSkipAC()];
+
+    try {
+      await Promise.all(promises);
+
+      throw new Error("Shouldn't get here because of unique constraint.");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(EntityUniqueConstraintError);
+    }
+
+    await Promise.allSettled(promises);
+
+    for (const user of [newUserA, newUserB]) {
+      if (user.guid != null) {
+        expect(await user.$deleteSkipAC()).toEqual(true);
+      }
+    }
   });
 });

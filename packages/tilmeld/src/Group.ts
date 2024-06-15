@@ -110,9 +110,13 @@ export default class Group extends AbleObject<GroupData> {
   protected $allowlistTags?: string[] = [];
 
   /**
-   * This is explicitly used only during the registration proccess.
+   * This should only be used by the backend.
    */
   private $skipAcWhenSaving = false;
+  /**
+   * This should only be used by the backend.
+   */
+  private $skipAcWhenDeleting = false;
 
   static async factoryGroupname(
     groupname?: string,
@@ -133,15 +137,6 @@ export default class Group extends AbleObject<GroupData> {
       }
     }
     return entity;
-  }
-
-  constructor() {
-    super();
-
-    // Defaults.
-    this.$data.enabled = true;
-    this.$data.abilities = [];
-    this.$updateDataProtection();
   }
 
   /**
@@ -227,6 +222,30 @@ export default class Group extends AbleObject<GroupData> {
       ).filter((group) => group != null) as (Group & GroupData)[];
     }
     return assignableGroups;
+  }
+
+  constructor() {
+    super();
+
+    // Defaults.
+    this.$data.enabled = true;
+    this.$data.abilities = [];
+    this.$updateDataProtection();
+  }
+
+  async $getUniques(): Promise<string[]> {
+    const tilmeld = enforceTilmeld(this);
+    const uniques = [`u:${this.$data.groupname}`];
+    if (
+      !tilmeld.config.emailUsernames &&
+      tilmeld.config.userFields.includes('email')
+    ) {
+      uniques.push(`e:${this.$data.email}`);
+    }
+    if (this.$data.defaultPrimary) {
+      uniques.push(`o:default-primary`);
+    }
+    return uniques;
   }
 
   public $getAvatar() {
@@ -768,7 +787,11 @@ export default class Group extends AbleObject<GroupData> {
       );
       if (currentPrimary != null && !this.$is(currentPrimary)) {
         currentPrimary.defaultPrimary = false;
-        if (!(await currentPrimary.$save())) {
+        if (
+          this.$skipAcWhenSaving
+            ? !(await currentPrimary.$saveSkipAC())
+            : !(await currentPrimary.$save())
+        ) {
           throw new CouldNotChangeDefaultPrimaryGroupError(
             'Could not change new user primary group from ' +
               `${currentPrimary.groupname}.`,
@@ -798,7 +821,7 @@ export default class Group extends AbleObject<GroupData> {
 
   public async $delete() {
     let tilmeld = enforceTilmeld(this);
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!this.$skipAcWhenDeleting && !tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete groups.");
     }
 
@@ -812,7 +835,11 @@ export default class Group extends AbleObject<GroupData> {
     const descendants = await this.$getDescendants();
     if (descendants.length) {
       for (let curGroup of descendants) {
-        if (!(await curGroup.$delete())) {
+        if (
+          this.$skipAcWhenDeleting
+            ? !(await curGroup.$deleteSkipAC())
+            : !(await curGroup.$delete())
+        ) {
           await tnymph.rollback(transaction);
           this.$nymph = nymph;
           return false;
@@ -833,7 +860,11 @@ export default class Group extends AbleObject<GroupData> {
     );
     for (let user of primaryUsers) {
       delete user.group;
-      if (!(await user.$save())) {
+      if (
+        this.$skipAcWhenDeleting
+          ? !(await user.$saveSkipAC())
+          : !(await user.$save())
+      ) {
         await tnymph.rollback(transaction);
         this.$nymph = nymph;
         return false;
@@ -853,7 +884,11 @@ export default class Group extends AbleObject<GroupData> {
     );
     for (let user of secondaryUsers) {
       user.$delGroup(this);
-      if (!(await user.$save())) {
+      if (
+        this.$skipAcWhenDeleting
+          ? !(await user.$saveSkipAC())
+          : !(await user.$save())
+      ) {
         await tnymph.rollback(transaction);
         return false;
       }
@@ -868,5 +903,21 @@ export default class Group extends AbleObject<GroupData> {
     }
     this.$nymph = nymph;
     return success;
+  }
+
+  /*
+   * This should *never* be accessible on the client.
+   */
+  async $deleteSkipAC() {
+    this.$skipAcWhenDeleting = true;
+    return await this.$delete();
+  }
+
+  $tilmeldDeleteSkipAC() {
+    if (this.$skipAcWhenDeleting) {
+      this.$skipAcWhenDeleting = false;
+      return true;
+    }
+    return false;
   }
 }

@@ -273,9 +273,13 @@ export default class User extends AbleObject<UserData> {
    */
   private $gatekeeperCache?: { [k: string]: true };
   /**
-   * This is explicitly used only during the registration proccess.
+   * This should only be used by the backend.
    */
   private $skipAcWhenSaving = false;
+  /**
+   * This should only be used by the backend.
+   */
+  private $skipAcWhenDeleting = false;
   /**
    * The user's group descendants.
    */
@@ -306,17 +310,6 @@ export default class User extends AbleObject<UserData> {
       }
     }
     return entity;
-  }
-
-  constructor() {
-    super();
-
-    // Defaults.
-    this.$data.enabled = true;
-    this.$data.abilities = [];
-    this.$data.groups = [];
-    this.$data.inheritAbilities = true;
-    this.$updateDataProtection();
   }
 
   public static current(returnObjectIfNotExist: true): User & UserData;
@@ -529,6 +522,33 @@ export default class User extends AbleObject<UserData> {
       result.user = user;
     }
     return result;
+  }
+
+  constructor() {
+    super();
+
+    // Defaults.
+    this.$data.enabled = true;
+    this.$data.abilities = [];
+    this.$data.groups = [];
+    this.$data.inheritAbilities = true;
+    this.$updateDataProtection();
+  }
+
+  async $getUniques(): Promise<string[]> {
+    const tilmeld = enforceTilmeld(this);
+    const uniques = [`u:${this.$data.username}`];
+    if (
+      !tilmeld.config.emailUsernames &&
+      tilmeld.config.userFields.includes('email')
+    ) {
+      uniques.push(`e:${this.$data.email}`);
+
+      if (this.$data.newEmailAddress != null) {
+        uniques.push(`e:${this.$data.newEmailAddress}`);
+      }
+    }
+    return uniques;
   }
 
   public async $login(data: {
@@ -1901,7 +1921,7 @@ export default class User extends AbleObject<UserData> {
         this.$data.enabled = true;
       }
 
-      // If create_admin is true and there are no other users, grant
+      // If createAdmin is true and there are no other users, grant
       // "system/admin".
       let madeAdmin = false;
       if (tilmeld.config.createAdmin) {
@@ -2051,6 +2071,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (
+      !this.$skipAcWhenSaving &&
       tilmeld.gatekeeper('tilmeld/admin') &&
       !tilmeld.gatekeeper('system/admin') &&
       this.$data.abilities?.includes('system/admin')
@@ -2295,18 +2316,39 @@ export default class User extends AbleObject<UserData> {
     if (group != null && group.user != null && this.$is(group.user)) {
       try {
         // Update the user's generated primary group.
-        group.groupname = this.$data.username;
-        group.avatar = this.$data.avatar;
-        if (tilmeld.config.userFields.includes('email')) {
+        let changed = false;
+        if (group.groupname !== this.$data.username) {
+          group.groupname = this.$data.username;
+          changed = true;
+        }
+        if (group.avatar !== this.$data.avatar) {
+          group.avatar = this.$data.avatar;
+          changed = true;
+        }
+        if (
+          tilmeld.config.userFields.includes('email') &&
+          group.email !== this.$data.email
+        ) {
           group.email = this.$data.email;
+          changed = true;
         }
-        if (tilmeld.config.userFields.includes('name')) {
+        if (
+          tilmeld.config.userFields.includes('name') &&
+          group.name !== this.$data.name
+        ) {
           group.name = this.$data.name;
+          changed = true;
         }
-        if (tilmeld.config.userFields.includes('phone')) {
+        if (
+          tilmeld.config.userFields.includes('phone') &&
+          group.phone !== this.$data.phone
+        ) {
           group.phone = this.$data.phone;
+          changed = true;
         }
-        await group.$saveSkipAC();
+        if (changed) {
+          await group.$saveSkipAC();
+        }
         this.$data.group = group;
       } catch (e: any) {
         await tnymph.rollback(transaction);
@@ -2375,10 +2417,11 @@ export default class User extends AbleObject<UserData> {
 
   public async $delete() {
     const tilmeld = enforceTilmeld(this);
-    if (!tilmeld.gatekeeper('tilmeld/admin')) {
+    if (!this.$skipAcWhenDeleting && !tilmeld.gatekeeper('tilmeld/admin')) {
       throw new BadDataError("You don't have the authority to delete users.");
     }
     if (
+      !this.$skipAcWhenDeleting &&
       !tilmeld.gatekeeper('system/admin') &&
       this.$data.abilities?.includes('system/admin')
     ) {
@@ -2390,6 +2433,22 @@ export default class User extends AbleObject<UserData> {
       await this.$logout();
     }
     return await super.$delete();
+  }
+
+  /*
+   * This should *never* be accessible on the client.
+   */
+  async $deleteSkipAC() {
+    this.$skipAcWhenDeleting = true;
+    return await this.$delete();
+  }
+
+  $tilmeldDeleteSkipAC() {
+    if (this.$skipAcWhenDeleting) {
+      this.$skipAcWhenDeleting = false;
+      return true;
+    }
+    return false;
   }
 
   public static on<T extends EventType>(

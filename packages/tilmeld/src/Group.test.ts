@@ -1,5 +1,5 @@
 import { SQLite3Driver } from '@nymphjs/driver-sqlite3';
-import { Nymph } from '@nymphjs/nymph';
+import { Nymph, EntityUniqueConstraintError } from '@nymphjs/nymph';
 
 import Tilmeld from './Tilmeld';
 import defaults from './conf/defaults';
@@ -54,5 +54,103 @@ describe('Group', () => {
     expect(() => {
       defaults.validatorGroup({ config: defaults } as Tilmeld, invalidGroup);
     }).toThrow('Invalid Group:  "unknown" is not allowed');
+  });
+
+  it("doesn't allow duplicate groupnames", async () => {
+    const newGroupA = await Group.factory();
+
+    newGroupA.groupname = 'new-group';
+    newGroupA.email = 'newgroupa@localhost';
+    newGroupA.name = 'New Group';
+
+    const newGroupB = await Group.factory();
+
+    newGroupB.groupname = 'new-group';
+    newGroupB.email = 'newgroupb@localhost';
+    newGroupB.name = 'New Group';
+
+    const promises = [newGroupA.$saveSkipAC(), newGroupB.$saveSkipAC()];
+
+    try {
+      await Promise.all(promises);
+
+      throw new Error("Shouldn't get here because of unique constraint.");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(EntityUniqueConstraintError);
+    }
+
+    await Promise.allSettled(promises);
+
+    for (const group of [newGroupA, newGroupB]) {
+      if (group.guid != null) {
+        expect(await group.$deleteSkipAC()).toEqual(true);
+      }
+    }
+  });
+
+  it("doesn't allow duplicate emails", async () => {
+    const newGroupA = await Group.factory();
+
+    newGroupA.groupname = 'new-group-a';
+    newGroupA.email = 'newgroup@localhost';
+    newGroupA.name = 'New Group';
+
+    const newGroupB = await Group.factory();
+
+    newGroupB.groupname = 'new-group-b';
+    newGroupB.email = 'newgroup@localhost';
+    newGroupB.name = 'New Group';
+
+    const promises = [newGroupA.$saveSkipAC(), newGroupB.$saveSkipAC()];
+
+    try {
+      await Promise.all(promises);
+
+      throw new Error("Shouldn't get here because of unique constraint.");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(EntityUniqueConstraintError);
+    }
+
+    await Promise.allSettled(promises);
+
+    for (const group of [newGroupA, newGroupB]) {
+      if (group.guid != null) {
+        expect(await group.$deleteSkipAC()).toEqual(true);
+      }
+    }
+  });
+
+  it("doesn't allow two default primary groups", async () => {
+    const newGroupA = await Group.factory();
+
+    newGroupA.groupname = 'new-group-a';
+    newGroupA.email = 'newgroupa@localhost';
+    newGroupA.name = 'New Group';
+    newGroupA.defaultPrimary = true;
+
+    const newGroupB = await Group.factory();
+
+    newGroupB.groupname = 'new-group-b';
+    newGroupB.email = 'newgroupb@localhost';
+    newGroupB.name = 'New Group';
+    newGroupB.defaultPrimary = true;
+
+    const promises = [newGroupA.$saveSkipAC(), newGroupB.$saveSkipAC()];
+
+    try {
+      await Promise.all(promises);
+
+      throw new Error("Shouldn't get here because of unique constraint.");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(EntityUniqueConstraintError);
+    }
+
+    await Promise.allSettled(promises);
+
+    for (const group of [newGroupA, newGroupB]) {
+      if (group.guid != null) {
+        expect(await group.$deleteSkipAC()).toEqual(true);
+      }
+    }
   });
 });
