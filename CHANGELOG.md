@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.62](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.61...v1.0.0-beta.62) (2024-06-15)
+
+### Bug Fixes
+
+- assign generated and default groups to users created through admin app ([7ea0baa](https://github.com/sciactive/nymphjs/commit/7ea0baaf3a2c1285a63ee95ec153f38c169af6b6))
+- update test with new error message ([05afe42](https://github.com/sciactive/nymphjs/commit/05afe42470d975278858edbe65ec1b29c1c43207))
+
+### Features
+
+- use unique constraint to guarantee username, groupname, and email uniqueness ([eff5cc4](https://github.com/sciactive/nymphjs/commit/eff5cc43fbbf31e66ede17f42d38de07a0344ede))
+
 # [1.0.0-beta.61](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.60...v1.0.0-beta.61) (2024-06-14)
 
 ### Bug Fixes
