@@ -1,4 +1,5 @@
-import {
+import type {
+  Nymph,
   EntityData,
   EntityJson,
   EntityPatch,
@@ -17,7 +18,8 @@ import {
   BadUsernameError,
   CouldNotChangeDefaultPrimaryGroupError,
 } from './errors';
-import User, { UserData } from './User';
+import type User from './User';
+import type { UserData } from './User';
 
 export type GroupData = {
   /**
@@ -231,6 +233,18 @@ export default class Group extends AbleObject<GroupData> {
     this.$data.enabled = true;
     this.$data.abilities = [];
     this.$updateDataProtection();
+  }
+
+  $setNymph(nymph: Nymph) {
+    this.$nymph = nymph;
+    if (!this.$asleep()) {
+      if (this.$data.user && this.$data.user.$nymph !== nymph) {
+        this.$data.user.$setNymph(nymph);
+      }
+      if (this.$data.parent && this.$data.parent.$nymph !== nymph) {
+        this.$data.parent.$setNymph(nymph);
+      }
+    }
   }
 
   async $getUniques(): Promise<string[]> {
@@ -828,7 +842,7 @@ export default class Group extends AbleObject<GroupData> {
     const transaction = 'tilmeld-delete-' + this.guid;
     const nymph = this.$nymph;
     const tnymph = await nymph.startTransaction(transaction);
-    this.$nymph = tnymph;
+    this.$setNymph(tnymph);
     tilmeld = enforceTilmeld(this);
 
     // Delete descendants.
@@ -841,7 +855,7 @@ export default class Group extends AbleObject<GroupData> {
             : !(await curGroup.$delete())
         ) {
           await tnymph.rollback(transaction);
-          this.$nymph = nymph;
+          this.$setNymph(nymph);
           return false;
         }
       }
@@ -866,7 +880,7 @@ export default class Group extends AbleObject<GroupData> {
           : !(await user.$save())
       ) {
         await tnymph.rollback(transaction);
-        this.$nymph = nymph;
+        this.$setNymph(nymph);
         return false;
       }
     }
@@ -901,7 +915,7 @@ export default class Group extends AbleObject<GroupData> {
     } else {
       await tnymph.rollback(transaction);
     }
-    this.$nymph = nymph;
+    this.$setNymph(nymph);
     return success;
   }
 

@@ -162,7 +162,17 @@
     {/if}
 
     {#if activeTab === 'Groups'}
-      <h5 style="margin-top: 0;">Primary Group</h5>
+      {#if entity.guid == null}
+        <p style="margin-top: 0;">
+          When you leave primary group empty, if Nymph is configured to generate
+          primary groups, one will be generated for this new user. Otherwise,
+          Nymph will assign the default primary group. Likewise, when you leave
+          secondary groups empty, Nymph will assign the default secondary
+          groups.
+        </p>
+      {/if}
+
+      <h5 style={entity.guid == null ? '' : 'margin-top: 0;'}>Primary Group</h5>
 
       <Paper
         style="display: flex; justify-content: space-between; align-items: center;"

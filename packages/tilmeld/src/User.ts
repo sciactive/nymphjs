@@ -1,4 +1,5 @@
-import {
+import type {
+  Nymph,
   EntityData,
   EntityJson,
   EntityPatch,
@@ -6,7 +7,7 @@ import {
   SerializedEntityData,
 } from '@nymphjs/nymph';
 import { humanSecret, nanoid } from '@nymphjs/guid';
-import { EmailOptions } from 'email-templates';
+import type { EmailOptions } from 'email-templates';
 import strtotime from 'locutus/php/datetime/strtotime';
 import Base64 from 'crypto-js/enc-base64';
 import sha256 from 'crypto-js/sha256';
@@ -17,7 +18,8 @@ import { toDataURL } from 'qrcode';
 
 import { enforceTilmeld } from './enforceTilmeld';
 import AbleObject from './AbleObject';
-import Group, { GroupData } from './Group';
+import type Group from './Group';
+import type { GroupData } from './Group';
 import {
   BadDataError,
   BadEmailError,
@@ -533,6 +535,20 @@ export default class User extends AbleObject<UserData> {
     this.$data.groups = [];
     this.$data.inheritAbilities = true;
     this.$updateDataProtection();
+  }
+
+  $setNymph(nymph: Nymph) {
+    this.$nymph = nymph;
+    if (!this.$asleep()) {
+      if (this.$data.group && this.$data.group.$nymph !== nymph) {
+        this.$data.group.$setNymph(nymph);
+      }
+      for (const group of this.$data.groups ?? []) {
+        if (group && group.$nymph !== nymph) {
+          group.$setNymph(nymph);
+        }
+      }
+    }
   }
 
   async $getUniques(): Promise<string[]> {
@@ -1813,7 +1829,7 @@ export default class User extends AbleObject<UserData> {
     const transaction = 'tilmeld-register-' + nanoid();
     const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
-    this.$nymph = tnymph;
+    this.$setNymph(tnymph);
     tilmeld = enforceTilmeld(this);
 
     let message = '';
@@ -1829,84 +1845,12 @@ export default class User extends AbleObject<UserData> {
         }
       } catch (e: any) {
         await tnymph.rollback(transaction);
-        this.$nymph = nymph;
+        this.$setNymph(nymph);
         return {
           result: false,
           loggedin: false,
           message: e.message,
         };
-      }
-
-      // Add primary group.
-      let generatedPrimaryGroup: (Group & GroupData) | null = null;
-      if (tilmeld.config.generatePrimary) {
-        // Generate a new primary group for the user.
-        generatedPrimaryGroup = await tilmeld.Group.factory();
-        generatedPrimaryGroup.groupname = this.$data.username;
-        generatedPrimaryGroup.avatar = this.$data.avatar;
-        if (tilmeld.config.userFields.includes('name')) {
-          generatedPrimaryGroup.name = this.$data.name;
-        }
-        if (tilmeld.config.userFields.includes('email')) {
-          generatedPrimaryGroup.email = this.$data.email;
-        }
-        const parent = await tnymph.getEntity(
-          { class: tilmeld.Group },
-          {
-            type: '&',
-            equal: ['defaultPrimary', true],
-          },
-        );
-        if (parent != null) {
-          generatedPrimaryGroup.parent = parent;
-        }
-        if (!(await generatedPrimaryGroup.$saveSkipAC())) {
-          await tnymph.rollback(transaction);
-          this.$nymph = nymph;
-          return {
-            result: false,
-            loggedin: false,
-            message: 'Error creating primary group for user.',
-          };
-        }
-        this.$data.group = generatedPrimaryGroup;
-      } else {
-        // Add the default primary.
-        const group = await tnymph.getEntity(
-          { class: tilmeld.Group },
-          {
-            type: '&',
-            equal: ['defaultPrimary', true],
-          },
-        );
-        if (group != null) {
-          this.$data.group = group;
-        }
-      }
-
-      // Add secondary groups.
-      if (
-        tilmeld.config.userFields.includes('email') &&
-        tilmeld.config.verifyEmail &&
-        tilmeld.config.unverifiedAccess
-      ) {
-        // Add the default secondaries for unverified users.
-        this.$data.groups = await tnymph.getEntities(
-          { class: tilmeld.Group },
-          {
-            type: '&',
-            equal: ['unverifiedSecondary', true],
-          },
-        );
-      } else {
-        // Add the default secondaries.
-        this.$data.groups = await tnymph.getEntities(
-          { class: tilmeld.Group },
-          {
-            type: '&',
-            equal: ['defaultSecondary', true],
-          },
-        );
       }
 
       if (
@@ -1970,21 +1914,6 @@ export default class User extends AbleObject<UserData> {
           );
         }
 
-        // Save the primary group.
-        if (generatedPrimaryGroup != null) {
-          generatedPrimaryGroup.user = this;
-          if (!(await generatedPrimaryGroup.$saveSkipAC())) {
-            await tnymph.rollback(transaction);
-            this.$nymph = nymph;
-            return {
-              result: false,
-              loggedin: false,
-              message:
-                'Your primary group could not be assigned. Please try again later.',
-            };
-          }
-        }
-
         // Finish up.
         if (
           tilmeld.config.verifyEmail &&
@@ -2032,7 +1961,7 @@ export default class User extends AbleObject<UserData> {
           `Error registering new user "${this.$data.username}".`,
         );
         await tnymph.rollback(transaction);
-        this.$nymph = nymph;
+        this.$setNymph(nymph);
         return {
           result: false,
           loggedin: false,
@@ -2045,13 +1974,13 @@ export default class User extends AbleObject<UserData> {
         `Error registering new user "${this.$data.username}": ${e}`,
       );
       await tnymph.rollback(transaction);
-      this.$nymph = nymph;
+      this.$setNymph(nymph);
       throw e;
     }
 
     try {
       await tnymph.commit(transaction);
-      this.$nymph = nymph;
+      this.$setNymph(nymph);
       await this.$nymph.tilmeld?.fillSession(this);
     } catch (e: any) {
       throw e;
@@ -2298,23 +2227,53 @@ export default class User extends AbleObject<UserData> {
       throw new BadDataError('A password is required.');
     }
 
-    try {
-      tilmeld.config.validatorUser(tilmeld, this);
-    } catch (e: any) {
-      throw new BadDataError(e?.message);
-    }
-
     // Start transaction.
     const transaction = 'tilmeld-save-' + nanoid();
     const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
-    this.$nymph = tnymph;
+    this.$setNymph(tnymph);
     tilmeld = enforceTilmeld(this);
 
-    const group = this.$data.group;
-    await group?.$wake();
-    if (group != null && group.user != null && this.$is(group.user)) {
-      try {
+    // If the primary group is generated now, the user assigned to it won't have
+    // a guid yet, so it needs to be assigned after the user is saved.
+    let saveGeneratedPrimaryGroupAgain = false;
+
+    try {
+      let group = this.$data.group;
+      await group?.$wake();
+      if (group == null && this.guid == null) {
+        if (tilmeld.config.generatePrimary) {
+          // Generate a new primary group for the user.
+          group = await tilmeld.Group.factory();
+          // This user doesn't have a guid yet, so that's why we set
+          // saveGeneratedPrimaryGroupAgain.
+          group.user = this;
+          saveGeneratedPrimaryGroupAgain = true;
+          const parent = await tnymph.getEntity(
+            { class: tilmeld.Group },
+            {
+              type: '&',
+              equal: ['defaultPrimary', true],
+            },
+          );
+          if (parent != null) {
+            group.parent = parent;
+          }
+        } else {
+          // Add the default primary.
+          const group = await tnymph.getEntity(
+            { class: tilmeld.Group },
+            {
+              type: '&',
+              equal: ['defaultPrimary', true],
+            },
+          );
+          if (group != null) {
+            this.$data.group = group;
+          }
+        }
+      }
+      if (group != null && group.user != null && this.$is(group.user)) {
         // Update the user's generated primary group.
         let changed = false;
         if (group.groupname !== this.$data.username) {
@@ -2347,14 +2306,50 @@ export default class User extends AbleObject<UserData> {
           changed = true;
         }
         if (changed) {
-          await group.$saveSkipAC();
+          if (!(await group.$saveSkipAC())) {
+            throw Error('Error updating primary group for user.');
+          }
         }
         this.$data.group = group;
-      } catch (e: any) {
-        await tnymph.rollback(transaction);
-        this.$nymph = nymph;
-        throw e;
       }
+
+      if (this.$data.groups == null || this.$data.groups.length === 0) {
+        // Add secondary groups.
+        if (
+          tilmeld.config.userFields.includes('email') &&
+          tilmeld.config.verifyEmail &&
+          tilmeld.config.unverifiedAccess &&
+          this.$data.secret != null
+        ) {
+          // Add the default secondaries for unverified users.
+          this.$data.groups = await tnymph.getEntities(
+            { class: tilmeld.Group },
+            {
+              type: '&',
+              equal: ['unverifiedSecondary', true],
+            },
+          );
+        } else {
+          // Add the default secondaries.
+          this.$data.groups = await tnymph.getEntities(
+            { class: tilmeld.Group },
+            {
+              type: '&',
+              equal: ['defaultSecondary', true],
+            },
+          );
+        }
+      }
+
+      try {
+        tilmeld.config.validatorUser(tilmeld, this);
+      } catch (e: any) {
+        throw new BadDataError(e?.message);
+      }
+    } catch (e: any) {
+      await tnymph.rollback(transaction);
+      this.$setNymph(nymph);
+      throw e;
     }
 
     let ret: boolean;
@@ -2364,11 +2359,26 @@ export default class User extends AbleObject<UserData> {
 
     try {
       ret = await super.$save();
+
+      if (ret && saveGeneratedPrimaryGroupAgain) {
+        const group = this.$data.group;
+        if (group == null) {
+          throw Error('Generated primary group not found.');
+        }
+        await group.$wake();
+        // Now this user has a GUID, so saving it on the group will succeed.
+        group.user = this;
+        if (!(await group.$saveSkipAC())) {
+          throw Error("Generated primary group couldn't be saved.");
+        }
+        this.$data.group = group;
+      }
     } catch (e: any) {
       await tnymph.rollback(transaction);
-      this.$nymph = nymph;
+      this.$setNymph(nymph);
       throw e;
     }
+
     if (ret) {
       if (sendVerification) {
         // The email has changed, so send a new verification email.
@@ -2377,7 +2387,7 @@ export default class User extends AbleObject<UserData> {
           this.guid = preGuid;
           this.cdate = preCdate;
           this.mdate = preMdate;
-          this.$nymph = nymph;
+          this.$setNymph(nymph);
           throw new Error("Couldn't send verification email.");
         }
       }
@@ -2395,7 +2405,7 @@ export default class User extends AbleObject<UserData> {
     } else {
       await tnymph.rollback(transaction);
     }
-    this.$nymph = nymph;
+    this.$setNymph(nymph);
     return ret;
   }
 
