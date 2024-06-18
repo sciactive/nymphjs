@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.63](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.62...v1.0.0-beta.63) (2024-06-18)
+
+### Bug Fixes
+
+- undo ts compilation to module change ([84be6d4](https://github.com/sciactive/nymphjs/commit/84be6d434be29f8afd53907d15be2eb77d1736ce))
+
+### Features
+
+- allow importing from text and iterables ([9d766bd](https://github.com/sciactive/nymphjs/commit/9d766bdad4b0f17bc2dd68b0336a0064857eb4e9))
+- export data iterator ([b86aa19](https://github.com/sciactive/nymphjs/commit/b86aa19fc77d744b5a683046dfb697fc4746df5c))
+
 # [1.0.0-beta.62](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.61...v1.0.0-beta.62) (2024-06-15)
 
 **Note:** Version bump only for package @nymphjs/driver-mysql
