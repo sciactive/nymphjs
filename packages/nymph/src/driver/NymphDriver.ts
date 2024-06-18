@@ -68,6 +68,7 @@ export default abstract class NymphDriver {
   abstract connect(): Promise<boolean>;
 
   abstract isConnected(): boolean;
+  protected abstract internalTransaction(name: string): Promise<any>;
   abstract startTransaction(name: string): Promise<Nymph>;
   abstract commit(name: string): Promise<boolean>;
   abstract rollback(name: string): Promise<boolean>;
@@ -106,7 +107,15 @@ export default abstract class NymphDriver {
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T>[] | string[] | number>;
   abstract getUID(name: string): Promise<number | null>;
-  abstract import(filename: string, transaction?: boolean): Promise<boolean>;
+  abstract importEntity(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }): Promise<void>;
+  abstract importUID(uid: { name: string; value: number }): Promise<void>;
   abstract newUID(name: string): Promise<number | null>;
   abstract renameUID(oldName: string, newName: string): Promise<boolean>;
   abstract saveEntity(entity: EntityInterface): Promise<boolean>;
@@ -200,75 +209,105 @@ export default abstract class NymphDriver {
     return true;
   }
 
-  protected async importFromFile(
-    filename: string,
-    saveEntityCallback: (
-      guid: string,
-      tags: string[],
-      sdata: SerializedEntityData,
-      etype: string,
-    ) => Promise<void>,
-    saveUIDCallback: (name: string, value: number) => Promise<void>,
-    startTransactionCallback: (() => Promise<void>) | null = null,
-    commitTransactionCallback: (() => Promise<void>) | null = null,
+  public async importDataIterator(
+    lines: Iterable<string>,
+    transaction?: boolean,
   ) {
+    const first = lines[Symbol.iterator]().next();
+
+    if (first.done || first.value !== '#nex2') {
+      throw new Error('Tried to import a file that is not a NEX v2 file.');
+    }
+
+    if (transaction) {
+      await this.internalTransaction('nymph-import');
+    }
+    try {
+      let guid: string | null = null;
+      let sdata: SerializedEntityData = {};
+      let tags: string[] = [];
+      let etype = '__undefined';
+      for (let line of lines) {
+        if (line.match(/^\s*#/)) {
+          continue;
+        }
+        const entityMatch = line.match(
+          /^\s*{([0-9A-Fa-f]+)}<([-\w_]+)>\[([^\]]*)\]\s*$/,
+        );
+        const propMatch = line.match(/^\s*([^=]+)\s*=\s*(.*\S)\s*$/);
+        const uidMatch = line.match(/^\s*<([^>]+)>\[(\d+)\]\s*$/);
+        if (uidMatch) {
+          // Add the UID.
+          await this.importUID({
+            name: uidMatch[1],
+            value: Number(uidMatch[2]),
+          });
+        } else if (entityMatch) {
+          // Save the current entity.
+          if (guid) {
+            const cdate = Number(JSON.parse(sdata.cdate));
+            delete sdata.cdate;
+            const mdate = Number(JSON.parse(sdata.mdate));
+            delete sdata.mdate;
+            await this.importEntity({ guid, cdate, mdate, tags, sdata, etype });
+            guid = null;
+            tags = [];
+            sdata = {};
+            etype = '__undefined';
+          }
+          // Record the new entity's info.
+          guid = entityMatch[1];
+          etype = entityMatch[2];
+          tags = entityMatch[3].split(',');
+        } else if (propMatch) {
+          // Add the variable to the new entity.
+          if (guid) {
+            sdata[propMatch[1]] = propMatch[2];
+          }
+        }
+        // Clear the entity cache.
+        this.entityCache = {};
+      }
+      // Save the last entity.
+      if (guid) {
+        const cdate = Number(JSON.parse(sdata.cdate));
+        delete sdata.cdate;
+        const mdate = Number(JSON.parse(sdata.mdate));
+        delete sdata.mdate;
+        await this.importEntity({ guid, cdate, mdate, tags, sdata, etype });
+      }
+      if (transaction) {
+        await this.commit('nymph-import');
+      }
+    } catch (e: any) {
+      await this.rollback('nymph-import');
+      throw e;
+    }
+    return true;
+  }
+
+  public async importData(text: string, transaction?: boolean) {
+    return await this.importDataIterator(text.split('/n'), transaction);
+  }
+
+  public async import(filename: string, transaction?: boolean) {
     let rl: ReadLines;
     try {
       rl = new ReadLines(filename);
     } catch (e: any) {
       throw new InvalidParametersError('Provided filename is unreadable.');
     }
-    let guid: string | null = null;
-    let line: Buffer | false = false;
-    let sdata: SerializedEntityData = {};
-    let tags: string[] = [];
-    let etype = '__undefined';
-    if (startTransactionCallback) {
-      await startTransactionCallback();
-    }
-    while ((line = rl.next())) {
-      const text = line.toString('utf8');
-      if (text.match(/^\s*#/)) {
-        continue;
-      }
-      const entityMatch = text.match(
-        /^\s*{([0-9A-Fa-f]+)}<([-\w_]+)>\[([^\]]*)\]\s*$/,
-      );
-      const propMatch = text.match(/^\s*([^=]+)\s*=\s*(.*\S)\s*$/);
-      const uidMatch = text.match(/^\s*<([^>]+)>\[(\d+)\]\s*$/);
-      if (uidMatch) {
-        // Add the UID.
-        await saveUIDCallback(uidMatch[1], Number(uidMatch[2]));
-      } else if (entityMatch) {
-        // Save the current entity.
-        if (guid) {
-          await saveEntityCallback(guid, tags, sdata, etype);
-          guid = null;
-          tags = [];
-          sdata = {};
-          etype = '__undefined';
+
+    const lines = {
+      *[Symbol.iterator]() {
+        let line: false | Buffer;
+        while ((line = rl.next())) {
+          yield line.toString('utf8');
         }
-        // Record the new entity's info.
-        guid = entityMatch[1];
-        etype = entityMatch[2];
-        tags = entityMatch[3].split(',');
-      } else if (propMatch) {
-        // Add the variable to the new entity.
-        if (guid) {
-          sdata[propMatch[1]] = propMatch[2];
-        }
-      }
-      // Clear the entity cache.
-      this.entityCache = {};
-    }
-    // Save the last entity.
-    if (guid) {
-      await saveEntityCallback(guid, tags, sdata, etype);
-    }
-    if (commitTransactionCallback) {
-      await commitTransactionCallback();
-    }
-    return true;
+      },
+    };
+
+    return await this.importDataIterator(lines, transaction);
   }
 
   public checkData(

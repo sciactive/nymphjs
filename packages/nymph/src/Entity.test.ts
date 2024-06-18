@@ -1,10 +1,11 @@
+import { cloneDeep } from 'lodash';
+
 import { MockNymph } from './testMocks';
 import {
   TestBModel as TestBModelClass,
   TestModel as TestModelClass,
   TestModelData,
 } from './testArtifacts';
-import { cloneDeep } from 'lodash';
 
 const nymph = new MockNymph();
 

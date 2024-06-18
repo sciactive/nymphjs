@@ -1858,229 +1858,211 @@ export default class MySQLDriver extends NymphDriver {
     return (result?.cur_uid as number | null) ?? null;
   }
 
-  public async import(filename: string, transaction?: boolean) {
+  public async importEntity({
+    guid,
+    cdate,
+    mdate,
+    tags,
+    sdata,
+    etype,
+  }: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
     try {
-      const result = await this.importFromFile(
-        filename,
-        async (guid, tags, sdata, etype) => {
-          try {
-            await this.internalTransaction(`nymph-import-entity-${guid}`);
+      await this.internalTransaction(`nymph-import-entity-${guid}`);
 
-            const cdate = Number(JSON.parse(sdata.cdate));
-            delete sdata.cdate;
-            const mdate = Number(JSON.parse(sdata.mdate));
-            delete sdata.mdate;
-
-            await this.queryRun(
-              `REPLACE INTO ${MySQLDriver.escape(
-                `${this.prefix}entities_${etype}`,
-              )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
+      await this.queryRun(
+        `REPLACE INTO ${MySQLDriver.escape(
+          `${this.prefix}entities_${etype}`,
+        )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+            tags: ' ' + tags.join(' ') + ' ',
+            cdate: isNaN(cdate) ? null : cdate,
+            mdate: isNaN(mdate) ? null : mdate,
+          },
+        },
+      );
+      const promises = [];
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}data_${etype}`,
+          )} WHERE \`guid\`=UNHEX(@guid);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
+          },
+        ),
+      );
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}comparisons_${etype}`,
+          )} WHERE \`guid\`=UNHEX(@guid);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
+          },
+        ),
+      );
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}references_${etype}`,
+          )} WHERE \`guid\`=UNHEX(@guid);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
+          },
+        ),
+      );
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}uniques_${etype}`,
+          )} WHERE \`guid\`=UNHEX(@guid);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
+          },
+        ),
+      );
+      await Promise.all(promises);
+      for (const name in sdata) {
+        const value = sdata[name];
+        const uvalue = JSON.parse(value);
+        if (value === undefined) {
+          continue;
+        }
+        const storageValue =
+          typeof uvalue === 'number'
+            ? 'N'
+            : typeof uvalue === 'string'
+            ? 'S'
+            : value;
+        const promises = [];
+        promises.push(
+          this.queryRun(
+            `INSERT INTO ${MySQLDriver.escape(
+              `${this.prefix}data_${etype}`,
+            )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+                name,
+                storageValue,
+              },
+            },
+          ),
+        );
+        promises.push(
+          this.queryRun(
+            `INSERT INTO ${MySQLDriver.escape(
+              `${this.prefix}comparisons_${etype}`,
+            )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+                name,
+                truthy: !!uvalue,
+                string: `${uvalue}`,
+                number: isNaN(Number(uvalue)) ? null : Number(uvalue),
+              },
+            },
+          ),
+        );
+        const references = this.findReferences(value);
+        for (const reference of references) {
+          promises.push(
+            this.queryRun(
+              `INSERT INTO ${MySQLDriver.escape(
+                `${this.prefix}references_${etype}`,
+              )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
               {
                 etypes: [etype],
                 params: {
                   guid,
-                  tags: ' ' + tags.join(' ') + ' ',
-                  cdate: isNaN(cdate) ? null : cdate,
-                  mdate: isNaN(mdate) ? null : mdate,
-                },
-              },
-            );
-            const promises = [];
-            promises.push(
-              this.queryRun(
-                `DELETE FROM ${MySQLDriver.escape(
-                  `${this.prefix}data_${etype}`,
-                )} WHERE \`guid\`=UNHEX(@guid);`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                },
-              ),
-            );
-            promises.push(
-              this.queryRun(
-                `DELETE FROM ${MySQLDriver.escape(
-                  `${this.prefix}comparisons_${etype}`,
-                )} WHERE \`guid\`=UNHEX(@guid);`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                },
-              ),
-            );
-            promises.push(
-              this.queryRun(
-                `DELETE FROM ${MySQLDriver.escape(
-                  `${this.prefix}references_${etype}`,
-                )} WHERE \`guid\`=UNHEX(@guid);`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                },
-              ),
-            );
-            promises.push(
-              this.queryRun(
-                `DELETE FROM ${MySQLDriver.escape(
-                  `${this.prefix}uniques_${etype}`,
-                )} WHERE \`guid\`=UNHEX(@guid);`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                },
-              ),
-            );
-            await Promise.all(promises);
-            for (const name in sdata) {
-              const value = sdata[name];
-              const uvalue = JSON.parse(value);
-              if (value === undefined) {
-                continue;
-              }
-              const storageValue =
-                typeof uvalue === 'number'
-                  ? 'N'
-                  : typeof uvalue === 'string'
-                  ? 'S'
-                  : value;
-              const promises = [];
-              promises.push(
-                this.queryRun(
-                  `INSERT INTO ${MySQLDriver.escape(
-                    `${this.prefix}data_${etype}`,
-                  )} (\`guid\`, \`name\`, \`value\`) VALUES (UNHEX(@guid), @name, @storageValue);`,
-                  {
-                    etypes: [etype],
-                    params: {
-                      guid,
-                      name,
-                      storageValue,
-                    },
-                  },
-                ),
-              );
-              promises.push(
-                this.queryRun(
-                  `INSERT INTO ${MySQLDriver.escape(
-                    `${this.prefix}comparisons_${etype}`,
-                  )} (\`guid\`, \`name\`, \`truthy\`, \`string\`, \`number\`) VALUES (UNHEX(@guid), @name, @truthy, @string, @number);`,
-                  {
-                    etypes: [etype],
-                    params: {
-                      guid,
-                      name,
-                      truthy: !!uvalue,
-                      string: `${uvalue}`,
-                      number: isNaN(Number(uvalue)) ? null : Number(uvalue),
-                    },
-                  },
-                ),
-              );
-              const references = this.findReferences(value);
-              for (const reference of references) {
-                promises.push(
-                  this.queryRun(
-                    `INSERT INTO ${MySQLDriver.escape(
-                      `${this.prefix}references_${etype}`,
-                    )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
-                    {
-                      etypes: [etype],
-                      params: {
-                        guid,
-                        name,
-                        reference,
-                      },
-                    },
-                  ),
-                );
-              }
-            }
-            const uniques = await this.nymph
-              .getEntityClassByEtype(etype)
-              .getUniques({ guid, cdate, mdate, tags, data: {}, sdata });
-            for (const unique of uniques) {
-              promises.push(
-                this.queryRun(
-                  `INSERT INTO ${MySQLDriver.escape(
-                    `${this.prefix}uniques_${etype}`,
-                  )} (\`guid\`, \`unique\`) VALUES (UNHEX(@guid), @unique);`,
-                  {
-                    etypes: [etype],
-                    params: {
-                      guid,
-                      unique,
-                    },
-                  },
-                ).catch((e: any) => {
-                  if (e instanceof EntityUniqueConstraintError) {
-                    this.nymph.config.debugError(
-                      'mysql',
-                      `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
-                    );
-                  }
-                  return e;
-                }),
-              );
-            }
-            await Promise.all(promises);
-            await this.commit(`nymph-import-entity-${guid}`);
-          } catch (e: any) {
-            this.nymph.config.debugError(
-              'mysql',
-              `Import entity error: "${e}"`,
-            );
-            await this.rollback(`nymph-import-entity-${guid}`);
-            throw e;
-          }
-        },
-        async (name, curUid) => {
-          try {
-            await this.internalTransaction(`nymph-import-uid-${name}`);
-            await this.queryRun(
-              `INSERT INTO ${MySQLDriver.escape(
-                `${this.prefix}uids`,
-              )} (\`name\`, \`cur_uid\`) VALUES (@name, @curUid) ON DUPLICATE KEY UPDATE \`cur_uid\`=@curUid;`,
-              {
-                params: {
                   name,
-                  curUid,
+                  reference,
                 },
               },
-            );
-            await this.commit(`nymph-import-uid-${name}`);
-          } catch (e: any) {
-            this.nymph.config.debugError('mysql', `Import UID error: "${e}"`);
-            await this.rollback(`nymph-import-uid-${name}`);
-            throw e;
-          }
-        },
-        async () => {
-          if (transaction) {
-            await this.internalTransaction('nymph-import');
-          }
-        },
-        async () => {
-          if (transaction) {
-            await this.commit('nymph-import');
-          }
+            ),
+          );
+        }
+      }
+      const uniques = await this.nymph
+        .getEntityClassByEtype(etype)
+        .getUniques({ guid, cdate, mdate, tags, data: {}, sdata });
+      for (const unique of uniques) {
+        promises.push(
+          this.queryRun(
+            `INSERT INTO ${MySQLDriver.escape(
+              `${this.prefix}uniques_${etype}`,
+            )} (\`guid\`, \`unique\`) VALUES (UNHEX(@guid), @unique);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+                unique,
+              },
+            },
+          ).catch((e: any) => {
+            if (e instanceof EntityUniqueConstraintError) {
+              this.nymph.config.debugError(
+                'mysql',
+                `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
+              );
+            }
+            return e;
+          }),
+        );
+      }
+      await Promise.all(promises);
+      await this.commit(`nymph-import-entity-${guid}`);
+    } catch (e: any) {
+      this.nymph.config.debugError('mysql', `Import entity error: "${e}"`);
+      await this.rollback(`nymph-import-entity-${guid}`);
+      throw e;
+    }
+  }
+
+  public async importUID({ name, value }: { name: string; value: number }) {
+    try {
+      await this.internalTransaction(`nymph-import-uid-${name}`);
+      await this.queryRun(
+        `INSERT INTO ${MySQLDriver.escape(
+          `${this.prefix}uids`,
+        )} (\`name\`, \`cur_uid\`) VALUES (@name, @value) ON DUPLICATE KEY UPDATE \`cur_uid\`=@value;`,
+        {
+          params: {
+            name,
+            value,
+          },
         },
       );
-
-      return result;
+      await this.commit(`nymph-import-uid-${name}`);
     } catch (e: any) {
-      this.nymph.config.debugError('mysql', `Import error: "${e}"`);
-      if (transaction) {
-        await this.rollback('nymph-import');
-      }
-      return false;
+      this.nymph.config.debugError('mysql', `Import UID error: "${e}"`);
+      await this.rollback(`nymph-import-uid-${name}`);
+      throw e;
     }
   }
 
@@ -2530,7 +2512,7 @@ export default class MySQLDriver extends NymphDriver {
     return true;
   }
 
-  private async internalTransaction(name: string) {
+  protected async internalTransaction(name: string) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
         'Transaction start attempted without a name.',
