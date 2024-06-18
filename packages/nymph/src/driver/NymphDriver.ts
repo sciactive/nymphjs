@@ -84,9 +84,11 @@ export default abstract class NymphDriver {
    */
   abstract disconnect(): Promise<boolean>;
 
-  protected abstract exportEntities(
-    writeLine: (line: string) => void,
-  ): Promise<void>;
+  abstract exportDataIterator(): AsyncGenerator<
+    { type: 'comment' | 'uid' | 'entity'; content: string },
+    void,
+    undefined | false
+  >;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
     ...selectors: Selector[]
@@ -181,9 +183,9 @@ export default abstract class NymphDriver {
       if (!fhandle) {
         throw new InvalidParametersError('Provided filename is not writeable.');
       }
-      await this.exportEntities((line: string) => {
-        fs.writeSync(fhandle, `${line}\n`);
-      });
+      for await (let entry of this.exportDataIterator()) {
+        fs.writeSync(fhandle, entry.content);
+      }
       fs.closeSync(fhandle);
     } catch (e: any) {
       return false;
@@ -192,9 +194,9 @@ export default abstract class NymphDriver {
   }
 
   public async exportPrint() {
-    await this.exportEntities((line: string) => {
-      console.log(line);
-    });
+    for await (let entry of this.exportDataIterator()) {
+      console.log(entry.content);
+    }
     return true;
   }
 

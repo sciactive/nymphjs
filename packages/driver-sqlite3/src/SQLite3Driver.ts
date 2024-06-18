@@ -602,18 +602,39 @@ export default class SQLite3Driver extends NymphDriver {
     return true;
   }
 
-  protected async exportEntities(writeLine: (line: string) => void) {
-    writeLine('#nex2');
-    writeLine('# Nymph Entity Exchange v2');
-    writeLine('# http://nymph.io');
-    writeLine('#');
-    writeLine('# Generation Time: ' + new Date().toLocaleString());
-    writeLine('');
+  public async *exportDataIterator(): AsyncGenerator<
+    { type: 'comment' | 'uid' | 'entity'; content: string },
+    void,
+    false | undefined
+  > {
+    if (
+      yield {
+        type: 'comment',
+        content: `#nex2
+# Nymph Entity Exchange v2
+# http://nymph.io
+#
+# Generation Time: ${new Date().toLocaleString()}
+`,
+      }
+    ) {
+      return;
+    }
 
-    writeLine('#');
-    writeLine('# UIDs');
-    writeLine('#');
-    writeLine('');
+    if (
+      yield {
+        type: 'comment',
+        content: `
+
+#
+# UIDs
+#
+
+`,
+      }
+    ) {
+      return;
+    }
 
     // Export UIDs.
     let uids: IterableIterator<any> = this.queryIter(
@@ -622,14 +643,25 @@ export default class SQLite3Driver extends NymphDriver {
       )} ORDER BY "name";`,
     );
     for (const uid of uids) {
-      writeLine(`<${uid.name}>[${uid.cur_uid}]`);
+      if (yield { type: 'uid', content: `<${uid.name}>[${uid.cur_uid}]\n` }) {
+        return;
+      }
     }
 
-    writeLine('');
-    writeLine('#');
-    writeLine('# Entities');
-    writeLine('#');
-    writeLine('');
+    if (
+      yield {
+        type: 'comment',
+        content: `
+
+#
+# Entities
+#
+
+`,
+      }
+    ) {
+      return;
+    }
 
     // Get the etypes.
     const tables: IterableIterator<any> = this.queryIter(
@@ -659,9 +691,10 @@ export default class SQLite3Driver extends NymphDriver {
         const tags = datum.value.tags.slice(1, -1);
         const cdate = datum.value.cdate;
         const mdate = datum.value.mdate;
-        writeLine(`{${guid}}<${etype}>[${tags}]`);
-        writeLine(`\tcdate=${JSON.stringify(cdate)}`);
-        writeLine(`\tmdate=${JSON.stringify(mdate)}`);
+        let currentEntityExport: string[] = [];
+        currentEntityExport.push(`{${guid}}<${etype}>[${tags}]`);
+        currentEntityExport.push(`\tcdate=${JSON.stringify(cdate)}`);
+        currentEntityExport.push(`\tmdate=${JSON.stringify(mdate)}`);
         if (datum.value.dname != null) {
           // This do will keep going and adding the data until the
           // next entity is reached. datum will end on the next entity.
@@ -672,17 +705,20 @@ export default class SQLite3Driver extends NymphDriver {
                 : datum.value.dvalue === 'S'
                 ? JSON.stringify(datum.value.string)
                 : datum.value.dvalue;
-            writeLine(`\t${datum.value.dname}=${value}`);
+            currentEntityExport.push(`\t${datum.value.dname}=${value}`);
             datum = dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
         } else {
           // Make sure that datum is incremented :)
           datum = dataIterator.next();
         }
+        currentEntityExport.push('');
+
+        if (yield { type: 'entity', content: currentEntityExport.join('\n') }) {
+          return;
+        }
       }
     }
-
-    return;
   }
 
   /**

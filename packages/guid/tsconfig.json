@@ -2,8 +2,9 @@
   "extends": "@tsconfig/recommended/tsconfig.json",
 
   "compilerOptions": {
-    "lib": ["ES2021"],
-    "target": "ES2021",
+    "lib": ["ES2023"],
+    "module": "node16",
+    "target": "ES2022",
     "noImplicitAny": true,
     "removeComments": false,
     "sourceMap": true,

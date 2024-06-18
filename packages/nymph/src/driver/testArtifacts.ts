@@ -94,14 +94,23 @@ These hats are absolutely fantastic.`;
   }
 
   it('delete old test data', async () => {
-    let all = await nymph.getEntities({ class: TestModel });
-    expect(Array.isArray(all)).toEqual(true);
-    for (const cur of all) {
+    let amodels = await nymph.getEntities({ class: TestModel });
+    expect(Array.isArray(amodels)).toEqual(true);
+    for (const cur of amodels) {
       expect(await cur.$delete()).toEqual(true);
     }
 
-    all = await nymph.getEntities({ class: TestModel });
-    expect(all.length).toEqual(0);
+    amodels = await nymph.getEntities({ class: TestModel });
+    expect(amodels.length).toEqual(0);
+
+    let bmodels = await nymph.getEntities({ class: TestBModel });
+    expect(Array.isArray(bmodels)).toEqual(true);
+    for (const cur of bmodels) {
+      expect(await cur.$delete()).toEqual(true);
+    }
+
+    bmodels = await nymph.getEntities({ class: TestBModel });
+    expect(bmodels.length).toEqual(0);
   });
 
   it('create entity', async () => {
@@ -1986,25 +1995,39 @@ export function ExportImportTest(
     const bmodels = await nymph.getEntities({ class: TestBModel });
 
     expect(models.length).toEqual(30);
-    expect(bmodels.length).toEqual(10);
+    expect(bmodels.length).toEqual(30);
 
-    const all = [...models, ...bmodels];
-    for (const model of all) {
-      if (model.index?.match(/^\d+a$/)) {
-        expect(model.null).toBeNull();
-        expect(model.string).toEqual('test');
-        expect(model.array).toEqual(['full', 'of', 'values', 500]);
-        expect(model.number).toEqual(30);
-        expect(model.timestamp).toBeGreaterThanOrEqual(strtotime('-2 minutes'));
+    for (const model of models) {
+      expect(model.name).toMatch(/^Entity Test /);
+      expect(model.null).toBeDefined();
+      expect(model.null).toBeNull();
+      expect(model.string).toEqual('test');
+      expect(model.array).toEqual(['full', 'of', 'values', 500]);
+      expect(model.match)
+        .toEqual(`Hello, my name is Edward McCheese. It is a pleasure to meet you. As you can see, I have several hats of the most pleasant nature.
 
-        await model.reference?.$wake();
-        expect(model.reference?.guid).not.toBeNull();
-        expect(model.reference?.string).toEqual('another');
-        expect(model.reference?.index?.match(/^\d+b$/)).toBeTruthy();
-        await Promise.all(model.refArray?.map((e) => e.$wake()) || []);
-        expect(model.refArray?.[0].guid).not.toBeNull();
-        expect(model.refArray?.[0].guid).toEqual(model.reference?.guid);
-      }
+This one's email address is nice_hat-wednesday+newyork@im-a-hat.hat.
+This one's phone number is (555) 555-1818.
+This one's zip code is 92064.
+This one's favorite emojis are 🔥❤️😊😂⭐🤔
+
+These hats are absolutely fantastic.`);
+      expect(model.number).toEqual(30);
+      expect(model.numberString).toEqual('30');
+      expect(model.timestamp).toBeGreaterThanOrEqual(strtotime('-2 minutes'));
+      expect(model.index).toMatch(/^\d+a$/);
+
+      await model.reference?.$wake();
+      expect(model.reference?.guid).not.toBeNull();
+      expect(model.reference?.string).toEqual('another');
+      expect(model.reference?.index).toMatch(/^\d+b$/);
+      expect(model.index?.substring(0, -1)).toEqual(
+        model.reference?.index?.substring(0, -1),
+      );
+      expect(model.reference?.$inArray(bmodels)).toEqual(true);
+      await Promise.all(model.refArray?.map((e) => e.$wake()) || []);
+      expect(model.refArray?.[0].guid).not.toBeNull();
+      expect(model.refArray?.[0].guid).toEqual(model.reference?.guid);
     }
   }
 
@@ -2017,22 +2040,29 @@ export function ExportImportTest(
     expect(await nymph.newUID('TestUID')).toEqual(2);
     expect(await nymph.newUID('TestUID2')).toEqual(1);
 
-    for (let i = 0; i < 20; i++) {
-      const EntityClass = i < 15 ? TestModel : TestBModel;
-
+    for (let i = 0; i < 30; i++) {
       // Creating entity...
-      const testEntity = await EntityClass.factory();
+      const testEntity = await TestModel.factory();
 
       // Saving entity...
       testEntity.name = 'Entity Test ' + new Date().toLocaleString();
       testEntity.null = null;
       testEntity.string = 'test';
       testEntity.array = ['full', 'of', 'values', 500];
+      testEntity.match = `Hello, my name is Edward McCheese. It is a pleasure to meet you. As you can see, I have several hats of the most pleasant nature.
+
+This one's email address is nice_hat-wednesday+newyork@im-a-hat.hat.
+This one's phone number is (555) 555-1818.
+This one's zip code is 92064.
+This one's favorite emojis are 🔥❤️😊😂⭐🤔
+
+These hats are absolutely fantastic.`;
       testEntity.number = 30;
+      testEntity.numberString = '30';
       testEntity.timestamp = Date.now();
       testEntity.index = i + 'a';
 
-      const entityReferenceTest = await EntityClass.factory();
+      const entityReferenceTest = await TestBModel.factory();
       entityReferenceTest.string = 'another';
       entityReferenceTest.index = i + 'b';
 
