@@ -287,7 +287,7 @@ export default abstract class NymphDriver {
   }
 
   public async importData(text: string, transaction?: boolean) {
-    return await this.importDataIterator(text.split('/n'), transaction);
+    return await this.importDataIterator(text.split('\n'), transaction);
   }
 
   public async import(filename: string, transaction?: boolean) {
