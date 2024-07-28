@@ -211,6 +211,7 @@ export default class MySQLDriver extends NymphDriver {
           \`cdate\` DOUBLE PRECISION NOT NULL,
           \`mdate\` DOUBLE PRECISION NOT NULL,
           PRIMARY KEY (\`guid\`),
+          INDEX \`id_guid\` USING HASH (\`guid\`),
           INDEX \`id_cdate\` USING BTREE (\`cdate\`),
           INDEX \`id_mdate\` USING BTREE (\`mdate\`),
           FULLTEXT \`id_tags\` (\`tags\`)
@@ -226,7 +227,9 @@ export default class MySQLDriver extends NymphDriver {
           \`name\` TEXT NOT NULL,
           \`value\` LONGTEXT NOT NULL,
           PRIMARY KEY (\`guid\`,\`name\`(255)),
-          INDEX \`id_name\` USING HASH (\`name\`(255)),
+          INDEX \`id_guid\` USING HASH (\`guid\`),
+          INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
+          INDEX \`id_guid_name_value\` USING BTREE (\`guid\`, \`name\`(255), \`value\`(512)),
           INDEX \`id_name_value\` USING BTREE (\`name\`(255), \`value\`(512))
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
@@ -242,7 +245,8 @@ export default class MySQLDriver extends NymphDriver {
           \`string\` LONGTEXT,
           \`number\` DOUBLE,
           PRIMARY KEY (\`guid\`, \`name\`(255)),
-          INDEX \`id_name\` USING HASH (\`name\`(255))
+          INDEX \`id_guid\` USING HASH (\`guid\`),
+          INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255))
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
@@ -255,7 +259,10 @@ export default class MySQLDriver extends NymphDriver {
           \`name\` TEXT NOT NULL,
           \`reference\` BINARY(12) NOT NULL,
           PRIMARY KEY (\`guid\`, \`name\`(255), \`reference\`),
-          INDEX \`id_name_reference\` USING BTREE (\`name\`(255), \`reference\`)
+          INDEX \`id_guid\` USING HASH (\`guid\`),
+          INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
+          INDEX \`id_guid_name_reference\` USING HASH (\`guid\`, \`name\`(255), \`reference\`),
+          INDEX \`id_name_reference\` USING HASH (\`name\`(255), \`reference\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
@@ -268,6 +275,7 @@ export default class MySQLDriver extends NymphDriver {
           \`guid\` BINARY(12) NOT NULL${foreignKeyUniquesTableGuid},
           \`unique\` TEXT NOT NULL,
           PRIMARY KEY (\`guid\`, \`unique\`(255)),
+          INDEX \`id_guid\` USING HASH (\`guid\`),
           CONSTRAINT \`uc_unique\` UNIQUE (\`unique\`(255))
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
