@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.64](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.63...v1.0.0-beta.64) (2024-08-04)
+
+### Bug Fixes
+
+- correctly split lines in importData ([121aa11](https://github.com/sciactive/nymphjs/commit/121aa1105942b275c94e7c7b8c083579d233b330))
+
+### Features
+
+- add more mysql indexes to speed up certain queries ([9ac5004](https://github.com/sciactive/nymphjs/commit/9ac50048d2e3ddbe3d918f000772dcd655ff236d))
+- fix and add more mysql indexes ([0f0f475](https://github.com/sciactive/nymphjs/commit/0f0f47506312d7b86c3826e22aeac27e1f04339f))
+- use index for ordering by cdate and mdate, speeding up many queries ([d5d2f3c](https://github.com/sciactive/nymphjs/commit/d5d2f3c081b5c2ad7586b5b1ae0ebe45937e501b))
+
 # [1.0.0-beta.63](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.62...v1.0.0-beta.63) (2024-06-18)
 
 ### Bug Fixes
