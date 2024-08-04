@@ -815,18 +815,40 @@ export default class MySQLDriver extends NymphDriver {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const groupQueryParam = `param${++count.i}`;
-                let groupQuery = '';
-                for (const curTag of curValue) {
-                  groupQuery += (typeIsOr ? ' ' : ' +') + curTag;
+                if (sort !== 'cdate' && sort !== 'mdate') {
+                  // Only use a full text index if we're not already using an
+                  // index for sorting.
+                  const groupQueryParam = `param${++count.i}`;
+                  let groupQuery = '';
+                  for (const curTag of curValue) {
+                    groupQuery += (typeIsOr ? ' ' : ' +') + curTag;
+                  }
+                  curQuery +=
+                    'MATCH (' +
+                    ieTable +
+                    '.`tags`) AGAINST (@' +
+                    groupQueryParam +
+                    ' IN BOOLEAN MODE)';
+                  params[groupQueryParam] = groupQuery;
+                } else {
+                  if (typeIsOr) {
+                    const tag = `param${++count.i}`;
+                    curQuery += ieTable + '.`tags` REGEXP @' + tag;
+                    params[tag] = ' (' + curValue.join('|') + ') ';
+                  } else {
+                    let firstDone = false;
+                    for (const curTag of curValue) {
+                      if (!firstDone) {
+                        firstDone = true;
+                      } else {
+                        curQuery += ' AND ';
+                      }
+                      const tag = `param${++count.i}`;
+                      curQuery += ieTable + '.`tags` REGEXP @' + tag;
+                      params[tag] = ' ' + curTag + ' ';
+                    }
+                  }
                 }
-                curQuery +=
-                  'MATCH (' +
-                  ieTable +
-                  '.`tags`) AGAINST (@' +
-                  groupQueryParam +
-                  ' IN BOOLEAN MODE)';
-                params[groupQueryParam] = groupQuery;
               }
               break;
             case 'defined':
@@ -1564,15 +1586,18 @@ export default class MySQLDriver extends NymphDriver {
     let sortByInner: string;
     let sortJoin = '';
     let sortJoinInner = '';
+    let indexHintInner = '';
     const order = options.reverse ? ' DESC' : '';
     switch (sort) {
       case 'mdate':
         sortBy = `${eTable}.\`mdate\`${order}`;
         sortByInner = `${ieTable}.\`mdate\`${order}`;
+        indexHintInner = `/*+ ORDER_INDEX(${ieTable} id_mdate) */ `;
         break;
       case 'cdate':
         sortBy = `${eTable}.\`cdate\`${order}`;
         sortByInner = `${ieTable}.\`cdate\`${order}`;
+        indexHintInner = `/*+ ORDER_INDEX(${ieTable} id_cdate) */ `;
         break;
       default:
         const name = `param${++count.i}`;
@@ -1633,7 +1658,7 @@ export default class MySQLDriver extends NymphDriver {
             tableSuffix === ''
               ? `LOWER(HEX(${ieTable}.\`guid\`))`
               : `${ieTable}.\`guid\``;
-          query = `SELECT ${guidColumn} AS \`guid\`
+          query = `SELECT ${indexHintInner}${guidColumn} AS \`guid\`
             FROM ${MySQLDriver.escape(
               `${this.prefix}entities_${etype}`,
             )} ${ieTable}
@@ -1661,7 +1686,7 @@ export default class MySQLDriver extends NymphDriver {
             )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
             ${sortJoin}
             INNER JOIN (
-              SELECT ${ieTable}.\`guid\`
+              SELECT ${indexHintInner}${ieTable}.\`guid\`
               FROM ${MySQLDriver.escape(
                 `${this.prefix}entities_${etype}`,
               )} ${ieTable}
@@ -1707,7 +1732,7 @@ export default class MySQLDriver extends NymphDriver {
             tableSuffix === ''
               ? `LOWER(HEX(${ieTable}.\`guid\`))`
               : `${ieTable}.\`guid\``;
-          query = `SELECT ${guidColumn} AS \`guid\`
+          query = `SELECT ${indexHintInner}${guidColumn} AS \`guid\`
             FROM ${MySQLDriver.escape(
               `${this.prefix}entities_${etype}`,
             )} ${ieTable}
@@ -1735,7 +1760,7 @@ export default class MySQLDriver extends NymphDriver {
               )} ${cTable} ON ${dTable}.\`guid\`=${cTable}.\`guid\` AND ${dTable}.\`name\`=${cTable}.\`name\`
               ${sortJoin}
               INNER JOIN (
-                SELECT ${ieTable}.\`guid\`
+                SELECT ${indexHintInner}${ieTable}.\`guid\`
                 FROM ${MySQLDriver.escape(
                   `${this.prefix}entities_${etype}`,
                 )} ${ieTable}
