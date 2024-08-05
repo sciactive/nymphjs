@@ -92,83 +92,101 @@ export default class Sorter<Entity extends Object> {
   public hsort(
     property: string,
     parentProperty: string,
-    sortOptions?: SortOptions,
+    {
+      caseSensitive = false,
+      reverse = false,
+      collatorOptions = undefined,
+      comparator = undefined,
+    }: SortOptions = {},
   ): Entity[] {
-    // First sort by the requested property.
-    this.sort(property, sortOptions);
     if (typeof parentProperty === 'undefined' || parentProperty === null) {
+      // Just sort by the requested property.
+      this.sort(property, {
+        caseSensitive,
+        reverse,
+        collatorOptions,
+        comparator,
+      });
       return this.array;
     }
 
-    // Now sort by children.
-    let newArray: (Entity & { [k: string]: any })[] = [];
-    // Look for entities ready to go in order.
-    let changed: boolean;
-    while (this.array.length) {
-      changed = false;
-      for (let key = 0; key < this.array.length; key++) {
-        // Must break after adding one, so any following children don't go in
-        // the wrong order.
-        if (
-          !(parentProperty in this.array[key]) ||
-          this.array[key][parentProperty] == null ||
-          typeof this.array[key][parentProperty].$inArray !== 'function' ||
-          !this.array[key][parentProperty].$inArray([
-            ...newArray,
-            ...this.array,
-          ])
-        ) {
-          // If they have no parent (or their parent isn't in the array), they
-          // go on the end.
-          newArray.push(this.array[key]);
-          this.array.splice(key, 1);
-          changed = true;
-          break;
-        } else if (
-          typeof this.array[key][parentProperty].$arraySearch === 'function'
-        ) {
-          // Else find the parent.
-          const pkey = this.array[key][parentProperty].$arraySearch(newArray);
-          if (pkey !== -1) {
-            // And insert after the parent.
-            // This makes entities go to the end of the child list.
-            const ancestry = [this.array[key][parentProperty].guid];
-            let newKey = pkey;
-            while (
-              newKey + 1 < newArray.length &&
-              parentProperty in newArray[newKey + 1] &&
-              newArray[newKey + 1][parentProperty] != null &&
-              ancestry.indexOf(newArray[newKey + 1][parentProperty].guid) !== -1
-            ) {
-              ancestry.push(newArray[newKey + 1].guid);
-              newKey += 1;
-            }
-            // Where to place the entity.
-            newKey += 1;
-            if (newKey < newArray.length) {
-              // If it already exists, we have to splice it in.
-              newArray.splice(newKey, 0, this.array[key]);
-            } else {
-              // Else just add it.
-              newArray.push(this.array[key]);
-            }
-            this.array.splice(key, 1);
-            changed = true;
-            break;
-          }
-        }
+    this.sortProperty = property;
+    this.sortParent = null;
+    this.collator = new Intl.Collator(
+      undefined,
+      collatorOptions || {
+        sensitivity: caseSensitive ? 'case' : 'base',
+      },
+    );
+    this.comparator = comparator;
+    const sort = (array: Entity[]) => {
+      // Sort by the requested property.
+      array.sort(this._arraySortProperty.bind(this));
+      if (reverse) {
+        array.reverse();
       }
-      if (!changed) {
-        // If there are any unexpected errors and the array isn't changed, just
-        // stick the rest on the end.
-        if (this.array.length) {
-          newArray = newArray.concat(this.array);
-          this.array.splice(0, this.array.length);
+      return array;
+    };
+
+    // Pick out all of the children.
+    const guidEntries: { [k: string]: Entity[] } = {};
+    const newEntries = new Map<Entity, Entity[]>();
+
+    // There is no incrementor in this for loop on purpose. It is incremented
+    // conditionally.
+    for (let i = 0; i < this.array.length; ) {
+      const entity = this.array[i];
+      const parent = entity[parentProperty];
+      if (parent == null) {
+        i++;
+      } else if (parent.guid != null) {
+        this.array.splice(i, 1);
+        if (!(parent.guid in guidEntries)) {
+          guidEntries[parent.guid] = [];
+        }
+        guidEntries[parent.guid].push(entity);
+      } else {
+        this.array.splice(i, 1);
+        let entries: Entity[] = [];
+        if (newEntries.has(parent)) {
+          entries = newEntries.get(parent) || [];
+        }
+        entries.push(entity);
+        newEntries.set(parent, entries);
+      }
+    }
+
+    // Sort the top level entries.
+    sort(this.array);
+
+    // Now place all of the children back in order.
+    for (let i = 0; i < this.array.length; i++) {
+      const entity = this.array[i];
+      if (entity.guid != null) {
+        if (entity.guid in guidEntries) {
+          this.array.splice(i + 1, 0, ...sort(guidEntries[entity.guid]));
+          delete guidEntries[entity.guid];
+        }
+      } else {
+        if (newEntries.has(entity)) {
+          this.array.splice(
+            i + 1,
+            0,
+            ...sort(newEntries.get(entity.guid) || []),
+          );
+          newEntries.delete(entity);
         }
       }
     }
-    // Now push the new array out.
-    this.array.splice(0, 0, ...newArray);
+
+    // Now place any orphans on the end.
+    for (let orphans of Object.values(guidEntries)) {
+      this.array.splice(this.array.length, 0, ...sort(orphans));
+    }
+    for (let [parent, orphans] of newEntries) {
+      this.array.splice(this.array.length, 0, ...sort(orphans));
+    }
+
     return this.array as Entity[];
   }
 

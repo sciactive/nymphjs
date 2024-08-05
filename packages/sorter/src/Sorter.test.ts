@@ -193,48 +193,54 @@ describe('Sorter', () => {
   });
 
   it('sorts entities hierarchically', () => {
-    const firstParent = new TestModel();
-    firstParent.name = 'Herbert';
-    const secondParent = new TestModel();
-    secondParent.name = 'Anthony';
-    const subParent = new TestModel();
-    subParent.name = 'Lamar';
-    subParent.parent = secondParent;
-    const entities: TestModel[] = [
-      (() => {
-        const entity = new TestModel();
-        entity.name = 'Jacob';
-        entity.parent = firstParent;
-        return entity;
-      })(),
-      (() => {
-        const entity = new TestModel();
-        entity.name = 'Joshua';
-        entity.parent = firstParent;
-        return entity;
-      })(),
-      subParent,
-      (() => {
-        const entity = new TestModel();
-        entity.name = 'Peter';
-        entity.parent = secondParent;
-        return entity;
-      })(),
-      (() => {
-        const entity = new TestModel();
-        entity.name = 'Warren';
-        entity.parent = subParent;
-        return entity;
-      })(),
-      (() => {
-        const entity = new TestModel();
-        entity.name = 'Arthur';
-        entity.parent = subParent;
-        return entity;
-      })(),
-      firstParent,
-      secondParent,
-    ];
+    const getEntries = () => {
+      const firstParent = new TestModel();
+      firstParent.name = 'Herbert';
+      const secondParent = new TestModel();
+      secondParent.name = 'Anthony';
+      const subParent = new TestModel();
+      subParent.name = 'Lamar';
+      subParent.parent = secondParent;
+      return [
+        (() => {
+          const entity = new TestModel();
+          entity.name = 'Jacob';
+          entity.parent = firstParent;
+          return entity;
+        })(),
+        (() => {
+          const entity = new TestModel();
+          entity.name = 'Joshua';
+          entity.parent = firstParent;
+          return entity;
+        })(),
+        subParent,
+        (() => {
+          const entity = new TestModel();
+          entity.name = 'Peter';
+          entity.parent = secondParent;
+          return entity;
+        })(),
+        (() => {
+          const entity = new TestModel();
+          entity.name = 'Warren';
+          entity.parent = subParent;
+          return entity;
+        })(),
+        (() => {
+          const entity = new TestModel();
+          entity.name = 'Arthur';
+          entity.parent = subParent;
+          return entity;
+        })(),
+        firstParent,
+        secondParent,
+      ];
+    };
+    const entities: TestModel[] = [];
+    for (let i = 0; i < 100; i++) {
+      entities.push(...getEntries());
+    }
 
     const sorter = new Sorter(entities);
 
@@ -250,14 +256,16 @@ describe('Sorter', () => {
         return output + entity.name;
       }),
     ).toEqual([
-      'Anthony',
-      '- Lamar',
-      '- - Arthur',
-      '- - Warren',
-      '- Peter',
-      'Herbert',
-      '- Jacob',
-      '- Joshua',
+      ...[...Array(100)]
+        .map(() => [
+          'Anthony',
+          '- Lamar',
+          '- - Arthur',
+          '- - Warren',
+          '- Peter',
+        ])
+        .flat(),
+      ...[...Array(100)].map(() => ['Herbert', '- Jacob', '- Joshua']).flat(),
     ]);
   });
 
