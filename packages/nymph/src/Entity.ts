@@ -684,9 +684,27 @@ export default class Entity<T extends EntityData = EntityData>
   }
 
   public $getAcUid() {
+    if ('user' in this.$sdata) {
+      const userValue = JSON.parse(this.$sdata.user);
+      if (
+        Array.isArray(userValue) &&
+        userValue[0] === 'nymph_entity_reference'
+      ) {
+        return userValue[1];
+      }
+    }
     return (this.$data.user?.guid ?? null) as string | null;
   }
   public $getAcGid() {
+    if ('group' in this.$sdata) {
+      const groupValue = JSON.parse(this.$sdata.group);
+      if (
+        Array.isArray(groupValue) &&
+        groupValue[0] === 'nymph_entity_reference'
+      ) {
+        return groupValue[1];
+      }
+    }
     return (this.$data.group?.guid ?? null) as string | null;
   }
   public $getAcReadIds() {
