@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.66](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.65...v1.0.0-beta.66) (2024-08-06)
+
+### Bug Fixes
+
+- improve performance of loading an entity's ac values ([8f716ae](https://github.com/sciactive/nymphjs/commit/8f716ae8208e2b8e5ffa1ebe4e28a6f09dd49c6a))
+
 # [1.0.0-beta.65](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.64...v1.0.0-beta.65) (2024-08-05)
 
 **Note:** Version bump only for package @nymphjs/nymph
