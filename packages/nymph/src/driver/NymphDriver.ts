@@ -912,9 +912,10 @@ export default abstract class NymphDriver {
     try {
       const formattedSelectors = this.formatSelectors(selectors, options);
       this.nymph.runQueryCallbacks(options, formattedSelectors.selectors);
-      for (let qref of formattedSelectors.qrefs) {
-        const [options, ...selectors] = qref;
+      for (let i = 0; i < formattedSelectors.qrefs.length; i++) {
+        const [options, ...selectors] = formattedSelectors.qrefs[i];
         this.nymph.runQueryCallbacks(options, selectors);
+        formattedSelectors.qrefs[i] = [options, ...selectors];
       }
       const { result } = performQueryCallback({
         options,
