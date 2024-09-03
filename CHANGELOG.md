@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.67](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.66...v1.0.0-beta.67) (2024-09-03)
+
+### Bug Fixes
+
+- include modifications to subquery selectors from query callbacks ([dc73455](https://github.com/sciactive/nymphjs/commit/dc73455fe05867d2b38f1ea84e139ae57acb5ebb))
+- remove index hinting from mysql driver ([0aff4a8](https://github.com/sciactive/nymphjs/commit/0aff4a8dab33952c1ce5b2d710dd7a7854352f75))
+
 # [1.0.0-beta.66](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.65...v1.0.0-beta.66) (2024-08-06)
 
 ### Bug Fixes

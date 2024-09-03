@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.67](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.66...v1.0.0-beta.67) (2024-09-03)
+
+### Bug Fixes
+
+- remove index hinting from mysql driver ([0aff4a8](https://github.com/sciactive/nymphjs/commit/0aff4a8dab33952c1ce5b2d710dd7a7854352f75))
+
 # [1.0.0-beta.66](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.65...v1.0.0-beta.66) (2024-08-06)
 
 **Note:** Version bump only for package @nymphjs/driver-mysql
