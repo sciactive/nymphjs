@@ -322,6 +322,18 @@ export default class PostgreSQLDriver extends NymphDriver {
           `${this.prefix}data_${etype}`,
         )} USING btree ("guid") WHERE "name" = 'group'::text;`,
       );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_value`,
+        )};`,
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_value`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree ("name", "value");`,
+      );
       // Create the data comparisons table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
@@ -370,27 +382,51 @@ export default class PostgreSQLDriver extends NymphDriver {
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_guid_name_truthy`,
+          `${this.prefix}comparisons_${etype}_id_name_truthy`,
         )};`,
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_guid_name_truthy`,
+          `${this.prefix}comparisons_${etype}_id_name_truthy`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("guid", "name") WHERE "truthy" = TRUE;`,
+        )} USING btree ("name") WHERE "truthy" = TRUE;`,
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_guid_name_falsy`,
+          `${this.prefix}comparisons_${etype}_id_name_falsy`,
         )};`,
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_guid_name_falsy`,
+          `${this.prefix}comparisons_${etype}_id_name_falsy`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("guid", "name") WHERE "truthy" <> TRUE;`,
+        )} USING btree ("name") WHERE "truthy" <> TRUE;`,
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_name_string`,
+        )};`,
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_name_string`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`,
+        )} USING btree ("name", "string");`,
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_name_number`,
+        )};`,
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_name_number`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`,
+        )} USING btree ("name", "number");`,
       );
       // Create the references table.
       await this.queryRun(
@@ -438,15 +474,15 @@ export default class PostgreSQLDriver extends NymphDriver {
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}references_${etype}_id_reference`,
+          `${this.prefix}references_${etype}_id_name_reference`,
         )};`,
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}references_${etype}_id_reference`,
+          `${this.prefix}references_${etype}_id_name_reference`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`,
-        )} USING btree ("reference");`,
+        )} USING btree ("name", "reference");`,
       );
       // Create the unique strings table.
       await this.queryRun(

@@ -279,6 +279,13 @@ export default class SQLite3Driver extends NymphDriver {
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_name_value`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("name", "value");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}_id_value`,
           )} ON ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}`,
@@ -329,10 +336,24 @@ export default class SQLite3Driver extends NymphDriver {
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}comparisons_${etype}_id_string`,
+            `${this.prefix}comparisons_${etype}_id_name__falsy`,
           )} ON ${SQLite3Driver.escape(
             `${this.prefix}comparisons_${etype}`,
-          )} ("string");`,
+          )} ("name") WHERE "truthy" <> 1;`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}comparisons_${etype}_id_name_string`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}comparisons_${etype}`,
+          )} ("name", "string");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}comparisons_${etype}_id_name_number`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}comparisons_${etype}`,
+          )} ("name", "number");`,
         );
         // Create the references table.
         this.queryRun(
@@ -358,10 +379,10 @@ export default class SQLite3Driver extends NymphDriver {
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_reference`,
+            `${this.prefix}references_${etype}_id_name_reference`,
           )} ON ${SQLite3Driver.escape(
             `${this.prefix}references_${etype}`,
-          )} ("reference");`,
+          )} ("name", "reference");`,
         );
         // Create the unique strings table.
         this.queryRun(
