@@ -96,8 +96,14 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
   }
 
-  private getConnection(): Promise<PostgreSQLDriverConnection> {
-    if (this.transaction != null && this.transaction.connection != null) {
+  private getConnection(
+    outsideTransaction = false,
+  ): Promise<PostgreSQLDriverConnection> {
+    if (
+      this.transaction != null &&
+      this.transaction.connection != null &&
+      !outsideTransaction
+    ) {
       return Promise.resolve(this.transaction.connection);
     }
     return new Promise((resolve, reject) =>
@@ -200,6 +206,7 @@ export default class PostgreSQLDriver extends NymphDriver {
    * @returns True on success, false on failure.
    */
   private async createTables(etype: string | null = null) {
+    const connection = await this.getConnection(true);
     if (etype != null) {
       // Create the entity table.
       await this.queryRun(
@@ -212,16 +219,19 @@ export default class PostgreSQLDriver extends NymphDriver {
           "mdate" DOUBLE PRECISION NOT NULL,
           PRIMARY KEY ("guid")
         ) WITH ( OIDS=FALSE );`,
+        { connection },
       );
       await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`,
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_cdate`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -229,11 +239,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`,
         )} USING btree ("cdate");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_mdate`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -241,11 +253,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`,
         )} USING btree ("mdate");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}_id_tags`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -253,6 +267,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`,
         )} USING gin ("tags");`,
+        { connection },
       );
       // Create the data table.
       await this.queryRun(
@@ -268,16 +283,19 @@ export default class PostgreSQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`,
             )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
         ) WITH ( OIDS=FALSE );`,
+        { connection },
       );
       await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -285,11 +303,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
         )} USING btree ("guid");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_name`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -297,11 +317,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
         )} USING btree ("name");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid_name__user`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -309,11 +331,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
         )} USING btree ("guid") WHERE "name" = 'user'::text;`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_guid_name__group`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -321,11 +345,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
         )} USING btree ("guid") WHERE "name" = 'group'::text;`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_name_value`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -333,6 +359,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
         )} USING btree ("name", "value");`,
+        { connection },
       );
       // Create the data comparisons table.
       await this.queryRun(
@@ -350,16 +377,19 @@ export default class PostgreSQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`,
             )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
         ) WITH ( OIDS=FALSE );`,
+        { connection },
       );
       await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_guid`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -367,11 +397,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
         )} USING btree ("guid");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_name`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -379,11 +411,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
         )} USING btree ("name");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_name_truthy`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -391,11 +425,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
         )} USING btree ("name") WHERE "truthy" = TRUE;`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_name_falsy`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -403,11 +439,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
         )} USING btree ("name") WHERE "truthy" <> TRUE;`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_name_string`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -415,11 +453,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
         )} USING btree ("name", "string");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}_id_name_number`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -427,6 +467,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
         )} USING btree ("name", "number");`,
+        { connection },
       );
       // Create the references table.
       await this.queryRun(
@@ -442,16 +483,19 @@ export default class PostgreSQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`,
             )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
         ) WITH ( OIDS=FALSE );`,
+        { connection },
       );
       await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`,
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_guid`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -459,11 +503,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`,
         )} USING btree ("guid");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_name`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -471,11 +517,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`,
         )} USING btree ("name");`,
+        { connection },
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}_id_name_reference`,
         )};`,
+        { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
@@ -483,6 +531,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`,
         )} USING btree ("name", "reference");`,
+        { connection },
       );
       // Create the unique strings table.
       await this.queryRun(
@@ -497,6 +546,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`,
             )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
         ) WITH ( OIDS=FALSE );`,
+        { connection },
       );
     } else {
       // Create the UID table.
@@ -508,13 +558,16 @@ export default class PostgreSQLDriver extends NymphDriver {
           "cur_uid" BIGINT NOT NULL,
           PRIMARY KEY ("name")
         ) WITH ( OIDS = FALSE );`,
+        { connection },
       );
       await this.queryRun(
         `ALTER TABLE ${PostgreSQLDriver.escape(
           `${this.prefix}uids`,
         )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`,
+        { connection },
       );
     }
+    connection.done();
     return true;
   }
 
@@ -650,9 +703,11 @@ export default class PostgreSQLDriver extends NymphDriver {
     {
       etypes = [],
       params = {},
+      connection,
     }: {
       etypes?: string[];
       params?: { [k: string]: any };
+      connection?: PostgreSQLDriverConnection;
     } = {},
   ) {
     const { query: newQuery, params: newParams } = this.translateQuery(
@@ -664,7 +719,10 @@ export default class PostgreSQLDriver extends NymphDriver {
         const results: QueryResult<any> = await new Promise(
           (resolve, reject) => {
             try {
-              (this.transaction?.connection?.client ?? this.link)
+              (
+                (connection ?? this.transaction?.connection)?.client ??
+                this.link
+              )
                 .query(newQuery, newParams)
                 .then(
                   (results) => resolve(results),
