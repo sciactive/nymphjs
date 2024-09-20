@@ -1062,12 +1062,12 @@ export default class PostgreSQLDriver extends NymphDriver {
                 }
                 const name = `param${++count.i}`;
                 curQuery +=
-                  ieTable +
-                  '."guid" ' +
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ')';
                 params[name] = curVar;
@@ -1097,12 +1097,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                   const name = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    ieTable +
-                    '."guid" IN (SELECT "guid" FROM ' +
+                    'EXISTS (SELECT "guid" FROM ' +
                     PostgreSQLDriver.escape(
                       this.prefix + 'comparisons_' + etype,
                     ) +
-                    ' WHERE "name"=@' +
+                    ' WHERE "guid"=' +
+                    ieTable +
+                    '."guid" AND "name"=@' +
                     name +
                     ' AND "truthy"=TRUE)';
                   params[name] = curVar;
@@ -1147,12 +1148,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "number"=@' +
                   value +
@@ -1167,12 +1169,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "string"=@' +
                   value +
@@ -1196,10 +1199,11 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "value"=@' +
                   value +
@@ -1260,21 +1264,21 @@ export default class PostgreSQLDriver extends NymphDriver {
                   const stringParam = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(' +
-                    ieTable +
-                    '."guid" IN (SELECT "guid" FROM ' +
+                    '(EXISTS (SELECT "guid" FROM ' +
                     PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE "name"=@' +
+                    ' WHERE "guid"=' +
+                    ieTable +
+                    '."guid" AND "name"=@' +
                     name +
                     ' AND position(@' +
                     value +
-                    ' IN "value")>0) OR ' +
-                    ieTable +
-                    '."guid" IN (SELECT "guid" FROM ' +
+                    ' IN "value")>0) OR EXISTS (SELECT "guid" FROM ' +
                     PostgreSQLDriver.escape(
                       this.prefix + 'comparisons_' + etype,
                     ) +
-                    ' WHERE "name"=@' +
+                    ' WHERE "guid"=' +
+                    ieTable +
+                    '."guid" AND "name"=@' +
                     name +
                     ' AND "string"=@' +
                     stringParam +
@@ -1283,10 +1287,11 @@ export default class PostgreSQLDriver extends NymphDriver {
                 } else {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    ieTable +
-                    '."guid" IN (SELECT "guid" FROM ' +
+                    'EXISTS (SELECT "guid" FROM ' +
                     PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE "name"=@' +
+                    ' WHERE "guid"=' +
+                    ieTable +
+                    '."guid" AND "name"=@' +
                     name +
                     ' AND position(@' +
                     value +
@@ -1334,12 +1339,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "string" ~ @' +
                   value +
@@ -1386,12 +1392,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "string" ~* @' +
                   value +
@@ -1438,12 +1445,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "string" LIKE @' +
                   value +
@@ -1490,12 +1498,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "string" ILIKE @' +
                   value +
@@ -1542,12 +1551,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "number">@' +
                   value +
@@ -1596,12 +1606,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "number">=@' +
                   value +
@@ -1650,12 +1661,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "number"<@' +
                   value +
@@ -1704,12 +1716,13 @@ export default class PostgreSQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '."guid" IN (SELECT "guid" FROM ' +
+                  'EXISTS (SELECT "guid" FROM ' +
                   PostgreSQLDriver.escape(
                     this.prefix + 'comparisons_' + etype,
                   ) +
-                  ' WHERE "name"=@' +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
                   name +
                   ' AND "number"<=@' +
                   value +
@@ -1737,10 +1750,11 @@ export default class PostgreSQLDriver extends NymphDriver {
               const guid = `param${++count.i}`;
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                ieTable +
-                '."guid" IN (SELECT "guid" FROM ' +
+                'EXISTS (SELECT "guid" FROM ' +
                 PostgreSQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE "name"=@' +
+                ' WHERE "guid"=' +
+                ieTable +
+                '."guid" AND "name"=@' +
                 name +
                 ' AND "reference"=decode(@' +
                 guid +
@@ -1793,10 +1807,11 @@ export default class PostgreSQLDriver extends NymphDriver {
               const qrefName = `param${++count.i}`;
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                ieTable +
-                '."guid" IN (SELECT "guid" FROM ' +
+                'EXISTS (SELECT "guid" FROM ' +
                 PostgreSQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE "name"=@' +
+                ' WHERE "guid"=' +
+                ieTable +
+                '."guid" AND "name"=@' +
                 qrefName +
                 ' AND "reference" IN (' +
                 qrefQuery.query +
