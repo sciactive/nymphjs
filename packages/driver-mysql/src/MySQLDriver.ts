@@ -872,10 +872,11 @@ export default class MySQLDriver extends NymphDriver {
                   const name = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
+                    'EXISTS (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                    ' WHERE `name`=@' +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
                     name +
                     ' AND `truthy`=TRUE)';
                   params[name] = curVar;
@@ -920,10 +921,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `number`=@' +
                   value +
@@ -938,10 +940,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `string`=@' +
                   value +
@@ -965,10 +968,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `value`=@' +
                   value +
@@ -1029,19 +1033,19 @@ export default class MySQLDriver extends NymphDriver {
                   const stringParam = `param${++count.i}`;
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(' +
-                    ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
+                    '(EXISTS (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE `name`=@' +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
                     name +
                     ' AND INSTR(`value`, @' +
                     value +
-                    ')) OR ' +
-                    ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
+                    ')) OR EXISTS (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                    ' WHERE `name`=@' +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
                     name +
                     ' AND `string`=@' +
                     stringParam +
@@ -1050,10 +1054,11 @@ export default class MySQLDriver extends NymphDriver {
                 } else {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    ieTable +
-                    '.`guid` IN (SELECT `guid` FROM ' +
+                    'EXISTS (SELECT `guid` FROM ' +
                     MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE `name`=@' +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
                     name +
                     ' AND INSTR(`value`, @' +
                     value +
@@ -1101,10 +1106,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `string` REGEXP @' +
                   value +
@@ -1151,10 +1157,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND LOWER(`string`) REGEXP LOWER(@' +
                   value +
@@ -1201,10 +1208,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `string` LIKE @' +
                   value +
@@ -1251,10 +1259,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND LOWER(`string`) LIKE LOWER(@' +
                   value +
@@ -1301,10 +1310,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `number`>@' +
                   value +
@@ -1353,10 +1363,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `number`>=@' +
                   value +
@@ -1405,10 +1416,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `number`<@' +
                   value +
@@ -1457,10 +1469,11 @@ export default class MySQLDriver extends NymphDriver {
                 const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`guid` IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'comparisons_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ' AND `number`<=@' +
                   value +
@@ -1488,10 +1501,11 @@ export default class MySQLDriver extends NymphDriver {
               const guid = `param${++count.i}`;
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                ieTable +
-                '.`guid` IN (SELECT `guid` FROM ' +
+                'EXISTS (SELECT `guid` FROM ' +
                 MySQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE `name`=@' +
+                ' WHERE `guid`=' +
+                ieTable +
+                '.`guid` AND `name`=@' +
                 name +
                 ' AND `reference`=UNHEX(@' +
                 guid +
@@ -1544,10 +1558,11 @@ export default class MySQLDriver extends NymphDriver {
               const qrefName = `param${++count.i}`;
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                ieTable +
-                '.`guid` IN (SELECT `guid` FROM ' +
+                'EXISTS (SELECT `guid` FROM ' +
                 MySQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE `name`=@' +
+                ' WHERE `guid`=' +
+                ieTable +
+                '.`guid` AND `name`=@' +
                 qrefName +
                 ' AND `reference` IN (' +
                 qrefQuery.query +
