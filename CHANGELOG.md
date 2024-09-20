@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.72](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.71...v1.0.0-beta.72) (2024-09-20)
+
+### Bug Fixes
+
+- optimize qref queries the same way ([6fcd92f](https://github.com/sciactive/nymphjs/commit/6fcd92f3289b2762fdf4549a88e80e4918cf8e19))
+- postgres count queries with limit or offset ([edd586e](https://github.com/sciactive/nymphjs/commit/edd586e3e8c7f80093a258a9c328b7a298c555d7))
+
 # [1.0.0-beta.71](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.70...v1.0.0-beta.71) (2024-09-20)
 
 ### Bug Fixes
