@@ -761,6 +761,7 @@ export default class SQLite3Driver extends NymphDriver {
     subquery = false,
     tableSuffix = '',
     etypes: string[] = [],
+    guidSelector: string | undefined = undefined,
   ) {
     if (typeof options.class?.alterOptions === 'function') {
       options = options.class.alterOptions(options);
@@ -1491,6 +1492,7 @@ export default class SQLite3Driver extends NymphDriver {
               break;
             case 'qref':
             case '!qref':
+              const referenceTableSuffix = makeTableSuffix();
               const [qrefOptions, ...qrefSelectors] = curValue[1] as [
                 Options,
                 ...FormattedSelector[],
@@ -1506,6 +1508,7 @@ export default class SQLite3Driver extends NymphDriver {
                 false,
                 makeTableSuffix(),
                 etypes,
+                'r' + referenceTableSuffix + '."reference"',
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1515,11 +1518,17 @@ export default class SQLite3Driver extends NymphDriver {
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                 'EXISTS (SELECT "guid" FROM ' +
                 SQLite3Driver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE "guid"=' +
+                ' r' +
+                referenceTableSuffix +
+                ' WHERE r' +
+                referenceTableSuffix +
+                '."guid"=' +
                 ieTable +
-                '."guid" AND "name"=@' +
+                '."guid" AND r' +
+                referenceTableSuffix +
+                '."name"=@' +
                 qrefName +
-                ' AND "reference" IN (' +
+                ' AND EXISTS (' +
                 qrefQuery.query +
                 '))';
               params[qrefName] = curValue[0];
@@ -1571,6 +1580,9 @@ export default class SQLite3Driver extends NymphDriver {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
         const whereClause = queryParts.join(') AND (');
+        const guidClause = guidSelector
+          ? `${ieTable}."guid"=${guidSelector} AND `
+          : '';
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT("guid") AS "count" FROM (
@@ -1578,14 +1590,14 @@ export default class SQLite3Driver extends NymphDriver {
                 FROM ${SQLite3Driver.escape(
                   this.prefix + 'entities_' + etype,
                 )} ${ieTable}
-                WHERE (${whereClause})${limit}${offset}
+                WHERE ${guidClause}(${whereClause})${limit}${offset}
               )`;
           } else {
             query = `SELECT COUNT("guid") AS "count"
               FROM ${SQLite3Driver.escape(
                 this.prefix + 'entities_' + etype,
               )} ${ieTable}
-              WHERE (${whereClause})`;
+              WHERE ${guidClause}(${whereClause})`;
           }
         } else if (options.return === 'guid') {
           query = `SELECT "guid"
@@ -1593,7 +1605,7 @@ export default class SQLite3Driver extends NymphDriver {
               this.prefix + 'entities_' + etype,
             )} ${ieTable}
             ${sortJoin}
-            WHERE (${whereClause})
+            WHERE ${guidClause}(${whereClause})
             ORDER BY ${sortByInner}, "guid"${limit}${offset}`;
         } else {
           query = `SELECT
@@ -1621,7 +1633,7 @@ export default class SQLite3Driver extends NymphDriver {
                 this.prefix + 'entities_' + etype,
               )} ${ieTable}
               ${sortJoin}
-              WHERE (${whereClause})
+              WHERE ${guidClause}(${whereClause})
               ORDER BY ${sortByInner}${limit}${offset}
             ) ${fTable} USING ("guid")
             ORDER BY ${sortBy}, ${eTable}."guid"`;
@@ -1639,19 +1651,22 @@ export default class SQLite3Driver extends NymphDriver {
         if ('offset' in options) {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
+        const guidClause = guidSelector
+          ? ` WHERE ${ieTable}."guid"=${guidSelector}`
+          : '';
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT("guid") AS "count" FROM (
                 SELECT "guid"
                 FROM ${SQLite3Driver.escape(
                   this.prefix + 'entities_' + etype,
-                )} ${ieTable}${limit}${offset}
+                )} ${ieTable}${guidClause}${limit}${offset}
               )`;
           } else {
             query = `SELECT COUNT("guid") AS "count"
               FROM ${SQLite3Driver.escape(
                 this.prefix + 'entities_' + etype,
-              )} ${ieTable}`;
+              )} ${ieTable}${guidClause}`;
           }
         } else if (options.return === 'guid') {
           query = `SELECT "guid"
@@ -1659,6 +1674,7 @@ export default class SQLite3Driver extends NymphDriver {
               this.prefix + 'entities_' + etype,
             )} ${ieTable}
             ${sortJoin}
+            ${guidClause}
             ORDER BY ${sortByInner}, "guid"${limit}${offset}`;
         } else {
           if (limit || offset) {
@@ -1687,6 +1703,7 @@ export default class SQLite3Driver extends NymphDriver {
                   this.prefix + 'entities_' + etype,
                 )} ${ieTable}
                 ${sortJoin}
+                ${guidClause}
                 ORDER BY ${sortByInner}${limit}${offset}
               ) ${fTable} USING ("guid")
               ORDER BY ${sortBy}, ${eTable}."guid"`;
@@ -1710,6 +1727,7 @@ export default class SQLite3Driver extends NymphDriver {
                 this.prefix + 'comparisons_' + etype,
               )} ${cTable} USING ("guid", "name")
               ${sortJoin}
+              ${guidSelector ? `WHERE ${eTable}."guid"=${guidSelector}` : ''}
               ORDER BY ${sortBy}, ${eTable}."guid"`;
           }
         }

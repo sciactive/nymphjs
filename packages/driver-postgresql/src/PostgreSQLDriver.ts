@@ -1004,6 +1004,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     subquery = false,
     tableSuffix = '',
     etypes: string[] = [],
+    guidSelector: string | undefined = undefined,
   ) {
     if (typeof options.class?.alterOptions === 'function') {
       options = options.class.alterOptions(options);
@@ -1785,6 +1786,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               break;
             case 'qref':
             case '!qref':
+              const referenceTableSuffix = makeTableSuffix();
               const [qrefOptions, ...qrefSelectors] = curValue[1] as [
                 Options,
                 ...FormattedSelector[],
@@ -1800,6 +1802,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 false,
                 makeTableSuffix(),
                 etypes,
+                'r' + referenceTableSuffix + '."reference"',
               );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1809,11 +1812,17 @@ export default class PostgreSQLDriver extends NymphDriver {
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                 'EXISTS (SELECT "guid" FROM ' +
                 PostgreSQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE "guid"=' +
+                ' r' +
+                referenceTableSuffix +
+                ' WHERE r' +
+                referenceTableSuffix +
+                '."guid"=' +
                 ieTable +
-                '."guid" AND "name"=@' +
+                '."guid" AND r' +
+                referenceTableSuffix +
+                '."name"=@' +
                 qrefName +
-                ' AND "reference" IN (' +
+                ' AND EXISTS (' +
                 qrefQuery.query +
                 '))';
               params[qrefName] = curValue[0];
@@ -1880,6 +1889,9 @@ export default class PostgreSQLDriver extends NymphDriver {
           )}`;
         }
         const whereClause = queryParts.join(') AND (');
+        const guidClause = guidSelector
+          ? `${ieTable}."guid"=${guidSelector} AND `
+          : '';
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT(${countTable}."guid") AS "count" FROM (
@@ -1887,14 +1899,14 @@ export default class PostgreSQLDriver extends NymphDriver {
                 FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}entities_${etype}`,
                 )} ${ieTable}
-                WHERE (${whereClause})${limit}${offset}
+                WHERE ${guidClause}(${whereClause})${limit}${offset}
               ) ${countTable}`;
           } else {
             query = `SELECT COUNT(${ieTable}."guid") AS "count"
               FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`,
               )} ${ieTable}
-              WHERE (${whereClause})`;
+              WHERE ${guidClause}(${whereClause})`;
           }
         } else if (options.return === 'guid') {
           const guidColumn =
@@ -1906,7 +1918,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`,
             )} ${ieTable}
             ${sortJoinInner}
-            WHERE (${whereClause})
+            WHERE ${guidClause}(${whereClause})
             ORDER BY ${sortByInner}, ${ieTable}."guid"${limit}${offset}`;
         } else {
           query = `SELECT
@@ -1934,7 +1946,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 `${this.prefix}entities_${etype}`,
               )} ${ieTable}
               ${sortJoinInner}
-              WHERE (${whereClause})
+              WHERE ${guidClause}(${whereClause})
               ORDER BY ${sortByInner}${limit}${offset}
             ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
             ORDER BY ${sortBy}, ${eTable}."guid"`;
@@ -1956,19 +1968,22 @@ export default class PostgreSQLDriver extends NymphDriver {
             isNaN(Number(options.offset)) ? 0 : Number(options.offset),
           )}`;
         }
+        const guidClause = guidSelector
+          ? ` WHERE ${ieTable}."guid"=${guidSelector}`
+          : '';
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT(${countTable}."guid") AS "count" FROM (
                 SELECT COUNT(${ieTable}."guid") AS "guid"
                 FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}entities_${etype}`,
-                )} ${ieTable}${limit}${offset}
+                )} ${ieTable}${guidClause}${limit}${offset}
               ) ${countTable}`;
           } else {
             query = `SELECT COUNT(${ieTable}."guid") AS "count"
               FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`,
-              )} ${ieTable}`;
+              )} ${ieTable}${guidClause}`;
           }
         } else if (options.return === 'guid') {
           const guidColumn =
@@ -1980,6 +1995,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               `${this.prefix}entities_${etype}`,
             )} ${ieTable}
             ${sortJoinInner}
+            ${guidClause}
             ORDER BY ${sortByInner}, ${ieTable}."guid"${limit}${offset}`;
         } else {
           if (limit || offset) {
@@ -2008,6 +2024,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                   `${this.prefix}entities_${etype}`,
                 )} ${ieTable}
                 ${sortJoinInner}
+                ${guidClause}
                 ORDER BY ${sortByInner}${limit}${offset}
               ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
               ORDER BY ${sortBy}, ${eTable}."guid"`;
@@ -2031,6 +2048,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 `${this.prefix}comparisons_${etype}`,
               )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
               ${sortJoin}
+              ${guidSelector ? `WHERE ${eTable}."guid"=${guidSelector}` : ''}
               ORDER BY ${sortBy}, ${eTable}."guid"`;
           }
         }
