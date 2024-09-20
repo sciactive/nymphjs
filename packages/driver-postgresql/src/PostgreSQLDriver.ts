@@ -1895,7 +1895,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT(${countTable}."guid") AS "count" FROM (
-                SELECT COUNT(${ieTable}."guid") AS "guid"
+                SELECT ${ieTable}."guid" AS "guid"
                 FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}entities_${etype}`,
                 )} ${ieTable}
@@ -1974,7 +1974,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT(${countTable}."guid") AS "count" FROM (
-                SELECT COUNT(${ieTable}."guid") AS "guid"
+                SELECT ${ieTable}."guid" AS "guid"
                 FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}entities_${etype}`,
                 )} ${ieTable}${guidClause}${limit}${offset}
