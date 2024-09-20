@@ -838,12 +838,12 @@ export default class MySQLDriver extends NymphDriver {
                 }
                 const name = `param${++count.i}`;
                 curQuery +=
-                  ieTable +
-                  '.`guid` ' +
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'IN (SELECT `guid` FROM ' +
+                  'EXISTS (SELECT `guid` FROM ' +
                   MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `name`=@' +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
                   name +
                   ')';
                 params[name] = curVar;
