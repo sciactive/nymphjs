@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.70](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.69...v1.0.0-beta.70) (2024-09-20)
+
+### Bug Fixes
+
+- optimize postgres queries ([764c95c](https://github.com/sciactive/nymphjs/commit/764c95c626290204b162245892e93c14bffd46a6))
+
 # [1.0.0-beta.69](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.68...v1.0.0-beta.69) (2024-09-19)
 
 ### Bug Fixes
