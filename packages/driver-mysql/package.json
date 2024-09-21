@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/driver-mysql",
-  "version": "1.0.0-beta.73",
+  "version": "1.0.0-beta.74",
   "description": "Nymph.js - MySQL DB Driver",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -33,8 +33,8 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.73",
-    "@nymphjs/nymph": "^1.0.0-beta.73",
+    "@nymphjs/guid": "^1.0.0-beta.74",
+    "@nymphjs/nymph": "^1.0.0-beta.74",
     "mysql2": "^3.9.2",
     "sqlstring": "^2.3.3"
   },

@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.74](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.73...v1.0.0-beta.74) (2024-09-21)
+
+### Bug Fixes
+
+- make sure tags don't contain empty strings when pulled from the db ([b67382f](https://github.com/sciactive/nymphjs/commit/b67382f3e23e616696373366d25148b8f2b93a47))
+
 # [1.0.0-beta.73](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.72...v1.0.0-beta.73) (2024-09-20)
 
 **Note:** Version bump only for package @nymphjs/driver-sqlite3
