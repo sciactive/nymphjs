@@ -952,7 +952,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       let datum = dataIterator.next();
       while (!datum.done) {
         const guid = datum.value.guid;
-        const tags = datum.value.tags.join(',');
+        const tags = datum.value.tags.filter((tag: string) => tag).join(',');
         const cdate = datum.value.cdate;
         const mdate = datum.value.mdate;
         let currentEntityExport: string[] = [];
@@ -2116,7 +2116,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       (row) => Number(row.count),
       (row) => row.guid,
       (row) => ({
-        tags: row.tags,
+        tags: row.tags.filter((tag: string) => tag),
         cdate: isNaN(Number(row.cdate)) ? null : Number(row.cdate),
         mdate: isNaN(Number(row.mdate)) ? null : Number(row.mdate),
       }),

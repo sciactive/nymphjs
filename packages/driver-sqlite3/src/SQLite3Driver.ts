@@ -1792,7 +1792,13 @@ export default class SQLite3Driver extends NymphDriver {
       (row) => Number(row.count),
       (row) => row.guid,
       (row) => ({
-        tags: row.tags.length > 2 ? row.tags.slice(1, -1).split(',') : [],
+        tags:
+          row.tags.length > 2
+            ? row.tags
+                .slice(1, -1)
+                .split(',')
+                .filter((tag: string) => tag)
+            : [],
         cdate: Number(row.cdate),
         mdate: Number(row.mdate),
       }),
