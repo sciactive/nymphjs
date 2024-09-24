@@ -358,7 +358,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           `${this.prefix}data_${etype}_id_name_value`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} USING btree ("name", "value");`,
+        )} USING btree ("name", LEFT("value", 512));`,
         { connection },
       );
       // Create the data comparisons table.
@@ -452,7 +452,15 @@ export default class PostgreSQLDriver extends NymphDriver {
           `${this.prefix}comparisons_${etype}_id_name_string`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("name", "string");`,
+        )} USING btree ("name", LEFT("string", 512));`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}_id_stringgin`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}comparisons_${etype}`,
+        )} USING gin ("string" gin_trgm_ops);`,
         { connection },
       );
       await this.queryRun(
@@ -549,6 +557,12 @@ export default class PostgreSQLDriver extends NymphDriver {
         { connection },
       );
     } else {
+      // Add trigram extensions.
+      try {
+        await this.queryRun(`CREATE EXTENSION pg_trgm;`, { connection });
+      } catch (e: any) {
+        // Ignore errors.
+      }
       // Create the UID table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
@@ -1178,8 +1192,10 @@ export default class PostgreSQLDriver extends NymphDriver {
                   ieTable +
                   '."guid" AND "name"=@' +
                   name +
-                  ' AND "string"=@' +
-                  value +
+                  ' AND "string"=' +
+                  (curValue[1].length < 512
+                    ? 'LEFT(@' + value + ', 512)'
+                    : '@' + value) +
                   ')';
                 params[name] = curValue[0];
                 params[value] = curValue[1];
@@ -1206,8 +1222,10 @@ export default class PostgreSQLDriver extends NymphDriver {
                   ieTable +
                   '."guid" AND "name"=@' +
                   name +
-                  ' AND "value"=@' +
-                  value +
+                  ' AND "value"=' +
+                  (svalue.length < 512
+                    ? 'LEFT(@' + value + ', 512)'
+                    : '@' + value) +
                   ')';
                 params[name] = curValue[0];
                 params[value] = svalue;
@@ -1281,8 +1299,10 @@ export default class PostgreSQLDriver extends NymphDriver {
                     ieTable +
                     '."guid" AND "name"=@' +
                     name +
-                    ' AND "string"=@' +
-                    stringParam +
+                    ' AND "string"=' +
+                    (stringValue.length < 512
+                      ? 'LEFT(@' + stringParam + ', 512)'
+                      : '@' + stringParam) +
                     '))';
                   params[stringParam] = stringValue;
                 } else {
