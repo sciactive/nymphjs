@@ -415,6 +415,7 @@ export default class SQLite3Driver extends NymphDriver {
     etypes: string[] = [],
   ): ReturnType<T> {
     try {
+      this.nymph.config.debugInfo('sqlite3:query', query);
       return runQuery();
     } catch (e: any) {
       const errorCode = e?.code;

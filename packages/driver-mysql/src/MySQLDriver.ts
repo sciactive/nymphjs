@@ -335,6 +335,7 @@ export default class MySQLDriver extends NymphDriver {
     // @ts-ignore: The return type of T is a promise.
   ): ReturnType<T> {
     try {
+      this.nymph.config.debugInfo('mysql:query', query);
       return await runQuery();
     } catch (e: any) {
       const errorCode = e?.errno;

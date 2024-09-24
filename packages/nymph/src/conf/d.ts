@@ -22,6 +22,10 @@ export interface Config {
    */
   emptyListError: boolean;
   /**
+   * A function to log info messages. By default, uses the `debug` package.
+   */
+  debugInfo: (source: string, message: string) => void;
+  /**
    * A function to log debug messages. By default, uses the `debug` package.
    */
   debugLog: (source: string, message: string) => void;

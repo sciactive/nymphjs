@@ -205,17 +205,17 @@ export default class Nymph {
       }
     }
 
-    this.config.debugLog('nymph', 'Nymph loaded.');
+    this.config.debugInfo('nymph', 'Nymph loaded.');
 
     if (tilmeld != null) {
       this.tilmeld = tilmeld;
     }
 
     this.driver.init(this);
-    this.config.debugLog('nymph', 'Nymph driver loaded.');
+    this.config.debugInfo('nymph', 'Nymph driver loaded.');
     if (this.tilmeld) {
       this.tilmeld.init(this);
-      this.config.debugLog('nymph', 'Tilmeld loaded.');
+      this.config.debugInfo('nymph', 'Tilmeld loaded.');
     }
   }
 
@@ -331,7 +331,7 @@ export default class Nymph {
           await callback(this, result);
         }
       }
-      this.config.debugLog('nymph', 'Driver connected.');
+      this.config.debugInfo('nymph', 'Driver connected.');
       return await result;
     } catch (e: any) {
       this.config.debugError('nymph', `Failed to connect: ${e}`);
@@ -352,7 +352,7 @@ export default class Nymph {
           await callback(this, result);
         }
       }
-      this.config.debugLog('nymph', 'Driver disconnected.');
+      this.config.debugInfo('nymph', 'Driver disconnected.');
       return await result;
     } catch (e: any) {
       this.config.debugError('nymph', `Failed to disconnect: ${e}`);

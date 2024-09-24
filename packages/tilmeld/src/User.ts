@@ -1572,7 +1572,7 @@ export default class User extends AbleObject<UserData> {
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
-    this.$nymph.config.debugLog(
+    this.$nymph.config.debugInfo(
       'tilmeld',
       `Username check "${this.$data.username}".`,
     );
@@ -1689,7 +1689,7 @@ export default class User extends AbleObject<UserData> {
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
-    this.$nymph.config.debugLog(
+    this.$nymph.config.debugInfo(
       'tilmeld',
       `Email check "${this.$data.email}".`,
     );
@@ -1740,7 +1740,7 @@ export default class User extends AbleObject<UserData> {
   public async $checkPhone(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
-    this.$nymph.config.debugLog(
+    this.$nymph.config.debugInfo(
       'tilmeld',
       `Phone check "${this.$data.phone}".`,
     );

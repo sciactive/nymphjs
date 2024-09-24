@@ -611,6 +611,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     // @ts-ignore: The return type of T is a promise.
   ): ReturnType<T> {
     try {
+      this.nymph.config.debugInfo('postgresql:query', query);
       return await runQuery();
     } catch (e: any) {
       const errorCode = e?.code;
