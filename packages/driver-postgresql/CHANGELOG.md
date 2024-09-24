@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.75](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.74...v1.0.0-beta.75) (2024-09-24)
+
+### Bug Fixes
+
+- shrink btree index and use trigram index in postgres to support very long strings ([7f7bc78](https://github.com/sciactive/nymphjs/commit/7f7bc783f1daf04f443ae12dc2139d45a5570cb9))
+
 # [1.0.0-beta.74](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.73...v1.0.0-beta.74) (2024-09-21)
 
 ### Bug Fixes

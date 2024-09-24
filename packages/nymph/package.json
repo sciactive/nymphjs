@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/nymph",
-  "version": "1.0.0-beta.74",
+  "version": "1.0.0-beta.75",
   "description": "Nymph.js - Nymph ORM",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -31,7 +31,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.74",
+    "@nymphjs/guid": "^1.0.0-beta.75",
     "debug": "^4.3.5",
     "joi": "^17.12.2",
     "locutus": "^2.0.16",
