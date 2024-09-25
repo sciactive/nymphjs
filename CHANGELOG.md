@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.76](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.75...v1.0.0-beta.76) (2024-09-25)
+
+### Features
+
+- add info level logging and log queries at this level ([afad941](https://github.com/sciactive/nymphjs/commit/afad941f46c4e594f0981de6443e4dd0b9ffdf4c))
+- add json column to postgres and store json values there ([b9ccfd8](https://github.com/sciactive/nymphjs/commit/b9ccfd8d4877870d2662c60423e916ddf46244b2))
+
+### BREAKING CHANGES
+
+- This is a breaking change, and requires export and
+  import of the database if you are using the Postgres driver.
+
 # [1.0.0-beta.75](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.74...v1.0.0-beta.75) (2024-09-24)
 
 ### Bug Fixes
