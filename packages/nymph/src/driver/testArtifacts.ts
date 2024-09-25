@@ -37,7 +37,14 @@ export function EntitiesTest(
     testEntity.name = 'Entity Test ' + new Date().toLocaleString();
     testEntity.null = null;
     testEntity.string = 'test';
-    testEntity.array = ['full', 'of', 'values', 500];
+    testEntity.array = [
+      'full',
+      'of',
+      'values',
+      500,
+      { test: true },
+      { nullbyte: '\\\x00\u0000  \x00' },
+    ];
     testEntity.match = `Hello, my name is Edward McCheese. It is a pleasure to meet you. As you can see, I have several hats of the most pleasant nature.
 
 This one's email address is nice_hat-wednesday+newyork@im-a-hat.hat.
@@ -46,6 +53,8 @@ This one's zip code is 92064.
 This one's favorite emojis are 🔥❤️😊😂⭐🤔
 
 These hats are absolutely fantastic.
+
+\x00\x00\x00
 
 Lorem ipsum odor amet, consectetuer adipiscing elit. Metus ad mattis sit pretium per, dignissim imperdiet luctus. Congue rhoncus turpis etiam aenean ultricies dapibus justo nunc. Netus non primis quis habitasse lacus. Nascetur dapibus sociosqu ridiculus primis; elementum netus consectetur ridiculus litora. Tristique facilisis erat ex class nulla cursus amet. Metus vitae tempor euismod vel; ullamcorper ac quisque vestibulum. Mauris libero pulvinar facilisi eros natoque massa.
 
@@ -685,10 +694,17 @@ Duis ex viverra auctor praesent elit ac. Sit ex at cubilia aenean scelerisque fi
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
 
-    // Retrieving entity by contain with full match...
+    // Retrieving entity by contain...
     resultEntity = await nymph.getEntities(
       { class: TestModel },
-      { type: '&', contain: ['string', 'test'] },
+      { type: '&', contain: ['array', 500] },
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+
+    // Retrieving entity by contain...
+    resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      { type: '&', contain: ['array', { test: true }] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });

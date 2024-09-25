@@ -54,6 +54,40 @@ export default class PostgreSQLDriver extends NymphDriver {
     return format.literal(input);
   }
 
+  static escapeNullSequences(input: string) {
+    // Postgres doesn't support null bytes in `text`, and it converts strings
+    // in JSON to `text`, so we need to escape the escape sequences for null
+    // bytes.
+    return (
+      input
+        .replace(/\uFFFD/g, () => '\uFFFD\uFFFD')
+        // n so that if there's already an escape, it turns into \n
+        // - so that it won't match a \uFFFD that got turned into \uFFFD\uFFFD
+        .replace(/\\u0000/g, () => 'nu\uFFFD-')
+        .replace(/\\x00/g, () => 'nx\uFFFD-')
+    );
+  }
+
+  static unescapeNullSequences(input: string) {
+    return input
+      .replace(/nu\uFFFD-/g, () => '\\u0000')
+      .replace(/nx\uFFFD-/g, () => '\\x00')
+      .replace(/\uFFFD\uFFFD/g, () => '\uFFFD');
+  }
+
+  static escapeNulls(input: string) {
+    // Postgres doesn't support null bytes in `text`.
+    return input
+      .replace(/\uFFFD/g, () => '\uFFFD\uFFFD')
+      .replace(/\x00/g, () => '-\uFFFD-');
+  }
+
+  static unescapeNulls(input: string) {
+    return input
+      .replace(/\uFFFD\uFFFD/g, () => '\uFFFD')
+      .replace(/-\uFFFD-/g, () => '\x00');
+  }
+
   constructor(
     config: Partial<PostgreSQLDriverConfig>,
     link?: Pool,
@@ -276,7 +310,8 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} (
           "guid" BYTEA NOT NULL,
           "name" TEXT NOT NULL,
-          "value" TEXT NOT NULL,
+          "value" CHARACTER(1) NOT NULL,
+          "json" JSONB,
           PRIMARY KEY ("guid", "name"),
           FOREIGN KEY ("guid")
             REFERENCES ${PostgreSQLDriver.escape(
@@ -358,7 +393,21 @@ export default class PostgreSQLDriver extends NymphDriver {
           `${this.prefix}data_${etype}_id_name_value`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} USING btree ("name", LEFT("value", 512));`,
+        )} USING btree ("name", "value");`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_json`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_json`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING gin ("json");`,
         { connection },
       );
       // Create the data comparisons table.
@@ -953,7 +1002,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       // Export entities.
       const dataIterator = (
         await this.queryIter(
-          `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name" AS "dname", d."value" AS "dvalue", c."string", c."number"
+          `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name" AS "dname", d."value" AS "dvalue", d."json" AS "djson", c."string", c."number"
           FROM ${PostgreSQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}data_${etype}`,
@@ -982,7 +1031,13 @@ export default class PostgreSQLDriver extends NymphDriver {
               datum.value.dvalue === 'N'
                 ? JSON.stringify(Number(datum.value.number))
                 : datum.value.dvalue === 'S'
-                ? JSON.stringify(datum.value.string)
+                ? JSON.stringify(
+                    PostgreSQLDriver.unescapeNulls(datum.value.string),
+                  )
+                : datum.value.dvalue === 'J'
+                ? PostgreSQLDriver.unescapeNullSequences(
+                    JSON.stringify(datum.value.djson),
+                  )
                 : datum.value.dvalue;
             currentEntityExport.push(`\t${datum.value.dname}=${value}`);
             datum = dataIterator.next();
@@ -1199,7 +1254,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                     : '@' + value) +
                   ')';
                 params[name] = curValue[0];
-                params[value] = curValue[1];
+                params[value] = PostgreSQLDriver.escapeNulls(curValue[1]);
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1223,13 +1278,11 @@ export default class PostgreSQLDriver extends NymphDriver {
                   ieTable +
                   '."guid" AND "name"=@' +
                   name +
-                  ' AND "value"=' +
-                  (svalue.length < 512
-                    ? 'LEFT(@' + value + ', 512)'
-                    : '@' + value) +
+                  ' AND "json"=' +
+                  value +
                   ')';
                 params[name] = curValue[0];
-                params[value] = svalue;
+                params[value] = PostgreSQLDriver.escapeNullSequences(svalue);
               }
               break;
             case 'contain':
@@ -1267,60 +1320,34 @@ export default class PostgreSQLDriver extends NymphDriver {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
                 let svalue: string;
-                let stringValue: string;
                 if (
                   curValue[1] instanceof Object &&
                   typeof curValue[1].toReference === 'function'
                 ) {
                   svalue = JSON.stringify(curValue[1].toReference());
-                  stringValue = `${curValue[1].toReference()}`;
-                } else {
+                } else if (
+                  typeof curValue[1] === 'string' ||
+                  typeof curValue[1] === 'number'
+                ) {
                   svalue = JSON.stringify(curValue[1]);
-                  stringValue = `${curValue[1]}`;
+                } else {
+                  svalue = JSON.stringify([curValue[1]]);
                 }
                 const name = `param${++count.i}`;
                 const value = `param${++count.i}`;
-                if (typeof curValue[1] === 'string') {
-                  const stringParam = `param${++count.i}`;
-                  curQuery +=
-                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(EXISTS (SELECT "guid" FROM ' +
-                    PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE "guid"=' +
-                    ieTable +
-                    '."guid" AND "name"=@' +
-                    name +
-                    ' AND position(@' +
-                    value +
-                    ' IN "value")>0) OR EXISTS (SELECT "guid" FROM ' +
-                    PostgreSQLDriver.escape(
-                      this.prefix + 'comparisons_' + etype,
-                    ) +
-                    ' WHERE "guid"=' +
-                    ieTable +
-                    '."guid" AND "name"=@' +
-                    name +
-                    ' AND "string"=' +
-                    (stringValue.length < 512
-                      ? 'LEFT(@' + stringParam + ', 512)'
-                      : '@' + stringParam) +
-                    '))';
-                  params[stringParam] = stringValue;
-                } else {
-                  curQuery +=
-                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    'EXISTS (SELECT "guid" FROM ' +
-                    PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE "guid"=' +
-                    ieTable +
-                    '."guid" AND "name"=@' +
-                    name +
-                    ' AND position(@' +
-                    value +
-                    ' IN "value")>0)';
-                }
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'EXISTS (SELECT "guid" FROM ' +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
+                  name +
+                  ' AND "json" @> @' +
+                  value +
+                  ')';
                 params[name] = curValue[0];
-                params[value] = svalue;
+                params[value] = PostgreSQLDriver.escapeNullSequences(svalue);
               }
               break;
             case 'match':
@@ -1373,7 +1400,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                   value +
                   ')';
                 params[name] = curValue[0];
-                params[value] = curValue[1];
+                params[value] = PostgreSQLDriver.escapeNulls(curValue[1]);
               }
               break;
             case 'imatch':
@@ -1426,7 +1453,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                   value +
                   ')';
                 params[name] = curValue[0];
-                params[value] = curValue[1];
+                params[value] = PostgreSQLDriver.escapeNulls(curValue[1]);
               }
               break;
             case 'like':
@@ -1479,7 +1506,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                   value +
                   ')';
                 params[name] = curValue[0];
-                params[value] = curValue[1];
+                params[value] = PostgreSQLDriver.escapeNulls(curValue[1]);
               }
               break;
             case 'ilike':
@@ -1532,7 +1559,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                   value +
                   ')';
                 params[name] = curValue[0];
-                params[value] = curValue[1];
+                params[value] = PostgreSQLDriver.escapeNulls(curValue[1]);
               }
               break;
             case 'gt':
@@ -1949,6 +1976,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               ${eTable}."mdate",
               ${dTable}."name",
               ${dTable}."value",
+              ${dTable}."json",
               ${cTable}."string",
               ${cTable}."number"
             FROM ${PostgreSQLDriver.escape(
@@ -2027,6 +2055,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 ${eTable}."mdate",
                 ${dTable}."name",
                 ${dTable}."value",
+                ${dTable}."json",
                 ${cTable}."string",
                 ${cTable}."number"
               FROM ${PostgreSQLDriver.escape(
@@ -2057,6 +2086,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 ${eTable}."mdate",
                 ${dTable}."name",
                 ${dTable}."value",
+                ${dTable}."json",
                 ${cTable}."string",
                 ${cTable}."number"
               FROM ${PostgreSQLDriver.escape(
@@ -2147,7 +2177,9 @@ export default class PostgreSQLDriver extends NymphDriver {
           row.value === 'N'
             ? JSON.stringify(Number(row.number))
             : row.value === 'S'
-            ? JSON.stringify(row.string)
+            ? JSON.stringify(PostgreSQLDriver.unescapeNulls(row.string))
+            : row.value === 'J'
+            ? PostgreSQLDriver.unescapeNullSequences(JSON.stringify(row.json))
             : row.value,
       }),
     );
@@ -2285,19 +2317,24 @@ export default class PostgreSQLDriver extends NymphDriver {
             ? 'N'
             : typeof uvalue === 'string'
             ? 'S'
-            : value;
+            : 'J';
+        const jsonValue =
+          storageValue === 'J'
+            ? PostgreSQLDriver.escapeNullSequences(value)
+            : null;
         const promises = [];
         promises.push(
           this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}data_${etype}`,
-            )} ("guid", "name", "value") VALUES (decode(@guid, 'hex'), @name, @storageValue);`,
+            )} ("guid", "name", "value", "json") VALUES (decode(@guid, 'hex'), @name, @storageValue, @jsonValue);`,
             {
               etypes: [etype],
               params: {
                 guid,
                 name,
                 storageValue,
+                jsonValue,
               },
             },
           ),
@@ -2313,7 +2350,10 @@ export default class PostgreSQLDriver extends NymphDriver {
                 guid,
                 name,
                 truthy: !!uvalue,
-                string: `${uvalue}`,
+                string:
+                  storageValue === 'J'
+                    ? null
+                    : PostgreSQLDriver.escapeNulls(`${uvalue}`),
                 number: isNaN(Number(uvalue)) ? null : Number(uvalue),
               },
             },
@@ -2523,19 +2563,24 @@ export default class PostgreSQLDriver extends NymphDriver {
             ? 'N'
             : typeof value === 'string'
             ? 'S'
-            : svalue;
+            : 'J';
+        const jsonValue =
+          storageValue === 'J'
+            ? PostgreSQLDriver.escapeNullSequences(svalue)
+            : null;
         const promises = [];
         promises.push(
           this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}data_${etype}`,
-            )} ("guid", "name", "value") VALUES (decode(@guid, 'hex'), @name, @storageValue);`,
+            )} ("guid", "name", "value", "json") VALUES (decode(@guid, 'hex'), @name, @storageValue, @jsonValue);`,
             {
               etypes: [etype],
               params: {
                 guid,
                 name,
                 storageValue,
+                jsonValue,
               },
             },
           ),
@@ -2551,7 +2596,10 @@ export default class PostgreSQLDriver extends NymphDriver {
                 guid,
                 name,
                 truthy: !!value,
-                string: `${value}`,
+                string:
+                  storageValue === 'J'
+                    ? null
+                    : PostgreSQLDriver.escapeNulls(`${value}`),
                 number: isNaN(Number(value)) ? null : Number(value),
               },
             },
