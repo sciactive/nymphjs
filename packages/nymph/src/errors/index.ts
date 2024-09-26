@@ -6,6 +6,8 @@ export * from './EntityInvalidDataError';
 
 export * from './EntityIsSleepingReferenceError';
 
+export * from './EntityTypeError';
+
 export * from './EntityUniqueConstraintError';
 
 export * from './InvalidParametersError';

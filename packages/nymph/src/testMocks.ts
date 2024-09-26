@@ -154,6 +154,7 @@ export class MockNymph {
 
     const entityJson: EntityJson = {
       class: className,
+      partition: entity.$getPartition(),
       guid: entity.guid,
       cdate: entity.cdate,
       mdate: entity.mdate,

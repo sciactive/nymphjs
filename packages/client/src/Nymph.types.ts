@@ -68,6 +68,11 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
    */
   class: T;
   /**
+   * A partition. If none is given, the class' `getPartition` method will be
+   * called.
+   */
+  partition?: string;
+  /**
    * The limit of entities to be returned. Not needed when using `getEntity`, as
    * it always returns only one.
    */

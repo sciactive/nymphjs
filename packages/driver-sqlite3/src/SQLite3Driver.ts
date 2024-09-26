@@ -46,7 +46,7 @@ export default class SQLite3Driver extends NymphDriver {
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
       throw new InvalidParametersError(
-        'SQLite3 identifiers (like entity ETYPE) cannot contain null characters.',
+        'SQLite3 identifiers (like entity etype and partition names) cannot contain null characters.',
       );
     }
 

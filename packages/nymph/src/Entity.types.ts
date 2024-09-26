@@ -12,7 +12,13 @@ export type ACProperties = {
   acFull: (string | null)[] | null;
 };
 
-export type EntityReference = ['nymph_entity_reference', string, string];
+export type EntityReference =
+  | ['nymph_entity_reference', string, string]
+  | ['nymph_entity_reference', string, string, string | undefined];
+
+export type EntityUniqueString =
+  | { scope: 'etype' | 'partition'; value: string }
+  | string;
 
 export type EntityData = {
   [k: string]: any;
@@ -24,6 +30,7 @@ export type SerializedEntityData = {
 
 export type EntityJson = {
   class: string;
+  partition: string | undefined;
   guid: string | null;
   cdate: number | null;
   mdate: number | null;
@@ -33,6 +40,7 @@ export type EntityJson = {
 
 export type EntityPatch = {
   class: string;
+  partition: string | undefined;
   guid: string;
   mdate: number | null;
   set: EntityData;
@@ -179,17 +187,29 @@ export interface EntityInterface extends DataObjectInterface {
    */
   $getSData(): SerializedEntityData;
   /**
-   * Get an array of strings that **must** be unique across the current etype.
+   * Get the partition this entity belongs to.
+   *
+   * If the entity hasn't been saved yet, it may not have a partition.
+   *
+   * @returns The entity's partition, or undefined if it has none.
+   */
+  $getPartition(): string | undefined;
+  /**
+   * Get an array of strings that **must** be unique across the current
+   * partition or etype.
    *
    * When you try to save another entity with any of the same unique strings,
    * Nymph will throw an error.
+   *
+   * By default, strings are scoped to the partition. (Meaning these are
+   * equivalent: `"somestring"` and `{scope:"partition",value:"somestring"}`)
    *
    * The default implementation of this method returns an empty array, meaning
    * there are no uniqueness constraints applied to its etype.
    *
    * @returns Resolves to an array of entity's unique constraint strings.
    */
-  $getUniques(): Promise<string[]>;
+  $getUniques(): Promise<EntityUniqueString[]>;
   /**
    * Get the original values of the AC properties.
    *

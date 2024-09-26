@@ -10,6 +10,7 @@ import type {
   EntityJson,
   EntityPatch,
   EntityReference,
+  EntityUniqueString,
   SerializedEntityData,
 } from './Entity.types';
 import {
@@ -125,6 +126,10 @@ export default class Entity<T extends EntityData = EntityData>
   public cdate: number | null = null;
   public mdate: number | null = null;
   public tags: string[] = [];
+  /**
+   * The partition where the entity came from.
+   */
+  private $partition: string | undefined = undefined;
   /**
    * The data proxy handler.
    */
@@ -245,6 +250,23 @@ export default class Entity<T extends EntityData = EntityData>
    * @returns The altered options.
    */
   static alterOptions?<T extends Options>(options: T): T;
+
+  /**
+   * Return the partition for this entity.
+   *
+   * The partition is a dynamic way to separate data. For example, you can
+   * partition an entity across users by returning the logged in user's GUID,
+   * if that entity is only meant to be accessed on a per-user basis.
+   *
+   * Partitioned data will be stored in its own table(s) and will only be
+   * returned by queries that use that partition.
+   *
+   * The partition is **NOT** a security measure. Any user can query entities on
+   * any partition.
+   */
+  static getPartition(): string | undefined {
+    return;
+  }
 
   /**
    * Initialize an entity.
@@ -460,6 +482,7 @@ export default class Entity<T extends EntityData = EntityData>
       new (): E;
     },
     guid?: string,
+    partition?: string,
   ): Promise<E & EntityDataType<E>> {
     const entity = new this();
     if (guid != null) {
@@ -468,6 +491,7 @@ export default class Entity<T extends EntityData = EntityData>
       ).nymph.getEntity(
         {
           class: this as unknown as EntityConstructor,
+          partition,
         },
         { type: '&', guid },
       );
@@ -558,6 +582,7 @@ export default class Entity<T extends EntityData = EntityData>
     }
     const obj: EntityJson = {
       class: (this.constructor as any).class as string,
+      partition: this.$partition,
       guid: this.guid,
       cdate: this.cdate,
       mdate: this.mdate,
@@ -658,7 +683,7 @@ export default class Entity<T extends EntityData = EntityData>
     return this.$sdata;
   }
 
-  public async $getUniques(): Promise<string[]> {
+  public async $getUniques(): Promise<EntityUniqueString[]> {
     return [];
   }
 
@@ -775,6 +800,15 @@ export default class Entity<T extends EntityData = EntityData>
       );
     }
 
+    if (
+      (this.guid && this.$partition !== input.partition) ||
+      (this.guid == null && input.partition != null)
+    ) {
+      throw new EntityConflictError(
+        'Tried to save entity into the wrong partition.',
+      );
+    }
+
     // Accept the modified date.
     const mdate = input.mdate ?? 0;
     const thismdate = this.mdate ?? 0;
@@ -867,6 +901,15 @@ export default class Entity<T extends EntityData = EntityData>
     if (this.guid != patch.guid) {
       throw new EntityConflictError(
         'Tried to accept JSON patch for the wrong entity.',
+      );
+    }
+
+    if (
+      (this.guid && this.$partition !== patch.partition) ||
+      (this.guid == null && patch.partition != null)
+    ) {
+      throw new EntityConflictError(
+        'Tried to save entity into the wrong partition.',
       );
     }
 
@@ -983,10 +1026,13 @@ export default class Entity<T extends EntityData = EntityData>
    */
   protected $referenceSleep(reference: EntityReference) {
     if (
-      reference.length !== 3 ||
+      (reference.length !== 3 && reference.length !== 4) ||
       reference[0] !== 'nymph_entity_reference' ||
       typeof reference[1] !== 'string' ||
-      typeof reference[2] !== 'string'
+      typeof reference[2] !== 'string' ||
+      (reference.length === 4 &&
+        reference[3] !== undefined &&
+        typeof reference[3] !== 'string')
     ) {
       throw new InvalidParametersError(
         'referenceSleep expects parameter 1 to be a valid Nymph entity ' +
@@ -1002,6 +1048,7 @@ export default class Entity<T extends EntityData = EntityData>
     }
     this.$isASleepingReference = true;
     this.guid = reference[1];
+    this.$partition = reference[3];
     this.$sleepingReference = reference;
   }
 
@@ -1045,6 +1092,7 @@ export default class Entity<T extends EntityData = EntityData>
           {
             class: EntityClass,
             skipAc: this.$skipAc,
+            partition: this.$partition,
           },
           { type: '&', guid: this.$sleepingReference[1] },
         )
@@ -1134,6 +1182,7 @@ export default class Entity<T extends EntityData = EntityData>
         ),
         skipCache: true,
         skipAc: this.$skipAc,
+        partition: this.$partition,
       },
       { type: '&', guid: this.guid },
     );
@@ -1170,10 +1219,28 @@ export default class Entity<T extends EntityData = EntityData>
       'nymph_entity_reference',
       this.guid,
       (this.constructor as any).class as string,
+      this.$partition,
     ] as EntityReference;
   }
 
   public $useSkipAc(skipAc: boolean) {
     this.$skipAc = !!skipAc;
+  }
+
+  /**
+   * This should only be called internally. Messing with partitions after
+   * entities are created can cause data corruption.
+   */
+  public $setPartition(partition: string | undefined) {
+    if (this.guid === null) {
+      this.$partition = partition;
+      return;
+    }
+
+    throw new Error("Can't set partition on an existing entity.");
+  }
+
+  public $getPartition() {
+    return this.$partition;
   }
 }

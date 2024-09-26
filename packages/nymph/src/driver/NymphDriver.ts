@@ -12,6 +12,7 @@ import type {
   EntityData,
   EntityInterface,
   EntityReference,
+  EntityUniqueString,
   SerializedEntityData,
 } from '../Entity.types';
 import { InvalidParametersError, UnableToConnectError } from '../errors';
@@ -114,6 +115,7 @@ export default abstract class NymphDriver {
     tags: string[];
     sdata: SerializedEntityData;
     etype: string;
+    partition: string | undefined;
   }): Promise<void>;
   abstract importUID(uid: { name: string; value: number }): Promise<void>;
   abstract newUID(name: string): Promise<number | null>;
@@ -226,7 +228,8 @@ export default abstract class NymphDriver {
       let guid: string | null = null;
       let sdata: SerializedEntityData = {};
       let tags: string[] = [];
-      let etype = '__undefined';
+      let etype = '_undefined';
+      let partition: string | undefined = undefined;
       for (let line of lines) {
         if (line.match(/^\s*#/)) {
           continue;
@@ -249,15 +252,27 @@ export default abstract class NymphDriver {
             delete sdata.cdate;
             const mdate = Number(JSON.parse(sdata.mdate));
             delete sdata.mdate;
-            await this.importEntity({ guid, cdate, mdate, tags, sdata, etype });
+            await this.importEntity({
+              guid,
+              cdate,
+              mdate,
+              tags,
+              sdata,
+              etype,
+              partition,
+            });
             guid = null;
             tags = [];
             sdata = {};
-            etype = '__undefined';
+            etype = '_undefined';
+            partition = undefined;
           }
           // Record the new entity's info.
           guid = entityMatch[1];
-          etype = entityMatch[2];
+          [etype, partition] = entityMatch[2].split('__');
+          if (partition === '' || partition == null) {
+            partition = undefined;
+          }
           tags = entityMatch[3].split(',');
         } else if (propMatch) {
           // Add the variable to the new entity.
@@ -274,7 +289,15 @@ export default abstract class NymphDriver {
         delete sdata.cdate;
         const mdate = Number(JSON.parse(sdata.mdate));
         delete sdata.mdate;
-        await this.importEntity({ guid, cdate, mdate, tags, sdata, etype });
+        await this.importEntity({
+          guid,
+          cdate,
+          mdate,
+          tags,
+          sdata,
+          etype,
+          partition,
+        });
       }
       if (transaction) {
         await this.commit('nymph-import');
@@ -569,10 +592,13 @@ export default abstract class NymphDriver {
       | string
       | (EntityInterface | EntityReference | string)[],
   ) {
+    const isEntityReference = (e: any): e is EntityReference => {
+      return Array.isArray(e) && e[0] === 'nymph_entity_reference';
+    };
     // Get the GUID, if the passed $entity is an object.
     const guids: string[] = [];
     if (Array.isArray(entity)) {
-      if (entity[0] === 'nymph_entity_reference') {
+      if (isEntityReference(entity)) {
         guids.push(value[1]);
       } else {
         for (const curEntity of entity) {
@@ -745,6 +771,7 @@ export default abstract class NymphDriver {
       options: Options<T>;
       selectors: FormattedSelector[];
       etype: string;
+      partition?: string;
     }) => {
       result: any;
     },
@@ -769,6 +796,7 @@ export default abstract class NymphDriver {
       options: Options<T>;
       selectors: FormattedSelector[];
       etype: string;
+      partition?: string;
     }) => {
       result: any;
     },
@@ -793,6 +821,7 @@ export default abstract class NymphDriver {
       options: Options<T>;
       selectors: FormattedSelector[];
       etype: string;
+      partition?: string;
     }) => {
       result: any;
     },
@@ -820,6 +849,7 @@ export default abstract class NymphDriver {
       options: Options<T>;
       selectors: FormattedSelector[];
       etype: string;
+      partition?: string;
     }) => {
       result: any;
     },
@@ -861,6 +891,7 @@ export default abstract class NymphDriver {
     const EntityClass =
       options.class ?? (this.nymph.getEntityClass('Entity') as T);
     const etype = EntityClass.ETYPE;
+    const partition = options.partition ?? EntityClass.getPartition();
 
     // Check if the requested entity is cached.
     if (
@@ -920,6 +951,7 @@ export default abstract class NymphDriver {
         options,
         selectors: formattedSelectors.selectors,
         etype,
+        partition,
       });
 
       return {
@@ -1006,9 +1038,10 @@ export default abstract class NymphDriver {
       tags: string[];
       data: EntityData;
       sdata: SerializedEntityData;
-      uniques: string[];
+      uniques: EntityUniqueString[];
       cdate: number;
       etype: string;
+      partition?: string;
     }) => Promise<boolean>,
     saveExistingEntityCallback: (data: {
       entity: EntityInterface;
@@ -1016,9 +1049,10 @@ export default abstract class NymphDriver {
       tags: string[];
       data: EntityData;
       sdata: SerializedEntityData;
-      uniques: string[];
+      uniques: EntityUniqueString[];
       mdate: number;
       etype: string;
+      partition?: string;
     }) => Promise<boolean>,
     startTransactionCallback: (() => Promise<void>) | null = null,
     commitTransactionCallback:
@@ -1033,6 +1067,7 @@ export default abstract class NymphDriver {
     const uniques = await entity.$getUniques();
     const EntityClass = entity.constructor as EntityConstructor;
     const etype = EntityClass.ETYPE;
+    const partition = EntityClass.getPartition();
     if (startTransactionCallback) {
       await startTransactionCallback();
     }
@@ -1049,6 +1084,7 @@ export default abstract class NymphDriver {
         uniques,
         cdate,
         etype,
+        partition,
       });
       if (success) {
         entity.guid = newId;
@@ -1069,6 +1105,7 @@ export default abstract class NymphDriver {
         uniques,
         mdate,
         etype,
+        partition,
       });
       if (success) {
         entity.mdate = mdate;

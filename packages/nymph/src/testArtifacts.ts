@@ -36,6 +36,16 @@ export class TestModel extends Entity<TestModelData> {
   protected $protectedTags = ['test', 'notag'];
   protected $allowlistTags? = ['newtag'];
 
+  private static partition: string | undefined = undefined;
+
+  static getPartition() {
+    return this.partition;
+  }
+
+  static setPartition(partition: string | undefined) {
+    this.partition = partition;
+  }
+
   constructor() {
     super();
 

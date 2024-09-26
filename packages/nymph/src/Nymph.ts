@@ -230,6 +230,10 @@ export default class Nymph {
    * returned from `getEntityClass` to check with `instanceof`.
    */
   public addEntityClass<T extends EntityConstructor>(EntityClass: T): T {
+    if (EntityClass.ETYPE.includes('__')) {
+      throw new Error('Entity etypes can\'t include "__".');
+    }
+
     if (EntityClass.class in this.entityClasses) {
       this.config.debugLog(
         'nymph',

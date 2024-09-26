@@ -480,10 +480,12 @@ export default class Nymph {
             ? entity.map((e) => ({
                 guid: e.guid,
                 class: (e.constructor as EntityConstructor).class,
+                partition: e.$getPartition(),
               }))
             : {
                 guid: (entity as EntityInterface).guid,
                 class: (entity.constructor as EntityConstructor).class,
+                partition: (entity as EntityInterface).$getPartition(),
               },
       },
     });

@@ -313,6 +313,7 @@ describe('Entity', () => {
     testEntity.mdate = 14;
     testEntity.$jsonAcceptPatch({
       class: TestModel.class,
+      partition: undefined,
       guid: testEntity.guid as string,
       mdate: 15,
       set: {
@@ -359,6 +360,7 @@ describe('Entity', () => {
     testEntity.mdate = 14;
     testEntity.$jsonAcceptPatch({
       class: TestModel.class,
+      partition: undefined,
       guid: testEntity.guid as string,
       mdate: 15,
       set: {
@@ -404,6 +406,7 @@ describe('Entity', () => {
     try {
       testEntity.$jsonAcceptPatch({
         class: TestModel.class,
+        partition: undefined,
         guid: data.guid,
         mdate: data.mdate,
         set: {

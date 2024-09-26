@@ -8,7 +8,9 @@ export type ServerCallResponse = {
 
 export type ServerCallStaticResponse = any;
 
-export type EntityReference = ['nymph_entity_reference', string, string];
+export type EntityReference =
+  | ['nymph_entity_reference', string, string]
+  | ['nymph_entity_reference', string, string, string | undefined];
 
 export type EntityData = {
   [k: string]: any;
@@ -20,6 +22,7 @@ export type SerializedEntityData = {
 
 export type EntityJson<T extends EntityConstructor = EntityConstructor> = {
   class: T['class'];
+  partition: string | undefined;
   guid: string | null;
   cdate: number | null;
   mdate: number | null;
@@ -29,6 +32,7 @@ export type EntityJson<T extends EntityConstructor = EntityConstructor> = {
 
 export type EntityPatch = {
   class: string;
+  partition: string | undefined;
   guid: string;
   mdate: number | null;
   set: EntityData;
@@ -149,6 +153,14 @@ export interface EntityInterface extends DataObjectInterface {
    * Get a patch of this entity's dirty data to be applied on the server.
    */
   $getPatch(): EntityPatch;
+  /**
+   * Get the partition this entity belongs to.
+   *
+   * If the entity hasn't been saved yet, it may not have a partition.
+   *
+   * @returns The entity's partition, or undefined if it has none.
+   */
+  $getPartition(): string | undefined;
   /**
    * Check that the entity has all of the given tags.
    *

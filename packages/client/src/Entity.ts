@@ -59,6 +59,10 @@ export default class Entity<T extends EntityData = EntityData>
    */
   public tags: string[] = [];
   /**
+   * The partition where the entity came from.
+   */
+  private $partition: string | undefined = undefined;
+  /**
    * Array of the entity's original tags (for patch).
    */
   protected $originalTags: string[] = [];
@@ -282,6 +286,7 @@ export default class Entity<T extends EntityData = EntityData>
       new (): E;
     },
     guid?: string,
+    partition?: string,
   ): Promise<E & EntityDataType<E>> {
     const cacheEntity = (
       guid
@@ -302,6 +307,7 @@ export default class Entity<T extends EntityData = EntityData>
         'nymph_entity_reference',
         guid,
         (this as unknown as EntityConstructor).class,
+        partition,
       ];
       await entity.$wake();
     }
@@ -390,6 +396,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.$check();
     const obj: EntityJson = {
       class: (this.constructor as any).class as string,
+      partition: this.$partition,
       guid: this.guid,
       cdate: this.cdate,
       mdate: this.mdate,
@@ -410,6 +417,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.$isASleepingReference = false;
     this.$sleepingReference = null;
 
+    this.$partition = entityJson.partition;
     this.guid = entityJson.guid;
     this.cdate = entityJson.cdate;
     this.mdate = entityJson.mdate;
@@ -498,9 +506,10 @@ export default class Entity<T extends EntityData = EntityData>
       );
     }
     const patch: EntityPatch = {
+      class: (this.constructor as EntityConstructor).class,
+      partition: this.$partition,
       guid: this.guid,
       mdate: this.mdate,
-      class: (this.constructor as EntityConstructor).class,
       addTags: this.tags.filter(
         (tag) => this.$originalTags.indexOf(tag) === -1,
       ),
@@ -606,7 +615,10 @@ export default class Entity<T extends EntityData = EntityData>
     if (!this.$wakePromise) {
       this.$wakePromise = this.$nymph
         .getEntityData(
-          { class: this.constructor as EntityConstructor },
+          {
+            class: this.constructor as EntityConstructor,
+            partition: this.$partition,
+          },
           { type: '&', guid: this.$sleepingReference[1] },
         )
         .then((data) => {
@@ -674,6 +686,7 @@ export default class Entity<T extends EntityData = EntityData>
   protected $referenceSleep(reference: EntityReference) {
     this.$isASleepingReference = true;
     this.guid = reference[1];
+    this.$partition = reference[3];
     this.$sleepingReference = [...reference];
   }
 
@@ -689,6 +702,7 @@ export default class Entity<T extends EntityData = EntityData>
     const data = await this.$nymph.getEntityData(
       {
         class: this.constructor as EntityConstructor,
+        partition: this.$partition,
       },
       {
         type: '&',
@@ -745,7 +759,25 @@ export default class Entity<T extends EntityData = EntityData>
       'nymph_entity_reference',
       this.guid,
       (this.constructor as EntityConstructor).class,
+      this.$partition,
     ] as EntityReference;
+  }
+
+  /**
+   * This should only be called internally. Messing with partitions after
+   * entities are created can cause data corruption.
+   */
+  public $setPartition(partition: string | undefined) {
+    if (this.guid === null) {
+      this.$partition = partition;
+      return;
+    }
+
+    throw new Error("Can't set partition on an existing entity.");
+  }
+
+  public $getPartition() {
+    return this.$partition;
   }
 }
 
