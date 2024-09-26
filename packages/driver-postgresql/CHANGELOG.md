@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.77](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.76...v1.0.0-beta.77) (2024-09-26)
+
+### Bug Fixes
+
+- broken queries where param wasn't preceded by at sign ([de183bf](https://github.com/sciactive/nymphjs/commit/de183bf1ab440ee34a7b27b51c42867e9c035bc4))
+
 # [1.0.0-beta.76](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.75...v1.0.0-beta.76) (2024-09-25)
 
 ### Features
