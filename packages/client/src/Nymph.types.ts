@@ -63,12 +63,37 @@ export type RequestCallback = (url: string, options: RequestInit) => void;
 export type ResponseCallback = (response: Response, text: string) => void;
 
 export type Options<T extends EntityConstructor = EntityConstructor> = {
+  /**
+   * The Entity class to query.
+   */
   class: T;
+  /**
+   * The limit of entities to be returned. Not needed when using `getEntity`, as
+   * it always returns only one.
+   */
   limit?: number;
+  /**
+   * The offset from the first matching entity, in order, to start retrieving.
+   */
   offset?: number;
+  /**
+   * If true, entities will be retrieved from newest to oldest/largest to
+   * smallest (with regard to `sort`).
+   */
   reverse?: boolean;
+  /**
+   * How to sort the entities. Should be "cdate", "mdate", or the name of a
+   * property.
+   */
   sort?: 'cdate' | 'mdate' | string;
+  /**
+   * What to return, the entities with their data, just the GUIDs, or just a
+   * count.
+   */
   return?: 'entity' | 'guid' | 'count';
+  /**
+   * If true, Nymph will skip the cache and retrieve the entity from the DB.
+   */
   skipCache?: boolean;
 };
 
