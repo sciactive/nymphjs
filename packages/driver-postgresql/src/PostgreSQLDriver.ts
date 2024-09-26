@@ -1278,7 +1278,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                   ieTable +
                   '."guid" AND "name"=@' +
                   name +
-                  ' AND "json"=' +
+                  ' AND "json"=@' +
                   value +
                   ')';
                 params[name] = curValue[0];
@@ -1295,7 +1295,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '."cdate"=' +
+                  '."cdate"=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1309,7 +1309,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '."mdate"=' +
+                  '."mdate"=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null

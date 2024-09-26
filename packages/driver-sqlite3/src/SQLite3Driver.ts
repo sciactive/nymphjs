@@ -976,7 +976,7 @@ export default class SQLite3Driver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '."cdate"=' +
+                  '."cdate"=@' +
                   cdate;
                 params[cdate] = Number(curValue[1]);
                 break;
@@ -988,7 +988,7 @@ export default class SQLite3Driver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '."mdate"=' +
+                  '."mdate"=@' +
                   mdate;
                 params[mdate] = Number(curValue[1]);
                 break;

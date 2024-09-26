@@ -997,7 +997,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`=' +
+                  '.`cdate`=@' +
                   cdate;
                 params[cdate] = isNaN(Number(curValue[1]))
                   ? null
@@ -1011,7 +1011,7 @@ export default class MySQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`=' +
+                  '.`mdate`=@' +
                   mdate;
                 params[mdate] = isNaN(Number(curValue[1]))
                   ? null
