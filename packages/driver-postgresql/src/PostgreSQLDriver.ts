@@ -84,8 +84,8 @@ export default class PostgreSQLDriver extends NymphDriver {
 
   static unescapeNulls(input: string) {
     return input
-      .replace(/\uFFFD\uFFFD/g, () => '\uFFFD')
-      .replace(/-\uFFFD-/g, () => '\x00');
+      .replace(/-\uFFFD-/g, () => '\x00')
+      .replace(/\uFFFD\uFFFD/g, () => '\uFFFD');
   }
 
   constructor(
