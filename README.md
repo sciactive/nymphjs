@@ -74,6 +74,8 @@ The GUID and unique code generators are used to generate new GUIDs for Nymph obj
 
 # Breaking Changes
 
+In version 1.0.0-beta.78, the database schema changed significantly, and data will need to be exported with an older version, then imported into a fresh database with this version. The meaning of the `contain` clause also changed to only check if the given value exists in an array.
+
 In version 1.0.0-beta.41, the server side API was rewritten to match the client side API. All synchronous database calls were removed. This is to prevent a very rare potential bug, because synchronous database calls were made outside of transactions. Here is a list of some things that changed that could break your code:
 
 - `$gatekeeper` is now async
