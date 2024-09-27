@@ -1786,8 +1786,6 @@ export default class SQLite3Driver extends NymphDriver {
     etype: string;
   }) {
     try {
-      await this.startTransaction(`nymph-import-entity-${guid}`);
-
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
           `${this.prefix}entities_${etype}`,
@@ -1921,10 +1919,8 @@ export default class SQLite3Driver extends NymphDriver {
           throw e;
         }
       }
-      await this.commit(`nymph-import-entity-${guid}`);
     } catch (e: any) {
       this.nymph.config.debugError('sqlite3', `Import entity error: "${e}"`);
-      await this.rollback(`nymph-import-entity-${guid}`);
       throw e;
     }
   }

@@ -1869,8 +1869,6 @@ export default class MySQLDriver extends NymphDriver {
     etype: string;
   }) {
     try {
-      await this.internalTransaction(`nymph-import-entity-${guid}`);
-
       await this.queryRun(
         `REPLACE INTO ${MySQLDriver.escape(
           `${this.prefix}entities_${etype}`,
@@ -2006,10 +2004,8 @@ export default class MySQLDriver extends NymphDriver {
         );
       }
       await Promise.all(promises);
-      await this.commit(`nymph-import-entity-${guid}`);
     } catch (e: any) {
       this.nymph.config.debugError('mysql', `Import entity error: "${e}"`);
-      await this.rollback(`nymph-import-entity-${guid}`);
       throw e;
     }
   }
