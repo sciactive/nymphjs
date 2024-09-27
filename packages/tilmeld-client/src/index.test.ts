@@ -14,7 +14,6 @@ import createServer from '@nymphjs/server';
 
 import {
   User as UserClass,
-  UserData,
   Group as GroupClass,
   CurrentUserData,
 } from './index';
@@ -22,16 +21,23 @@ import {
 describe('Tilmeld Client', () => {
   let server: Server | undefined = undefined;
 
-  afterEach(() => {
-    if (server) {
-      server.close(); // avoid jest open handle error
-    }
+  afterEach(async () => {
+    await new Promise<void>((resolve) => {
+      if (server) {
+        server.close(() => resolve()); // avoid jest open handle error
+      } else {
+        resolve();
+      }
+    });
   });
 
-  function createNymphTilmeldServer(
+  async function createNymphTilmeldServer(
     config?: Partial<TilmeldConfig>,
     clientConfig?: Partial<NymphOptions>,
   ) {
+    // Wait for next event loop.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
     const sqliteConfig = {
       filename: ':memory:',
     };
@@ -82,11 +88,16 @@ describe('Tilmeld Client', () => {
     admin.nameFirst = 'Admin';
     admin.nameLast = 'User';
 
-    const result = await admin.$register({
-      password: 'supersecretadminpassword',
-    });
+    try {
+      const result = await admin.$register({
+        password: 'supersecretadminpassword',
+      });
 
-    return { result, admin };
+      return { result, admin };
+    } catch (e: any) {
+      console.error('Error creating admin:', e);
+      throw e;
+    }
   }
 
   async function createUser(User: typeof UserClass) {
@@ -96,15 +107,20 @@ describe('Tilmeld Client', () => {
     user.nameFirst = 'Some';
     user.nameLast = 'User';
 
-    const result = await user.$register({
-      password: 'supersecretuserpassword',
-    });
+    try {
+      const result = await user.$register({
+        password: 'supersecretuserpassword',
+      });
 
-    return { result, user };
+      return { result, user };
+    } catch (e: any) {
+      console.error('Error creating user:', e);
+      throw e;
+    }
   }
 
   it('get client config', async () => {
-    const { User } = createNymphTilmeldServer();
+    const { User } = await createNymphTilmeldServer();
 
     const result = await User.getClientConfig();
 
@@ -113,7 +129,7 @@ describe('Tilmeld Client', () => {
   });
 
   it('produce errors when register data is incorrect', async () => {
-    const { User } = createNymphTilmeldServer();
+    const { User } = await createNymphTilmeldServer();
 
     try {
       const admin = User.factorySync() as UserClass & CurrentUserData;
@@ -153,13 +169,13 @@ describe('Tilmeld Client', () => {
 
       expect(admin.guid).toBeNull();
     } catch (e: any) {
-      console.error('Error creating admin: ', e);
+      console.error('Error running test: ', e);
       throw e;
     }
   });
 
   it('create admin user', async () => {
-    const { User } = createNymphTilmeldServer();
+    const { User } = await createNymphTilmeldServer();
 
     try {
       const { result, admin } = await createAdmin(User);
@@ -175,13 +191,13 @@ describe('Tilmeld Client', () => {
 
       expect(permission).toBeTruthy();
     } catch (e: any) {
-      console.error('Error creating admin: ', e);
+      console.error('Error running test: ', e);
       throw e;
     }
   });
 
   it('logout', async () => {
-    const { User } = createNymphTilmeldServer();
+    const { User } = await createNymphTilmeldServer();
 
     try {
       const { admin } = await createAdmin(User);
@@ -202,7 +218,7 @@ describe('Tilmeld Client', () => {
   });
 
   it('second user', async () => {
-    const { User } = createNymphTilmeldServer();
+    const { User } = await createNymphTilmeldServer();
 
     try {
       const { admin } = await createAdmin(User);
@@ -227,7 +243,7 @@ describe('Tilmeld Client', () => {
   });
 
   it("doesn't issue renewed token when not needed", async () => {
-    const { User, nymph } = createNymphTilmeldServer({
+    const { User, nymph } = await createNymphTilmeldServer({
       jwtExpire: 5,
       jwtRenew: 0,
     });
@@ -257,7 +273,7 @@ describe('Tilmeld Client', () => {
   });
 
   it('issues renewed token when needed', async () => {
-    const { User, nymph } = createNymphTilmeldServer({
+    const { User, nymph } = await createNymphTilmeldServer({
       jwtExpire: 5,
       jwtRenew: 5,
     });
@@ -283,7 +299,7 @@ describe('Tilmeld Client', () => {
   });
 
   it("doesn't issue renewed token when requested", async () => {
-    const { User, nymph } = createNymphTilmeldServer(
+    const { User, nymph } = await createNymphTilmeldServer(
       {
         jwtExpire: 5,
         jwtRenew: 5,
