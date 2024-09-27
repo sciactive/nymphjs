@@ -992,16 +992,13 @@ export default class MySQLDriver extends NymphDriver {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
                 let svalue: string;
-                let stringValue: string;
                 if (
                   curValue[1] instanceof Object &&
                   typeof curValue[1].toReference === 'function'
                 ) {
                   svalue = JSON.stringify(curValue[1].toReference());
-                  stringValue = `${curValue[1].toReference()}`;
                 } else {
                   svalue = JSON.stringify(curValue[1]);
-                  stringValue = `${curValue[1]}`;
                 }
                 const name = `param${++count.i}`;
                 const value = `param${++count.i}`;

@@ -261,7 +261,7 @@ export default class SQLite3Driver extends NymphDriver {
             `${this.prefix}data_${etype}`,
           )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
             `${this.prefix}entities_${etype}`,
-          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "value" TEXT NOT NULL, "string" TEXT, "number" REAL, "truthy" INTEGER, PRIMARY KEY("guid", "name"));`,
+          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "value" CHARACTER(1) NOT NULL, "json" BLOB, "string" TEXT, "number" REAL, "truthy" INTEGER, PRIMARY KEY("guid", "name"));`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
@@ -659,7 +659,7 @@ export default class SQLite3Driver extends NymphDriver {
     for (const etype of etypes) {
       // Export entities.
       const dataIterator: IterableIterator<any> = this.queryIter(
-        `SELECT e.*, d."name", d."value", d."string", d."number" FROM ${SQLite3Driver.escape(
+        `SELECT e.*, d."name", d."value", json(d."json") as "json", d."string", d."number" FROM ${SQLite3Driver.escape(
           `${this.prefix}entities_${etype}`,
         )} e LEFT JOIN ${SQLite3Driver.escape(
           `${this.prefix}data_${etype}`,
@@ -684,6 +684,8 @@ export default class SQLite3Driver extends NymphDriver {
                 ? JSON.stringify(datum.value.number)
                 : datum.value.value === 'S'
                 ? JSON.stringify(datum.value.string)
+                : datum.value.value === 'J'
+                ? datum.value.json
                 : datum.value.value;
             currentEntityExport.push(`\t${datum.value.name}=${value}`);
             datum = dataIterator.next();
@@ -916,9 +918,9 @@ export default class SQLite3Driver extends NymphDriver {
                   ieTable +
                   '."guid" AND "name"=@' +
                   name +
-                  ' AND "value"=@' +
+                  ' AND "json"=jsonb(@' +
                   value +
-                  ')';
+                  '))';
                 params[name] = curValue[0];
                 params[value] = svalue;
               }
@@ -950,58 +952,36 @@ export default class SQLite3Driver extends NymphDriver {
                 params[mdate] = Number(curValue[1]);
                 break;
               } else {
+                const containTableSuffix = makeTableSuffix();
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
                 let svalue: string;
-                let stringValue: string;
                 if (
                   curValue[1] instanceof Object &&
                   typeof curValue[1].toReference === 'function'
                 ) {
                   svalue = JSON.stringify(curValue[1].toReference());
-                  stringValue = `${curValue[1].toReference()}`;
                 } else {
                   svalue = JSON.stringify(curValue[1]);
-                  stringValue = `${curValue[1]}`;
                 }
                 const name = `param${++count.i}`;
                 const value = `param${++count.i}`;
-                if (typeof curValue[1] === 'string') {
-                  const stringParam = `param${++count.i}`;
-                  curQuery +=
-                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(EXISTS (SELECT "guid" FROM ' +
-                    SQLite3Driver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE "guid"=' +
-                    ieTable +
-                    '."guid" AND "name"=@' +
-                    name +
-                    ' AND instr("value", @' +
-                    value +
-                    ')) OR EXISTS (SELECT "guid" FROM ' +
-                    SQLite3Driver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE "guid"=' +
-                    ieTable +
-                    '."guid" AND "name"=@' +
-                    name +
-                    ' AND "string"=@' +
-                    stringParam +
-                    '))';
-                  params[stringParam] = stringValue;
-                } else {
-                  curQuery +=
-                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    'EXISTS (SELECT "guid" FROM ' +
-                    SQLite3Driver.escape(this.prefix + 'data_' + etype) +
-                    ' WHERE "guid"=' +
-                    ieTable +
-                    '."guid" AND "name"=@' +
-                    name +
-                    ' AND instr("value", @' +
-                    value +
-                    '))';
-                }
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'EXISTS (SELECT "guid" FROM ' +
+                  SQLite3Driver.escape(this.prefix + 'data_' + etype) +
+                  ' d' +
+                  containTableSuffix +
+                  ' WHERE "guid"=' +
+                  ieTable +
+                  '."guid" AND "name"=@' +
+                  name +
+                  ' AND json(@' +
+                  value +
+                  ') IN (SELECT json_quote("value") FROM json_each(d' +
+                  containTableSuffix +
+                  '."json")))';
                 params[name] = curValue[0];
                 params[value] = svalue;
               }
@@ -1573,6 +1553,7 @@ export default class SQLite3Driver extends NymphDriver {
               ${eTable}."mdate",
               ${dTable}."name",
               ${dTable}."value",
+              json(${dTable}."json") as "json",
               ${dTable}."string",
               ${dTable}."number"
             FROM ${SQLite3Driver.escape(
@@ -1640,6 +1621,7 @@ export default class SQLite3Driver extends NymphDriver {
                 ${eTable}."mdate",
                 ${dTable}."name",
                 ${dTable}."value",
+                json(${dTable}."json") as "json",
                 ${dTable}."string",
                 ${dTable}."number"
               FROM ${SQLite3Driver.escape(
@@ -1667,6 +1649,7 @@ export default class SQLite3Driver extends NymphDriver {
                 ${eTable}."mdate",
                 ${dTable}."name",
                 ${dTable}."value",
+                json(${dTable}."json") as "json",
                 ${dTable}."string",
                 ${dTable}."number"
               FROM ${SQLite3Driver.escape(
@@ -1758,6 +1741,8 @@ export default class SQLite3Driver extends NymphDriver {
             ? JSON.stringify(row.number)
             : row.value === 'S'
             ? JSON.stringify(row.string)
+            : row.value === 'J'
+            ? row.json
             : row.value,
       }),
     );
@@ -1873,18 +1858,20 @@ export default class SQLite3Driver extends NymphDriver {
             ? 'N'
             : typeof uvalue === 'string'
             ? 'S'
-            : value;
+            : 'J';
+        const jsonValue = storageValue === 'J' ? value : null;
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}`,
-          )} ("guid", "name", "value", "string", "number", "truthy") VALUES (@guid, @name, @storageValue, @string, @number, @truthy);`,
+          )} ("guid", "name", "value", "json", "string", "number", "truthy") VALUES (@guid, @name, @storageValue, jsonb(@jsonValue), @string, @number, @truthy);`,
           {
             etypes: [etype],
             params: {
               guid,
               name,
               storageValue,
-              string: `${uvalue}`,
+              jsonValue,
+              string: storageValue === 'J' ? null : `${uvalue}`,
               number: Number(uvalue),
               truthy: uvalue ? 1 : 0,
             },
@@ -2093,18 +2080,20 @@ export default class SQLite3Driver extends NymphDriver {
             ? 'N'
             : typeof value === 'string'
             ? 'S'
-            : svalue;
+            : 'J';
+        const jsonValue = storageValue === 'J' ? svalue : null;
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}`,
-          )} ("guid", "name", "value", "string", "number", "truthy") VALUES (@guid, @name, @storageValue, @string, @number, @truthy);`,
+          )} ("guid", "name", "value", "json", "string", "number", "truthy") VALUES (@guid, @name, @storageValue, jsonb(@jsonValue), @string, @number, @truthy);`,
           {
             etypes: [etype],
             params: {
               guid,
               name,
               storageValue,
-              string: `${value}`,
+              jsonValue,
+              string: storageValue === 'J' ? null : `${value}`,
               number: Number(value),
               truthy: value ? 1 : 0,
             },
