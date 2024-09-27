@@ -743,7 +743,7 @@ describe('Nymph REST Server and Client', () => {
             expect(value).toEqual(null);
             subscription.unsubscribe();
             resolve(true);
-          } else {
+          } else if (event === 'setUID') {
             expect(value).toEqual(456);
             updated = true;
           }
