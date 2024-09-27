@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.78](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.77...v1.0.0-beta.78) (2024-09-27)
+
+### Bug Fixes
+
+- don't use transactions for import, to avoid issues when creating tables ([2f8f715](https://github.com/sciactive/nymphjs/commit/2f8f71545de6ca2f3235a9f3a3c91107f58129bf))
+- potential bug with nulls in postgres ([1d8bc50](https://github.com/sciactive/nymphjs/commit/1d8bc500d752b1ef59d6591f3045bf4976eb7c00))
+
+### Features
+
+- add method to detect if migration is needed ([274f7c3](https://github.com/sciactive/nymphjs/commit/274f7c39aa4e0d251a38c01593775e1270fc9621))
+- move comparison fields to data table and remove comparison table ([3d7fe7e](https://github.com/sciactive/nymphjs/commit/3d7fe7e614327ecf8903ee7143e559549793e8fc))
+
+### BREAKING CHANGES
+
+- This is a breaking change, and requires export and
+  import of the database.
+
 # [1.0.0-beta.77](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.76...v1.0.0-beta.77) (2024-09-26)
 
 ### Bug Fixes

@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.78](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.77...v1.0.0-beta.78) (2024-09-27)
+
+### Features
+
+- add json column to mysql and store json values there ([542d762](https://github.com/sciactive/nymphjs/commit/542d762c6f6f41bfbbe775c859e1d9df0990042b))
+- add method to detect if migration is needed ([274f7c3](https://github.com/sciactive/nymphjs/commit/274f7c39aa4e0d251a38c01593775e1270fc9621))
+
+### BREAKING CHANGES
+
+- This is a breaking change, and requires export and
+  import of the database if you are using the MySQL driver.
+
 # [1.0.0-beta.77](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.76...v1.0.0-beta.77) (2024-09-26)
 
 **Note:** Version bump only for package @nymphjs/nymph

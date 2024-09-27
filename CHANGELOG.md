@@ -3,6 +3,32 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.78](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.77...v1.0.0-beta.78) (2024-09-27)
+
+### Bug Fixes
+
+- another flaky test ([0825249](https://github.com/sciactive/nymphjs/commit/082524955a3aea87d38bae3710f710d4b12d499c))
+- don't use transactions for import, to avoid issues when creating tables ([2f8f715](https://github.com/sciactive/nymphjs/commit/2f8f71545de6ca2f3235a9f3a3c91107f58129bf))
+- flaky test ([8098714](https://github.com/sciactive/nymphjs/commit/8098714026c92c9b97917a766b0f9453b0804699))
+- hopefully fix flaky test ([bc746f0](https://github.com/sciactive/nymphjs/commit/bc746f077243502fa749be3bc5b1baf2bab511e5))
+- potential bug with nulls in postgres ([1d8bc50](https://github.com/sciactive/nymphjs/commit/1d8bc500d752b1ef59d6591f3045bf4976eb7c00))
+
+### Features
+
+- add json column to mysql and store json values there ([542d762](https://github.com/sciactive/nymphjs/commit/542d762c6f6f41bfbbe775c859e1d9df0990042b))
+- add json column to sqlite and store json values there ([55a8a84](https://github.com/sciactive/nymphjs/commit/55a8a840fb7d23561d60fda602c410b79f76b0da))
+- add method to detect if migration is needed ([274f7c3](https://github.com/sciactive/nymphjs/commit/274f7c39aa4e0d251a38c01593775e1270fc9621))
+- move comparison fields to data table and remove comparison table ([3d7fe7e](https://github.com/sciactive/nymphjs/commit/3d7fe7e614327ecf8903ee7143e559549793e8fc))
+
+### BREAKING CHANGES
+
+- This is a breaking change, and requires export and
+  import of the database if you are using the SQLite driver.
+- This is a breaking change, and requires export and
+  import of the database if you are using the MySQL driver.
+- This is a breaking change, and requires export and
+  import of the database.
+
 # [1.0.0-beta.77](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.76...v1.0.0-beta.77) (2024-09-26)
 
 ### Bug Fixes

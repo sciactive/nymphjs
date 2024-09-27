@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.78](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.77...v1.0.0-beta.78) (2024-09-27)
+
+### Bug Fixes
+
+- another flaky test ([0825249](https://github.com/sciactive/nymphjs/commit/082524955a3aea87d38bae3710f710d4b12d499c))
+- hopefully fix flaky test ([bc746f0](https://github.com/sciactive/nymphjs/commit/bc746f077243502fa749be3bc5b1baf2bab511e5))
+
 # [1.0.0-beta.77](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.76...v1.0.0-beta.77) (2024-09-26)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-client
