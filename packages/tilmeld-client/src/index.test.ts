@@ -36,7 +36,7 @@ describe('Tilmeld Client', () => {
     clientConfig?: Partial<NymphOptions>,
   ) {
     // Wait for next event loop.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     const sqliteConfig = {
       filename: ':memory:',
