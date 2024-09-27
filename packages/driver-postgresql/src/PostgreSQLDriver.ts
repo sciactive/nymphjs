@@ -312,6 +312,9 @@ export default class PostgreSQLDriver extends NymphDriver {
           "name" TEXT NOT NULL,
           "value" CHARACTER(1) NOT NULL,
           "json" JSONB,
+          "string" TEXT,
+          "number" DOUBLE PRECISION,
+          "truthy" BOOLEAN,
           PRIMARY KEY ("guid", "name"),
           FOREIGN KEY ("guid")
             REFERENCES ${PostgreSQLDriver.escape(
@@ -342,16 +345,16 @@ export default class PostgreSQLDriver extends NymphDriver {
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}data_${etype}_id_name`,
+          `${this.prefix}data_${etype}_id_guid_name`,
         )};`,
         { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}data_${etype}_id_name`,
+          `${this.prefix}data_${etype}_id_guid_name`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} USING btree ("name");`,
+        )} USING btree ("guid", "name");`,
         { connection },
       );
       await this.queryRun(
@@ -384,16 +387,86 @@ export default class PostgreSQLDriver extends NymphDriver {
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}data_${etype}_id_name_value`,
+          `${this.prefix}data_${etype}_id_name`,
         )};`,
         { connection },
       );
       await this.queryRun(
         `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}data_${etype}_id_name_value`,
+          `${this.prefix}data_${etype}_id_name`,
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} USING btree ("name", "value");`,
+        )} USING btree ("name");`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_string`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_string`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree ("name", LEFT("string", 512));`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_number`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_number`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree ("name", "number");`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_truthy`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_truthy`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree ("name") WHERE "truthy" = TRUE;`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_falsy`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_name_falsy`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree ("name") WHERE "truthy" <> TRUE;`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_string`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_string`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING gin ("string" gin_trgm_ops);`,
         { connection },
       );
       await this.queryRun(
@@ -408,122 +481,6 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} ON ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}`,
         )} USING gin ("json");`,
-        { connection },
-      );
-      // Create the data comparisons table.
-      await this.queryRun(
-        `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} (
-          "guid" BYTEA NOT NULL,
-          "name" TEXT NOT NULL,
-          "truthy" BOOLEAN,
-          "string" TEXT,
-          "number" DOUBLE PRECISION,
-          PRIMARY KEY ("guid", "name"),
-          FOREIGN KEY ("guid")
-            REFERENCES ${PostgreSQLDriver.escape(
-              `${this.prefix}entities_${etype}`,
-            )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
-        ) WITH ( OIDS=FALSE );`,
-        { connection },
-      );
-      await this.queryRun(
-        `ALTER TABLE ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`,
-        { connection },
-      );
-      await this.queryRun(
-        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_guid`,
-        )};`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_guid`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("guid");`,
-        { connection },
-      );
-      await this.queryRun(
-        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name`,
-        )};`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("name");`,
-        { connection },
-      );
-      await this.queryRun(
-        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_truthy`,
-        )};`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_truthy`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("name") WHERE "truthy" = TRUE;`,
-        { connection },
-      );
-      await this.queryRun(
-        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_falsy`,
-        )};`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_falsy`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("name") WHERE "truthy" <> TRUE;`,
-        { connection },
-      );
-      await this.queryRun(
-        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_string`,
-        )};`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_string`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("name", LEFT("string", 512));`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_stringgin`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} USING gin ("string" gin_trgm_ops);`,
-        { connection },
-      );
-      await this.queryRun(
-        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_number`,
-        )};`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}_id_name_number`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} USING btree ("name", "number");`,
         { connection },
       );
       // Create the references table.
@@ -863,17 +820,6 @@ export default class PostgreSQLDriver extends NymphDriver {
       );
       await this.queryRun(
         `DELETE FROM ${PostgreSQLDriver.escape(
-          `${this.prefix}comparisons_${etype}`,
-        )} WHERE "guid"=decode(@guid, 'hex');`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
-          },
-        },
-      );
-      await this.queryRun(
-        `DELETE FROM ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`,
         )} WHERE "guid"=decode(@guid, 'hex');`,
         {
@@ -1002,14 +948,11 @@ export default class PostgreSQLDriver extends NymphDriver {
       // Export entities.
       const dataIterator = (
         await this.queryIter(
-          `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name" AS "dname", d."value" AS "dvalue", d."json" AS "djson", c."string", c."number"
+          `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name", d."value", d."json", d."string", d."number"
           FROM ${PostgreSQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}data_${etype}`,
           )} d ON e."guid"=d."guid"
-          INNER JOIN ${PostgreSQLDriver.escape(
-            `${this.prefix}comparisons_${etype}`,
-          )} c ON d."guid"=c."guid" AND d."name"=c."name"
           ORDER BY e."guid";`,
         )
       )[Symbol.iterator]();
@@ -1023,23 +966,23 @@ export default class PostgreSQLDriver extends NymphDriver {
         currentEntityExport.push(`{${guid}}<${etype}>[${tags}]`);
         currentEntityExport.push(`\tcdate=${JSON.stringify(cdate)}`);
         currentEntityExport.push(`\tmdate=${JSON.stringify(mdate)}`);
-        if (datum.value.dname != null) {
+        if (datum.value.name != null) {
           // This do will keep going and adding the data until the
           // next entity is reached. $row will end on the next entity.
           do {
             const value =
-              datum.value.dvalue === 'N'
+              datum.value.value === 'N'
                 ? JSON.stringify(Number(datum.value.number))
-                : datum.value.dvalue === 'S'
+                : datum.value.value === 'S'
                 ? JSON.stringify(
                     PostgreSQLDriver.unescapeNulls(datum.value.string),
                   )
-                : datum.value.dvalue === 'J'
+                : datum.value.value === 'J'
                 ? PostgreSQLDriver.unescapeNullSequences(
-                    JSON.stringify(datum.value.djson),
+                    JSON.stringify(datum.value.json),
                   )
-                : datum.value.dvalue;
-            currentEntityExport.push(`\t${datum.value.dname}=${value}`);
+                : datum.value.value;
+            currentEntityExport.push(`\t${datum.value.name}=${value}`);
             datum = dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
         } else {
@@ -1081,7 +1024,6 @@ export default class PostgreSQLDriver extends NymphDriver {
     }
     const eTable = `e${tableSuffix}`;
     const dTable = `d${tableSuffix}`;
-    const cTable = `c${tableSuffix}`;
     const fTable = `f${tableSuffix}`;
     const ieTable = `ie${tableSuffix}`;
     const countTable = `count${tableSuffix}`;
@@ -1169,9 +1111,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     'EXISTS (SELECT "guid" FROM ' +
-                    PostgreSQLDriver.escape(
-                      this.prefix + 'comparisons_' + etype,
-                    ) +
+                    PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                     ' WHERE "guid"=' +
                     ieTable +
                     '."guid" AND "name"=@' +
@@ -1220,9 +1160,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1241,9 +1179,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1389,9 +1325,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1442,9 +1376,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1495,9 +1427,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1548,9 +1478,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1601,9 +1529,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1656,9 +1582,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1711,9 +1635,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1766,9 +1688,7 @@ export default class PostgreSQLDriver extends NymphDriver {
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(
-                    this.prefix + 'comparisons_' + etype,
-                  ) +
+                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
                   ' WHERE "guid"=' +
                   ieTable +
                   '."guid" AND "name"=@' +
@@ -1899,17 +1819,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         const name = `param${++count.i}`;
         sortJoin = `LEFT JOIN (
             SELECT "guid", "string", "number"
-            FROM ${PostgreSQLDriver.escape(
-              this.prefix + 'comparisons_' + etype,
-            )}
+            FROM ${PostgreSQLDriver.escape(this.prefix + 'data_' + etype)}
             WHERE "name"=@${name}
             ORDER BY "number"${order}, "string"${order}
           ) ${sTable} ON ${eTable}."guid"=${sTable}."guid"`;
         sortJoinInner = `LEFT JOIN (
             SELECT "guid", "string", "number"
-            FROM ${PostgreSQLDriver.escape(
-              this.prefix + 'comparisons_' + etype,
-            )}
+            FROM ${PostgreSQLDriver.escape(this.prefix + 'data_' + etype)}
             WHERE "name"=@${name}
             ORDER BY "number"${order}, "string"${order}
           ) ${sTable} ON ${ieTable}."guid"=${sTable}."guid"`;
@@ -1977,17 +1893,14 @@ export default class PostgreSQLDriver extends NymphDriver {
               ${dTable}."name",
               ${dTable}."value",
               ${dTable}."json",
-              ${cTable}."string",
-              ${cTable}."number"
+              ${dTable}."string",
+              ${dTable}."number"
             FROM ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`,
             )} ${eTable}
             LEFT JOIN ${PostgreSQLDriver.escape(
               `${this.prefix}data_${etype}`,
             )} ${dTable} ON ${eTable}."guid"=${dTable}."guid"
-            INNER JOIN ${PostgreSQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`,
-            )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
             ${sortJoin}
             INNER JOIN (
               SELECT ${ieTable}."guid"
@@ -2056,17 +1969,14 @@ export default class PostgreSQLDriver extends NymphDriver {
                 ${dTable}."name",
                 ${dTable}."value",
                 ${dTable}."json",
-                ${cTable}."string",
-                ${cTable}."number"
+                ${dTable}."string",
+                ${dTable}."number"
               FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`,
               )} ${eTable}
               LEFT JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}data_${etype}`,
               )} ${dTable} ON ${eTable}."guid"=${dTable}."guid"
-              INNER JOIN ${PostgreSQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`,
-              )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
               ${sortJoin}
               INNER JOIN (
                 SELECT ${ieTable}."guid"
@@ -2087,17 +1997,14 @@ export default class PostgreSQLDriver extends NymphDriver {
                 ${dTable}."name",
                 ${dTable}."value",
                 ${dTable}."json",
-                ${cTable}."string",
-                ${cTable}."number"
+                ${dTable}."string",
+                ${dTable}."number"
               FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}entities_${etype}`,
               )} ${eTable}
               LEFT JOIN ${PostgreSQLDriver.escape(
                 `${this.prefix}data_${etype}`,
               )} ${dTable} ON ${eTable}."guid"=${dTable}."guid"
-              INNER JOIN ${PostgreSQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`,
-              )} ${cTable} ON ${dTable}."guid"=${cTable}."guid" AND ${dTable}."name"=${cTable}."name"
               ${sortJoin}
               ${guidSelector ? `WHERE ${eTable}."guid"=${guidSelector}` : ''}
               ORDER BY ${sortBy}, ${eTable}."guid"`;
@@ -2269,19 +2176,6 @@ export default class PostgreSQLDriver extends NymphDriver {
       promises.push(
         this.queryRun(
           `DELETE FROM ${PostgreSQLDriver.escape(
-            `${this.prefix}comparisons_${etype}`,
-          )} WHERE "guid"=decode(@guid, 'hex');`,
-          {
-            etypes: [etype],
-            params: {
-              guid,
-            },
-          },
-        ),
-      );
-      promises.push(
-        this.queryRun(
-          `DELETE FROM ${PostgreSQLDriver.escape(
             `${this.prefix}references_${etype}`,
           )} WHERE "guid"=decode(@guid, 'hex');`,
           {
@@ -2327,7 +2221,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}data_${etype}`,
-            )} ("guid", "name", "value", "json") VALUES (decode(@guid, 'hex'), @name, @storageValue, @jsonValue);`,
+            )} ("guid", "name", "value", "json", "string", "number", "truthy") VALUES (decode(@guid, 'hex'), @name, @storageValue, @jsonValue, @string, @number, @truthy);`,
             {
               etypes: [etype],
               params: {
@@ -2335,26 +2229,12 @@ export default class PostgreSQLDriver extends NymphDriver {
                 name,
                 storageValue,
                 jsonValue,
-              },
-            },
-          ),
-        );
-        promises.push(
-          this.queryRun(
-            `INSERT INTO ${PostgreSQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`,
-            )} ("guid", "name", "truthy", "string", "number") VALUES (decode(@guid, 'hex'), @name, @truthy, @string, @number);`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-                name,
-                truthy: !!uvalue,
                 string:
                   storageValue === 'J'
                     ? null
                     : PostgreSQLDriver.escapeNulls(`${uvalue}`),
                 number: isNaN(Number(uvalue)) ? null : Number(uvalue),
+                truthy: !!uvalue,
               },
             },
           ),
@@ -2573,7 +2453,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}data_${etype}`,
-            )} ("guid", "name", "value", "json") VALUES (decode(@guid, 'hex'), @name, @storageValue, @jsonValue);`,
+            )} ("guid", "name", "value", "json", "string", "number", "truthy") VALUES (decode(@guid, 'hex'), @name, @storageValue, @jsonValue, @string, @number, @truthy);`,
             {
               etypes: [etype],
               params: {
@@ -2581,26 +2461,12 @@ export default class PostgreSQLDriver extends NymphDriver {
                 name,
                 storageValue,
                 jsonValue,
-              },
-            },
-          ),
-        );
-        promises.push(
-          this.queryRun(
-            `INSERT INTO ${PostgreSQLDriver.escape(
-              `${this.prefix}comparisons_${etype}`,
-            )} ("guid", "name", "truthy", "string", "number") VALUES (decode(@guid, 'hex'), @name, @truthy, @string, @number);`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-                name,
-                truthy: !!value,
                 string:
                   storageValue === 'J'
                     ? null
                     : PostgreSQLDriver.escapeNulls(`${value}`),
                 number: isNaN(Number(value)) ? null : Number(value),
+                truthy: !!value,
               },
             },
           ),
@@ -2720,19 +2586,6 @@ export default class PostgreSQLDriver extends NymphDriver {
           promises.push(
             this.queryRun(
               `SELECT 1 FROM ${PostgreSQLDriver.escape(
-                `${this.prefix}comparisons_${etype}`,
-              )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
-              {
-                etypes: [etype],
-                params: {
-                  guid,
-                },
-              },
-            ),
-          );
-          promises.push(
-            this.queryRun(
-              `SELECT 1 FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}references_${etype}`,
               )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
               {
@@ -2778,19 +2631,6 @@ export default class PostgreSQLDriver extends NymphDriver {
               this.queryRun(
                 `DELETE FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}data_${etype}`,
-                )} WHERE "guid"=decode(@guid, 'hex');`,
-                {
-                  etypes: [etype],
-                  params: {
-                    guid,
-                  },
-                },
-              ),
-            );
-            promises.push(
-              this.queryRun(
-                `DELETE FROM ${PostgreSQLDriver.escape(
-                  `${this.prefix}comparisons_${etype}`,
                 )} WHERE "guid"=decode(@guid, 'hex');`,
                 {
                   etypes: [etype],
