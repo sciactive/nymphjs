@@ -139,7 +139,7 @@ Check for a reference to another entity using a query.
 
 ### contain and !contain
 
-Check for a JSON representation appearing within the JSON representation of the named property.
+Check if the array at the named property contains a value.
 
 - `name<value>` or `name!<value>`
   - (Escape angle brackets with a leading backslash. If your value could be interpreted as valid JSON, encode it as a JSON string and use the JSON syntax instead.)
