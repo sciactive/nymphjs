@@ -85,6 +85,14 @@ export default abstract class NymphDriver {
    */
   abstract disconnect(): Promise<boolean>;
 
+  /**
+   * Detect whether the database needs to be migrated.
+   *
+   * If true, the database should be exported with an old version of Nymph, then
+   * imported into a fresh database with this version.
+   */
+  abstract needsMigration(): Promise<boolean>;
+
   abstract exportDataIterator(): AsyncGenerator<
     { type: 'comment' | 'uid' | 'entity'; content: string },
     void,

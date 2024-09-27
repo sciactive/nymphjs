@@ -1093,6 +1093,16 @@ export default class Nymph {
     }
   }
 
+  /**
+   * Detect whether the database needs to be migrated.
+   *
+   * If true, the database should be exported with an old version of Nymph, then
+   * imported into a fresh database with this version.
+   */
+  public async needsMigration(): Promise<boolean> {
+    return await this.driver.needsMigration();
+  }
+
   public on<T extends NymphEventType>(
     event: T,
     callback: T extends 'connect'

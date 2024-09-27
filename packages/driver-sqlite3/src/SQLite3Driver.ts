@@ -647,13 +647,16 @@ export default class SQLite3Driver extends NymphDriver {
 
     // Get the etypes.
     const tables: IterableIterator<any> = this.queryIter(
-      "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name;",
+      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix;",
+      {
+        params: {
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
     );
     const etypes = [];
     for (const table of tables) {
-      if (table.name.startsWith(this.prefix + 'entities_')) {
-        etypes.push(table.name.substr((this.prefix + 'entities_').length));
-      }
+      etypes.push(table.name.substr((this.prefix + 'entities_').length));
     }
 
     for (const etype of etypes) {
@@ -2302,5 +2305,28 @@ export default class SQLite3Driver extends NymphDriver {
     this.queryRun(`SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted++;
     return this.nymph;
+  }
+
+  public async needsMigration(): Promise<boolean> {
+    const table: any = this.queryGet(
+      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix LIMIT 1;",
+      {
+        params: {
+          prefix: this.prefix + 'data_' + '%',
+        },
+      },
+    );
+    if (table?.name) {
+      const result: any = this.queryGet(
+        "SELECT 1 AS `exists` FROM pragma_table_info(@table) WHERE `name`='json';",
+        {
+          params: {
+            table: table.name,
+          },
+        },
+      );
+      return !result?.exists;
+    }
+    return false;
   }
 }

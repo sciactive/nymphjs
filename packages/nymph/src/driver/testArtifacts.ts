@@ -2090,6 +2090,10 @@ export function ExportImportTest(
     await checkEntityDataAndCount();
   });
 
+  it('needs migration', async () => {
+    expect(await nymph.needsMigration()).toEqual(false);
+  });
+
   it('export data', async () => {
     expect(await nymph.export(__dirname + '/testentityexport.nex')).toEqual(
       true,

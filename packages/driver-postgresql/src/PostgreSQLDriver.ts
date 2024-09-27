@@ -934,14 +934,17 @@ export default class PostgreSQLDriver extends NymphDriver {
 
     // Get the etypes.
     const tables = await this.queryIter(
-      'SELECT relname FROM pg_stat_user_tables ORDER BY relname;',
+      'SELECT "table_name" AS "table_name" FROM "information_schema"."tables" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name" LIKE @prefix;',
+      {
+        params: {
+          db: this.config.database,
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
     );
     const etypes = [];
-    for (const tableRow of tables) {
-      const table = tableRow.relname;
-      if (table.startsWith(this.prefix + 'entities_')) {
-        etypes.push(table.substr((this.prefix + 'entities_').length));
-      }
+    for (const table of tables) {
+      etypes.push(table.table_name.substr((this.prefix + 'entities_').length));
     }
 
     for (const etype of etypes) {
@@ -2132,32 +2135,20 @@ export default class PostgreSQLDriver extends NymphDriver {
     etype: string;
   }) {
     try {
-      await this.queryRun(
-        `DELETE FROM ${PostgreSQLDriver.escape(
-          `${this.prefix}entities_${etype}`,
-        )} WHERE "guid"=decode(@guid, 'hex');`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
+      let promises = [];
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${PostgreSQLDriver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} WHERE "guid"=decode(@guid, 'hex');`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
           },
-        },
+        ),
       );
-      await this.queryRun(
-        `INSERT INTO ${PostgreSQLDriver.escape(
-          `${this.prefix}entities_${etype}`,
-        )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @mdate);`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
-            tags,
-            cdate: isNaN(cdate) ? null : cdate,
-            mdate: isNaN(mdate) ? null : mdate,
-          },
-        },
-      );
-      const promises = [];
       promises.push(
         this.queryRun(
           `DELETE FROM ${PostgreSQLDriver.escape(
@@ -2198,6 +2189,21 @@ export default class PostgreSQLDriver extends NymphDriver {
         ),
       );
       await Promise.all(promises);
+      promises = [];
+      await this.queryRun(
+        `INSERT INTO ${PostgreSQLDriver.escape(
+          `${this.prefix}entities_${etype}`,
+        )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @mdate);`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+            tags,
+            cdate: isNaN(cdate) ? null : cdate,
+            mdate: isNaN(mdate) ? null : mdate,
+          },
+        },
+      );
       for (const name in sdata) {
         const value = sdata[name];
         const uvalue = JSON.parse(value);
@@ -2214,7 +2220,6 @@ export default class PostgreSQLDriver extends NymphDriver {
           storageValue === 'J'
             ? PostgreSQLDriver.escapeNullSequences(value)
             : null;
-        const promises = [];
         promises.push(
           this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
@@ -2767,5 +2772,30 @@ export default class PostgreSQLDriver extends NymphDriver {
     (nymph.driver as PostgreSQLDriver).transaction = transaction;
 
     return nymph;
+  }
+
+  public async needsMigration(): Promise<boolean> {
+    const table = await this.queryGet(
+      'SELECT "table_name" AS "table_name" FROM "information_schema"."tables" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name" LIKE @prefix LIMIT 1;',
+      {
+        params: {
+          db: this.config.database,
+          prefix: this.prefix + 'data_' + '%',
+        },
+      },
+    );
+    if (table?.table_name) {
+      const result = await this.queryGet(
+        'SELECT 1 AS "exists" FROM "information_schema"."columns" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name"=@table AND "column_name"=\'json\';',
+        {
+          params: {
+            db: this.config.database,
+            table: table.table_name,
+          },
+        },
+      );
+      return !result?.exists;
+    }
+    return false;
   }
 }

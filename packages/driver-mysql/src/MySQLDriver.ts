@@ -226,7 +226,7 @@ export default class MySQLDriver extends NymphDriver {
           \`string\` LONGTEXT,
           \`number\` DOUBLE,
           \`truthy\` BOOLEAN,
-          PRIMARY KEY (\`guid\`,\`name\`(255)),
+          PRIMARY KEY (\`guid\`, \`name\`(255)),
           INDEX \`id_guid\` USING HASH (\`guid\`),
           INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
           INDEX \`id_name\` USING BTREE (\`name\`(255)),
@@ -653,13 +653,18 @@ export default class MySQLDriver extends NymphDriver {
     }
 
     // Get the etypes.
-    const tables = await this.queryIter('SHOW TABLES;');
+    const tables = await this.queryIter(
+      'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix;',
+      {
+        params: {
+          db: this.config.database,
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
+    );
     const etypes = [];
-    for (const tableRow of tables) {
-      const table = tableRow[Object.keys(tableRow)[0]];
-      if (table.startsWith(this.prefix + 'entities_')) {
-        etypes.push(table.substr((this.prefix + 'entities_').length));
-      }
+    for (const table of tables) {
+      etypes.push(table.table_name.substr((this.prefix + 'entities_').length));
     }
 
     for (const etype of etypes) {
@@ -1869,21 +1874,20 @@ export default class MySQLDriver extends NymphDriver {
     etype: string;
   }) {
     try {
-      await this.queryRun(
-        `REPLACE INTO ${MySQLDriver.escape(
-          `${this.prefix}entities_${etype}`,
-        )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
-            tags: ' ' + tags.join(' ') + ' ',
-            cdate: isNaN(cdate) ? null : cdate,
-            mdate: isNaN(mdate) ? null : mdate,
+      let promises = [];
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} WHERE \`guid\`=UNHEX(@guid);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
           },
-        },
+        ),
       );
-      const promises = [];
       promises.push(
         this.queryRun(
           `DELETE FROM ${MySQLDriver.escape(
@@ -1924,6 +1928,21 @@ export default class MySQLDriver extends NymphDriver {
         ),
       );
       await Promise.all(promises);
+      promises = [];
+      await this.queryRun(
+        `INSERT INTO ${MySQLDriver.escape(
+          `${this.prefix}entities_${etype}`,
+        )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+            tags: ' ' + tags.join(' ') + ' ',
+            cdate: isNaN(cdate) ? null : cdate,
+            mdate: isNaN(mdate) ? null : mdate,
+          },
+        },
+      );
       for (const name in sdata) {
         const value = sdata[name];
         const uvalue = JSON.parse(value);
@@ -1937,7 +1956,6 @@ export default class MySQLDriver extends NymphDriver {
             ? 'S'
             : 'J';
         const jsonValue = storageValue === 'J' ? value : null;
-        const promises = [];
         promises.push(
           this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
@@ -2477,5 +2495,30 @@ export default class MySQLDriver extends NymphDriver {
     (nymph.driver as MySQLDriver).transaction = transaction;
 
     return nymph;
+  }
+
+  public async needsMigration(): Promise<boolean> {
+    const table = await this.queryGet(
+      'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix LIMIT 1;',
+      {
+        params: {
+          db: this.config.database,
+          prefix: this.prefix + 'data_' + '%',
+        },
+      },
+    );
+    if (table?.table_name) {
+      const result = await this.queryGet(
+        "SELECT 1 AS `exists` FROM `information_schema`.`columns` WHERE `table_schema`=@db AND `table_name`=@table AND `column_name`='json';",
+        {
+          params: {
+            db: this.config.database,
+            table: table.table_name,
+          },
+        },
+      );
+      return !result?.exists;
+    }
+    return false;
   }
 }
