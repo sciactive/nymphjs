@@ -7,7 +7,7 @@
     "lint": "prettier --ignore-unknown --check \"**/*\"",
     "clean": "lerna run clean",
     "docs": "typedoc",
-    "prepare": "husky install && npm run lint",
+    "prepare": "husky && npm run lint",
     "postinstall": "npm run build",
     "build": "lerna run build",
     "test": "lerna run test --concurrency=1 --stream --no-prefix --no-progress --no-bail -- --passWithNoTests",
