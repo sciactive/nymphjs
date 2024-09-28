@@ -932,21 +932,6 @@ export default class MySQLDriver extends NymphDriver {
                   ')';
                 params[name] = curValue[0];
                 params[value] = curValue[1];
-              } else if (curValue[1] == null) {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const name = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'EXISTS (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `guid`=' +
-                  ieTable +
-                  '.`guid` AND `name`=@' +
-                  name +
-                  " AND JSON_TYPE(`json`)='NULL')";
-                params[name] = curValue[0];
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -970,9 +955,9 @@ export default class MySQLDriver extends NymphDriver {
                   ieTable +
                   '.`guid` AND `name`=@' +
                   name +
-                  ' AND `json`=@' +
+                  ' AND `json`=CAST(@' +
                   value +
-                  ')';
+                  ' AS JSON))';
                 params[name] = curValue[0];
                 params[value] = svalue;
               }

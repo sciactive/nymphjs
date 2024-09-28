@@ -458,6 +458,40 @@ export function EntitiesTest(
       { type: '&', equal: ['null', null] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
+
+    // Retrieving entity by equal...
+    resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      { type: '&', equal: ['boolean', true] },
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+
+    // Retrieving entity by equal...
+    resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      { type: '&', equal: ['number', 30] },
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+
+    // Retrieving entity by equal...
+    resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      {
+        type: '&',
+        equal: [
+          'array',
+          [
+            'full',
+            'of',
+            'values',
+            500,
+            { test: true },
+            { nullbyte: '\\\x00\u0000  \x00' },
+          ],
+        ],
+      },
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
 
   it('not equal', async () => {
