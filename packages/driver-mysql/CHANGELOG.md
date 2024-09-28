@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.81](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.80...v1.0.0-beta.81) (2024-09-28)
+
+### Features
+
+- add index to json column in mysql ([afe684f](https://github.com/sciactive/nymphjs/commit/afe684ffe54b105e878a8aa5324085bb6571966e))
+
 # [1.0.0-beta.80](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.79...v1.0.0-beta.80) (2024-09-28)
 
 ### Bug Fixes
