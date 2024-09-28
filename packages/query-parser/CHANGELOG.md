@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.79](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.78...v1.0.0-beta.79) (2024-09-28)
+
+**Note:** Version bump only for package @nymphjs/query-parser
+
 # [1.0.0-beta.78](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.77...v1.0.0-beta.78) (2024-09-27)
 
 **Note:** Version bump only for package @nymphjs/query-parser

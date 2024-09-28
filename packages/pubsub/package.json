@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/pubsub",
-  "version": "1.0.0-beta.78",
+  "version": "1.0.0-beta.79",
   "description": "Nymph.js - PubSub Server",
   "type": "commonjs",
   "main": "dist/index.js",
@@ -31,15 +31,15 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/nymph": "^1.0.0-beta.78",
+    "@nymphjs/nymph": "^1.0.0-beta.79",
     "lodash": "^4.17.21",
     "websocket": "^1.0.34"
   },
   "devDependencies": {
-    "@nymphjs/client": "^1.0.0-beta.78",
-    "@nymphjs/client-node": "^1.0.0-beta.78",
-    "@nymphjs/driver-sqlite3": "^1.0.0-beta.78",
-    "@nymphjs/server": "^1.0.0-beta.78",
+    "@nymphjs/client": "^1.0.0-beta.79",
+    "@nymphjs/client-node": "^1.0.0-beta.79",
+    "@nymphjs/driver-sqlite3": "^1.0.0-beta.79",
+    "@nymphjs/server": "^1.0.0-beta.79",
     "@tsconfig/recommended": "^1.0.3",
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.12",

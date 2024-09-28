@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.79](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.78...v1.0.0-beta.79) (2024-09-28)
+
+### Bug Fixes
+
+- mysql equal clause with null value ([63fce80](https://github.com/sciactive/nymphjs/commit/63fce80cc9461027664d0a2e83bf14e4aee2bfbb))
+
 # [1.0.0-beta.78](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.77...v1.0.0-beta.78) (2024-09-27)
 
 ### Features
