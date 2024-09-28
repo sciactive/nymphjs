@@ -446,9 +446,16 @@ export function EntitiesTest(
     await createTestEntities();
 
     // Retrieving entity by equal...
-    const resultEntity = await nymph.getEntities(
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       { type: '&', equal: ['string', 'test'] },
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+
+    // Retrieving entity by equal...
+    resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      { type: '&', equal: ['null', null] },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
