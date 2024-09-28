@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.80](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.79...v1.0.0-beta.80) (2024-09-28)
+
+### Bug Fixes
+
+- more mysql json queries ([33a72e6](https://github.com/sciactive/nymphjs/commit/33a72e679c02a4f49a6fa232305c4228841754d3))
+
 # [1.0.0-beta.79](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.78...v1.0.0-beta.79) (2024-09-28)
 
 ### Bug Fixes
