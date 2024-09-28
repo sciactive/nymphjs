@@ -230,9 +230,10 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_guid\` USING HASH (\`guid\`),
           INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
           INDEX \`id_name\` USING BTREE (\`name\`(255)),
-          INDEX \`id_name_truthy\` USING HASH (\`name\`(255), \`truthy\`),
+          INDEX \`id_name_json\` USING BTREE (\`name\`(255), (CAST(\`json\` AS CHAR(512)) COLLATE utf8mb4_bin)),
           INDEX \`id_name_string\` USING BTREE (\`name\`(255), \`string\`(512)),
-          INDEX \`id_name_number\` USING BTREE (\`name\`(255), \`number\`)
+          INDEX \`id_name_number\` USING BTREE (\`name\`(255), \`number\`),
+          INDEX \`id_name_truthy\` USING HASH (\`name\`(255), \`truthy\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
@@ -947,17 +948,31 @@ export default class MySQLDriver extends NymphDriver {
                 }
                 const name = `param${++count.i}`;
                 const value = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'EXISTS (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `guid`=' +
-                  ieTable +
-                  '.`guid` AND `name`=@' +
-                  name +
-                  ' AND `json`=CAST(@' +
-                  value +
-                  ' AS JSON))';
+                if (svalue.length < 512) {
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                    'EXISTS (SELECT `guid` FROM ' +
+                    MySQLDriver.escape(this.prefix + 'data_' + etype) +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
+                    name +
+                    ' AND (CAST(`json` AS CHAR(512)) COLLATE utf8mb4_bin)=CAST(CAST(@' +
+                    value +
+                    ' AS JSON) AS CHAR(512)))';
+                } else {
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                    'EXISTS (SELECT `guid` FROM ' +
+                    MySQLDriver.escape(this.prefix + 'data_' + etype) +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
+                    name +
+                    ' AND `json`=CAST(@' +
+                    value +
+                    ' AS JSON))';
+                }
                 params[name] = curValue[0];
                 params[value] = svalue;
               }

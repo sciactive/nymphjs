@@ -492,6 +492,16 @@ export function EntitiesTest(
       },
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
+
+    // Retrieving entity by equal...
+    resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      {
+        type: '&',
+        equal: ['match', matchValue],
+      },
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
 
   it('not equal', async () => {
