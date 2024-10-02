@@ -102,11 +102,9 @@ To develop Nymph.js, checkout the repo and run:
 
 ```sh
 npm i
-npm run bootstrap
-rm packages/*/package-lock.json
 ```
 
-Once you make changes in one package, you can either build that package directly or build all packages with `bootstrap`, then the other packages will be aware of the changes.
+Once you make changes in one package, you can either build that package directly or build all packages with `npm run build` in the root directory, then the other packages will be aware of the changes.
 
 ## Testing
 
@@ -130,7 +128,7 @@ npm run test:db:stop
 
 # License
 
-Copyright 2021 SciActive Inc
+Copyright 2021-2024 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
