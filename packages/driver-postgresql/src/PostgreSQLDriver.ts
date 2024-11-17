@@ -1,5 +1,6 @@
 import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
 import format from 'pg-format';
+import Cursor from 'pg-cursor';
 import {
   NymphDriver,
   type EntityConstructor,
@@ -645,7 +646,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     }
   }
 
-  private queryIter(
+  private queryArray(
     query: string,
     {
       etypes = [],
@@ -676,6 +677,54 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         );
         return results.rows;
+      },
+      `${query} -- ${JSON.stringify(params)}`,
+      etypes,
+    );
+  }
+
+  private async queryIter(
+    query: string,
+    {
+      etypes = [],
+      params = {},
+    }: {
+      etypes?: string[];
+      params?: { [k: string]: any };
+    } = {},
+  ) {
+    const { query: newQuery, params: newParams } = this.translateQuery(
+      query,
+      params,
+    );
+    const that = this;
+
+    return this.query(
+      async function* (): AsyncGenerator<any, void, false | undefined> {
+        const transaction = !!that.transaction?.connection;
+        const connection = await that.getConnection();
+        const cursor = new Cursor(newQuery, newParams);
+        const iter = connection.client.query(cursor);
+
+        while (true) {
+          const rows = await iter.read(100);
+
+          if (!rows.length) {
+            await new Promise<void>((resolve) => {
+              iter.close(() => {
+                if (!transaction) {
+                  connection.done();
+                }
+                resolve();
+              });
+            });
+            return;
+          }
+
+          for (let row of rows) {
+            yield row;
+          }
+        }
       },
       `${query} -- ${JSON.stringify(params)}`,
       etypes,
@@ -911,7 +960,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         `${this.prefix}uids`,
       )} ORDER BY "name";`,
     );
-    for (const uid of uids) {
+    for await (const uid of uids) {
       if (yield { type: 'uid', content: `<${uid.name}>[${uid.cur_uid}]\n` }) {
         return;
       }
@@ -933,7 +982,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     }
 
     // Get the etypes.
-    const tables = await this.queryIter(
+    const tables = await this.queryArray(
       'SELECT "table_name" AS "table_name" FROM "information_schema"."tables" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name" LIKE @prefix;',
       {
         params: {
@@ -949,17 +998,15 @@ export default class PostgreSQLDriver extends NymphDriver {
 
     for (const etype of etypes) {
       // Export entities.
-      const dataIterator = (
-        await this.queryIter(
-          `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name", d."value", d."json", d."string", d."number"
+      const dataIterator = await this.queryIter(
+        `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name", d."value", d."json", d."string", d."number"
           FROM ${PostgreSQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}data_${etype}`,
           )} d ON e."guid"=d."guid"
           ORDER BY e."guid";`,
-        )
-      )[Symbol.iterator]();
-      let datum = dataIterator.next();
+      );
+      let datum = await dataIterator.next();
       while (!datum.done) {
         const guid = datum.value.guid;
         const tags = datum.value.tags.filter((tag: string) => tag).join(',');
@@ -986,11 +1033,11 @@ export default class PostgreSQLDriver extends NymphDriver {
                   )
                 : datum.value.value;
             currentEntityExport.push(`\t${datum.value.name}=${value}`);
-            datum = dataIterator.next();
+            datum = await dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
         } else {
           // Make sure that datum is incremented :)
-          datum = dataIterator.next();
+          datum = await dataIterator.next();
         }
         currentEntityExport.push('');
 
@@ -2039,7 +2086,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       formattedSelectors,
       etype,
     );
-    const result = this.queryIter(query, { etypes, params }).then((val) =>
+    const result = this.queryArray(query, { etypes, params }).then((val) =>
       val[Symbol.iterator](),
     );
     return {

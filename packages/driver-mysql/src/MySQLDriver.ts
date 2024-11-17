@@ -363,7 +363,7 @@ export default class MySQLDriver extends NymphDriver {
     }
   }
 
-  private queryIter(
+  private queryArray(
     query: string,
     {
       etypes = [],
@@ -627,7 +627,7 @@ export default class MySQLDriver extends NymphDriver {
     }
 
     // Export UIDs.
-    let uids = await this.queryIter(
+    let uids = await this.queryArray(
       `SELECT * FROM ${MySQLDriver.escape(
         `${this.prefix}uids`,
       )} ORDER BY \`name\`;`,
@@ -654,7 +654,7 @@ export default class MySQLDriver extends NymphDriver {
     }
 
     // Get the etypes.
-    const tables = await this.queryIter(
+    const tables = await this.queryArray(
       'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix;',
       {
         params: {
@@ -671,7 +671,7 @@ export default class MySQLDriver extends NymphDriver {
     for (const etype of etypes) {
       // Export entities.
       const dataIterator = (
-        await this.queryIter(
+        await this.queryArray(
           `SELECT LOWER(HEX(e.\`guid\`)) AS \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, d.\`json\`, d.\`string\`, d.\`number\`
           FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${MySQLDriver.escape(
@@ -1787,7 +1787,7 @@ export default class MySQLDriver extends NymphDriver {
       formattedSelectors,
       etype,
     );
-    const result = this.queryIter(query, { etypes, params }).then((val) =>
+    const result = this.queryArray(query, { etypes, params }).then((val) =>
       val[Symbol.iterator](),
     );
     return {

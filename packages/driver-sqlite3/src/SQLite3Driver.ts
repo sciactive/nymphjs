@@ -421,7 +421,7 @@ export default class SQLite3Driver extends NymphDriver {
     }
   }
 
-  private queryIter(
+  private queryArray(
     query: string,
     {
       etypes = [],
@@ -619,7 +619,7 @@ export default class SQLite3Driver extends NymphDriver {
     }
 
     // Export UIDs.
-    let uids: IterableIterator<any> = this.queryIter(
+    let uids: IterableIterator<any> = this.queryArray(
       `SELECT * FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`,
       )} ORDER BY "name";`,
@@ -646,7 +646,7 @@ export default class SQLite3Driver extends NymphDriver {
     }
 
     // Get the etypes.
-    const tables: IterableIterator<any> = this.queryIter(
+    const tables: IterableIterator<any> = this.queryArray(
       "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix;",
       {
         params: {
@@ -661,7 +661,7 @@ export default class SQLite3Driver extends NymphDriver {
 
     for (const etype of etypes) {
       // Export entities.
-      const dataIterator: IterableIterator<any> = this.queryIter(
+      const dataIterator: IterableIterator<any> = this.queryArray(
         `SELECT e.*, d."name", d."value", json(d."json") as "json", d."string", d."number" FROM ${SQLite3Driver.escape(
           `${this.prefix}entities_${etype}`,
         )} e LEFT JOIN ${SQLite3Driver.escape(
@@ -1692,7 +1692,9 @@ export default class SQLite3Driver extends NymphDriver {
       formattedSelectors,
       etype,
     );
-    const result = this.queryIter(query, { etypes, params })[Symbol.iterator]();
+    const result = this.queryArray(query, { etypes, params })[
+      Symbol.iterator
+    ]();
     return {
       result,
     };
