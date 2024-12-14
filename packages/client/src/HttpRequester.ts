@@ -61,18 +61,18 @@ export default class HttpRequester {
     callback: T extends 'request'
       ? HttpRequesterRequestCallback
       : T extends 'response'
-      ? HttpRequesterResponseCallback
-      : T extends 'iterator'
-      ? HttpRequesterIteratorCallback
-      : never,
+        ? HttpRequesterResponseCallback
+        : T extends 'iterator'
+          ? HttpRequesterIteratorCallback
+          : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
       : T extends 'response'
-      ? 'responseCallbacks'
-      : T extends 'iterator'
-      ? 'iteratorCallbacks'
-      : never;
+        ? 'responseCallbacks'
+        : T extends 'iterator'
+          ? 'iteratorCallbacks'
+          : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
@@ -86,18 +86,18 @@ export default class HttpRequester {
     callback: T extends 'request'
       ? HttpRequesterRequestCallback
       : T extends 'response'
-      ? HttpRequesterResponseCallback
-      : T extends 'iterator'
-      ? HttpRequesterIteratorCallback
-      : never,
+        ? HttpRequesterResponseCallback
+        : T extends 'iterator'
+          ? HttpRequesterIteratorCallback
+          : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
       : T extends 'response'
-      ? 'responseCallbacks'
-      : T extends 'iterator'
-      ? 'iteratorCallbacks'
-      : never;
+        ? 'responseCallbacks'
+        : T extends 'iterator'
+          ? 'iteratorCallbacks'
+          : never;
     if (!(prop in this)) {
       return false;
     }
@@ -189,12 +189,12 @@ export default class HttpRequester {
       throw response.status < 200
         ? new InformationalError(response, errObj)
         : response.status < 300
-        ? new SuccessError(response, errObj)
-        : response.status < 400
-        ? new RedirectError(response, errObj)
-        : response.status < 500
-        ? new ClientError(response, errObj)
-        : new ServerError(response, errObj);
+          ? new SuccessError(response, errObj)
+          : response.status < 400
+            ? new RedirectError(response, errObj)
+            : response.status < 500
+              ? new ClientError(response, errObj)
+              : new ServerError(response, errObj);
     }
     for (let i = 0; i < this.responseCallbacks.length; i++) {
       this.responseCallbacks[i] &&
@@ -300,12 +300,12 @@ export default class HttpRequester {
         throw response.status < 200
           ? new InformationalError(response, errObj)
           : response.status < 300
-          ? new SuccessError(response, errObj)
-          : response.status < 400
-          ? new RedirectError(response, errObj)
-          : response.status < 500
-          ? new ClientError(response, errObj)
-          : new ServerError(response, errObj);
+            ? new SuccessError(response, errObj)
+            : response.status < 400
+              ? new RedirectError(response, errObj)
+              : response.status < 500
+                ? new ClientError(response, errObj)
+                : new ServerError(response, errObj);
       },
 
       onmessage(event) {
@@ -357,12 +357,12 @@ export default class HttpRequester {
             errObj.status < 200
               ? new InformationalError(serverResponse, errObj)
               : errObj.status < 300
-              ? new SuccessError(serverResponse, errObj)
-              : errObj.status < 400
-              ? new RedirectError(serverResponse, errObj)
-              : errObj.status < 500
-              ? new ClientError(serverResponse, errObj)
-              : new ServerError(serverResponse, errObj),
+                ? new SuccessError(serverResponse, errObj)
+                : errObj.status < 400
+                  ? new RedirectError(serverResponse, errObj)
+                  : errObj.status < 500
+                    ? new ClientError(serverResponse, errObj)
+                    : new ServerError(serverResponse, errObj),
           );
         } else if (event.event === 'finished') {
           responsesDone = true;

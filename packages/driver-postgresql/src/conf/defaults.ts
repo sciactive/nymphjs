@@ -1,4 +1,4 @@
-import { PostgreSQLDriverConfig } from './d';
+import { PostgreSQLDriverConfig } from './d.js';
 
 export default {
   host: 'localhost',

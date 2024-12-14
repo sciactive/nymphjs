@@ -1,6 +1,6 @@
-import { EntityReference } from './Entity.types';
-import Nymph from './Nymph';
-import Entity from './Entity';
+import { EntityReference } from './Entity.types.js';
+import Nymph from './Nymph.js';
+import Entity from './Entity.js';
 
 export function uniqueStrings(array: string[]) {
   const obj: { [k: string]: true } = {};

@@ -2,11 +2,8 @@ import express from 'express';
 import { SQLite3Driver } from '@nymphjs/driver-sqlite3';
 import { Nymph } from '@nymphjs/nymph';
 import { Tilmeld } from '@nymphjs/tilmeld';
-import server from '@nymphjs/server';
-import setupApp from './dist/index.js';
-
-const createServer = server.default;
-const setup = setupApp.default;
+import createServer from '@nymphjs/server';
+import setup from './dist/index.js';
 
 const nymph = new Nymph(
   {},

@@ -1,8 +1,12 @@
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
-import strtotime from 'locutus/php/datetime/strtotime';
+import strtotime from 'locutus/php/datetime/strtotime.js';
 import type { NymphOptions } from '@nymphjs/client';
 import type { Nymph } from '@nymphjs/nymph';
 import { enforceTilmeld } from '@nymphjs/tilmeld';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function setup(
   options: NymphOptions,

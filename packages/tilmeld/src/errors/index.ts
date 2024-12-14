@@ -1,11 +1,11 @@
-export * from './AccessControlError';
+export * from './AccessControlError.js';
 
-export * from './BadDataError';
+export * from './BadDataError.js';
 
-export * from './BadEmailError';
+export * from './BadEmailError.js';
 
-export * from './BadUsernameError';
+export * from './BadUsernameError.js';
 
-export * from './CouldNotChangeDefaultPrimaryGroupError';
+export * from './CouldNotChangeDefaultPrimaryGroupError.js';
 
-export * from './EmailChangeRateLimitExceededError';
+export * from './EmailChangeRateLimitExceededError.js';

@@ -1,5 +1,5 @@
 // Nymph expects fetch and WebSocket.
-import { w3cwebsocket } from 'websocket';
+import ws from 'websocket';
 import fetch from 'node-fetch';
 import { Nymph, PubSub, type NymphOptions } from '@nymphjs/client';
 
@@ -34,7 +34,7 @@ class NodePubSub extends PubSub {
   constructor(nymphOptions: NymphOptions, nymph: Nymph) {
     super(
       {
-        WebSocket: w3cwebsocket as unknown as typeof WebSocket,
+        WebSocket: ws.w3cwebsocket as unknown as typeof WebSocket,
         ...nymphOptions,
       },
       nymph,

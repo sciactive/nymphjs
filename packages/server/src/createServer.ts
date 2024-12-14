@@ -18,7 +18,7 @@ import {
 } from '@nymphjs/nymph';
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
-import { statusDescriptions } from './statusDescriptions';
+import { statusDescriptions } from './statusDescriptions.js';
 
 type NymphResponse = Response<any, { nymph: Nymph }>;
 

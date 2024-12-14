@@ -1,4 +1,4 @@
-<svelte:window on:resize={setMiniWindow} />
+<svelte:window onresize={setMiniWindow} />
 
 <TopAppBar variant="static" class="tilmeld-top-app-bar">
   <Row>
@@ -6,7 +6,7 @@
       {#if miniWindow}
         <IconButton
           class="material-icons"
-          on:click={() => (drawerOpen = !drawerOpen)}>menu</IconButton
+          onclick={() => (drawerOpen = !drawerOpen)}>menu</IconButton
         >
       {/if}
       <Title style={miniWindow ? 'padding-left: 0;' : ''}>
@@ -37,17 +37,17 @@
       <div>
         <IconButton
           title="Account"
-          on:click={() => user != null && accountMenu.setOpen(true)}
+          onclick={() => $user != null && accountMenu.setOpen(true)}
         >
           <Icon tag="img" src={userAvatar} />
         </IconButton>
         <Menu bind:this={accountMenu} anchorCorner="BOTTOM_LEFT">
           <List>
-            <Item on:SMUI:action={() => (accountOpen = true)}>
+            <Item onSMUIAction={() => (accountOpen = true)}>
               <Text>Account Details</Text>
             </Item>
             <Separator />
-            <Item on:SMUI:action={() => user?.$logout()}>
+            <Item onSMUIAction={() => $user?.$logout()}>
               <Text>Logout</Text>
             </Item>
           </List>
@@ -89,12 +89,12 @@
               </Item>
             {/if}
           {/each}
-        {:else if user == null}
-          <Item tag="span" on:click={() => (drawerOpen = false)} activated>
+        {:else if $user == null}
+          <Item tag="span" onclick={() => (drawerOpen = false)} activated>
             <Text class="mdc-theme--on-secondary">Login</Text>
           </Item>
         {:else}
-          <Item tag="span" on:click={() => (drawerOpen = false)} activated>
+          <Item tag="span" onclick={() => (drawerOpen = false)} activated>
             <Text class="mdc-theme--on-secondary">Forbidden</Text>
           </Item>
         {/if}
@@ -108,12 +108,12 @@
   <AppContent class="tilmeld-app-content">
     <main class="tilmeld-main-content" bind:this={mainContent}>
       {#if tilmeldAdmin}
-        {#if clientConfig}
-          <svelte:component this={CurrentRoute} {router} {params} />
+        {#if $clientConfig}
+          <CurrentRoute {router} {params} {clientConfig} {user} />
         {:else}
           Loading...
         {/if}
-      {:else if user === null}
+      {:else if $user === null}
         <section style="display: flex; justify-content: center;">
           <Login
             {User}
@@ -121,19 +121,21 @@
             showExistingUserToggle={allowRegistration}
           />
         </section>
-      {:else if user === undefined}
+      {:else if $user === undefined}
         Loading...
       {:else}
         <section>You don't have permission to access this app.</section>
       {/if}
-      <Account bind:open={accountOpen} {User} {clientConfig} />
+      <Account bind:open={accountOpen} {User} {user} {clientConfig} />
     </main>
   </AppContent>
 </div>
 
 <script lang="ts">
-  import type { ComponentType, SvelteComponent } from 'svelte';
+  import type { Component } from 'svelte';
   import { onMount } from 'svelte';
+  import type { Writable } from 'svelte/store';
+  import { writable } from 'svelte/store';
   import Navigo from 'navigo';
   import type {
     User as UserClass,
@@ -161,26 +163,31 @@
   const allowRegistration = (window as any).allowRegistration;
 
   let mainContent: HTMLElement;
-  let miniWindow = false;
-  let drawerOpen = false;
+  let miniWindow = $state(false);
+  let drawerOpen = $state(false);
   let accountMenu: any;
-  let clientConfig: ClientConfig;
-  let user: (UserClass & CurrentUserData) | null | undefined = undefined;
-  let userAvatar: string = DEFAULT_AVATAR;
-  let tilmeldAdmin: boolean | undefined = undefined;
-  let accountOpen = false;
+  let clientConfig: Writable<ClientConfig | undefined> = writable();
+  let user: Writable<(UserClass & CurrentUserData) | null | undefined> =
+    writable();
+  let userAvatar: string = $state(DEFAULT_AVATAR);
+  let tilmeldAdmin: boolean | undefined = $state();
+  let accountOpen = $state(false);
 
-  $: if (user) {
-    user.$gatekeeper('tilmeld/admin').then((value) => (tilmeldAdmin = value));
-    user.$getAvatar().then((value) => (userAvatar = value));
-  } else {
-    tilmeldAdmin = undefined;
-    userAvatar = DEFAULT_AVATAR;
-  }
+  $effect(() => {
+    if ($user) {
+      $user
+        .$gatekeeper('tilmeld/admin')
+        .then((value) => (tilmeldAdmin = value));
+      $user.$getAvatar().then((value) => (userAvatar = value));
+    } else {
+      tilmeldAdmin = undefined;
+      userAvatar = DEFAULT_AVATAR;
+    }
+  });
 
   const router = new Navigo('/', { hash: true });
-  let CurrentRoute: ComponentType<SvelteComponent> = Intro;
-  let params: any = {};
+  let CurrentRoute: Component<any> = $state(Intro);
+  let params: any = $state({});
 
   router.hooks({
     before(done, match) {
@@ -235,7 +242,7 @@
     }
   });
 
-  let currentMatch = router.getCurrentLocation();
+  let currentMatch = $state(router.getCurrentLocation());
   router.resolve();
 
   const sections: (
@@ -244,7 +251,7 @@
         indent: number;
         href?: string;
         absolute?: boolean;
-        component?: SvelteComponent;
+        component?: ReturnType<Component<any>>;
       }
     | { name: string; separator: true }
   )[] = [
@@ -271,10 +278,10 @@
   ];
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
-    user = currentUser;
+    $user = currentUser;
   };
   const onLogout = () => {
-    user = null;
+    $user = null;
   };
 
   onMount(setMiniWindow);
@@ -282,9 +289,9 @@
     User.on('login', onLogin);
     User.on('logout', onLogout);
 
-    clientConfig = await User.getClientConfig();
+    $clientConfig = await User.getClientConfig();
 
-    user = await User.current();
+    $user = await User.current();
   });
 
   function setMiniWindow() {

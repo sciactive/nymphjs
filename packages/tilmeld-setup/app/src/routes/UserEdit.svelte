@@ -1,4 +1,4 @@
-{#if clientConfig == null || user == null || loading}
+{#if $clientConfig == null || $user == null || loading}
   <section>
     <div style="display: flex; justify-content: center; align-items: center;">
       <CircularProgress style="height: 45px; width: 45px;" indeterminate />
@@ -8,29 +8,30 @@
   <div style="display: flex; align-items: center; padding: 12px;">
     <IconButton
       title="Back"
-      on:click={() => router.navigate('', { historyAPIMethod: 'back' })}
+      onclick={() => router.navigate('', { historyAPIMethod: 'back' })}
     >
       <Icon tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiArrowLeft} />
       </Icon>
     </IconButton>
     <h2 style="margin: 0px 12px 0px;" class="mdc-typography--headline5">
-      Editing {entity.guid
-        ? entity.$is(user)
+      Editing {$entity.guid
+        ? $entity.$is($user)
           ? 'Yourself'
-          : entity.name ?? entity.username
+          : ($entity.name ?? $entity.username)
         : 'New User'}
     </h2>
   </div>
 
   <TabBar
     tabs={['General', 'Groups', 'Abilities', 'Security']}
-    let:tab
     bind:active={activeTab}
   >
-    <Tab {tab}>
-      <Label>{tab}</Label>
-    </Tab>
+    {#snippet tab(tab)}
+      <Tab {tab}>
+        <Label>{tab}</Label>
+      </Tab>
+    {/snippet}
   </TabBar>
 
   <section>
@@ -38,12 +39,14 @@
       <LayoutGrid style="padding: 0;">
         <LayoutCell span={4}>
           <div class="mdc-typography--headline6">GUID</div>
-          <code>{entity.guid}</code>
+          <code>{$entity.guid}</code>
         </LayoutCell>
         <LayoutCell span={4}>
           <FormField>
-            <Checkbox bind:checked={entity.enabled} />
-            <span slot="label">Enabled (Able to log in)</span>
+            <Checkbox bind:checked={$entity.enabled} />
+            {#snippet label()}
+              Enabled (Able to log in)
+            {/snippet}
           </FormField>
         </LayoutCell>
         <LayoutCell span={4} style="text-align: end;">
@@ -51,10 +54,12 @@
             <img src={avatar} alt="Avatar" title="Avatar by Gravatar" />
           </a>
         </LayoutCell>
-        {#if !clientConfig.emailUsernames}
-          <LayoutCell span={clientConfig.userFields.includes('email') ? 6 : 12}>
+        {#if !$clientConfig.emailUsernames}
+          <LayoutCell
+            span={$clientConfig.userFields.includes('email') ? 6 : 12}
+          >
             <Textfield
-              bind:value={entity.username}
+              bind:value={$entity.username}
               label="Username"
               type="text"
               style="width: 100%;"
@@ -64,16 +69,18 @@
               input$autocapitalize="off"
               input$spellcheck="false"
             >
-              <HelperText persistent slot="helper">
-                {usernameVerifiedMessage ?? ''}
-              </HelperText>
+              {#snippet helper()}
+                <HelperText persistent>
+                  {usernameVerifiedMessage ?? ''}
+                </HelperText>
+              {/snippet}
             </Textfield>
           </LayoutCell>
         {/if}
-        {#if clientConfig.userFields.includes('email')}
-          <LayoutCell span={clientConfig.emailUsernames ? 12 : 6}>
+        {#if $clientConfig.userFields.includes('email')}
+          <LayoutCell span={$clientConfig.emailUsernames ? 12 : 6}>
             <Textfield
-              bind:value={entity.email}
+              bind:value={$entity.email}
               label="Email"
               type="email"
               style="width: 100%;"
@@ -83,16 +90,18 @@
               input$autocapitalize="off"
               input$spellcheck="false"
             >
-              <HelperText persistent slot="helper">
-                {emailVerifiedMessage ?? ''}
-              </HelperText>
+              {#snippet helper()}
+                <HelperText persistent>
+                  {emailVerifiedMessage ?? ''}
+                </HelperText>
+              {/snippet}
             </Textfield>
           </LayoutCell>
         {/if}
-        {#if clientConfig.userFields.includes('name')}
+        {#if $clientConfig.userFields.includes('name')}
           <LayoutCell span={4}>
             <Textfield
-              bind:value={entity.nameFirst}
+              bind:value={$entity.nameFirst}
               label="First Name"
               type="text"
               style="width: 100%;"
@@ -101,7 +110,7 @@
           </LayoutCell>
           <LayoutCell span={4}>
             <Textfield
-              bind:value={entity.nameMiddle}
+              bind:value={$entity.nameMiddle}
               label="Middle Name"
               type="text"
               style="width: 100%;"
@@ -110,7 +119,7 @@
           </LayoutCell>
           <LayoutCell span={4}>
             <Textfield
-              bind:value={entity.nameLast}
+              bind:value={$entity.nameLast}
               label="Last Name"
               type="text"
               style="width: 100%;"
@@ -118,19 +127,19 @@
             />
           </LayoutCell>
         {/if}
-        <LayoutCell span={clientConfig.userFields.includes('phone') ? 8 : 12}>
+        <LayoutCell span={$clientConfig.userFields.includes('phone') ? 8 : 12}>
           <Textfield
-            bind:value={entity.avatar}
+            bind:value={$entity.avatar}
             label="Avatar"
             type="text"
             style="width: 100%;"
             input$autocomplete="off"
           />
         </LayoutCell>
-        {#if clientConfig.userFields.includes('phone')}
+        {#if $clientConfig.userFields.includes('phone')}
           <LayoutCell span={4}>
             <Textfield
-              bind:value={entity.phone}
+              bind:value={$entity.phone}
               label="Phone"
               type="tel"
               style="width: 100%;"
@@ -140,8 +149,8 @@
         {/if}
         <LayoutCell span={6}>
           <Textfield
-            bind:value={entity.passwordTemp}
-            label={`${entity.guid ? 'Update ' : ''}Password`}
+            bind:value={$entity.passwordTemp}
+            label={`${$entity.guid ? 'Update ' : ''}Password`}
             type="password"
             style="width: 100%;"
             input$autocomplete="off"
@@ -155,14 +164,14 @@
             style="width: 100%;"
             invalid={passwordVerified === false}
             input$autocomplete="off"
-            on:blur={doVerifyPassword}
+            onblur={doVerifyPassword}
           />
         </LayoutCell>
       </LayoutGrid>
     {/if}
 
     {#if activeTab === 'Groups'}
-      {#if entity.guid == null}
+      {#if $entity.guid == null}
         <p style="margin-top: 0;">
           When you leave primary group empty, if Nymph is configured to generate
           primary groups, one will be generated for this new user. Otherwise,
@@ -172,24 +181,26 @@
         </p>
       {/if}
 
-      <h5 style={entity.guid == null ? '' : 'margin-top: 0;'}>Primary Group</h5>
+      <h5 style={$entity.guid == null ? '' : 'margin-top: 0;'}>
+        Primary Group
+      </h5>
 
       <Paper
         style="display: flex; justify-content: space-between; align-items: center;"
       >
-        {#if !entity.group}
+        {#if !$entity.group}
           No primary group
         {:else}
-          <a href="#/groups/edit/{encodeURIComponent(entity.group.guid || '')}"
-            >{clientConfig.userFields.includes('name')
-              ? entity.group.name + ' (' + entity.group.groupname + ')'
-              : entity.group.groupname}</a
+          <a href="#/groups/edit/{encodeURIComponent($entity.group.guid || '')}"
+            >{$clientConfig.userFields.includes('name')
+              ? $entity.group.name + ' (' + $entity.group.groupname + ')'
+              : $entity.group.groupname}</a
           >
 
           <IconButton
-            on:click={() => {
-              delete entity.group;
-              entity = entity;
+            onclick={() => {
+              delete $entity.group;
+              $entity = $entity;
             }}
           >
             <Icon tag="svg" viewBox="0 0 24 24">
@@ -208,13 +219,13 @@
           </Icon>
           <Input
             bind:value={primaryGroupSearch}
-            on:keydown={primaryGroupSearchKeyDown}
+            onkeydown={primaryGroupSearchKeyDown}
             placeholder="Primary Group Search"
             class="solo-input"
           />
         </Paper>
         <IconButton
-          on:click={searchPrimaryGroups}
+          onclick={searchPrimaryGroups}
           disabled={primaryGroupSearch === ''}
           class="solo-fab"
           title="Search"
@@ -235,13 +246,13 @@
         <DataTable table$aria-label="Primary group list" style="width: 100%;">
           <Head>
             <Row>
-              {#if !clientConfig.emailUsernames}
+              {#if !$clientConfig.emailUsernames}
                 <Cell>Groupname</Cell>
               {/if}
-              {#if clientConfig.userFields.includes('name')}
+              {#if $clientConfig.userFields.includes('name')}
                 <Cell>Name</Cell>
               {/if}
-              {#if clientConfig.userFields.includes('email')}
+              {#if $clientConfig.userFields.includes('email')}
                 <Cell>Email</Cell>
               {/if}
               <Cell>Enabled</Cell>
@@ -251,16 +262,16 @@
             <!-- Purposefully not making these links. -->
             {#each primaryGroups as curEntity (curEntity.guid)}
               <Row
-                on:click={() => (entity.group = curEntity)}
+                onclick={() => ($entity.group = curEntity)}
                 style="cursor: pointer;"
               >
-                {#if !clientConfig.emailUsernames}
+                {#if !$clientConfig.emailUsernames}
                   <Cell>{curEntity.groupname}</Cell>
                 {/if}
-                {#if clientConfig.userFields.includes('name')}
+                {#if $clientConfig.userFields.includes('name')}
                   <Cell>{curEntity.name}</Cell>
                 {/if}
-                {#if clientConfig.userFields.includes('email')}
+                {#if $clientConfig.userFields.includes('email')}
                   <Cell>{curEntity.email}</Cell>
                 {/if}
                 <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
@@ -278,13 +289,13 @@
       >
         <Head>
           <Row>
-            {#if !clientConfig.emailUsernames}
+            {#if !$clientConfig.emailUsernames}
               <Cell>Groupname</Cell>
             {/if}
-            {#if clientConfig.userFields.includes('name')}
+            {#if $clientConfig.userFields.includes('name')}
               <Cell>Name</Cell>
             {/if}
-            {#if clientConfig.userFields.includes('email')}
+            {#if $clientConfig.userFields.includes('email')}
               <Cell>Email</Cell>
             {/if}
             <Cell>Enabled</Cell>
@@ -292,63 +303,61 @@
           </Row>
         </Head>
         <Body>
-          {#if entity.groups}
-            {#each entity.groups as curEntity, index (curEntity.guid)}
-              <Row>
-                {#if !clientConfig.emailUsernames}
-                  <Cell
-                    ><a
-                      href="#/groups/edit/{encodeURIComponent(
-                        curEntity.guid || '',
-                      )}">{curEntity.groupname}</a
-                    ></Cell
-                  >
-                {/if}
-                {#if clientConfig.userFields.includes('name')}
-                  <Cell
-                    ><a
-                      href="#/groups/edit/{encodeURIComponent(
-                        curEntity.guid || '',
-                      )}">{curEntity.name}</a
-                    ></Cell
-                  >
-                {/if}
-                {#if clientConfig.userFields.includes('email')}
-                  <Cell
-                    ><a
-                      href="#/groups/edit/{encodeURIComponent(
-                        curEntity.guid || '',
-                      )}">{curEntity.email}</a
-                    ></Cell
-                  >
-                {/if}
-                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
-                <Cell>
-                  <IconButton
-                    on:click={() => {
-                      entity.groups?.splice(index, 1);
-                      entity = entity;
-                    }}
-                  >
-                    <Icon tag="svg" viewBox="0 0 24 24">
-                      <path fill="currentColor" d={mdiMinus} />
-                    </Icon>
-                  </IconButton>
-                </Cell>
-              </Row>
-            {:else}
-              <Row>
+          {#each $entity.groups || [] as curEntity, index (curEntity.guid)}
+            <Row>
+              {#if !$clientConfig.emailUsernames}
                 <Cell
-                  colspan={2 +
-                    (!clientConfig.emailUsernames ? 1 : 0) +
-                    (clientConfig.userFields.includes('name') ? 1 : 0) +
-                    (clientConfig.userFields.includes('email') ? 1 : 0)}
+                  ><a
+                    href="#/groups/edit/{encodeURIComponent(
+                      curEntity.guid || '',
+                    )}">{curEntity.groupname}</a
+                  ></Cell
                 >
-                  No secondary groups
-                </Cell>
-              </Row>
-            {/each}
-          {/if}
+              {/if}
+              {#if $clientConfig.userFields.includes('name')}
+                <Cell
+                  ><a
+                    href="#/groups/edit/{encodeURIComponent(
+                      curEntity.guid || '',
+                    )}">{curEntity.name}</a
+                  ></Cell
+                >
+              {/if}
+              {#if $clientConfig.userFields.includes('email')}
+                <Cell
+                  ><a
+                    href="#/groups/edit/{encodeURIComponent(
+                      curEntity.guid || '',
+                    )}">{curEntity.email}</a
+                  ></Cell
+                >
+              {/if}
+              <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+              <Cell>
+                <IconButton
+                  onclick={() => {
+                    $entity.groups?.splice(index, 1);
+                    $entity = $entity;
+                  }}
+                >
+                  <Icon tag="svg" viewBox="0 0 24 24">
+                    <path fill="currentColor" d={mdiMinus} />
+                  </Icon>
+                </IconButton>
+              </Cell>
+            </Row>
+          {:else}
+            <Row>
+              <Cell
+                colspan={2 +
+                  (!$clientConfig.emailUsernames ? 1 : 0) +
+                  ($clientConfig.userFields.includes('name') ? 1 : 0) +
+                  ($clientConfig.userFields.includes('email') ? 1 : 0)}
+              >
+                No secondary groups
+              </Cell>
+            </Row>
+          {/each}
         </Body>
       </DataTable>
 
@@ -361,13 +370,13 @@
           </Icon>
           <Input
             bind:value={secondaryGroupSearch}
-            on:keydown={secondaryGroupSearchKeyDown}
+            onkeydown={secondaryGroupSearchKeyDown}
             placeholder="Secondary Group Search"
             class="solo-input"
           />
         </Paper>
         <IconButton
-          on:click={searchSecondaryGroups}
+          onclick={searchSecondaryGroups}
           disabled={secondaryGroupSearch === ''}
           class="solo-fab"
           title="Search"
@@ -388,13 +397,13 @@
         <DataTable table$aria-label="Secondary group list" style="width: 100%;">
           <Head>
             <Row>
-              {#if !clientConfig.emailUsernames}
+              {#if !$clientConfig.emailUsernames}
                 <Cell>Groupname</Cell>
               {/if}
-              {#if clientConfig.userFields.includes('name')}
+              {#if $clientConfig.userFields.includes('name')}
                 <Cell>Name</Cell>
               {/if}
-              {#if clientConfig.userFields.includes('email')}
+              {#if $clientConfig.userFields.includes('email')}
                 <Cell>Email</Cell>
               {/if}
               <Cell>Enabled</Cell>
@@ -404,20 +413,20 @@
             <!-- Purposefully not making these links. -->
             {#each secondaryGroups as curEntity, index (curEntity.guid)}
               <Row
-                on:click={() => {
-                  entity.groups?.push(curEntity);
+                onclick={() => {
+                  $entity.groups?.push(curEntity);
                   secondaryGroups?.splice(index, 1);
-                  entity = entity;
+                  $entity = $entity;
                 }}
                 style="cursor: pointer;"
               >
-                {#if !clientConfig.emailUsernames}
+                {#if !$clientConfig.emailUsernames}
                   <Cell>{curEntity.groupname}</Cell>
                 {/if}
-                {#if clientConfig.userFields.includes('name')}
+                {#if $clientConfig.userFields.includes('name')}
                   <Cell>{curEntity.name}</Cell>
                 {/if}
-                {#if clientConfig.userFields.includes('email')}
+                {#if $clientConfig.userFields.includes('email')}
                   <Cell>{curEntity.email}</Cell>
                 {/if}
                 <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
@@ -432,31 +441,29 @@
       <h5 style="margin-top: 0;">Abilities</h5>
 
       <List nonInteractive>
-        {#if entity.abilities}
-          {#each entity.abilities as ability, index (ability)}
-            <Item>
-              <Text>
-                {ability}
-              </Text>
-              <Meta>
-                <IconButton
-                  on:click={() => {
-                    entity.abilities?.splice(index, 1);
-                    entity = entity;
-                  }}
-                >
-                  <Icon tag="svg" viewBox="0 0 24 24">
-                    <path fill="currentColor" d={mdiMinus} />
-                  </Icon>
-                </IconButton>
-              </Meta>
-            </Item>
-          {:else}
-            <Item>
-              <Text>No abilities</Text>
-            </Item>
-          {/each}
-        {/if}
+        {#each $entity.abilities || [] as ability, index (ability)}
+          <Item>
+            <Text>
+              {ability}
+            </Text>
+            <Meta>
+              <IconButton
+                onclick={() => {
+                  $entity.abilities?.splice(index, 1);
+                  $entity = $entity;
+                }}
+              >
+                <Icon tag="svg" viewBox="0 0 24 24">
+                  <path fill="currentColor" d={mdiMinus} />
+                </Icon>
+              </IconButton>
+            </Meta>
+          </Item>
+        {:else}
+          <Item>
+            <Text>No abilities</Text>
+          </Item>
+        {/each}
       </List>
 
       <h6>Add Ability</h6>
@@ -467,28 +474,28 @@
           label="Ability"
           type="text"
           style="width: 250px; max-width: 100%;"
-          on:keydown={abilityKeyDown}
+          onkeydown={abilityKeyDown}
         />
-        <IconButton on:click={addAbility}>
+        <IconButton onclick={addAbility}>
           <Icon tag="svg" viewBox="0 0 24 24">
             <path fill="currentColor" d={mdiPlus} />
           </Icon>
         </IconButton>
         {#if sysAdmin}
           <Button
-            on:click={addSystemAdminAbility}
+            onclick={addSystemAdminAbility}
             title="System Admins have all abilities. Gatekeeper checks always return true."
           >
             <Label>System Admin</Label>
           </Button>
           <Button
-            on:click={addTilmeldAdminAbility}
+            onclick={addTilmeldAdminAbility}
             title="Tilmeld Admins have the ability to modify, create, and delete users and groups, and grant and revoke abilities."
           >
             <Label>Tilmeld Admin</Label>
           </Button>
           <Button
-            on:click={addTilmeldSwitchAbility}
+            onclick={addTilmeldSwitchAbility}
             title="The switch user ability lets a user log in as another non-admin user without needing their password."
           >
             <Label>Switch User</Label>
@@ -500,18 +507,18 @@
 
       <div>
         <FormField>
-          <Checkbox bind:checked={entity.inheritAbilities} />
-          <span slot="label"
-            >Additionally, inherit the abilities of the group(s) this user
-            belongs to.</span
-          >
+          <Checkbox bind:checked={$entity.inheritAbilities} />
+          {#snippet label()}
+            Additionally, inherit the abilities of the group(s) this user
+            belongs to.
+          {/snippet}
         </FormField>
       </div>
     {/if}
 
     {#if activeTab === 'Security'}
       <LayoutGrid style="padding: 0;">
-        {#if clientConfig.userFields.includes('email')}
+        {#if $clientConfig.userFields.includes('email')}
           <LayoutCell span={12}>
             <h5>Verification</h5>
             <p>
@@ -521,7 +528,7 @@
           </LayoutCell>
           <LayoutCell span={12}>
             <Textfield
-              bind:value={entity.secret}
+              bind:value={$entity.secret}
               label="Email Verification Secret"
               type="text"
               style="width: 100%;"
@@ -538,7 +545,7 @@
           </LayoutCell>
           <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.recoverSecret}
+              bind:value={$entity.recoverSecret}
               label="Account Recovery Secret"
               type="text"
               style="width: 100%;"
@@ -547,18 +554,20 @@
           </LayoutCell>
           <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.recoverSecretDate}
+              bind:value={$entity.recoverSecretDate}
               label="Account Recovery Date (Timestamp)"
               type="number"
               style="width: 100%;"
               input$autocomplete="off"
             >
-              <HelperText persistent slot="helper">
-                {entity.recoverSecretDate === 0 ||
-                entity.recoverSecretDate == null
-                  ? 'Unset'
-                  : new Date(entity.recoverSecretDate).toLocaleString()}
-              </HelperText>
+              {#snippet helper()}
+                <HelperText persistent>
+                  {$entity.recoverSecretDate === 0 ||
+                  $entity.recoverSecretDate == null
+                    ? 'Unset'
+                    : new Date($entity.recoverSecretDate).toLocaleString()}
+                </HelperText>
+              {/snippet}
             </Textfield>
           </LayoutCell>
           <LayoutCell span={12}>
@@ -575,22 +584,25 @@
           </LayoutCell>
           <LayoutCell span={12}>
             <Textfield
-              bind:value={entity.emailChangeDate}
+              bind:value={$entity.emailChangeDate}
               label="Email Change Date (Timestamp)"
               type="number"
               style="width: 100%;"
               input$autocomplete="off"
             >
-              <HelperText persistent slot="helper">
-                {entity.emailChangeDate === 0 || entity.emailChangeDate == null
-                  ? 'Unset'
-                  : new Date(entity.emailChangeDate).toLocaleString()}
-              </HelperText>
+              {#snippet helper()}
+                <HelperText persistent>
+                  {$entity.emailChangeDate === 0 ||
+                  $entity.emailChangeDate == null
+                    ? 'Unset'
+                    : new Date($entity.emailChangeDate).toLocaleString()}
+                </HelperText>
+              {/snippet}
             </Textfield>
           </LayoutCell>
           <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.newEmailSecret}
+              bind:value={$entity.newEmailSecret}
               label="New Email Verification Secret"
               type="text"
               style="width: 100%;"
@@ -599,7 +611,7 @@
           </LayoutCell>
           <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.newEmailAddress}
+              bind:value={$entity.newEmailAddress}
               label="New Email Address"
               type="email"
               style="width: 100%;"
@@ -608,7 +620,7 @@
           </LayoutCell>
           <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.cancelEmailSecret}
+              bind:value={$entity.cancelEmailSecret}
               label="Cancel Email Verification Secret"
               type="text"
               style="width: 100%;"
@@ -617,7 +629,7 @@
           </LayoutCell>
           <LayoutCell span={6}>
             <Textfield
-              bind:value={entity.cancelEmailAddress}
+              bind:value={$entity.cancelEmailAddress}
               label="Cancel Email Address"
               type="email"
               style="width: 100%;"
@@ -639,21 +651,23 @@
           <div style="display: flex; gap: 1em; align-items: center;">
             <div style="flex-grow: 1;">
               <Textfield
-                bind:value={entity.revokeTokenDate}
+                bind:value={$entity.revokeTokenDate}
                 label="Token Revocation Date (Timestamp)"
                 type="number"
                 style="width: 100%;"
                 input$autocomplete="off"
               >
-                <HelperText persistent slot="helper">
-                  {entity.revokeTokenDate === 0 ||
-                  entity.revokeTokenDate == null
-                    ? 'Unset'
-                    : new Date(entity.revokeTokenDate).toLocaleString()}
-                </HelperText>
+                {#snippet helper()}
+                  <HelperText persistent>
+                    {$entity.revokeTokenDate === 0 ||
+                    $entity.revokeTokenDate == null
+                      ? 'Unset'
+                      : new Date($entity.revokeTokenDate).toLocaleString()}
+                  </HelperText>
+                {/snippet}
               </Textfield>
             </div>
-            <Button on:click={() => (entity.revokeTokenDate = Date.now())}>
+            <Button onclick={() => ($entity.revokeTokenDate = Date.now())}>
               <Label>Now</Label>
             </Button>
           </div>
@@ -672,7 +686,7 @@
               Has 2FA secret: {hasTOTPSecret ? 'Yes' : 'No'}
             </span>
             {#if hasTOTPSecret}
-              <Button on:click={removeTOTPSecret} disabled={saving}>
+              <Button onclick={removeTOTPSecret} disabled={saving}>
                 <Label>Remove 2FA</Label>
               </Button>
             {/if}
@@ -691,11 +705,11 @@
       style="margin-top: 36px; display: flex; justify-content: space-between;"
     >
       <div>
-        <Button variant="raised" on:click={saveEntity} disabled={saving}>
+        <Button variant="raised" onclick={saveEntity} disabled={saving}>
           <Label>Save User</Label>
         </Button>
-        {#if entity.guid}
-          <Button on:click={deleteEntity} disabled={saving}>
+        {#if $entity.guid}
+          <Button onclick={deleteEntity} disabled={saving}>
             <Label>Delete</Label>
           </Button>
         {/if}
@@ -703,10 +717,10 @@
           <span>Successfully saved!</span>
         {/if}
       </div>
-      {#if tilmeldSwitchUser && entity.guid && !entity.$is(user)}
+      {#if tilmeldSwitchUser && $entity.guid && !$entity.$is($user)}
         <div>
           <Button
-            on:click={() => {
+            onclick={() => {
               tilmeldSwitchUserDialogOpen = true;
             }}
             disabled={saving}
@@ -723,7 +737,7 @@
   bind:open={tilmeldSwitchUserDialogOpen}
   aria-labelledby="switch-user-title"
   aria-describedby="switch-user-content"
-  on:SMUIDialog:closed={switchUserDialogCloseHandler}
+  onSMUIDialogClosed={switchUserDialogCloseHandler}
 >
   <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
   <Title id="switch-user-title">Switch User</Title>
@@ -747,6 +761,8 @@
 
 <script lang="ts">
   import { onMount } from 'svelte';
+  import type { Writable } from 'svelte/store';
+  import { writable } from 'svelte/store';
   import type Navigo from 'navigo';
   import type {
     AdminGroupData,
@@ -784,58 +800,65 @@
 
   import { User, Group } from '../nymph';
 
-  export let router: Navigo;
-  export let params: { guid: string };
+  let {
+    router,
+    params,
+    clientConfig,
+    user,
+  }: {
+    router: Navigo;
+    params: { guid: string };
+    clientConfig: Writable<ClientConfig | undefined>;
+    user: Writable<(UserClass & CurrentUserData) | null | undefined>;
+  } = $props();
 
-  let entity: UserClass & AdminUserData;
-  let clientConfig: ClientConfig | undefined = undefined;
-  let user: (UserClass & CurrentUserData) | undefined = undefined;
-  let sysAdmin = false;
-  let tilmeldSwitchUser = false;
-  let tilmeldSwitchUserDialogOpen = false;
-  let activeTab: 'General' | 'Groups' | 'Abilities' | 'Security' = 'General';
-  let primaryGroupSearch = '';
-  let secondaryGroupSearch = '';
-  let ability = '';
-  let avatar = 'https://secure.gravatar.com/avatar/?d=mm&s=40';
-  let hasTOTPSecret: boolean | undefined = undefined;
-  let failureMessage: string | undefined = undefined;
-  let passwordVerify = '';
-  let passwordVerified: boolean | undefined = undefined;
+  let entity: Writable<UserClass & AdminUserData> = writable(
+    User.factorySync(),
+  );
+  let sysAdmin = $state(false);
+  let tilmeldSwitchUser = $state(false);
+  let tilmeldSwitchUserDialogOpen = $state(false);
+  let activeTab: 'General' | 'Groups' | 'Abilities' | 'Security' =
+    $state('General');
+  let primaryGroupSearch = $state('');
+  let secondaryGroupSearch = $state('');
+  let ability = $state('');
+  let avatar = $state('https://secure.gravatar.com/avatar/?d=mm&s=40');
+  let hasTOTPSecret: boolean | undefined = $state();
+  let failureMessage: string | undefined = $state();
+  let passwordVerify = $state('');
+  let passwordVerified: boolean | undefined = $state();
   let usernameTimer: NodeJS.Timeout | undefined = undefined;
-  let usernameVerified: boolean | undefined = undefined;
-  let usernameVerifiedMessage: string | undefined = undefined;
+  let usernameVerified: boolean | undefined = $state();
+  let usernameVerifiedMessage: string | undefined = $state();
   let emailTimer: NodeJS.Timeout | undefined = undefined;
-  let emailVerified: boolean | undefined = undefined;
-  let emailVerifiedMessage: string | undefined = undefined;
-  let saving = false;
-  let success: boolean | undefined = undefined;
-  let loading = true;
+  let emailVerified: boolean | undefined = $state();
+  let emailVerifiedMessage: string | undefined = $state();
+  let saving = $state(false);
+  let success: boolean | undefined = $state();
+  let loading = $state(true);
 
-  $: if (params) {
-    handleGuidParam();
-  }
-
-  onMount(async () => {
-    user = (await User.current()) ?? undefined;
-    sysAdmin = (await user?.$gatekeeper('system/admin')) ?? false;
-    tilmeldSwitchUser = (await user?.$gatekeeper('tilmeld/switch')) ?? false;
-    hasTOTPSecret = (await user?.$hasTOTPSecret()) ?? false;
+  $effect(() => {
+    if (params) {
+      handleGuidParam();
+    }
   });
+
   onMount(async () => {
-    clientConfig = await User.getClientConfig();
+    sysAdmin = (await $user?.$gatekeeper('system/admin')) ?? false;
+    tilmeldSwitchUser = (await $user?.$gatekeeper('tilmeld/switch')) ?? false;
   });
 
   async function handleGuidParam() {
     loading = true;
     failureMessage = undefined;
     try {
-      entity =
+      $entity =
         params.guid === '+' || params.guid === ' ' || params.guid === '%20'
           ? await User.factory()
           : await User.factory(params.guid);
-      oldUsername = entity.username;
-      oldEmail = entity.email;
+      oldUsername = $entity.username;
+      oldEmail = $entity.email;
       await readyEntity();
     } catch (e: any) {
       failureMessage = e.message;
@@ -845,70 +868,73 @@
 
   async function readyEntity() {
     // Make sure all fields are defined.
-    if (entity.enabled == null) {
-      entity.enabled = false;
+    if ($entity.enabled == null) {
+      $entity.enabled = false;
     }
-    if (entity.username == null) {
-      entity.username = '';
+    if ($entity.username == null) {
+      $entity.username = '';
     }
-    if (entity.email == null) {
-      entity.email = '';
+    if ($entity.email == null) {
+      $entity.email = '';
     }
-    if (entity.nameFirst == null) {
-      entity.nameFirst = '';
+    if ($entity.nameFirst == null) {
+      $entity.nameFirst = '';
     }
-    if (entity.nameMiddle == null) {
-      entity.nameMiddle = '';
+    if ($entity.nameMiddle == null) {
+      $entity.nameMiddle = '';
     }
-    if (entity.nameLast == null) {
-      entity.nameLast = '';
+    if ($entity.nameLast == null) {
+      $entity.nameLast = '';
     }
-    if (entity.avatar == null) {
-      entity.avatar = '';
+    if ($entity.avatar == null) {
+      $entity.avatar = '';
     }
-    if (entity.phone == null) {
-      entity.phone = '';
+    if ($entity.phone == null) {
+      $entity.phone = '';
     }
-    if (entity.passwordTemp == null) {
-      entity.passwordTemp = '';
+    if ($entity.passwordTemp == null) {
+      $entity.passwordTemp = '';
     }
-    if (entity.inheritAbilities == null) {
-      entity.inheritAbilities = false;
+    if ($entity.inheritAbilities == null) {
+      $entity.inheritAbilities = false;
     }
-    if (entity.secret == null) {
-      entity.secret = '';
+    if ($entity.secret == null) {
+      $entity.secret = '';
     }
-    if (entity.emailChangeDate == null) {
-      entity.emailChangeDate = 0;
+    if ($entity.emailChangeDate == null) {
+      $entity.emailChangeDate = 0;
     }
-    if (entity.newEmailSecret == null) {
-      entity.newEmailSecret = '';
+    if ($entity.newEmailSecret == null) {
+      $entity.newEmailSecret = '';
     }
-    if (entity.newEmailAddress == null) {
-      entity.newEmailAddress = '';
+    if ($entity.newEmailAddress == null) {
+      $entity.newEmailAddress = '';
     }
-    if (entity.cancelEmailSecret == null) {
-      entity.cancelEmailSecret = '';
+    if ($entity.cancelEmailSecret == null) {
+      $entity.cancelEmailSecret = '';
     }
-    if (entity.cancelEmailAddress == null) {
-      entity.cancelEmailAddress = '';
+    if ($entity.cancelEmailAddress == null) {
+      $entity.cancelEmailAddress = '';
     }
-    if (entity.recoverSecret == null) {
-      entity.recoverSecret = '';
+    if ($entity.recoverSecret == null) {
+      $entity.recoverSecret = '';
     }
-    if (entity.recoverSecretDate == null) {
-      entity.recoverSecretDate = 0;
+    if ($entity.recoverSecretDate == null) {
+      $entity.recoverSecretDate = 0;
     }
-    if (entity.revokeTokenDate == null) {
-      entity.revokeTokenDate = 0;
+    if ($entity.revokeTokenDate == null) {
+      $entity.revokeTokenDate = 0;
     }
-    avatar = await entity.$getAvatar();
-    await entity.$wakeAll(1);
-    entity = entity;
+    [avatar, hasTOTPSecret] = await Promise.all([
+      $entity.$getAvatar(),
+      (!!$entity.guid && $entity?.$hasTOTPSecret()) || Promise.resolve(false),
+      $entity.$wakeAll(1),
+    ]);
+    $entity = $entity;
   }
 
-  let primaryGroupsSearching = false;
-  let primaryGroups: (GroupClass & AdminGroupData)[] | undefined = undefined;
+  let primaryGroupsSearching = $state(false);
+  let primaryGroups: (GroupClass & AdminGroupData)[] | undefined = $state();
   async function searchPrimaryGroups() {
     primaryGroupsSearching = true;
     failureMessage = undefined;
@@ -933,7 +959,7 @@
       });
       primaryGroups = (await Group.getPrimaryGroups(options, selectors)).filter(
         (group) => {
-          return !group.$is(entity.group);
+          return !group.$is($entity.group);
         },
       );
     } catch (e: any) {
@@ -946,8 +972,8 @@
     if (event.key === 'Enter') searchPrimaryGroups();
   }
 
-  let secondaryGroupsSearching = false;
-  let secondaryGroups: (GroupClass & AdminGroupData)[] | undefined = undefined;
+  let secondaryGroupsSearching = $state(false);
+  let secondaryGroups: (GroupClass & AdminGroupData)[] | undefined = $state();
   async function searchSecondaryGroups() {
     secondaryGroupsSearching = true;
     failureMessage = undefined;
@@ -973,7 +999,7 @@
       secondaryGroups = (
         await Group.getSecondaryGroups(options, selectors)
       ).filter((group) => {
-        return !group.$inArray(entity.groups ?? []);
+        return !group.$inArray($entity.groups ?? []);
       });
     } catch (e: any) {
       failureMessage = e?.message;
@@ -986,68 +1012,72 @@
   }
 
   let oldUsername: string | undefined = undefined;
-  $: if (entity && entity.username !== oldUsername) {
-    if (usernameTimer) {
-      clearTimeout(usernameTimer);
+  $effect(() => {
+    if ($entity && $entity.username !== oldUsername) {
+      if (usernameTimer) {
+        clearTimeout(usernameTimer);
+      }
+      usernameTimer = setTimeout(async () => {
+        if ($entity.username === '') {
+          usernameVerified = undefined;
+          usernameVerifiedMessage = undefined;
+          return;
+        }
+        try {
+          const data = await $entity.$checkUsername();
+          usernameVerified = data.result;
+          usernameVerifiedMessage = data.message;
+        } catch (e: any) {
+          usernameVerified = false;
+          usernameVerifiedMessage = e?.message;
+        }
+      }, 400);
+      oldUsername = $entity.username;
     }
-    usernameTimer = setTimeout(async () => {
-      if (entity.username === '') {
-        usernameVerified = undefined;
-        usernameVerifiedMessage = undefined;
-        return;
-      }
-      try {
-        const data = await entity.$checkUsername();
-        usernameVerified = data.result;
-        usernameVerifiedMessage = data.message;
-      } catch (e: any) {
-        usernameVerified = false;
-        usernameVerifiedMessage = e?.message;
-      }
-    }, 400);
-    oldUsername = entity.username;
-  }
+  });
 
   let oldEmail: string | undefined = undefined;
-  $: if (entity && entity.email !== oldEmail) {
-    if (emailTimer) {
-      clearTimeout(emailTimer);
+  $effect(() => {
+    if ($entity && $entity.email !== oldEmail) {
+      if (emailTimer) {
+        clearTimeout(emailTimer);
+      }
+      emailTimer = setTimeout(async () => {
+        if ($entity.email === '') {
+          emailVerified = undefined;
+          emailVerifiedMessage = undefined;
+          return;
+        }
+        try {
+          const data = await $entity.$checkEmail();
+          emailVerified = data.result;
+          emailVerifiedMessage = data.message;
+        } catch (e: any) {
+          emailVerified = false;
+          emailVerifiedMessage = e?.message;
+        }
+      }, 400);
+      oldEmail = $entity.email;
     }
-    emailTimer = setTimeout(async () => {
-      if (entity.email === '') {
-        emailVerified = undefined;
-        emailVerifiedMessage = undefined;
-        return;
-      }
-      try {
-        const data = await entity.$checkEmail();
-        emailVerified = data.result;
-        emailVerifiedMessage = data.message;
-      } catch (e: any) {
-        emailVerified = false;
-        emailVerifiedMessage = e?.message;
-      }
-    }, 400);
-    oldEmail = entity.email;
-  }
+  });
 
   function doVerifyPassword() {
     if (
-      (entity.passwordTemp == null || entity.passwordTemp === '') &&
+      ($entity.passwordTemp == null || $entity.passwordTemp === '') &&
       passwordVerify === ''
     ) {
       passwordVerified = undefined;
     }
-    passwordVerified = entity.passwordTemp === passwordVerify;
+    passwordVerified = $entity.passwordTemp === passwordVerify;
   }
 
   function addAbility() {
     if (ability === '') {
       return;
     }
-    entity.abilities?.push(ability);
+    $entity.abilities?.push(ability);
+    $entity = $entity;
     ability = '';
-    entity = entity;
   }
   function abilityKeyDown(event: CustomEvent | KeyboardEvent) {
     event = event as KeyboardEvent;
@@ -1055,23 +1085,23 @@
   }
 
   function addSystemAdminAbility() {
-    if (entity.abilities?.indexOf('system/admin') === -1) {
-      entity.abilities?.push('system/admin');
-      entity = entity;
+    if ($entity.abilities?.indexOf('system/admin') === -1) {
+      $entity.abilities?.push('system/admin');
+      $entity = $entity;
     }
   }
 
   function addTilmeldAdminAbility() {
-    if (entity.abilities?.indexOf('tilmeld/admin') === -1) {
-      entity.abilities?.push('tilmeld/admin');
-      entity = entity;
+    if ($entity.abilities?.indexOf('tilmeld/admin') === -1) {
+      $entity.abilities?.push('tilmeld/admin');
+      $entity = $entity;
     }
   }
 
   function addTilmeldSwitchAbility() {
-    if (entity.abilities?.indexOf('tilmeld/switch') === -1) {
-      entity.abilities?.push('tilmeld/switch');
-      entity = entity;
+    if ($entity.abilities?.indexOf('tilmeld/switch') === -1) {
+      $entity.abilities?.push('tilmeld/switch');
+      $entity = $entity;
     }
   }
 
@@ -1080,7 +1110,7 @@
     if (confirm("Are you sure you want to remove the user's 2FA?")) {
       saving = true;
       try {
-        const result = await entity.$removeTOTPSecret();
+        const result = await $entity.$removeTOTPSecret();
 
         if (result.result) {
           hasTOTPSecret = false;
@@ -1096,8 +1126,8 @@
 
   async function saveEntity() {
     if (
-      (entity.passwordTemp != null || entity.passwordTemp !== '') &&
-      entity.passwordTemp !== passwordVerify
+      ($entity.passwordTemp != null || $entity.passwordTemp !== '') &&
+      $entity.passwordTemp !== passwordVerify
     ) {
       failureMessage = "Passwords don't match!";
       return;
@@ -1105,15 +1135,15 @@
 
     saving = true;
     failureMessage = undefined;
-    const newEntity = entity.guid == null;
+    const newEntity = $entity.guid == null;
     try {
-      if (await entity.$save()) {
+      if (await $entity.$save()) {
         await readyEntity();
         success = true;
         passwordVerify = '';
         if (newEntity) {
           router.navigate(
-            `/users/edit/${encodeURIComponent(entity.guid || '')}`,
+            `/users/edit/${encodeURIComponent($entity.guid || '')}`,
             { historyAPIMethod: 'replaceState' },
           );
         }
@@ -1135,7 +1165,7 @@
     if (confirm('Are you sure you want to delete this?')) {
       saving = true;
       try {
-        if (await entity.$delete()) {
+        if (await $entity.$delete()) {
           router.navigate('', { historyAPIMethod: 'back' });
         } else {
           failureMessage = 'An error occurred.';
@@ -1153,7 +1183,7 @@
     if (e.detail.action === 'switch') {
       saving = true;
       try {
-        const result = await entity.$switchUser();
+        const result = await $entity.$switchUser();
 
         if (result.result) {
           window.location.href =

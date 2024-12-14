@@ -1,7 +1,7 @@
-import { difference, intersection, isEqual } from 'lodash';
+import { difference, intersection, isEqual } from 'lodash-es';
 
-import type Nymph from './Nymph';
-import type { Options } from './Nymph.types';
+import type Nymph from './Nymph.js';
+import type { Options } from './Nymph.types.js';
 import type {
   ACProperties,
   EntityConstructor,
@@ -11,22 +11,21 @@ import type {
   EntityPatch,
   EntityReference,
   SerializedEntityData,
-} from './Entity.types';
+} from './Entity.types.js';
 import {
   EntityConflictError,
   EntityIsSleepingReferenceError,
   InvalidParametersError,
   InvalidStateError,
-} from './errors';
+} from './errors/index.js';
 import {
   entitiesToReferences,
   referencesToEntities,
   uniqueStrings,
-} from './utils';
+} from './utils.js';
 
-export type EntityDataType<T> = T extends Entity<infer DataType>
-  ? DataType
-  : never;
+export type EntityDataType<T> =
+  T extends Entity<infer DataType> ? DataType : never;
 
 export type EntityInstanceType<T extends EntityConstructor> =
   T extends new () => infer E ? E & EntityDataType<E> : never;

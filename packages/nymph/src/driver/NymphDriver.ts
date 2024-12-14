@@ -1,21 +1,24 @@
-import fs from 'fs';
-import { difference } from 'lodash';
+import fs from 'node:fs';
+import { difference } from 'lodash-es';
 import ReadLines from 'n-readlines';
-import strtotime from 'locutus/php/datetime/strtotime';
+import strtotime from 'locutus/php/datetime/strtotime.js';
 import { guid } from '@nymphjs/guid';
 
-import type Nymph from '../Nymph';
-import type { Selector, Options, FormattedSelector } from '../Nymph.types';
-import Entity, { type EntityInstanceType } from '../Entity';
+import type Nymph from '../Nymph.js';
+import type { Selector, Options, FormattedSelector } from '../Nymph.types.js';
+import Entity, { type EntityInstanceType } from '../Entity.js';
 import type {
   EntityConstructor,
   EntityData,
   EntityInterface,
   EntityReference,
   SerializedEntityData,
-} from '../Entity.types';
-import { InvalidParametersError, UnableToConnectError } from '../errors';
-import { xor } from '../utils';
+} from '../Entity.types.js';
+import {
+  InvalidParametersError,
+  UnableToConnectError,
+} from '../errors/index.js';
+import { xor } from '../utils.js';
 
 // from: https://stackoverflow.com/a/6969486/664915
 function escapeRegExp(string: string): string {
@@ -910,8 +913,8 @@ export default abstract class NymphDriver {
                   ? 1
                   : 0
                 : options.return === 'guid'
-                ? [guid]
-                : [entity],
+                  ? [guid]
+                  : [entity],
           };
         }
       }

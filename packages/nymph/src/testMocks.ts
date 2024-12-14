@@ -1,15 +1,15 @@
 import { guid } from '@nymphjs/guid';
 
-import type Nymph from './Nymph';
-import type { EntityInstanceType } from './Entity';
+import type Nymph from './Nymph.js';
+import type { EntityInstanceType } from './Entity.js';
 import type {
   EntityConstructor,
   EntityInterface,
   EntityJson,
-} from './Entity.types';
-import { Options, Selector } from './Nymph.types';
-import { ClassNotAvailableError } from './errors';
-import Entity from './Entity';
+} from './Entity.types.js';
+import { Options, Selector } from './Nymph.types.js';
+import { ClassNotAvailableError } from './errors/index.js';
+import Entity from './Entity.js';
 
 const entities: { [k: string]: EntityJson } = {};
 

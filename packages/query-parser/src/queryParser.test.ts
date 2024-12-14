@@ -1,5 +1,5 @@
 import type { Entity } from '@nymphjs/client';
-import queryParser from './queryParser';
+import queryParser from './queryParser.js';
 
 const BlogPost = function () {} as unknown as typeof Entity;
 const Category = function () {} as unknown as typeof Entity;

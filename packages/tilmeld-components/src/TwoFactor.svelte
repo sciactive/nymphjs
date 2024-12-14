@@ -1,11 +1,13 @@
-{#if user != null}
+<svelte:options runes />
+
+{#if $user != null}
   <Dialog
-    use={usePass}
+    {use}
     bind:open
     aria-labelledby="tilmeld-two-factor-title"
     aria-describedby="tilmeld-two-factor-content"
     surface$class="tilmeld-two-factor-dialog-surface"
-    {...exclude($$restProps, [
+    {...exclude(restProps, [
       'password$',
       'code$',
       'closeButton$',
@@ -120,7 +122,7 @@
               type="password"
               style="width: 100%;"
               input$autocomplete="current-password"
-              {...prefixFilter($$restProps, 'password$')}
+              {...prefixFilter(restProps, 'password$')}
             />
           </div>
 
@@ -136,7 +138,7 @@
               style="width: 100%;"
               input$maxlength={6}
               input$minlength={6}
-              {...prefixFilter($$restProps, 'code$')}
+              {...prefixFilter(restProps, 'code$')}
             />
           </div>
         {/if}
@@ -152,31 +154,28 @@
             <CircularProgress
               style="height: 24px; width: 24px;"
               indeterminate
-              {...prefixFilter($$restProps, 'progress$')}
+              {...prefixFilter(restProps, 'progress$')}
             />
           </div>
         {/if}
       </Content>
       <Actions>
-        <Button
-          disabled={loading}
-          {...prefixFilter($$restProps, 'closeButton$')}
-        >
+        <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>
           <Label>Close</Label>
         </Button>
         {#if totpSecret == null}
           <Button
-            on:click$preventDefault$stopPropagation={beginSetup}
+            onclick={preventDefault(stopPropagation(beginSetup))}
             disabled={loading}
-            {...prefixFilter($$restProps, 'setupButton$')}
+            {...prefixFilter(restProps, 'setupButton$')}
           >
             <Label>Set Up 2FA</Label>
           </Button>
         {:else}
           <Button
-            on:click$preventDefault$stopPropagation={enableTOTP}
+            onclick={preventDefault(stopPropagation(enableTOTP))}
             disabled={loading}
-            {...prefixFilter($$restProps, 'setupButton$')}
+            {...prefixFilter(restProps, 'setupButton$')}
           >
             <Label>Enable 2FA</Label>
           </Button>
@@ -198,7 +197,7 @@
             type="password"
             style="width: 100%;"
             input$autocomplete="current-password"
-            {...prefixFilter($$restProps, 'password$')}
+            {...prefixFilter(restProps, 'password$')}
           />
         </div>
 
@@ -209,11 +208,11 @@
             style="width: 100%;"
             input$maxlength={6}
             input$minlength={6}
-            {...prefixFilter($$restProps, 'code$')}
+            {...prefixFilter(restProps, 'code$')}
           />
         </div>
 
-        <slot name="additional" />
+        {@render additional?.()}
 
         {#if failureMessage}
           <div class="tilmeld-two-factor-failure">
@@ -226,22 +225,19 @@
             <CircularProgress
               style="height: 24px; width: 24px;"
               indeterminate
-              {...prefixFilter($$restProps, 'progress$')}
+              {...prefixFilter(restProps, 'progress$')}
             />
           </div>
         {/if}
       </Content>
       <Actions>
-        <Button
-          disabled={loading}
-          {...prefixFilter($$restProps, 'closeButton$')}
-        >
+        <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>
           <Label>Close</Label>
         </Button>
         <Button
-          on:click$preventDefault$stopPropagation={disableTOTP}
+          onclick={preventDefault(stopPropagation(disableTOTP))}
           disabled={loading}
-          {...prefixFilter($$restProps, 'removeButton$')}
+          {...prefixFilter(restProps, 'removeButton$')}
         >
           <Label>Disable 2FA</Label>
         </Button>
@@ -251,7 +247,7 @@
         <CircularProgress
           style="height: 24px; width: 24px;"
           indeterminate
-          {...prefixFilter($$restProps, 'progress$')}
+          {...prefixFilter(restProps, 'progress$')}
         />
       </div>
     {/if}
@@ -259,58 +255,130 @@
 {/if}
 
 <script lang="ts">
+  import type { ComponentProps, Snippet } from 'svelte';
   import { onMount, onDestroy } from 'svelte';
-  import { get_current_component } from 'svelte/internal';
+  import type { Writable } from 'svelte/store';
+  import { writable } from 'svelte/store';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
   import Button, { Label } from '@smui/button';
   import type { ActionArray } from '@smui/common/internal';
-  import {
-    forwardEventsBuilder,
-    exclude,
-    prefixFilter,
-  } from '@smui/common/internal';
+  import { exclude, prefixFilter } from '@smui/common/internal';
+  import { preventDefault, stopPropagation } from '@smui/common/events';
   import type { CurrentUserData } from '@nymphjs/tilmeld-client';
   import type { User as UserClass } from '@nymphjs/tilmeld-client';
 
-  const forwardEvents = forwardEventsBuilder(get_current_component());
+  type OwnProps = {
+    /**
+     * An array of Action or [Action, ActionProps] to be applied to the element.
+     */
+    use?: ActionArray;
+    /**
+     * Whether the dialog is open.
+     */
+    open?: boolean;
+    /**
+     * The title of the dialog.
+     */
+    title?: string;
+    /**
+     * The User class from Nymph.
+     */
+    User: typeof UserClass;
+    /**
+     * A writable store of the current user.
+     *
+     * It will be retrieved from the server if not provided.
+     */
+    user?: Writable<(UserClass & CurrentUserData) | null | undefined>;
+    /**
+     * Server provided. You can bind to it if you need to.
+     */
+    hasTOTPSecret?: boolean | null;
+    /**
+     * Server provided. You can bind to it if you need to.
+     */
+    totpSecret?: {
+      uri: string;
+      qrcode: string;
+      secret: string;
+    } | null;
+    /**
+     * User provided. You can bind to it if you need to.
+     */
+    password?: string;
+    /**
+     * User provided. You can bind to it if you need to.
+     */
+    code?: string;
 
-  export let use: ActionArray = [];
-  $: usePass = [forwardEvents, ...use] as ActionArray;
-  export let open = false;
-  export let title = 'Manage Two Factor Authentication';
-  export let User: typeof UserClass;
-  export let user: (UserClass & CurrentUserData) | undefined = undefined;
+    /**
+     * A spot for additional content.
+     */
+    additional?: Snippet;
+  };
+  let {
+    use = [],
+    open = $bindable(false),
+    title = 'Manage Two Factor Authentication',
+    User,
+    user = $bindable(writable(false as unknown as undefined)),
+    hasTOTPSecret = $bindable(null),
+    totpSecret = $bindable(null),
+    password = $bindable(''),
+    code = $bindable(''),
+    additional,
+    ...restProps
+  }: OwnProps & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `password\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `code\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof CircularProgress
+    > as `progress\$${k}`]?: ComponentProps<typeof CircularProgress>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Button<undefined, 'button'>
+    > as `closeButton\$${k}`]?: ComponentProps<
+      typeof Button<undefined, 'button'>
+    >[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Button<undefined, 'button'>
+    > as `setupButton\$${k}`]?: ComponentProps<
+      typeof Button<undefined, 'button'>
+    >[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Button<undefined, 'button'>
+    > as `removeButton\$${k}`]?: ComponentProps<
+      typeof Button<undefined, 'button'>
+    >[k];
+  } = $props();
 
-  let loading = false;
-  let failureMessage: string | undefined = undefined;
+  let loading = $state(false);
+  let failureMessage: string | undefined = $state();
 
-  /** Server provided. You can bind to it if you need to. */
-  export let hasTOTPSecret: boolean | null = null;
-  /** Server provided. You can bind to it if you need to. */
-  export let totpSecret: {
-    uri: string;
-    qrcode: string;
-    secret: string;
-  } | null = null;
-  /** User provided. You can bind to it if you need to. */
-  export let password = '';
-  /** User provided. You can bind to it if you need to. */
-  export let code = '';
-
-  $: if (!open) {
-    loading = false;
-    failureMessage = undefined;
-    totpSecret = null;
-    password = '';
-    code = '';
-  }
+  $effect(() => {
+    if (!open) {
+      loading = false;
+      failureMessage = undefined;
+      totpSecret = null;
+      password = '';
+      code = '';
+    }
+  });
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
-    user = currentUser;
+    $user = currentUser;
     hasTOTPSecret = null;
-    user.$hasTOTPSecret().then(
+    $user.$hasTOTPSecret().then(
       (value) => {
         hasTOTPSecret = value;
         failureMessage = undefined;
@@ -322,19 +390,20 @@
     );
   };
   const onLogout = () => {
-    user = undefined;
+    $user = null;
     hasTOTPSecret = null;
   };
 
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    if (user === undefined) {
-      user = (await User.current()) ?? undefined;
+    if ($user === (false as unknown as undefined)) {
+      $user = undefined;
+      $user = await User.current();
     }
-    if (user) {
+    if ($user) {
       try {
-        hasTOTPSecret = await user.$hasTOTPSecret();
+        hasTOTPSecret = await $user.$hasTOTPSecret();
         failureMessage = undefined;
       } catch (e: any) {
         hasTOTPSecret = null;
@@ -353,14 +422,14 @@
   async function beginSetup() {
     loading = true;
 
-    if (user == null) {
+    if ($user == null) {
       failureMessage = 'You must be logged in.';
       loading = false;
       return;
     }
 
     try {
-      totpSecret = await user.$getNewTOTPSecret();
+      totpSecret = await $user.$getNewTOTPSecret();
     } catch (e: any) {
       failureMessage = e?.message;
     }
@@ -387,9 +456,9 @@
     loading = true;
 
     // Get the current user again, in case their data has changed.
-    user = (await User.current()) ?? undefined;
+    $user = await User.current();
 
-    if (user == null) {
+    if ($user == null) {
       failureMessage = 'You must be logged in.';
       loading = false;
       return;
@@ -397,7 +466,7 @@
 
     try {
       // Save the user's TOTP secret.
-      const data = await user.$saveTOTPSecret({
+      const data = await $user.$saveTOTPSecret({
         password,
         secret: totpSecret.secret,
         code,
@@ -430,9 +499,9 @@
     loading = true;
 
     // Get the current user again, in case their data has changed.
-    user = (await User.current()) ?? undefined;
+    $user = await User.current();
 
-    if (user == null) {
+    if ($user == null) {
       failureMessage = 'You must be logged in.';
       loading = false;
       return;
@@ -440,7 +509,7 @@
 
     try {
       // Remove the user's TOTP secret.
-      const data = await user.$removeTOTPSecret({
+      const data = await $user.$removeTOTPSecret({
         password,
         code,
       });

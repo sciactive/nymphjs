@@ -1,8 +1,8 @@
 import { TilmeldAccessLevels } from '@nymphjs/nymph';
 import Joi from 'joi';
 
-import User from './User';
-import Group from './Group';
+import User from './User.js';
+import Group from './Group.js';
 
 export default {
   user: Joi.object().instance(User),

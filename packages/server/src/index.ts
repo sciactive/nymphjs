@@ -1,7 +1,7 @@
-import { createServer } from './createServer';
+import { createServer } from './createServer.js';
 
-export * from './HttpError';
-export * from './statusDescriptions';
-export * from './createServer';
+export * from './HttpError.js';
+export * from './statusDescriptions.js';
+export * from './createServer.js';
 
 export default createServer;

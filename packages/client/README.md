@@ -10,7 +10,7 @@ The Nymph Client allows you to query and push data to a Nymph REST server from t
 npm install --save @nymphjs/client
 ```
 
-This package is the Nymph client for browsers. You can find UMD in `dist`, or TS source in `src`. There is also a **[Node.js client](https://github.com/sciactive/nymphjs/packages/client-node)**.
+This package is the Nymph client for browsers. You can find ES modules in `dist`, or TS source in `src`. There is also a **[Node.js client](https://github.com/sciactive/nymphjs/packages/client-node)**.
 
 ## Usage
 
@@ -18,7 +18,7 @@ Here's an overview:
 
 ```ts
 import { Nymph, PubSub } from '@nymphjs/client';
-import TodoClass from 'Todo';
+import TodoClass from './Todo.js';
 
 const nymphOptions = {
   restUrl: 'https://yournymphrestserver/path/to/your/endpoint',

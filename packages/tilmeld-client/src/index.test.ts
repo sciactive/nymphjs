@@ -16,7 +16,7 @@ import {
   User as UserClass,
   Group as GroupClass,
   CurrentUserData,
-} from './index';
+} from './index.js';
 
 describe('Tilmeld Client', () => {
   let server: Server | undefined = undefined;

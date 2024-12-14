@@ -1,5 +1,5 @@
-import type Nymph from './Nymph';
-import type Entity from './Entity';
+import type Nymph from './Nymph.js';
+import type Entity from './Entity.js';
 
 export type ACProperties = {
   user: string | null;

@@ -1,5 +1,5 @@
-import Group, { GroupData } from './Group';
-import User, { UserData } from './User';
+import Group, { GroupData } from './Group.js';
+import User, { UserData } from './User.js';
 
 export type AccessControlData = {
   user?: User & UserData;

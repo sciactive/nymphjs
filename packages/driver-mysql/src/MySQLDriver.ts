@@ -23,7 +23,7 @@ import { makeTableSuffix } from '@nymphjs/guid';
 import {
   MySQLDriverConfig,
   MySQLDriverConfigDefaults as defaults,
-} from './conf';
+} from './conf/index.js';
 
 type MySQLDriverTransaction = {
   connection: PoolConnection | null;
@@ -702,10 +702,10 @@ export default class MySQLDriver extends NymphDriver {
               datum.value.value === 'N'
                 ? JSON.stringify(datum.value.number)
                 : datum.value.value === 'S'
-                ? JSON.stringify(datum.value.string)
-                : datum.value.value === 'J'
-                ? JSON.stringify(datum.value.json)
-                : datum.value.value;
+                  ? JSON.stringify(datum.value.string)
+                  : datum.value.value === 'J'
+                    ? JSON.stringify(datum.value.json)
+                    : datum.value.value;
             currentEntityExport.push(`\t${datum.value.name}=${value}`);
             datum = dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
@@ -1841,10 +1841,10 @@ export default class MySQLDriver extends NymphDriver {
           row.value === 'N'
             ? JSON.stringify(row.number)
             : row.value === 'S'
-            ? JSON.stringify(row.string)
-            : row.value === 'J'
-            ? JSON.stringify(row.json)
-            : row.value,
+              ? JSON.stringify(row.string)
+              : row.value === 'J'
+                ? JSON.stringify(row.json)
+                : row.value,
       }),
     );
 
@@ -1968,8 +1968,8 @@ export default class MySQLDriver extends NymphDriver {
           typeof uvalue === 'number'
             ? 'N'
             : typeof uvalue === 'string'
-            ? 'S'
-            : 'J';
+              ? 'S'
+              : 'J';
         const jsonValue = storageValue === 'J' ? value : null;
         promises.push(
           this.queryRun(
@@ -2184,8 +2184,8 @@ export default class MySQLDriver extends NymphDriver {
           typeof value === 'number'
             ? 'N'
             : typeof value === 'string'
-            ? 'S'
-            : 'J';
+              ? 'S'
+              : 'J';
         const jsonValue = storageValue === 'J' ? svalue : null;
         const promises = [];
         promises.push(

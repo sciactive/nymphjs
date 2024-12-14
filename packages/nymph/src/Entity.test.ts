@@ -1,11 +1,13 @@
-import { cloneDeep } from 'lodash';
+import { jest } from '@jest/globals';
 
-import { MockNymph } from './testMocks';
+import { cloneDeep } from 'lodash-es';
+
+import { MockNymph } from './testMocks.js';
 import {
   TestBModel as TestBModelClass,
   TestModel as TestModelClass,
   TestModelData,
-} from './testArtifacts';
+} from './testArtifacts.js';
 
 const nymph = new MockNymph();
 

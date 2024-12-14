@@ -15,8 +15,8 @@ import {
   PubSubDisabledData,
 } from '@nymphjs/server/dist/testArtifacts.js';
 
-import createServer from './index';
-import PubSubServer from './PubSub';
+import createServer from './index.js';
+import PubSubServer from './PubSub.js';
 
 const sqliteConfig = {
   filename: ':memory:',

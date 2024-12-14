@@ -1,8 +1,8 @@
-import { Config, ConfigDefaults as defaults } from './conf';
-import type { NymphDriver } from './driver';
-import Entity, { type EntityInstanceType } from './Entity';
-import type { EntityConstructor, EntityInterface } from './Entity.types';
-import { ClassNotAvailableError } from './errors';
+import { Config, ConfigDefaults as defaults } from './conf/index.js';
+import type { NymphDriver } from './driver/index.js';
+import Entity, { type EntityInstanceType } from './Entity.js';
+import type { EntityConstructor, EntityInterface } from './Entity.types.js';
+import { ClassNotAvailableError } from './errors/index.js';
 import type {
   Selector,
   Options,
@@ -41,7 +41,7 @@ import type {
   NymphQueryCallback,
   FormattedSelector,
   TilmeldInterface,
-} from './Nymph.types';
+} from './Nymph.types.js';
 
 /**
  * An object relational mapper for Node.js.
@@ -1108,134 +1108,134 @@ export default class Nymph {
     callback: T extends 'connect'
       ? NymphConnectCallback
       : T extends 'disconnect'
-      ? NymphDisconnectCallback
-      : T extends 'query'
-      ? NymphQueryCallback
-      : T extends 'beforeGetEntity'
-      ? NymphBeforeGetEntityCallback
-      : T extends 'beforeGetEntities'
-      ? NymphBeforeGetEntitiesCallback
-      : T extends 'beforeSaveEntity'
-      ? NymphBeforeSaveEntityCallback
-      : T extends 'afterSaveEntity'
-      ? NymphAfterSaveEntityCallback
-      : T extends 'failedSaveEntity'
-      ? NymphFailedSaveEntityCallback
-      : T extends 'beforeDeleteEntity'
-      ? NymphBeforeDeleteEntityCallback
-      : T extends 'afterDeleteEntity'
-      ? NymphAfterDeleteEntityCallback
-      : T extends 'failedDeleteEntity'
-      ? NymphFailedDeleteEntityCallback
-      : T extends 'beforeDeleteEntityByID'
-      ? NymphBeforeDeleteEntityByIDCallback
-      : T extends 'afterDeleteEntityByID'
-      ? NymphAfterDeleteEntityByIDCallback
-      : T extends 'failedDeleteEntityByID'
-      ? NymphFailedDeleteEntityByIDCallback
-      : T extends 'beforeNewUID'
-      ? NymphBeforeNewUIDCallback
-      : T extends 'afterNewUID'
-      ? NymphAfterNewUIDCallback
-      : T extends 'failedNewUID'
-      ? NymphFailedNewUIDCallback
-      : T extends 'beforeSetUID'
-      ? NymphBeforeSetUIDCallback
-      : T extends 'afterSetUID'
-      ? NymphAfterSetUIDCallback
-      : T extends 'failedSetUID'
-      ? NymphFailedSetUIDCallback
-      : T extends 'beforeRenameUID'
-      ? NymphBeforeRenameUIDCallback
-      : T extends 'afterRenameUID'
-      ? NymphAfterRenameUIDCallback
-      : T extends 'failedRenameUID'
-      ? NymphFailedRenameUIDCallback
-      : T extends 'beforeDeleteUID'
-      ? NymphBeforeDeleteUIDCallback
-      : T extends 'afterDeleteUID'
-      ? NymphAfterDeleteUIDCallback
-      : T extends 'failedDeleteUID'
-      ? NymphFailedDeleteUIDCallback
-      : T extends 'beforeStartTransaction'
-      ? NymphBeforeStartTransactionCallback
-      : T extends 'afterStartTransaction'
-      ? NymphAfterStartTransactionCallback
-      : T extends 'beforeCommitTransaction'
-      ? NymphBeforeCommitTransactionCallback
-      : T extends 'afterCommitTransaction'
-      ? NymphAfterCommitTransactionCallback
-      : T extends 'beforeRollbackTransaction'
-      ? NymphBeforeRollbackTransactionCallback
-      : T extends 'afterRollbackTransaction'
-      ? NymphAfterRollbackTransactionCallback
-      : never,
+        ? NymphDisconnectCallback
+        : T extends 'query'
+          ? NymphQueryCallback
+          : T extends 'beforeGetEntity'
+            ? NymphBeforeGetEntityCallback
+            : T extends 'beforeGetEntities'
+              ? NymphBeforeGetEntitiesCallback
+              : T extends 'beforeSaveEntity'
+                ? NymphBeforeSaveEntityCallback
+                : T extends 'afterSaveEntity'
+                  ? NymphAfterSaveEntityCallback
+                  : T extends 'failedSaveEntity'
+                    ? NymphFailedSaveEntityCallback
+                    : T extends 'beforeDeleteEntity'
+                      ? NymphBeforeDeleteEntityCallback
+                      : T extends 'afterDeleteEntity'
+                        ? NymphAfterDeleteEntityCallback
+                        : T extends 'failedDeleteEntity'
+                          ? NymphFailedDeleteEntityCallback
+                          : T extends 'beforeDeleteEntityByID'
+                            ? NymphBeforeDeleteEntityByIDCallback
+                            : T extends 'afterDeleteEntityByID'
+                              ? NymphAfterDeleteEntityByIDCallback
+                              : T extends 'failedDeleteEntityByID'
+                                ? NymphFailedDeleteEntityByIDCallback
+                                : T extends 'beforeNewUID'
+                                  ? NymphBeforeNewUIDCallback
+                                  : T extends 'afterNewUID'
+                                    ? NymphAfterNewUIDCallback
+                                    : T extends 'failedNewUID'
+                                      ? NymphFailedNewUIDCallback
+                                      : T extends 'beforeSetUID'
+                                        ? NymphBeforeSetUIDCallback
+                                        : T extends 'afterSetUID'
+                                          ? NymphAfterSetUIDCallback
+                                          : T extends 'failedSetUID'
+                                            ? NymphFailedSetUIDCallback
+                                            : T extends 'beforeRenameUID'
+                                              ? NymphBeforeRenameUIDCallback
+                                              : T extends 'afterRenameUID'
+                                                ? NymphAfterRenameUIDCallback
+                                                : T extends 'failedRenameUID'
+                                                  ? NymphFailedRenameUIDCallback
+                                                  : T extends 'beforeDeleteUID'
+                                                    ? NymphBeforeDeleteUIDCallback
+                                                    : T extends 'afterDeleteUID'
+                                                      ? NymphAfterDeleteUIDCallback
+                                                      : T extends 'failedDeleteUID'
+                                                        ? NymphFailedDeleteUIDCallback
+                                                        : T extends 'beforeStartTransaction'
+                                                          ? NymphBeforeStartTransactionCallback
+                                                          : T extends 'afterStartTransaction'
+                                                            ? NymphAfterStartTransactionCallback
+                                                            : T extends 'beforeCommitTransaction'
+                                                              ? NymphBeforeCommitTransactionCallback
+                                                              : T extends 'afterCommitTransaction'
+                                                                ? NymphAfterCommitTransactionCallback
+                                                                : T extends 'beforeRollbackTransaction'
+                                                                  ? NymphBeforeRollbackTransactionCallback
+                                                                  : T extends 'afterRollbackTransaction'
+                                                                    ? NymphAfterRollbackTransactionCallback
+                                                                    : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
       : T extends 'disconnect'
-      ? 'disconnectCallbacks'
-      : T extends 'query'
-      ? 'queryCallbacks'
-      : T extends 'beforeGetEntity'
-      ? 'beforeGetEntityCallbacks'
-      : T extends 'beforeGetEntities'
-      ? 'beforeGetEntitiesCallbacks'
-      : T extends 'beforeSaveEntity'
-      ? 'beforeSaveEntityCallbacks'
-      : T extends 'afterSaveEntity'
-      ? 'afterSaveEntityCallbacks'
-      : T extends 'failedSaveEntity'
-      ? 'failedSaveEntityCallbacks'
-      : T extends 'beforeDeleteEntity'
-      ? 'beforeDeleteEntityCallbacks'
-      : T extends 'afterDeleteEntity'
-      ? 'afterDeleteEntityCallbacks'
-      : T extends 'failedDeleteEntity'
-      ? 'failedDeleteEntityCallbacks'
-      : T extends 'beforeDeleteEntityByID'
-      ? 'beforeDeleteEntityByIDCallbacks'
-      : T extends 'afterDeleteEntityByID'
-      ? 'afterDeleteEntityByIDCallbacks'
-      : T extends 'failedDeleteEntityByID'
-      ? 'failedDeleteEntityByIDCallbacks'
-      : T extends 'beforeNewUID'
-      ? 'beforeNewUIDCallbacks'
-      : T extends 'afterNewUID'
-      ? 'afterNewUIDCallbacks'
-      : T extends 'failedNewUID'
-      ? 'failedNewUIDCallbacks'
-      : T extends 'beforeSetUID'
-      ? 'beforeSetUIDCallbacks'
-      : T extends 'afterSetUID'
-      ? 'afterSetUIDCallbacks'
-      : T extends 'failedSetUID'
-      ? 'failedSetUIDCallbacks'
-      : T extends 'beforeRenameUID'
-      ? 'beforeRenameUIDCallbacks'
-      : T extends 'afterRenameUID'
-      ? 'afterRenameUIDCallbacks'
-      : T extends 'failedRenameUID'
-      ? 'failedRenameUIDCallbacks'
-      : T extends 'beforeDeleteUID'
-      ? 'beforeDeleteUIDCallbacks'
-      : T extends 'afterDeleteUID'
-      ? 'afterDeleteUIDCallbacks'
-      : T extends 'failedDeleteUID'
-      ? 'failedDeleteUIDCallbacks'
-      : T extends 'beforeStartTransaction'
-      ? 'beforeStartTransactionCallbacks'
-      : T extends 'afterStartTransaction'
-      ? 'afterStartTransactionCallbacks'
-      : T extends 'beforeCommitTransaction'
-      ? 'beforeCommitTransactionCallbacks'
-      : T extends 'afterCommitTransaction'
-      ? 'afterCommitTransactionCallbacks'
-      : T extends 'beforeRollbackTransaction'
-      ? 'beforeRollbackTransactionCallbacks'
-      : T extends 'afterRollbackTransaction'
-      ? 'afterRollbackTransactionCallbacks'
-      : never;
+        ? 'disconnectCallbacks'
+        : T extends 'query'
+          ? 'queryCallbacks'
+          : T extends 'beforeGetEntity'
+            ? 'beforeGetEntityCallbacks'
+            : T extends 'beforeGetEntities'
+              ? 'beforeGetEntitiesCallbacks'
+              : T extends 'beforeSaveEntity'
+                ? 'beforeSaveEntityCallbacks'
+                : T extends 'afterSaveEntity'
+                  ? 'afterSaveEntityCallbacks'
+                  : T extends 'failedSaveEntity'
+                    ? 'failedSaveEntityCallbacks'
+                    : T extends 'beforeDeleteEntity'
+                      ? 'beforeDeleteEntityCallbacks'
+                      : T extends 'afterDeleteEntity'
+                        ? 'afterDeleteEntityCallbacks'
+                        : T extends 'failedDeleteEntity'
+                          ? 'failedDeleteEntityCallbacks'
+                          : T extends 'beforeDeleteEntityByID'
+                            ? 'beforeDeleteEntityByIDCallbacks'
+                            : T extends 'afterDeleteEntityByID'
+                              ? 'afterDeleteEntityByIDCallbacks'
+                              : T extends 'failedDeleteEntityByID'
+                                ? 'failedDeleteEntityByIDCallbacks'
+                                : T extends 'beforeNewUID'
+                                  ? 'beforeNewUIDCallbacks'
+                                  : T extends 'afterNewUID'
+                                    ? 'afterNewUIDCallbacks'
+                                    : T extends 'failedNewUID'
+                                      ? 'failedNewUIDCallbacks'
+                                      : T extends 'beforeSetUID'
+                                        ? 'beforeSetUIDCallbacks'
+                                        : T extends 'afterSetUID'
+                                          ? 'afterSetUIDCallbacks'
+                                          : T extends 'failedSetUID'
+                                            ? 'failedSetUIDCallbacks'
+                                            : T extends 'beforeRenameUID'
+                                              ? 'beforeRenameUIDCallbacks'
+                                              : T extends 'afterRenameUID'
+                                                ? 'afterRenameUIDCallbacks'
+                                                : T extends 'failedRenameUID'
+                                                  ? 'failedRenameUIDCallbacks'
+                                                  : T extends 'beforeDeleteUID'
+                                                    ? 'beforeDeleteUIDCallbacks'
+                                                    : T extends 'afterDeleteUID'
+                                                      ? 'afterDeleteUIDCallbacks'
+                                                      : T extends 'failedDeleteUID'
+                                                        ? 'failedDeleteUIDCallbacks'
+                                                        : T extends 'beforeStartTransaction'
+                                                          ? 'beforeStartTransactionCallbacks'
+                                                          : T extends 'afterStartTransaction'
+                                                            ? 'afterStartTransactionCallbacks'
+                                                            : T extends 'beforeCommitTransaction'
+                                                              ? 'beforeCommitTransactionCallbacks'
+                                                              : T extends 'afterCommitTransaction'
+                                                                ? 'afterCommitTransactionCallbacks'
+                                                                : T extends 'beforeRollbackTransaction'
+                                                                  ? 'beforeRollbackTransactionCallbacks'
+                                                                  : T extends 'afterRollbackTransaction'
+                                                                    ? 'afterRollbackTransactionCallbacks'
+                                                                    : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
@@ -1249,134 +1249,134 @@ export default class Nymph {
     callback: T extends 'connect'
       ? NymphConnectCallback
       : T extends 'disconnect'
-      ? NymphDisconnectCallback
-      : T extends 'query'
-      ? NymphQueryCallback
-      : T extends 'beforeGetEntity'
-      ? NymphBeforeGetEntityCallback
-      : T extends 'beforeGetEntities'
-      ? NymphBeforeGetEntitiesCallback
-      : T extends 'beforeSaveEntity'
-      ? NymphBeforeSaveEntityCallback
-      : T extends 'afterSaveEntity'
-      ? NymphAfterSaveEntityCallback
-      : T extends 'failedSaveEntity'
-      ? NymphFailedSaveEntityCallback
-      : T extends 'beforeDeleteEntity'
-      ? NymphBeforeDeleteEntityCallback
-      : T extends 'afterDeleteEntity'
-      ? NymphAfterDeleteEntityCallback
-      : T extends 'failedDeleteEntity'
-      ? NymphFailedDeleteEntityCallback
-      : T extends 'beforeDeleteEntityByID'
-      ? NymphBeforeDeleteEntityByIDCallback
-      : T extends 'afterDeleteEntityByID'
-      ? NymphAfterDeleteEntityByIDCallback
-      : T extends 'failedDeleteEntityByID'
-      ? NymphFailedDeleteEntityByIDCallback
-      : T extends 'beforeNewUID'
-      ? NymphBeforeNewUIDCallback
-      : T extends 'afterNewUID'
-      ? NymphAfterNewUIDCallback
-      : T extends 'failedNewUID'
-      ? NymphFailedNewUIDCallback
-      : T extends 'beforeSetUID'
-      ? NymphBeforeSetUIDCallback
-      : T extends 'afterSetUID'
-      ? NymphAfterSetUIDCallback
-      : T extends 'failedSetUID'
-      ? NymphFailedSetUIDCallback
-      : T extends 'beforeRenameUID'
-      ? NymphBeforeRenameUIDCallback
-      : T extends 'afterRenameUID'
-      ? NymphAfterRenameUIDCallback
-      : T extends 'failedRenameUID'
-      ? NymphFailedRenameUIDCallback
-      : T extends 'beforeDeleteUID'
-      ? NymphBeforeDeleteUIDCallback
-      : T extends 'afterDeleteUID'
-      ? NymphAfterDeleteUIDCallback
-      : T extends 'failedDeleteUID'
-      ? NymphFailedDeleteUIDCallback
-      : T extends 'beforeStartTransaction'
-      ? NymphBeforeStartTransactionCallback
-      : T extends 'afterStartTransaction'
-      ? NymphAfterStartTransactionCallback
-      : T extends 'beforeCommitTransaction'
-      ? NymphBeforeCommitTransactionCallback
-      : T extends 'afterCommitTransaction'
-      ? NymphAfterCommitTransactionCallback
-      : T extends 'beforeRollbackTransaction'
-      ? NymphBeforeRollbackTransactionCallback
-      : T extends 'afterRollbackTransaction'
-      ? NymphAfterRollbackTransactionCallback
-      : never,
+        ? NymphDisconnectCallback
+        : T extends 'query'
+          ? NymphQueryCallback
+          : T extends 'beforeGetEntity'
+            ? NymphBeforeGetEntityCallback
+            : T extends 'beforeGetEntities'
+              ? NymphBeforeGetEntitiesCallback
+              : T extends 'beforeSaveEntity'
+                ? NymphBeforeSaveEntityCallback
+                : T extends 'afterSaveEntity'
+                  ? NymphAfterSaveEntityCallback
+                  : T extends 'failedSaveEntity'
+                    ? NymphFailedSaveEntityCallback
+                    : T extends 'beforeDeleteEntity'
+                      ? NymphBeforeDeleteEntityCallback
+                      : T extends 'afterDeleteEntity'
+                        ? NymphAfterDeleteEntityCallback
+                        : T extends 'failedDeleteEntity'
+                          ? NymphFailedDeleteEntityCallback
+                          : T extends 'beforeDeleteEntityByID'
+                            ? NymphBeforeDeleteEntityByIDCallback
+                            : T extends 'afterDeleteEntityByID'
+                              ? NymphAfterDeleteEntityByIDCallback
+                              : T extends 'failedDeleteEntityByID'
+                                ? NymphFailedDeleteEntityByIDCallback
+                                : T extends 'beforeNewUID'
+                                  ? NymphBeforeNewUIDCallback
+                                  : T extends 'afterNewUID'
+                                    ? NymphAfterNewUIDCallback
+                                    : T extends 'failedNewUID'
+                                      ? NymphFailedNewUIDCallback
+                                      : T extends 'beforeSetUID'
+                                        ? NymphBeforeSetUIDCallback
+                                        : T extends 'afterSetUID'
+                                          ? NymphAfterSetUIDCallback
+                                          : T extends 'failedSetUID'
+                                            ? NymphFailedSetUIDCallback
+                                            : T extends 'beforeRenameUID'
+                                              ? NymphBeforeRenameUIDCallback
+                                              : T extends 'afterRenameUID'
+                                                ? NymphAfterRenameUIDCallback
+                                                : T extends 'failedRenameUID'
+                                                  ? NymphFailedRenameUIDCallback
+                                                  : T extends 'beforeDeleteUID'
+                                                    ? NymphBeforeDeleteUIDCallback
+                                                    : T extends 'afterDeleteUID'
+                                                      ? NymphAfterDeleteUIDCallback
+                                                      : T extends 'failedDeleteUID'
+                                                        ? NymphFailedDeleteUIDCallback
+                                                        : T extends 'beforeStartTransaction'
+                                                          ? NymphBeforeStartTransactionCallback
+                                                          : T extends 'afterStartTransaction'
+                                                            ? NymphAfterStartTransactionCallback
+                                                            : T extends 'beforeCommitTransaction'
+                                                              ? NymphBeforeCommitTransactionCallback
+                                                              : T extends 'afterCommitTransaction'
+                                                                ? NymphAfterCommitTransactionCallback
+                                                                : T extends 'beforeRollbackTransaction'
+                                                                  ? NymphBeforeRollbackTransactionCallback
+                                                                  : T extends 'afterRollbackTransaction'
+                                                                    ? NymphAfterRollbackTransactionCallback
+                                                                    : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
       : T extends 'disconnect'
-      ? 'disconnectCallbacks'
-      : T extends 'query'
-      ? 'queryCallbacks'
-      : T extends 'beforeSaveEntity'
-      ? 'beforeSaveEntityCallbacks'
-      : T extends 'beforeGetEntity'
-      ? 'beforeGetEntityCallbacks'
-      : T extends 'beforeGetEntities'
-      ? 'beforeGetEntitiesCallbacks'
-      : T extends 'afterSaveEntity'
-      ? 'afterSaveEntityCallbacks'
-      : T extends 'failedSaveEntity'
-      ? 'failedSaveEntityCallbacks'
-      : T extends 'beforeDeleteEntity'
-      ? 'beforeDeleteEntityCallbacks'
-      : T extends 'afterDeleteEntity'
-      ? 'afterDeleteEntityCallbacks'
-      : T extends 'failedDeleteEntity'
-      ? 'failedDeleteEntityCallbacks'
-      : T extends 'beforeDeleteEntityByID'
-      ? 'beforeDeleteEntityByIDCallbacks'
-      : T extends 'afterDeleteEntityByID'
-      ? 'afterDeleteEntityByIDCallbacks'
-      : T extends 'failedDeleteEntityByID'
-      ? 'failedDeleteEntityByIDCallbacks'
-      : T extends 'beforeNewUID'
-      ? 'beforeNewUIDCallbacks'
-      : T extends 'afterNewUID'
-      ? 'afterNewUIDCallbacks'
-      : T extends 'failedNewUID'
-      ? 'failedNewUIDCallbacks'
-      : T extends 'beforeSetUID'
-      ? 'beforeSetUIDCallbacks'
-      : T extends 'afterSetUID'
-      ? 'afterSetUIDCallbacks'
-      : T extends 'failedSetUID'
-      ? 'failedSetUIDCallbacks'
-      : T extends 'beforeRenameUID'
-      ? 'beforeRenameUIDCallbacks'
-      : T extends 'afterRenameUID'
-      ? 'afterRenameUIDCallbacks'
-      : T extends 'failedRenameUID'
-      ? 'failedRenameUIDCallbacks'
-      : T extends 'beforeDeleteUID'
-      ? 'beforeDeleteUIDCallbacks'
-      : T extends 'afterDeleteUID'
-      ? 'afterDeleteUIDCallbacks'
-      : T extends 'failedDeleteUID'
-      ? 'failedDeleteUIDCallbacks'
-      : T extends 'beforeStartTransaction'
-      ? 'beforeStartTransactionCallbacks'
-      : T extends 'afterStartTransaction'
-      ? 'afterStartTransactionCallbacks'
-      : T extends 'beforeCommitTransaction'
-      ? 'beforeCommitTransactionCallbacks'
-      : T extends 'afterCommitTransaction'
-      ? 'afterCommitTransactionCallbacks'
-      : T extends 'beforeRollbackTransaction'
-      ? 'beforeRollbackTransactionCallbacks'
-      : T extends 'afterRollbackTransaction'
-      ? 'afterRollbackTransactionCallbacks'
-      : never;
+        ? 'disconnectCallbacks'
+        : T extends 'query'
+          ? 'queryCallbacks'
+          : T extends 'beforeSaveEntity'
+            ? 'beforeSaveEntityCallbacks'
+            : T extends 'beforeGetEntity'
+              ? 'beforeGetEntityCallbacks'
+              : T extends 'beforeGetEntities'
+                ? 'beforeGetEntitiesCallbacks'
+                : T extends 'afterSaveEntity'
+                  ? 'afterSaveEntityCallbacks'
+                  : T extends 'failedSaveEntity'
+                    ? 'failedSaveEntityCallbacks'
+                    : T extends 'beforeDeleteEntity'
+                      ? 'beforeDeleteEntityCallbacks'
+                      : T extends 'afterDeleteEntity'
+                        ? 'afterDeleteEntityCallbacks'
+                        : T extends 'failedDeleteEntity'
+                          ? 'failedDeleteEntityCallbacks'
+                          : T extends 'beforeDeleteEntityByID'
+                            ? 'beforeDeleteEntityByIDCallbacks'
+                            : T extends 'afterDeleteEntityByID'
+                              ? 'afterDeleteEntityByIDCallbacks'
+                              : T extends 'failedDeleteEntityByID'
+                                ? 'failedDeleteEntityByIDCallbacks'
+                                : T extends 'beforeNewUID'
+                                  ? 'beforeNewUIDCallbacks'
+                                  : T extends 'afterNewUID'
+                                    ? 'afterNewUIDCallbacks'
+                                    : T extends 'failedNewUID'
+                                      ? 'failedNewUIDCallbacks'
+                                      : T extends 'beforeSetUID'
+                                        ? 'beforeSetUIDCallbacks'
+                                        : T extends 'afterSetUID'
+                                          ? 'afterSetUIDCallbacks'
+                                          : T extends 'failedSetUID'
+                                            ? 'failedSetUIDCallbacks'
+                                            : T extends 'beforeRenameUID'
+                                              ? 'beforeRenameUIDCallbacks'
+                                              : T extends 'afterRenameUID'
+                                                ? 'afterRenameUIDCallbacks'
+                                                : T extends 'failedRenameUID'
+                                                  ? 'failedRenameUIDCallbacks'
+                                                  : T extends 'beforeDeleteUID'
+                                                    ? 'beforeDeleteUIDCallbacks'
+                                                    : T extends 'afterDeleteUID'
+                                                      ? 'afterDeleteUIDCallbacks'
+                                                      : T extends 'failedDeleteUID'
+                                                        ? 'failedDeleteUIDCallbacks'
+                                                        : T extends 'beforeStartTransaction'
+                                                          ? 'beforeStartTransactionCallbacks'
+                                                          : T extends 'afterStartTransaction'
+                                                            ? 'afterStartTransactionCallbacks'
+                                                            : T extends 'beforeCommitTransaction'
+                                                              ? 'beforeCommitTransactionCallbacks'
+                                                              : T extends 'afterCommitTransaction'
+                                                                ? 'afterCommitTransactionCallbacks'
+                                                                : T extends 'beforeRollbackTransaction'
+                                                                  ? 'beforeRollbackTransactionCallbacks'
+                                                                  : T extends 'afterRollbackTransaction'
+                                                                    ? 'afterRollbackTransactionCallbacks'
+                                                                    : never;
     if (!(prop in this)) {
       return false;
     }

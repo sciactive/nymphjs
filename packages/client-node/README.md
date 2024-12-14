@@ -10,7 +10,7 @@ The Nymph Node Client lets you do everything the Nymph Client does, but from Nod
 npm install --save @nymphjs/client-node
 ```
 
-This package is the Nymph client for Node.js. You can find CJS in `dist`, or TS source in `src`. There is also a **[browser client](https://github.com/sciactive/nymphjs/packages/client)**.
+This package is the Nymph client for Node.js. You can find ES modules in `dist`, or TS source in `src`. There is also a **[browser client](https://github.com/sciactive/nymphjs/packages/client)**.
 
 This package provides fetch and WebSocket ponyfills to Nymph and handles Tilmeld auth tokens.
 

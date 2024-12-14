@@ -1,7 +1,7 @@
 import { Entity as EntityServer, EntityInvalidDataError } from '@nymphjs/nymph';
 import { Entity } from '@nymphjs/client';
 
-import { HttpError } from './HttpError';
+import { HttpError } from './HttpError.js';
 
 export type EmployeeBaseData<T> = {
   name?: string;

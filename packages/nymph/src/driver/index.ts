@@ -1,4 +1,4 @@
-import NymphDriver from './NymphDriver';
+import NymphDriver from './NymphDriver.js';
 export { NymphDriver };
 
-export * from './testArtifacts';
+export * from './testArtifacts.js';

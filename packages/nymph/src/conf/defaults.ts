@@ -1,5 +1,6 @@
 import createDebug, { type Debugger } from 'debug';
-import { Config } from './d';
+
+import { Config } from './d.js';
 
 const debuggers: {
   [k: string]: { info: Debugger; log: Debugger; error: Debugger };

@@ -9,7 +9,7 @@ import {
   humanSecret,
   nanoid,
   customAlphabet,
-} from './index';
+} from './index.js';
 
 describe('GUID', () => {
   it('exports nanoid and customAlphabet', () => {

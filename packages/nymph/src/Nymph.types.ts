@@ -1,5 +1,5 @@
-import type { EntityConstructor, EntityInterface } from './Entity.types';
-import type Nymph from './Nymph';
+import type { EntityConstructor, EntityInterface } from './Entity.types.js';
+import type Nymph from './Nymph.js';
 
 export type NymphEventType =
   | 'connect'

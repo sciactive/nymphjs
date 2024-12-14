@@ -21,7 +21,7 @@ import { makeTableSuffix } from '@nymphjs/guid';
 import {
   SQLite3DriverConfig,
   SQLite3DriverConfigDefaults as defaults,
-} from './conf';
+} from './conf/index.js';
 
 class InternalStore {
   public link: SQLite3.Database;
@@ -686,10 +686,10 @@ export default class SQLite3Driver extends NymphDriver {
               datum.value.value === 'N'
                 ? JSON.stringify(datum.value.number)
                 : datum.value.value === 'S'
-                ? JSON.stringify(datum.value.string)
-                : datum.value.value === 'J'
-                ? datum.value.json
-                : datum.value.value;
+                  ? JSON.stringify(datum.value.string)
+                  : datum.value.value === 'J'
+                    ? datum.value.json
+                    : datum.value.value;
             currentEntityExport.push(`\t${datum.value.name}=${value}`);
             datum = dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
@@ -1745,10 +1745,10 @@ export default class SQLite3Driver extends NymphDriver {
           row.value === 'N'
             ? JSON.stringify(row.number)
             : row.value === 'S'
-            ? JSON.stringify(row.string)
-            : row.value === 'J'
-            ? row.json
-            : row.value,
+              ? JSON.stringify(row.string)
+              : row.value === 'J'
+                ? row.json
+                : row.value,
       }),
     );
     const value = process();
@@ -1860,8 +1860,8 @@ export default class SQLite3Driver extends NymphDriver {
           typeof uvalue === 'number'
             ? 'N'
             : typeof uvalue === 'string'
-            ? 'S'
-            : 'J';
+              ? 'S'
+              : 'J';
         const jsonValue = storageValue === 'J' ? value : null;
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
@@ -2080,8 +2080,8 @@ export default class SQLite3Driver extends NymphDriver {
           typeof value === 'number'
             ? 'N'
             : typeof value === 'string'
-            ? 'S'
-            : 'J';
+              ? 'S'
+              : 'J';
         const jsonValue = storageValue === 'J' ? svalue : null;
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(

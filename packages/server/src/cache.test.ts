@@ -3,11 +3,11 @@ import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import { Nymph as NymphServer } from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
 
-import createServer from './index';
+import createServer from './index.js';
 import {
   EmployeeModel as EmployeeModelClass,
   Employee as EmployeeClass,
-} from './testArtifacts';
+} from './testArtifacts.js';
 
 const sqliteConfig = {
   filename: ':memory:',

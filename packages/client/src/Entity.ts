@@ -1,6 +1,6 @@
-import { difference, isEqual } from 'lodash';
+import { difference, isEqual } from 'lodash-es';
 
-import type Nymph from './Nymph';
+import type Nymph from './Nymph.js';
 import {
   EntityConstructor,
   EntityData,
@@ -8,17 +8,16 @@ import {
   EntityJson,
   EntityPatch,
   EntityReference,
-} from './Entity.types';
+} from './Entity.types.js';
 import {
   uniqueStrings,
   entitiesToReferences,
   referencesToEntities,
   sortObj,
-} from './utils';
+} from './utils.js';
 
-export type EntityDataType<T> = T extends Entity<infer DataType>
-  ? DataType
-  : never;
+export type EntityDataType<T> =
+  T extends Entity<infer DataType> ? DataType : never;
 
 export type EntityInstanceType<T extends EntityConstructor> =
   T extends new () => infer E ? E & EntityDataType<E> : never;
@@ -536,6 +535,10 @@ export default class Entity<T extends EntityData = EntityData>
       }
     }
     return true;
+  }
+
+  public $isDirty(property: string) {
+    return property in this.$dirty ? this.$dirty[property] : null;
   }
 
   public $inArray(array: any[], strict = false) {

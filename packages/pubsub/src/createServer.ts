@@ -1,9 +1,9 @@
+import http from 'node:http';
 import type { Nymph } from '@nymphjs/nymph';
-import http from 'http';
-import { server as WebSocketServer } from 'websocket';
+import ws from 'websocket';
 
-import { Config, ConfigDefaults as defaults } from './conf';
-import PubSub from './PubSub';
+import { Config, ConfigDefaults as defaults } from './conf/index.js';
+import PubSub from './PubSub.js';
 
 export default function createServer(
   port = 8080,
@@ -23,7 +23,7 @@ export default function createServer(
     );
   });
 
-  const wsServer = new WebSocketServer({
+  const wsServer = new ws.server({
     httpServer: listener,
     // You should not use autoAcceptConnections for production
     // applications, as it defeats all standard cross-origin protection

@@ -1,4 +1,4 @@
-export { PostgreSQLDriverConfig } from './d';
+export { PostgreSQLDriverConfig } from './d.js';
 
-import defaults from './defaults';
+import defaults from './defaults.js';
 export { defaults as PostgreSQLDriverConfigDefaults };

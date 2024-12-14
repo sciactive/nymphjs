@@ -2,7 +2,7 @@
   "name": "@nymphjs/tilmeld",
   "version": "1.0.0-beta.81",
   "description": "Nymph.js - Tilmeld User and Group System",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "keywords": [
@@ -15,8 +15,8 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "prepublish": "npm run clean && npm run build",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest",
+    "test:watch": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -34,32 +34,31 @@
     "@nymphjs/guid": "^1.0.0-beta.81",
     "@nymphjs/nymph": "^1.0.0-beta.81",
     "@nymphjs/server": "^1.0.0-beta.81",
-    "crypto-js": "^4.2.0",
-    "email-templates": "^11.1.1",
-    "express": "^4.18.3",
-    "joi": "^17.12.2",
+    "email-templates": "^12.0.1",
+    "express": "^4.21.2",
+    "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
-    "locutus": "^2.0.16",
-    "lodash": "^4.17.21",
-    "otpauth": "^9.2.2",
-    "pug": "^3.0.2",
-    "qrcode": "^1.5.3"
+    "locutus": "^2.0.32",
+    "lodash-es": "^4.17.21",
+    "otpauth": "^9.3.5",
+    "pug": "^3.0.3",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@nymphjs/client": "^1.0.0-beta.81",
     "@nymphjs/client-node": "^1.0.0-beta.81",
     "@nymphjs/driver-sqlite3": "^1.0.0-beta.81",
-    "@tsconfig/recommended": "^1.0.3",
-    "@types/crypto-js": "^4.2.2",
+    "@tsconfig/recommended": "^1.0.8",
     "@types/email-templates": "^10.0.4",
-    "@types/express": "^4.17.21",
-    "@types/jest": "^29.5.12",
-    "@types/jsonwebtoken": "^9.0.6",
+    "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/jsonwebtoken": "^9.0.7",
     "@types/locutus": "^0.0.8",
-    "@types/lodash": "^4.14.202",
+    "@types/lodash-es": "^4.17.12",
     "@types/qrcode": "^1.5.5",
     "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
-    "typescript": "^5.3.3"
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }

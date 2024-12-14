@@ -1,4 +1,4 @@
-import { EntityConstructor, EntityInterface } from './Entity.types';
+import { EntityConstructor, EntityInterface } from './Entity.types.js';
 
 export default class EntityWeakCache {
   private references: WeakMap<

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import fs from 'node:fs';
 import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
-import SQLite3Driver from './SQLite3Driver';
+import SQLite3Driver from './SQLite3Driver.js';
 
 describe('SQLite3Driver In-Memory', () => {
   const sqliteConfig = {

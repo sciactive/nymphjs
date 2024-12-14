@@ -1,4 +1,5 @@
-import { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
+import pg from 'pg';
+import type { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
 import format from 'pg-format';
 import Cursor from 'pg-cursor';
 import {
@@ -23,7 +24,7 @@ import { makeTableSuffix } from '@nymphjs/guid';
 import {
   PostgreSQLDriverConfig,
   PostgreSQLDriverConfigDefaults as defaults,
-} from './conf';
+} from './conf/index.js';
 
 type PostgreSQLDriverConnection = {
   client: PoolClient;
@@ -146,8 +147,8 @@ export default class PostgreSQLDriver extends NymphDriver {
         err
           ? reject(err)
           : client
-          ? resolve({ client, done })
-          : reject('No client returned from connect.'),
+            ? resolve({ client, done })
+            : reject('No client returned from connect.'),
       ),
     );
   }
@@ -167,8 +168,8 @@ export default class PostgreSQLDriver extends NymphDriver {
               err
                 ? reject(err)
                 : client
-                ? resolve({ client, done })
-                : reject('No client returned from connect.'),
+                  ? resolve({ client, done })
+                  : reject('No client returned from connect.'),
             ),
         );
         await new Promise((resolve, reject) =>
@@ -188,7 +189,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     // Connecting, selecting database
     if (!this.connected) {
       try {
-        this.link = new Pool(this.postgresqlConfig);
+        this.link = new pg.Pool(this.postgresqlConfig);
         this.connected = true;
       } catch (e: any) {
         if (
@@ -1024,14 +1025,14 @@ export default class PostgreSQLDriver extends NymphDriver {
               datum.value.value === 'N'
                 ? JSON.stringify(Number(datum.value.number))
                 : datum.value.value === 'S'
-                ? JSON.stringify(
-                    PostgreSQLDriver.unescapeNulls(datum.value.string),
-                  )
-                : datum.value.value === 'J'
-                ? PostgreSQLDriver.unescapeNullSequences(
-                    JSON.stringify(datum.value.json),
-                  )
-                : datum.value.value;
+                  ? JSON.stringify(
+                      PostgreSQLDriver.unescapeNulls(datum.value.string),
+                    )
+                  : datum.value.value === 'J'
+                    ? PostgreSQLDriver.unescapeNullSequences(
+                        JSON.stringify(datum.value.json),
+                      )
+                    : datum.value.value;
             currentEntityExport.push(`\t${datum.value.name}=${value}`);
             datum = await dataIterator.next();
           } while (!datum.done && datum.value.guid === guid);
@@ -2134,10 +2135,12 @@ export default class PostgreSQLDriver extends NymphDriver {
           row.value === 'N'
             ? JSON.stringify(Number(row.number))
             : row.value === 'S'
-            ? JSON.stringify(PostgreSQLDriver.unescapeNulls(row.string))
-            : row.value === 'J'
-            ? PostgreSQLDriver.unescapeNullSequences(JSON.stringify(row.json))
-            : row.value,
+              ? JSON.stringify(PostgreSQLDriver.unescapeNulls(row.string))
+              : row.value === 'J'
+                ? PostgreSQLDriver.unescapeNullSequences(
+                    JSON.stringify(row.json),
+                  )
+                : row.value,
       }),
     );
 
@@ -2261,8 +2264,8 @@ export default class PostgreSQLDriver extends NymphDriver {
           typeof uvalue === 'number'
             ? 'N'
             : typeof uvalue === 'string'
-            ? 'S'
-            : 'J';
+              ? 'S'
+              : 'J';
         const jsonValue =
           storageValue === 'J'
             ? PostgreSQLDriver.escapeNullSequences(value)
@@ -2490,8 +2493,8 @@ export default class PostgreSQLDriver extends NymphDriver {
           typeof value === 'number'
             ? 'N'
             : typeof value === 'string'
-            ? 'S'
-            : 'J';
+              ? 'S'
+              : 'J';
         const jsonValue =
           storageValue === 'J'
             ? PostgreSQLDriver.escapeNullSequences(svalue)

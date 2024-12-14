@@ -1,4 +1,4 @@
-import Entity from './Entity';
+import Entity from './Entity.js';
 
 // Save referenced entities in an entity's data.
 export function saveEntities(entity: Entity) {

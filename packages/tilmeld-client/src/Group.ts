@@ -1,7 +1,7 @@
 import { Entity, Options, Selector } from '@nymphjs/client';
 
-import type User from './User';
-import type { CurrentUserData } from './User';
+import type User from './User.js';
+import type { CurrentUserData } from './User.js';
 
 export type GroupData = {
   /**

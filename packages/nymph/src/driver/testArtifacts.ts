@@ -1,15 +1,19 @@
-import fs from 'fs';
-import strtotime from 'locutus/php/datetime/strtotime';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
+import strtotime from 'locutus/php/datetime/strtotime.js';
 import { guid } from '@nymphjs/guid';
 
-import type Nymph from '../Nymph';
-import { EntityUniqueConstraintError } from '../errors';
+import type Nymph from '../Nymph.js';
+import { EntityUniqueConstraintError } from '../errors/index.js';
 import {
   TestBModel as TestBModelClass,
   TestModel as TestModelClass,
   TestModelData,
   TestEmptyModel as TestEmptyModelClass,
-} from '../testArtifacts';
+} from '../testArtifacts.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export function EntitiesTest(
   nymph: Nymph,

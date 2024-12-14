@@ -1,5 +1,5 @@
-import Sorter from './Sorter';
-import { TestModel } from './testArtifacts';
+import Sorter from './Sorter.js';
+import { TestModel } from './testArtifacts.js';
 
 describe('Sorter', () => {
   it('sorts entities by a string property', () => {

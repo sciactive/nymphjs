@@ -71,3 +71,7 @@
     user is changed, that information is propagated to the group.
   </p>
 </section>
+
+<script lang="ts">
+  let {}: {} = $props();
+</script>

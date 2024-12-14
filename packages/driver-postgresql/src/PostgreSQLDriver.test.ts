@@ -1,6 +1,8 @@
+import { jest } from '@jest/globals';
+
 import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
 
-import PostgreSQLDriver from './PostgreSQLDriver';
+import PostgreSQLDriver from './PostgreSQLDriver.js';
 
 // When using remote server, this can be helpful.
 jest.setTimeout(60000);

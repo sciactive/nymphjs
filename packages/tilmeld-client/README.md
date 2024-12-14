@@ -10,7 +10,7 @@ The Tilmeld Client lets you register, login, and perform user account related fu
 npm install --save @nymphjs/tilmeld-client
 ```
 
-You can find UMD in `dist`, or TS source in `src`.
+You can find ES modules in `dist`, or TS source in `src`.
 
 ## Usage
 

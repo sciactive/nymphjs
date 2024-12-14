@@ -1,14 +1,14 @@
-import Entity, { type EntityInstanceType } from './Entity';
+import Entity, { type EntityInstanceType } from './Entity.js';
 import type {
   EntityConstructor,
   EntityInterface,
   EntityJson,
   ServerCallResponse,
   ServerCallStaticResponse,
-} from './Entity.types';
-import EntityWeakCache from './EntityWeakCache';
-import type { AbortableAsyncIterator } from './HttpRequester';
-import HttpRequester from './HttpRequester';
+} from './Entity.types.js';
+import EntityWeakCache from './EntityWeakCache.js';
+import type { AbortableAsyncIterator } from './HttpRequester.js';
+import HttpRequester from './HttpRequester.js';
 import type {
   EventType,
   NymphOptions,
@@ -16,9 +16,12 @@ import type {
   RequestCallback,
   ResponseCallback,
   Selector,
-} from './Nymph.types';
-import type PubSub from './PubSub';
-import { entitiesToReferences, entityConstructorsToClassNames } from './utils';
+} from './Nymph.types.js';
+import type PubSub from './PubSub.js';
+import {
+  entitiesToReferences,
+  entityConstructorsToClassNames,
+} from './utils.js';
 
 let requester: HttpRequester;
 
@@ -586,14 +589,14 @@ export default class Nymph {
     callback: T extends 'request'
       ? RequestCallback
       : T extends 'response'
-      ? ResponseCallback
-      : never,
+        ? ResponseCallback
+        : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
       : T extends 'request'
-      ? 'responseCallbacks'
-      : never;
+        ? 'responseCallbacks'
+        : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
@@ -607,14 +610,14 @@ export default class Nymph {
     callback: T extends 'request'
       ? RequestCallback
       : T extends 'response'
-      ? ResponseCallback
-      : never,
+        ? ResponseCallback
+        : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'request'
       ? 'requestCallbacks'
       : T extends 'request'
-      ? 'responseCallbacks'
-      : never;
+        ? 'responseCallbacks'
+        : never;
     if (!(prop in this)) {
       return false;
     }

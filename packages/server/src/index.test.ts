@@ -4,14 +4,14 @@ import { Nymph as NymphServer } from '@nymphjs/nymph';
 import { Nymph } from '@nymphjs/client-node';
 import { Entity, HttpError } from '@nymphjs/client';
 
-import createServer from './index';
+import createServer from './index.js';
 import {
   EmployeeModel as EmployeeModelClass,
   Employee as EmployeeClass,
   RestrictedModel as RestrictedModelClass,
   Restricted as RestrictedClass,
   EmployeeData,
-} from './testArtifacts';
+} from './testArtifacts.js';
 
 const sqliteConfig = {
   filename: ':memory:',

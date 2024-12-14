@@ -1,7 +1,7 @@
 import { Nymph, Entity } from '@nymphjs/client';
 
-import type Group from './Group';
-import type { AdminGroupData, CurrentGroupData } from './Group';
+import type Group from './Group.js';
+import type { AdminGroupData, CurrentGroupData } from './Group.js';
 
 export type EventType = 'register' | 'login' | 'logout';
 export type RegisterCallback = (user: User & CurrentUserData) => void;
@@ -478,10 +478,10 @@ export default class User extends Entity<UserData> {
     callback: T extends 'register'
       ? RegisterCallback
       : T extends 'login'
-      ? LoginCallback
-      : T extends 'logout'
-      ? LogoutCallback
-      : never,
+        ? LoginCallback
+        : T extends 'logout'
+          ? LogoutCallback
+          : never,
   ) {
     const store = User.stores.get(this.nymph);
     if (store == null) {
@@ -493,10 +493,10 @@ export default class User extends Entity<UserData> {
     const prop = (event + 'Callbacks') as T extends 'register'
       ? 'registerCallbacks'
       : T extends 'login'
-      ? 'loginCallbacks'
-      : T extends 'logout'
-      ? 'logoutCallbacks'
-      : never;
+        ? 'loginCallbacks'
+        : T extends 'logout'
+          ? 'logoutCallbacks'
+          : never;
     if (!(prop in store)) {
       throw new Error('Invalid event type.');
     }
@@ -510,10 +510,10 @@ export default class User extends Entity<UserData> {
     callback: T extends 'register'
       ? RegisterCallback
       : T extends 'login'
-      ? LoginCallback
-      : T extends 'logout'
-      ? LogoutCallback
-      : never,
+        ? LoginCallback
+        : T extends 'logout'
+          ? LogoutCallback
+          : never,
   ) {
     const store = User.stores.get(this.nymph);
     if (store == null) {
@@ -525,10 +525,10 @@ export default class User extends Entity<UserData> {
     const prop = (event + 'Callbacks') as T extends 'register'
       ? 'registerCallbacks'
       : T extends 'login'
-      ? 'loginCallbacks'
-      : T extends 'logout'
-      ? 'logoutCallbacks'
-      : never;
+        ? 'loginCallbacks'
+        : T extends 'logout'
+          ? 'logoutCallbacks'
+          : never;
     if (!(prop in store)) {
       return false;
     }

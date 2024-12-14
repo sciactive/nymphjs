@@ -1,20 +1,20 @@
-export * from './conf';
-export * from './driver';
-export * from './errors';
+export * from './conf/index.js';
+export * from './driver/index.js';
+export * from './errors/index.js';
 
-export * from './Entity.types';
+export * from './Entity.types.js';
 
-export * from './Entity';
-import Entity from './Entity';
+export * from './Entity.js';
+import Entity from './Entity.js';
 export { Entity };
 
-export * from './Nymph.types';
+export * from './Nymph.types.js';
 
-export * from './Nymph';
-import Nymph from './Nymph';
+export * from './Nymph.js';
+import Nymph from './Nymph.js';
 export { Nymph };
 
-import nymphJoiProps from './nymphJoiProps';
+import nymphJoiProps from './nymphJoiProps.js';
 export { nymphJoiProps };
 
-export * from './utils';
+export * from './utils.js';

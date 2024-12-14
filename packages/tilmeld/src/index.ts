@@ -1,24 +1,24 @@
-export * from './conf';
+export * from './conf/index.js';
 
-export * from './enforceTilmeld';
+export * from './enforceTilmeld.js';
 
-export * from './errors';
+export * from './errors/index.js';
 
-import AbleObject from './AbleObject';
+import AbleObject from './AbleObject.js';
 export { AbleObject };
 
-export * from './Group';
-import Group from './Group';
+export * from './Group.js';
+import Group from './Group.js';
 export { Group };
 
-import Tilmeld from './Tilmeld';
+import Tilmeld from './Tilmeld.js';
 export { Tilmeld };
 
-export * from './Tilmeld.types';
+export * from './Tilmeld.types.js';
 
-import tilmeldJoiProps from './tilmeldJoiProps';
+import tilmeldJoiProps from './tilmeldJoiProps.js';
 export { tilmeldJoiProps };
 
-export * from './User';
-import User from './User';
+export * from './User.js';
+import User from './User.js';
 export { User };

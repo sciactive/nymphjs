@@ -1,3 +1,3 @@
-export * from './Sorter';
-import Sorter, { SortOptions } from './Sorter';
+export * from './Sorter.js';
+import Sorter, { SortOptions } from './Sorter.js';
 export { Sorter, SortOptions };

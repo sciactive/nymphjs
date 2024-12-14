@@ -3,3 +3,7 @@
 
   <p>Sorry, that address was not found.</p>
 </section>
+
+<script lang="ts">
+  let {}: {} = $props();
+</script>

@@ -2,7 +2,7 @@
   "name": "@nymphjs/nymph",
   "version": "1.0.0-beta.81",
   "description": "Nymph.js - Nymph ORM",
-  "type": "commonjs",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "keywords": [
@@ -15,8 +15,8 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "prepublish": "npm run clean && npm run build",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest",
+    "test:watch": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -32,21 +32,22 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.81",
-    "debug": "^4.3.5",
-    "joi": "^17.12.2",
-    "locutus": "^2.0.16",
-    "lodash": "^4.17.21",
+    "debug": "^4.4.0",
+    "joi": "^17.13.3",
+    "locutus": "^2.0.32",
+    "lodash-es": "^4.17.21",
     "n-readlines": "^1.0.3"
   },
   "devDependencies": {
-    "@tsconfig/recommended": "^1.0.3",
+    "@tsconfig/recommended": "^1.0.8",
     "@types/debug": "^4.1.12",
-    "@types/jest": "^29.5.12",
+    "@types/jest": "^29.5.14",
     "@types/locutus": "^0.0.8",
-    "@types/lodash": "^4.14.202",
+    "@types/lodash-es": "^4.17.12",
     "@types/n-readlines": "^1.0.6",
     "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
-    "typescript": "^5.3.3"
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }

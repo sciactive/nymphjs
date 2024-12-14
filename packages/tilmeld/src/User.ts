@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type {
   Nymph,
   EntityData,
@@ -8,24 +9,21 @@ import type {
 } from '@nymphjs/nymph';
 import { humanSecret, nanoid } from '@nymphjs/guid';
 import type { EmailOptions } from 'email-templates';
-import strtotime from 'locutus/php/datetime/strtotime';
-import Base64 from 'crypto-js/enc-base64';
-import sha256 from 'crypto-js/sha256';
-import md5 from 'crypto-js/md5';
-import { difference } from 'lodash';
+import strtotime from 'locutus/php/datetime/strtotime.js';
+import { difference } from 'lodash-es';
 import { TOTP, Secret } from 'otpauth';
 import { toDataURL } from 'qrcode';
 
-import { enforceTilmeld } from './enforceTilmeld';
-import AbleObject from './AbleObject';
-import type Group from './Group';
-import type { GroupData } from './Group';
+import { enforceTilmeld } from './enforceTilmeld.js';
+import AbleObject from './AbleObject.js';
+import type Group from './Group.js';
+import type { GroupData } from './Group.js';
 import {
   BadDataError,
   BadEmailError,
   BadUsernameError,
   EmailChangeRateLimitExceededError,
-} from './errors';
+} from './errors/index.js';
 
 export type EventType =
   | 'checkUsername'
@@ -764,7 +762,11 @@ export default class User extends AbleObject<UserData> {
     }
     return (
       'https://secure.gravatar.com/avatar/' +
-      md5(this.$data.email.trim().toLowerCase()).toString() +
+      crypto
+        .createHash('sha256')
+        .update(this.$data.email.trim().toLowerCase())
+        .digest('hex')
+        .toLowerCase() +
       '?d=identicon&s=40'
     );
   }
@@ -1206,12 +1208,18 @@ export default class User extends AbleObject<UserData> {
       case 'plain':
         return this.$data.password === password;
       case 'digest':
-        return this.$data.password === sha256(password).toString(Base64);
+        return (
+          this.$data.password ===
+          crypto.createHash('sha256').update(password).digest('base64')
+        );
       case 'salt':
       default:
         return (
           this.$data.password ===
-          sha256(password + this.$data.salt).toString(Base64)
+          crypto
+            .createHash('sha256')
+            .update(password + this.$data.salt)
+            .digest('base64')
         );
     }
   }
@@ -1341,14 +1349,18 @@ export default class User extends AbleObject<UserData> {
         break;
       case 'digest':
         delete this.$data.salt;
-        this.$data.password = sha256(password).toString(Base64);
+        this.$data.password = crypto
+          .createHash('sha256')
+          .update(password)
+          .digest('base64');
         break;
       case 'salt':
       default:
         this.$data.salt = nanoid();
-        this.$data.password = sha256(password + this.$data.salt).toString(
-          Base64,
-        );
+        this.$data.password = crypto
+          .createHash('sha256')
+          .update(password + this.$data.salt)
+          .digest('base64');
         break;
     }
     return this.$data.password;
@@ -2466,34 +2478,34 @@ export default class User extends AbleObject<UserData> {
     callback: T extends 'checkUsername'
       ? TilmeldCheckUsernameCallback
       : T extends 'beforeRegister'
-      ? TilmeldBeforeRegisterCallback
-      : T extends 'afterRegister'
-      ? TilmeldAfterRegisterCallback
-      : T extends 'beforeLogin'
-      ? TilmeldBeforeLoginCallback
-      : T extends 'afterLogin'
-      ? TilmeldAfterLoginCallback
-      : T extends 'beforeLogout'
-      ? TilmeldBeforeLogoutCallback
-      : T extends 'afterLogout'
-      ? TilmeldAfterLogoutCallback
-      : never,
+        ? TilmeldBeforeRegisterCallback
+        : T extends 'afterRegister'
+          ? TilmeldAfterRegisterCallback
+          : T extends 'beforeLogin'
+            ? TilmeldBeforeLoginCallback
+            : T extends 'afterLogin'
+              ? TilmeldAfterLoginCallback
+              : T extends 'beforeLogout'
+                ? TilmeldBeforeLogoutCallback
+                : T extends 'afterLogout'
+                  ? TilmeldAfterLogoutCallback
+                  : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'checkUsername'
       ? 'checkUsernameCallbacks'
       : T extends 'beforeRegister'
-      ? 'beforeRegisterCallbacks'
-      : T extends 'afterRegister'
-      ? 'afterRegisterCallbacks'
-      : T extends 'beforeLogin'
-      ? 'beforeLoginCallbacks'
-      : T extends 'afterLogin'
-      ? 'afterLoginCallbacks'
-      : T extends 'beforeLogout'
-      ? 'beforeLogoutCallbacks'
-      : T extends 'afterLogout'
-      ? 'afterLogoutCallbacks'
-      : never;
+        ? 'beforeRegisterCallbacks'
+        : T extends 'afterRegister'
+          ? 'afterRegisterCallbacks'
+          : T extends 'beforeLogin'
+            ? 'beforeLoginCallbacks'
+            : T extends 'afterLogin'
+              ? 'afterLoginCallbacks'
+              : T extends 'beforeLogout'
+                ? 'beforeLogoutCallbacks'
+                : T extends 'afterLogout'
+                  ? 'afterLogoutCallbacks'
+                  : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
@@ -2507,34 +2519,34 @@ export default class User extends AbleObject<UserData> {
     callback: T extends 'checkUsername'
       ? TilmeldCheckUsernameCallback
       : T extends 'beforeRegister'
-      ? TilmeldBeforeRegisterCallback
-      : T extends 'afterRegister'
-      ? TilmeldAfterRegisterCallback
-      : T extends 'beforeLogin'
-      ? TilmeldBeforeLoginCallback
-      : T extends 'afterLogin'
-      ? TilmeldAfterLoginCallback
-      : T extends 'beforeLogout'
-      ? TilmeldBeforeLogoutCallback
-      : T extends 'afterLogout'
-      ? TilmeldAfterLogoutCallback
-      : never,
+        ? TilmeldBeforeRegisterCallback
+        : T extends 'afterRegister'
+          ? TilmeldAfterRegisterCallback
+          : T extends 'beforeLogin'
+            ? TilmeldBeforeLoginCallback
+            : T extends 'afterLogin'
+              ? TilmeldAfterLoginCallback
+              : T extends 'beforeLogout'
+                ? TilmeldBeforeLogoutCallback
+                : T extends 'afterLogout'
+                  ? TilmeldAfterLogoutCallback
+                  : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'checkUsername'
       ? 'checkUsernameCallbacks'
       : T extends 'beforeRegister'
-      ? 'beforeRegisterCallbacks'
-      : T extends 'afterRegister'
-      ? 'afterRegisterCallbacks'
-      : T extends 'beforeLogin'
-      ? 'beforeLoginCallbacks'
-      : T extends 'afterLogin'
-      ? 'afterLoginCallbacks'
-      : T extends 'beforeLogout'
-      ? 'beforeLogoutCallbacks'
-      : T extends 'afterLogout'
-      ? 'afterLogoutCallbacks'
-      : never;
+        ? 'beforeRegisterCallbacks'
+        : T extends 'afterRegister'
+          ? 'afterRegisterCallbacks'
+          : T extends 'beforeLogin'
+            ? 'beforeLoginCallbacks'
+            : T extends 'afterLogin'
+              ? 'afterLoginCallbacks'
+              : T extends 'beforeLogout'
+                ? 'beforeLogoutCallbacks'
+                : T extends 'afterLogout'
+                  ? 'afterLogoutCallbacks'
+                  : never;
     if (!(prop in this)) {
       return false;
     }

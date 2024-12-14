@@ -4,8 +4,18 @@
   "description": "Nymph.js - Tilmeld Front End Components",
   "type": "module",
   "main": "dist/index.cjs",
-  "module": "lib/index.js",
-  "svelte": "lib/index.js",
+  "module": "dist/index.js",
+  "svelte": "dist/index.js",
+  "exports": {
+    "./package.json": {
+      "types": "./package.json",
+      "svelte": "./package.json"
+    },
+    ".": {
+      "types": "./src/index.d.ts",
+      "svelte": "./dist/index.js"
+    }
+  },
   "types": "src/index.d.ts",
   "keywords": [
     "nymph",
@@ -13,15 +23,10 @@
     "object relational mapper"
   ],
   "scripts": {
-    "clean": "npm run clean:ts && npm run clean:js",
-    "clean:ts": "test -d lib && rm -r lib || true",
-    "clean:js": "test -d dist && rm -r dist || true",
-    "build": "npm run build:ts && npm run build:svelte && npm run build:bundle",
-    "build:bundle": "webpack",
-    "watch:bundle": "webpack --watch",
-    "build:ts": "tsc",
-    "watch:ts": "tsc --watch",
-    "build:svelte": "svelte-strip strip src/ lib/",
+    "clean": "test -d dist && rm -r dist || true",
+    "build": "npm run build:js && npm run build:svelte",
+    "build:js": "tsc -p . --outDir dist/ --rootDir src/",
+    "build:svelte": "cp src/*.svelte dist/",
     "prepublish": "npm run clean && npm run build",
     "test": "jest",
     "test:watch": "jest --watch"
@@ -40,26 +45,25 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@nymphjs/tilmeld-client": "^1.0.0-beta.81",
-    "@smui/button": "^7.0.0-beta.16",
-    "@smui/checkbox": "^7.0.0-beta.16",
-    "@smui/circular-progress": "^7.0.0-beta.16",
-    "@smui/dialog": "^7.0.0-beta.16",
-    "@smui/form-field": "^7.0.0-beta.16",
-    "@smui/radio": "^7.0.0-beta.16",
-    "@smui/textfield": "^7.0.0-beta.16",
-    "@tsconfig/recommended": "^1.0.3",
-    "@tsconfig/svelte": "^5.0.2",
-    "@types/jest": "^29.5.12",
+    "@smui/button": "^8.0.0-beta.2",
+    "@smui/checkbox": "^8.0.0-beta.2",
+    "@smui/circular-progress": "^8.0.0-beta.2",
+    "@smui/dialog": "^8.0.0-beta.2",
+    "@smui/form-field": "^8.0.0-beta.2",
+    "@smui/radio": "^8.0.0-beta.2",
+    "@smui/textfield": "^8.0.0-beta.2",
+    "@tsconfig/recommended": "^1.0.8",
+    "@tsconfig/svelte": "^5.0.4",
+    "@types/jest": "^29.5.14",
     "jest": "^29.7.0",
-    "svelte": "^4.2.12",
-    "svelte-check": "^3.6.6",
-    "svelte-loader": "^3.1.9",
-    "svelte-preprocess": "^5.1.3",
-    "svelte-strip": "^3.1.1",
-    "ts-jest": "^29.1.2",
+    "svelte": "^5.11.2",
+    "svelte-check": "^4.1.1",
+    "svelte-loader": "^3.2.4",
+    "svelte-preprocess": "^6.0.3",
+    "ts-jest": "^29.2.5",
     "ts-loader": "^9.5.1",
-    "typescript": "^5.3.3",
-    "webpack": "^5.90.3",
+    "typescript": "^5.7.2",
+    "webpack": "^5.97.1",
     "webpack-cli": "^5.1.4"
   }
 }

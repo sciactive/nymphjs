@@ -1,19 +1,19 @@
-export * from './ClassNotAvailableError';
+export * from './ClassNotAvailableError.js';
 
-export * from './EntityConflictError';
+export * from './EntityConflictError.js';
 
-export * from './EntityInvalidDataError';
+export * from './EntityInvalidDataError.js';
 
-export * from './EntityIsSleepingReferenceError';
+export * from './EntityIsSleepingReferenceError.js';
 
-export * from './EntityUniqueConstraintError';
+export * from './EntityUniqueConstraintError.js';
 
-export * from './InvalidParametersError';
+export * from './InvalidParametersError.js';
 
-export * from './InvalidStateError';
+export * from './InvalidStateError.js';
 
-export * from './NotConfiguredError';
+export * from './NotConfiguredError.js';
 
-export * from './QueryFailedError';
+export * from './QueryFailedError.js';
 
-export * from './UnableToConnectError';
+export * from './UnableToConnectError.js';

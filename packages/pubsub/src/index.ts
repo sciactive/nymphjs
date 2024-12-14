@@ -1,10 +1,10 @@
-export * from './conf';
+export * from './conf/index.js';
 
-import PubSub from './PubSub';
+import PubSub from './PubSub.js';
 export { PubSub };
 
-export * from './PubSub.types';
+export * from './PubSub.types.js';
 
-import createServer from './createServer';
+import createServer from './createServer.js';
 export { createServer };
 export default createServer;

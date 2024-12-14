@@ -1,5 +1,5 @@
-export * from './conf';
+export * from './conf/index.js';
 
-import MySQLDriver from './MySQLDriver';
+import MySQLDriver from './MySQLDriver.js';
 export { MySQLDriver };
 export default MySQLDriver;

@@ -1,5 +1,5 @@
-import { EntityJson } from './Entity.types';
-import { PubSubSubscription } from './PubSub';
+import { EntityJson } from './Entity.types.js';
+import { PubSubSubscription } from './PubSub.js';
 
 export type PubSubResolveCallback<T> = (arg: T, event?: string) => void;
 export type PubSubRejectCallback = (err: any) => void;

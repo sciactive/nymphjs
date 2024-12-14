@@ -1,11 +1,11 @@
-import Nymph, { InvalidRequestError } from './Nymph';
-import type { NymphOptions, Options, Selector } from './Nymph.types';
-import type { EntityInstanceType } from './Entity';
+import Nymph, { InvalidRequestError } from './Nymph.js';
+import type { NymphOptions, Options, Selector } from './Nymph.types.js';
+import type { EntityInstanceType } from './Entity.js';
 import type {
   EntityConstructor,
   EntityInterface,
   EntityJson,
-} from './Entity.types';
+} from './Entity.types.js';
 import type {
   PubSubCallbacks,
   PubSubConnectCallback,
@@ -17,9 +17,9 @@ import type {
   PubSubErrorCallback,
   PubSubSubscribable,
   PubSubUpdate,
-} from './PubSub.types';
-import { entityConstructorsToClassNames } from './utils';
-import { ClientError } from './HttpRequester';
+} from './PubSub.types.js';
+import { entityConstructorsToClassNames } from './utils.js';
+import { ClientError } from './HttpRequester.js';
 
 export default class PubSub {
   private nymph: Nymph;
@@ -736,18 +736,18 @@ export default class PubSub {
     callback: T extends 'connect'
       ? PubSubConnectCallback
       : T extends 'disconnect'
-      ? PubSubDisconnectCallback
-      : T extends 'error'
-      ? PubSubErrorCallback
-      : never,
+        ? PubSubDisconnectCallback
+        : T extends 'error'
+          ? PubSubErrorCallback
+          : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
       : T extends 'disconnect'
-      ? 'disconnectCallbacks'
-      : T extends 'error'
-      ? 'errorCallbacks'
-      : never;
+        ? 'disconnectCallbacks'
+        : T extends 'error'
+          ? 'errorCallbacks'
+          : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
@@ -761,18 +761,18 @@ export default class PubSub {
     callback: T extends 'connect'
       ? PubSubConnectCallback
       : T extends 'disconnect'
-      ? PubSubDisconnectCallback
-      : T extends 'error'
-      ? PubSubErrorCallback
-      : never,
+        ? PubSubDisconnectCallback
+        : T extends 'error'
+          ? PubSubErrorCallback
+          : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'connect'
       ? 'connectCallbacks'
       : T extends 'disconnect'
-      ? 'disconnectCallbacks'
-      : T extends 'error'
-      ? 'errorCallbacks'
-      : never;
+        ? 'disconnectCallbacks'
+        : T extends 'error'
+          ? 'errorCallbacks'
+          : never;
     if (!(prop in this)) {
       return false;
     }

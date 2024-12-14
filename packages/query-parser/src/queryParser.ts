@@ -1,5 +1,5 @@
 import type { EntityConstructor, Options, Selector } from '@nymphjs/client';
-import splitn from '@sciactive/splitn';
+import { splitn } from '@sciactive/splitn';
 
 export type BareQueryHandler = (
   input: string,

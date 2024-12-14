@@ -7,16 +7,10 @@ import {
   SerializedEntityData,
   classNamesToEntityConstructors,
 } from '@nymphjs/nymph';
-import {
-  request,
-  client as WebSocketClient,
-  server as WebSocketServer,
-  connection,
-  Message,
-} from 'websocket';
-import { difference } from 'lodash';
+import ws from 'websocket';
+import { difference } from 'lodash-es';
 
-import { Config, ConfigDefaults as defaults } from './conf';
+import { Config, ConfigDefaults as defaults } from './conf/index.js';
 import type {
   QuerySubscriptionData,
   AuthenticateMessageData,
@@ -28,7 +22,7 @@ import type {
   PublishMessageData,
   MessageData,
   MessageOptions,
-} from './PubSub.types';
+} from './PubSub.types.js';
 
 /**
  * A publish/subscribe server for Nymph.
@@ -53,19 +47,19 @@ export default class PubSub {
   /**
    * The WebSocket server.
    */
-  public server: WebSocketServer;
+  public server: ws.server;
 
   private sessions = new Map<
-    connection,
+    ws.connection,
     { authToken: string; switchToken?: string }
   >();
   protected querySubs: {
     [etype: string]: {
-      [query: string]: Map<connection, QuerySubscriptionData>;
+      [query: string]: Map<ws.connection, QuerySubscriptionData>;
     };
   } = {};
   protected uidSubs: {
-    [uidName: string]: Map<connection, { count: boolean }>;
+    [uidName: string]: Map<ws.connection, { count: boolean }>;
   } = {};
   protected static transactionPublishes: {
     nymph: Nymph;
@@ -302,7 +296,7 @@ export default class PubSub {
 
   private static publish(message: string, config: Config) {
     for (let host of config.entries ?? []) {
-      const client = new WebSocketClient();
+      const client = new ws.client();
 
       client.on('connectFailed', (error) => {
         if (config.logger) {
@@ -389,11 +383,7 @@ export default class PubSub {
    *
    * @param config The PubSub configuration.
    */
-  public constructor(
-    config: Partial<Config>,
-    nymph: Nymph,
-    server: WebSocketServer,
-  ) {
+  public constructor(config: Partial<Config>, nymph: Nymph, server: ws.server) {
     this.nymph = nymph;
     this.config = { ...defaults, ...config };
     this.server = server;
@@ -405,7 +395,7 @@ export default class PubSub {
     this.server.shutDown();
   }
 
-  public handleRequest(request: request) {
+  public handleRequest(request: ws.request) {
     if (!this.config.originIsAllowed(request.origin)) {
       // Make sure we only accept requests from an allowed origin
       request.reject();
@@ -440,7 +430,7 @@ export default class PubSub {
   /**
    * Handle a message from a client.
    */
-  public async onMessage(from: connection, msg: Message) {
+  public async onMessage(from: ws.connection, msg: ws.Message) {
     if (msg.type !== 'utf8') {
       throw new Error("This server doesn't accept binary messages.");
     }
@@ -470,7 +460,7 @@ export default class PubSub {
   /**
    * Clean up after users who leave.
    */
-  public onClose(conn: connection, description: string) {
+  public onClose(conn: ws.connection, description: string) {
     this.config.logger(
       'log',
       new Date().toISOString(),
@@ -556,7 +546,7 @@ export default class PubSub {
     }
   }
 
-  public onError(conn: connection, e: Error) {
+  public onError(conn: ws.connection, e: Error) {
     this.config.logger(
       'error',
       new Date().toISOString(),
@@ -568,7 +558,7 @@ export default class PubSub {
    * Handle an authentication from a client.
    */
   private handleAuthentication(
-    from: connection,
+    from: ws.connection,
     data: AuthenticateMessageData,
   ) {
     // Save the user's auth token in session storage.
@@ -585,7 +575,7 @@ export default class PubSub {
    * Handle a subscribe or unsubscribe from a client.
    */
   private async handleSubscription(
-    from: connection,
+    from: ws.connection,
     data: SubscribeMessageData,
   ) {
     try {
@@ -617,7 +607,7 @@ export default class PubSub {
    * Handle a subscribe or unsubscribe for a query from a client.
    */
   private async handleSubscriptionQuery(
-    from: connection,
+    from: ws.connection,
     data: QuerySubscribeMessageData,
     qrefParent?: {
       etype: string;
@@ -859,7 +849,7 @@ export default class PubSub {
    * Handle a subscribe or unsubscribe for a UID from a client.
    */
   private async handleSubscriptionUid(
-    from: connection,
+    from: ws.connection,
     data: UidSubscribeMessageData,
   ) {
     if (data.action === 'subscribe') {
@@ -976,8 +966,8 @@ export default class PubSub {
    * Handle a publish from a client.
    */
   private async handlePublish(
-    from: connection,
-    msg: Message,
+    from: ws.connection,
+    msg: ws.Message,
     data: PublishMessageData,
   ) {
     if (
@@ -1018,7 +1008,7 @@ export default class PubSub {
    * Handle an entity publish from a client.
    */
   private async handlePublishEntity(
-    from: connection,
+    from: ws.connection,
     data: PublishEntityMessageData,
   ) {
     this.config.logger(
@@ -1035,7 +1025,7 @@ export default class PubSub {
 
     for (let curQuery in this.querySubs[etype]) {
       const curClients = this.querySubs[etype][curQuery];
-      const updatedClients = new Set<connection>();
+      const updatedClients = new Set<ws.connection>();
 
       if (data.event === 'delete' || data.event === 'update') {
         // Check if it is in any client's currents.
@@ -1135,7 +1125,7 @@ export default class PubSub {
   }
 
   private async updateClient(
-    curClient: connection,
+    curClient: ws.connection,
     curData: QuerySubscriptionData,
     data: PublishEntityMessageData,
   ) {
@@ -1276,7 +1266,7 @@ export default class PubSub {
    * Handle a UID publish from a client.
    */
   private async handlePublishUid(
-    from: connection,
+    from: ws.connection,
     data: PublishUidMessageData,
   ) {
     this.config.logger(
@@ -1345,7 +1335,7 @@ export default class PubSub {
   /**
    * Relay publish data to other servers.
    */
-  private relay(message: Message) {
+  private relay(message: ws.Message) {
     if (message.type !== 'utf8') {
       this.config.logger(
         'error',
@@ -1356,7 +1346,7 @@ export default class PubSub {
     }
 
     for (let host of this.config.relays) {
-      const client = new WebSocketClient();
+      const client = new ws.client();
 
       client.on('connectFailed', (error) => {
         this.config.logger(
@@ -1425,7 +1415,7 @@ export default class PubSub {
    * This translates qref selectors into ref selectors using the "current" GUID
    * list in the existing subscriptions.
    */
-  private translateQRefSelectors(client: connection, selectors: Selector[]) {
+  private translateQRefSelectors(client: ws.connection, selectors: Selector[]) {
     const newSelectors: Selector[] = [];
 
     for (const curSelector of selectors) {

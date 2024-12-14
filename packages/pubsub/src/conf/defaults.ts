@@ -1,4 +1,4 @@
-import { Config } from './d';
+import { Config } from './d.js';
 
 export default {
   originIsAllowed: () => {

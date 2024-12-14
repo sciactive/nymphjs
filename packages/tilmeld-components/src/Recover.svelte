@@ -1,11 +1,13 @@
-{#if clientConfig != null && clientConfig.pwRecovery}
+<svelte:options runes />
+
+{#if $clientConfig != null && $clientConfig.pwRecovery}
   <Dialog
-    use={usePass}
+    {use}
     bind:open
     aria-labelledby="tilmeld-recovery-title"
     aria-describedby="tilmeld-recovery-content"
     surface$class="tilmeld-recover-dialog-surface"
-    {...exclude($$restProps, [
+    {...exclude(restProps, [
       'recoveryTypePassword$',
       'recoveryTypeUsername$',
       'account$',
@@ -27,23 +29,27 @@
         {successRecoveredMessage}
       {:else}
         {#if !hasSentSecret}
-          {#if !clientConfig.emailUsernames}
+          {#if !$clientConfig.emailUsernames}
             <div>
               <FormField style="margin-right: 1em;">
                 <Radio
                   bind:group={recoveryType}
                   value="password"
-                  {...prefixFilter($$restProps, 'recoveryTypePassword$')}
+                  {...prefixFilter(restProps, 'recoveryTypePassword$')}
                 />
-                <span slot="label">I don't know my password.</span>
+                {#snippet label()}
+                  I don't know my password.
+                {/snippet}
               </FormField>
               <FormField style="margin-right: 1em;">
                 <Radio
                   bind:group={recoveryType}
                   value="username"
-                  {...prefixFilter($$restProps, 'recoveryTypeUsername$')}
+                  {...prefixFilter(restProps, 'recoveryTypeUsername$')}
                 />
-                <span slot="label">I don't know my username.</span>
+                {#snippet label()}
+                  I don't know my username.
+                {/snippet}
               </FormField>
             </div>
           {/if}
@@ -51,7 +57,7 @@
           <div>
             {#if recoveryType === 'password'}
               <p>
-                To reset your password, type the {clientConfig.emailUsernames
+                To reset your password, type the {$clientConfig.emailUsernames
                   ? 'email'
                   : 'username'}
                 you use to sign in below.
@@ -69,19 +75,19 @@
             <Textfield
               bind:this={accountElem}
               bind:value={account}
-              label={clientConfig.emailUsernames || recoveryType === 'username'
+              label={$clientConfig.emailUsernames || recoveryType === 'username'
                 ? 'Email Address'
                 : 'Username'}
-              type={clientConfig.emailUsernames || recoveryType === 'username'
+              type={$clientConfig.emailUsernames || recoveryType === 'username'
                 ? 'email'
                 : 'text'}
-              input$autocomplete={clientConfig.emailUsernames ||
+              input$autocomplete={$clientConfig.emailUsernames ||
               recoveryType === 'username'
                 ? 'email'
                 : 'username'}
               input$autocapitalize="off"
               input$spellcheck="false"
-              {...prefixFilter($$restProps, 'account$')}
+              {...prefixFilter(restProps, 'account$')}
             />
           </div>
 
@@ -89,8 +95,8 @@
             <div class="tilmeld-recover-action">
               <a
                 href={'javascript:void(0);'}
-                on:click={() => (hasSentSecret = 1)}
-                {...prefixFilter($$restProps, 'alreadyGotCodeLink$')}
+                onclick={() => (hasSentSecret = 1)}
+                {...prefixFilter(restProps, 'alreadyGotCodeLink$')}
               >
                 Already Got a Code?
               </a>
@@ -98,7 +104,7 @@
           {/if}
         {:else}
           <div>
-            <p {...prefixFilter($$restProps, 'codeSentMessage$')}>
+            <p {...prefixFilter(restProps, 'codeSentMessage$')}>
               A code has been sent to you by email. Enter that code here, and a
               new password for your account.
             </p>
@@ -109,16 +115,16 @@
               <Textfield
                 bind:this={accountElem}
                 bind:value={account}
-                label={clientConfig.emailUsernames
+                label={$clientConfig.emailUsernames
                   ? 'Email Address'
                   : 'Username'}
-                type={clientConfig.emailUsernames ? 'email' : 'text'}
-                input$autocomplete={clientConfig.emailUsernames
+                type={$clientConfig.emailUsernames ? 'email' : 'text'}
+                input$autocomplete={$clientConfig.emailUsernames
                   ? 'email'
                   : 'username'}
                 input$autocapitalize="off"
                 input$spellcheck="false"
-                {...prefixFilter($$restProps, 'account$')}
+                {...prefixFilter(restProps, 'account$')}
               />
             </div>
           {/if}
@@ -129,7 +135,7 @@
               label="Recovery Code"
               type="text"
               input$autocomplete="one-time-code"
-              {...prefixFilter($$restProps, 'recoveryCode$')}
+              {...prefixFilter(restProps, 'recoveryCode$')}
             />
           </div>
 
@@ -139,7 +145,7 @@
               label="Password"
               type="password"
               input$autocomplete="new-password"
-              {...prefixFilter($$restProps, 'password$')}
+              {...prefixFilter(restProps, 'password$')}
             />
           </div>
 
@@ -149,15 +155,15 @@
               label="Re-enter Password"
               type="password"
               input$autocomplete="new-password"
-              {...prefixFilter($$restProps, 'password2$')}
+              {...prefixFilter(restProps, 'password2$')}
             />
           </div>
 
           <div class="tilmeld-recover-action">
             <a
               href={'javascript:void(0);'}
-              on:click={() => (hasSentSecret = false)}
-              {...prefixFilter($$restProps, 'needCodeLink$')}
+              onclick={() => (hasSentSecret = false)}
+              {...prefixFilter(restProps, 'needCodeLink$')}
             >
               Need a New Code?
             </a>
@@ -175,30 +181,30 @@
             <CircularProgress
               style="height: 24px; width: 24px;"
               indeterminate
-              {...prefixFilter($$restProps, 'progress$')}
+              {...prefixFilter(restProps, 'progress$')}
             />
           </div>
         {/if}
       {/if}
     </Content>
     <Actions>
-      <Button on:click={() => (open = false)} disabled={loading}>
+      <Button onclick={() => (open = false)} disabled={loading}>
         <Label>{successRecoveredMessage ? 'Close' : 'Cancel'}</Label>
       </Button>
       {#if !successRecoveredMessage}
         {#if !hasSentSecret}
           <Button
-            on:click$preventDefault$stopPropagation={sendRecovery}
+            onclick={preventDefault(stopPropagation(sendRecovery))}
             disabled={loading}
-            {...prefixFilter($$restProps, 'sendCodeButton$')}
+            {...prefixFilter(restProps, 'sendCodeButton$')}
           >
             <Label>Send Recovery</Label>
           </Button>
         {:else}
           <Button
-            on:click$preventDefault$stopPropagation={recover}
+            onclick={preventDefault(stopPropagation(recover))}
             disabled={loading}
-            {...prefixFilter($$restProps, 'resetPasswordButton$')}
+            {...prefixFilter(restProps, 'resetPasswordButton$')}
           >
             <Label>Reset Password</Label>
           </Button>
@@ -209,8 +215,10 @@
 {/if}
 
 <script lang="ts">
+  import type { ComponentProps } from 'svelte';
   import { onMount } from 'svelte';
-  import { get_current_component } from 'svelte/internal';
+  import type { Writable } from 'svelte/store';
+  import { writable } from 'svelte/store';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
@@ -218,51 +226,141 @@
   import FormField from '@smui/form-field';
   import Radio from '@smui/radio';
   import type { ActionArray } from '@smui/common/internal';
-  import {
-    forwardEventsBuilder,
-    exclude,
-    prefixFilter,
-  } from '@smui/common/internal';
+  import { exclude, prefixFilter } from '@smui/common/internal';
+  import { preventDefault, stopPropagation } from '@smui/common/events';
+  import type { SmuiElementPropMap } from '@smui/common';
   import type {
     User as UserClass,
     ClientConfig,
   } from '@nymphjs/tilmeld-client';
 
-  const forwardEvents = forwardEventsBuilder(get_current_component());
+  type OwnProps = {
+    /**
+     * An array of Action or [Action, ActionProps] to be applied to the element.
+     */
+    use?: ActionArray;
+    /**
+     * Whether the dialog is open.
+     */
+    open?: boolean;
+    /**
+     * The title of the dialog.
+     */
+    title?: string;
+    /**
+     * A writable store of the Nymph client config.
+     *
+     * It will be retrieved from the server if not provided.
+     */
+    clientConfig?: Writable<ClientConfig | undefined>;
+    /**
+     * The User class from Nymph.
+     */
+    User: typeof UserClass;
+    /**
+     * Give focus to the account box when the form is ready.
+     */
+    autofocus?: boolean;
+    /**
+     * The type of recovery being requested.
+     *
+     * User provided. You can bind to it if you need to.
+     */
+    recoveryType?: 'username' | 'password';
+    /**
+     * User provided. You can bind to it if you need to.
+     */
+    account?: string;
+    /**
+     * User provided. You can bind to it if you need to.
+     */
+    secret?: string;
+    /**
+     * User provided. You can bind to it if you need to.
+     */
+    password?: string;
+    /**
+     * User provided. You can bind to it if you need to.
+     */
+    password2?: string;
+  };
+  let {
+    use = [],
+    open = $bindable(false),
+    title = 'Recover Your Account',
+    clientConfig = $bindable(writable(false as unknown as undefined)),
+    User,
+    autofocus = true,
+    recoveryType = $bindable('password'),
+    account = $bindable(''),
+    secret = $bindable(''),
+    password = $bindable(''),
+    password2 = $bindable(''),
+    ...restProps
+  }: OwnProps & {
+    [k in keyof ComponentProps<
+      typeof Radio
+    > as `recoveryTypePassword\$${k}`]?: ComponentProps<typeof Radio>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Radio
+    > as `recoveryTypeUsername\$${k}`]?: ComponentProps<typeof Radio>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `account\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof SmuiElementPropMap['a'] as `alreadyGotCodeLink\$${k}`]?: SmuiElementPropMap['a'][k];
+  } & {
+    [k in keyof SmuiElementPropMap['p'] as `codeSentMessage\$${k}`]?: SmuiElementPropMap['p'][k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `recoveryCode\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `password\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `password2\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof SmuiElementPropMap['a'] as `needCodeLink\$${k}`]?: SmuiElementPropMap['a'][k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof CircularProgress
+    > as `progress\$${k}`]?: ComponentProps<typeof CircularProgress>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Button<undefined, 'button'>
+    > as `sendCodeButton\$${k}`]?: ComponentProps<
+      typeof Button<undefined, 'button'>
+    >[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Button<undefined, 'button'>
+    > as `resetPasswordButton\$${k}`]?: ComponentProps<
+      typeof Button<undefined, 'button'>
+    >[k];
+  } = $props();
 
-  export let use: ActionArray = [];
-  $: usePass = [forwardEvents, ...use] as ActionArray;
-  export let open = false;
-  export let title = 'Recover Your Account';
-  export let clientConfig: ClientConfig | undefined = undefined;
-  export let User: typeof UserClass;
+  let loading = $state(false);
+  let hasSentSecret: number | boolean = $state(false);
+  let accountElem: Textfield | undefined = $state();
+  let failureMessage: string | undefined = $state();
+  let successRecoveredMessage: string | undefined = $state();
 
-  // Give focus to the account box when the form is ready.
-  export let autofocus = true;
-  export let recoveryType: 'username' | 'password' = 'password';
-
-  /** User provided. You can bind to it if you need to. */
-  export let account = '';
-  /** User provided. You can bind to it if you need to. */
-  export let secret = '';
-  /** User provided. You can bind to it if you need to. */
-  export let password = '';
-  /** User provided. You can bind to it if you need to. */
-  export let password2 = '';
-
-  let loading = false;
-  let hasSentSecret: number | boolean = false;
-  let accountElem: Textfield;
-  let failureMessage: string | undefined = undefined;
-  let successRecoveredMessage: string | undefined = undefined;
-
-  $: if (open && autofocus && accountElem) {
-    accountElem.focus();
-  }
+  $effect(() => {
+    if (open && autofocus && accountElem) {
+      accountElem.focus();
+    }
+  });
 
   onMount(async () => {
-    if (clientConfig === undefined) {
-      clientConfig = await User.getClientConfig();
+    if ($clientConfig === (false as unknown as undefined)) {
+      $clientConfig = undefined;
+      $clientConfig = await User.getClientConfig();
     }
   });
 
@@ -270,7 +368,7 @@
     if (account === '') {
       failureMessage =
         'You need to enter ' +
-        (clientConfig?.emailUsernames || recoveryType === 'username'
+        ($clientConfig?.emailUsernames || recoveryType === 'username'
           ? 'an email address'
           : 'a username') +
         '.';
@@ -304,7 +402,7 @@
     if (account === '') {
       failureMessage =
         'You need to enter ' +
-        (clientConfig?.emailUsernames || recoveryType === 'username'
+        ($clientConfig?.emailUsernames || recoveryType === 'username'
           ? 'an email address'
           : 'a username') +
         '.';

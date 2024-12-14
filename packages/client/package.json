@@ -2,26 +2,21 @@
   "name": "@nymphjs/client",
   "version": "1.0.0-beta.81",
   "description": "Nymph.js - Client",
-  "browser": "dist/index.js",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "keywords": [
     "nymph",
     "ORM",
     "object relational mapper"
   ],
   "scripts": {
-    "clean": "npm run clean:ts && npm run clean:js",
-    "clean:ts": "test -d lib && rm -r lib || true",
-    "clean:js": "test -d dist && rm -r dist || true",
-    "build": "npm run build:ts && npm run build:js",
-    "build:ts": "tsc",
-    "build:js": "webpack",
-    "watch:ts": "tsc --watch",
-    "watch:js": "webpack --watch",
+    "clean": "test -d dist && rm -r dist || true",
+    "build": "tsc",
+    "watch": "tsc --watch",
     "prepublish": "npm run clean && npm run build",
-    "test": "jest --detectOpenHandles",
-    "test:watch": "jest --watch"
+    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest",
+    "test:watch": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -35,19 +30,17 @@
     "url": "https://github.com/sciactive/nymphjs/issues"
   },
   "license": "Apache-2.0",
-  "devDependencies": {
-    "@tsconfig/recommended": "^1.0.3",
-    "@types/jest": "^29.5.12",
-    "@types/lodash": "^4.14.202",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.2",
-    "ts-loader": "^9.5.1",
-    "typescript": "^5.3.3",
-    "webpack": "^5.90.3",
-    "webpack-cli": "^5.1.4"
-  },
   "dependencies": {
     "fetch-event-source-hperrin": "^3.0.0",
-    "lodash": "^4.17.21"
+    "lodash-es": "^4.17.21"
+  },
+  "devDependencies": {
+    "@tsconfig/recommended": "^1.0.8",
+    "@types/jest": "^29.5.14",
+    "@types/lodash-es": "^4.17.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
   }
 }

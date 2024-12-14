@@ -1,5 +1,5 @@
-import type Nymph from './Nymph';
-import type Entity from './Entity';
+import type Nymph from './Nymph.js';
+import type Entity from './Entity.js';
 
 export type ServerCallResponse = {
   return: any;
@@ -156,6 +156,24 @@ export interface EntityInterface extends DataObjectInterface {
    * @returns True or false.
    */
   $hasTag(...tags: string[]): boolean;
+  /**
+   * Check whether a property is dirty.
+   *
+   * To be a dirty property, it must have been set or deleted since the entity
+   * was initialized. A clean property existed on initialization and hasn't been
+   * set or deleted. An untracked property didn't exist on initialization and
+   * hasn't been set or deleted.
+   *
+   * Note that this doesn't necessarily mean the property has changed. It could
+   * have been set to the same value, or created and then deleted.
+   *
+   * Entities are initialized when they are pulled from the server or saved.
+   * This is done with the `$init` method.
+   *
+   * @param property The name of a property.
+   * @returns True if it's dirty, false if not, and null if it's not tracked.
+   */
+  $isDirty(property: string): boolean | null;
   /**
    * Initialize this entity from a JSON representation.
    *

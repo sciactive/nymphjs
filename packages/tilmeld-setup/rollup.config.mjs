@@ -2,7 +2,8 @@ import svelte from 'rollup-plugin-svelte';
 import resolve from '@rollup/plugin-node-resolve';
 import typescript from '@rollup/plugin-typescript';
 import commonjs from '@rollup/plugin-commonjs';
-import preprocess from 'svelte-preprocess';
+import { sveltePreprocess } from 'svelte-preprocess';
+import postcss from 'rollup-plugin-postcss';
 
 export default {
   input: 'app/index.ts',
@@ -20,13 +21,16 @@ export default {
     commonjs(),
     typescript(),
     svelte({
-      emitCss: false,
-      preprocess: preprocess({
+      emitCss: true,
+      preprocess: sveltePreprocess({
         typescript: {
-          handleMixedImports: true,
+          verbatimModuleSyntax: true,
           tsconfigFile: 'tsconfig.json',
         },
       }),
+    }),
+    postcss({
+      extract: true,
     }),
   ],
 };

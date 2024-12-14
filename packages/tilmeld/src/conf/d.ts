@@ -1,8 +1,10 @@
-import { EmailOptions, EmailConfig } from 'email-templates';
+import type { EmailOptions, EmailConfig } from 'email-templates';
 
-import type Tilmeld from '../Tilmeld';
-import Group, { GroupData } from '../Group';
-import User, { UserData } from '../User';
+import type Tilmeld from '../Tilmeld.js';
+import type Group from '../Group.js';
+import type { GroupData } from '../Group.js';
+import type User from '../User.js';
+import type { UserData } from '../User.js';
 
 /**
  * Tilmeld Config

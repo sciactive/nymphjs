@@ -1,14 +1,16 @@
-import path from 'path';
-import { URL } from 'url';
+import path from 'node:path';
+import { URL, fileURLToPath } from 'node:url';
 import jwt from 'jsonwebtoken';
 import Email from 'email-templates';
 import Joi from 'joi';
 import { nanoid } from '@nymphjs/guid';
 import { nymphJoiProps } from '@nymphjs/nymph';
 
-import { Config } from './d';
-import User from '../User';
-import Group from '../Group';
+import type { Config } from './d.js';
+import User from '../User.js';
+import Group from '../Group.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default {
   appName: 'My Nymph App',

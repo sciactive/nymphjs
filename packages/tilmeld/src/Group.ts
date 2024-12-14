@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type {
   Nymph,
   EntityData,
@@ -7,19 +8,18 @@ import type {
   Selector,
   SerializedEntityData,
 } from '@nymphjs/nymph';
-import md5 from 'crypto-js/md5';
-import { difference } from 'lodash';
+import { difference } from 'lodash-es';
 
-import { enforceTilmeld } from './enforceTilmeld';
-import AbleObject from './AbleObject';
+import { enforceTilmeld } from './enforceTilmeld.js';
+import AbleObject from './AbleObject.js';
 import {
   BadDataError,
   BadEmailError,
   BadUsernameError,
   CouldNotChangeDefaultPrimaryGroupError,
-} from './errors';
-import type User from './User';
-import type { UserData } from './User';
+} from './errors/index.js';
+import type User from './User.js';
+import type { UserData } from './User.js';
 
 export type GroupData = {
   /**
@@ -271,7 +271,11 @@ export default class Group extends AbleObject<GroupData> {
     }
     return (
       'https://secure.gravatar.com/avatar/' +
-      md5(this.$data.email.trim().toLowerCase()).toString() +
+      crypto
+        .createHash('sha256')
+        .update(this.$data.email.trim().toLowerCase())
+        .digest('hex')
+        .toLowerCase() +
       '?d=identicon&s=40'
     );
   }

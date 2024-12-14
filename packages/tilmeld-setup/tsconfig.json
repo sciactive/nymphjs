@@ -2,8 +2,18 @@
   "extends": "@tsconfig/svelte/tsconfig.json",
 
   "compilerOptions": {
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "lib": ["DOM", "ES2022"],
+    "target": "ES2022",
     "noImplicitAny": true,
-    "strict": true
+    "strict": true,
+
+    "removeComments": false,
+    "sourceMap": true,
+    "outDir": "dist/app",
+    "resolveJsonModule": true,
+    "declaration": true
   },
   "include": ["app/**/*"],
   "exclude": ["node_modules/*"]

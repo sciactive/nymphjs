@@ -1,4 +1,4 @@
-{#if clientConfig == null || user == null}
+{#if $clientConfig == null || $user == null}
   <section>
     <div style="display: flex; justify-content: center; align-items: center;">
       <CircularProgress style="height: 45px; width: 45px;" indeterminate />
@@ -23,13 +23,13 @@
       </Icon>
       <Input
         bind:value={entitySearch}
-        on:keydown={entitySearchKeyDown}
+        onkeydown={entitySearchKeyDown}
         placeholder="User Search"
         class="solo-input"
       />
     </Paper>
     <Fab
-      on:click={searchEntities}
+      onclick={searchEntities}
       disabled={entitySearch === ''}
       color="primary"
       mini
@@ -56,13 +56,13 @@
       <DataTable table$aria-label="User list" style="width: 100%;">
         <Head>
           <Row>
-            {#if !clientConfig.emailUsernames}
+            {#if !$clientConfig.emailUsernames}
               <Cell>Username</Cell>
             {/if}
-            {#if clientConfig.userFields.includes('name')}
+            {#if $clientConfig.userFields.includes('name')}
               <Cell>Name</Cell>
             {/if}
-            {#if clientConfig.userFields.includes('email')}
+            {#if $clientConfig.userFields.includes('email')}
               <Cell>Email</Cell>
             {/if}
             <Cell>Enabled</Cell>
@@ -71,7 +71,7 @@
         <Body>
           {#each entities as curEntity (curEntity.guid)}
             <Row>
-              {#if !clientConfig.emailUsernames}
+              {#if !$clientConfig.emailUsernames}
                 <Cell
                   ><a
                     href="#/users/edit/{encodeURIComponent(
@@ -80,7 +80,7 @@
                   ></Cell
                 >
               {/if}
-              {#if clientConfig.userFields.includes('name')}
+              {#if $clientConfig.userFields.includes('name')}
                 <Cell
                   ><a
                     href="#/users/edit/{encodeURIComponent(
@@ -89,7 +89,7 @@
                   ></Cell
                 >
               {/if}
-              {#if clientConfig.userFields.includes('email')}
+              {#if $clientConfig.userFields.includes('email')}
                 <Cell
                   ><a
                     href="#/users/edit/{encodeURIComponent(
@@ -104,9 +104,9 @@
             <Row>
               <Cell
                 colspan={1 +
-                  (!clientConfig.emailUsernames ? 1 : 0) +
-                  (clientConfig.userFields.includes('name') ? 1 : 0) +
-                  (clientConfig.userFields.includes('email') ? 1 : 0)}
+                  (!$clientConfig.emailUsernames ? 1 : 0) +
+                  ($clientConfig.userFields.includes('name') ? 1 : 0) +
+                  ($clientConfig.userFields.includes('email') ? 1 : 0)}
                 >None found.</Cell
               >
             </Row>
@@ -118,7 +118,7 @@
 {/if}
 
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import type { Writable } from 'svelte/store';
   import type Navigo from 'navigo';
   import queryParser from '@nymphjs/query-parser';
   import type {
@@ -140,23 +140,25 @@
 
   import { nymph, User, Group } from '../nymph';
 
-  export let router: Navigo;
-  export let params: { query?: string } = {};
+  let {
+    router,
+    params,
+    clientConfig,
+    user,
+  }: {
+    router: Navigo;
+    params: { query?: string };
+    clientConfig: Writable<ClientConfig | undefined>;
+    user: Writable<(UserClass & CurrentUserData) | null | undefined>;
+  } = $props();
 
-  let clientConfig: ClientConfig | undefined = undefined;
-  let user: (UserClass & CurrentUserData) | undefined = undefined;
-  let entitySearch = params.query ?? '';
-  let failureMessage: string | undefined = undefined;
+  let entitySearch = $state(params.query ?? '');
+  let failureMessage: string | undefined = $state();
 
-  $: if (params) {
-    handleSearchParam();
-  }
-
-  onMount(async () => {
-    user = (await User.current()) ?? undefined;
-  });
-  onMount(async () => {
-    clientConfig = await User.getClientConfig();
+  $effect(() => {
+    if (params) {
+      handleSearchParam();
+    }
   });
 
   async function handleSearchParam() {
@@ -187,8 +189,8 @@
     }
   }
 
-  let entitiesSearching = false;
-  let entities: (UserClass & AdminUserData)[] | undefined = undefined;
+  let entitiesSearching = $state(false);
+  let entities: (UserClass & AdminUserData)[] | undefined = $state();
   async function searchEntities() {
     router.navigate(`/users/${encodeURIComponent(entitySearch)}`);
   }

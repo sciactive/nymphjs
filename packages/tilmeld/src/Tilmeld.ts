@@ -1,3 +1,4 @@
+import { URL } from 'node:url';
 import {
   Nymph,
   EntityInterface,
@@ -7,16 +8,15 @@ import {
   TilmeldAccessLevels,
   ACProperties,
 } from '@nymphjs/nymph';
-import { URL } from 'url';
 import { Request, Response } from 'express';
-import { xor } from 'lodash';
+import { xor } from 'lodash-es';
 
-import { Config, ConfigDefaults as defaults } from './conf';
-import { AccessControlError } from './errors';
-import Group from './Group';
-import User, { UserData } from './User';
-import { AccessControlData } from './Tilmeld.types';
-import { enforceTilmeld } from './enforceTilmeld';
+import { Config, ConfigDefaults as defaults } from './conf/index.js';
+import { AccessControlError } from './errors/index.js';
+import Group from './Group.js';
+import User, { UserData } from './User.js';
+import { AccessControlData } from './Tilmeld.types.js';
+import { enforceTilmeld } from './enforceTilmeld.js';
 
 /**
  * A user and group system for Nymph.js.

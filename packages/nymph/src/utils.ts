@@ -1,7 +1,7 @@
-import Entity from './Entity';
-import { EntityReference } from './Entity.types';
-import Nymph from './Nymph';
-import { Options, Selector } from './Nymph.types';
+import Entity from './Entity.js';
+import { EntityReference } from './Entity.types.js';
+import Nymph from './Nymph.js';
+import { Options, Selector } from './Nymph.types.js';
 
 export function xor(a: any, b: any): boolean {
   return !!(a && !b) || (!a && b);

@@ -2,12 +2,14 @@
   "extends": "@tsconfig/recommended/tsconfig.json",
 
   "compilerOptions": {
-    "lib": ["DOM", "ES2021"],
-    "target": "ES2021",
+    "module": "ES2022",
+    "moduleResolution": "node",
+    "lib": ["DOM", "ES2022"],
+    "target": "ES2022",
     "noImplicitAny": true,
     "removeComments": false,
     "sourceMap": true,
-    "outDir": "lib",
+    "outDir": "dist",
     "resolveJsonModule": true,
     "rootDir": "src/",
     "declaration": true

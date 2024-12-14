@@ -1,8 +1,8 @@
 import { SQLite3Driver } from '@nymphjs/driver-sqlite3';
 import { Nymph, EntityUniqueConstraintError } from '@nymphjs/nymph';
 
-import Tilmeld from './Tilmeld';
-import defaults from './conf/defaults';
+import Tilmeld from './Tilmeld.js';
+import defaults from './conf/defaults.js';
 
 const tilmeld = new Tilmeld({
   appName: 'My App',

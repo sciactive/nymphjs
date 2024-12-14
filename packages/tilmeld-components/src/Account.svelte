@@ -1,11 +1,13 @@
-{#if clientConfig != null && user != null}
+<svelte:options runes />
+
+{#if $clientConfig != null && $user != null}
   <Dialog
-    use={usePass}
+    {use}
     bind:open
     aria-labelledby="tilmeld-account-title"
     aria-describedby="tilmeld-account-content"
     surface$class="tilmeld-account-dialog-surface"
-    {...exclude($$restProps, [
+    {...exclude(restProps, [
       'username$',
       'email$',
       'nameFirst$',
@@ -13,11 +15,11 @@
       'nameLast$',
       'phone$',
       'changePasswordLink$',
-      'revokeSessionsLink$',
+      'revokeTokensLink$',
       'closeButton$',
       'saveButton$',
       'changePassword$',
-      'revokeSessions$',
+      'revokeTokens$',
       'twoFactor$',
       'progress$',
     ])}
@@ -25,10 +27,10 @@
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
     <Title id="tilmeld-account-title">{title}</Title>
     <Content id="tilmeld-account-content">
-      {#if !clientConfig.emailUsernames && clientConfig.allowUsernameChange}
+      {#if !$clientConfig.emailUsernames && $clientConfig.allowUsernameChange}
         <div>
           <Textfield
-            bind:value={user.username}
+            bind:value={$user.username}
             label="Username"
             type="text"
             style="width: 100%;"
@@ -38,19 +40,21 @@
             input$autocapitalize="off"
             input$spellcheck="false"
             input$emptyValueUndefined
-            {...prefixFilter($$restProps, 'username$')}
+            {...prefixFilter(restProps, 'username$')}
           >
-            <HelperText persistent slot="helper">
-              {usernameVerifiedMessage || ''}
-            </HelperText>
+            {#snippet helper()}
+              <HelperText persistent>
+                {usernameVerifiedMessage || ''}
+              </HelperText>
+            {/snippet}
           </Textfield>
         </div>
       {/if}
 
-      {#if clientConfig.emailUsernames || clientConfig.userFields.includes('email')}
+      {#if $clientConfig.emailUsernames || $clientConfig.userFields.includes('email')}
         <div>
           <Textfield
-            bind:value={user.email}
+            bind:value={$user.email}
             label="Email"
             type="email"
             style="width: 100%;"
@@ -60,78 +64,80 @@
             input$autocapitalize="off"
             input$spellcheck="false"
             input$emptyValueUndefined
-            {...prefixFilter($$restProps, 'email$')}
+            {...prefixFilter(restProps, 'email$')}
           >
-            <HelperText persistent slot="helper">
-              {emailVerifiedMessage || ''}
-            </HelperText>
+            {#snippet helper()}
+              <HelperText persistent>
+                {emailVerifiedMessage || ''}
+              </HelperText>
+            {/snippet}
           </Textfield>
         </div>
       {/if}
 
-      {#if clientConfig.userFields.includes('name')}
+      {#if $clientConfig.userFields.includes('name')}
         <div>
           <Textfield
-            bind:value={user.nameFirst}
+            bind:value={$user.nameFirst}
             label="First Name"
             type="text"
             style="width: 100%;"
             input$autocomplete="given-name"
             input$emptyValueUndefined
-            {...prefixFilter($$restProps, 'nameFirst$')}
+            {...prefixFilter(restProps, 'nameFirst$')}
           />
         </div>
 
         <div>
           <Textfield
-            bind:value={user.nameMiddle}
+            bind:value={$user.nameMiddle}
             label="Middle Name"
             type="text"
             style="width: 100%;"
             input$autocomplete="additional-name"
             input$emptyValueUndefined
-            {...prefixFilter($$restProps, 'nameMiddle$')}
+            {...prefixFilter(restProps, 'nameMiddle$')}
           />
         </div>
 
         <div>
           <Textfield
-            bind:value={user.nameLast}
+            bind:value={$user.nameLast}
             label="Last Name"
             type="text"
             style="width: 100%;"
             input$autocomplete="family-name"
             input$emptyValueUndefined
-            {...prefixFilter($$restProps, 'nameLast$')}
+            {...prefixFilter(restProps, 'nameLast$')}
           />
         </div>
       {/if}
 
-      {#if clientConfig.userFields.includes('phone')}
+      {#if $clientConfig.userFields.includes('phone')}
         <div>
           <Textfield
-            bind:value={user.phone}
+            bind:value={$user.phone}
             label="Phone Number"
             type="tel"
             style="width: 100%;"
             input$autocomplete="tel"
             input$name="phone"
             input$emptyValueUndefined
-            {...prefixFilter($$restProps, 'phone$')}
+            {...prefixFilter(restProps, 'phone$')}
           />
         </div>
       {/if}
 
-      <slot name="additional" />
+      {@render additional?.()}
 
       <div class="tilmeld-account-action">
         <a
           href={'javascript:void(0);'}
-          on:click={() => {
+          onclick={() => {
             open = false;
             changePasswordOpen = true;
           }}
-          {...prefixFilter($$restProps, 'changePasswordLink$')}
+          {...prefixFilter(restProps, 'changePasswordLink$')}
         >
           Change your password.
         </a>
@@ -140,11 +146,11 @@
       <div class="tilmeld-account-action">
         <a
           href={'javascript:void(0);'}
-          on:click={() => {
+          onclick={() => {
             open = false;
             revokeTokensOpen = true;
           }}
-          {...prefixFilter($$restProps, 'revokeTokensLink$')}
+          {...prefixFilter(restProps, 'revokeTokensLink$')}
         >
           Log out of other sessions.
         </a>
@@ -152,11 +158,11 @@
         <div class="tilmeld-account-action">
           <a
             href={'javascript:void(0);'}
-            on:click={() => {
+            onclick={() => {
               open = false;
               twoFactorOpen = true;
             }}
-            {...prefixFilter($$restProps, 'twoFactor$')}
+            {...prefixFilter(restProps, 'twoFactor$')}
           >
             {#if hasTOTPSecret === false}
               Enable two factor authentication (2FA).
@@ -177,20 +183,20 @@
             <CircularProgress
               style="height: 24px; width: 24px;"
               indeterminate
-              {...prefixFilter($$restProps, 'progress$')}
+              {...prefixFilter(restProps, 'progress$')}
             />
           </div>
         {/if}
       </div>
     </Content>
     <Actions>
-      <Button disabled={loading} {...prefixFilter($$restProps, 'closeButton$')}>
+      <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>
         <Label>Close</Label>
       </Button>
       <Button
-        on:click$preventDefault$stopPropagation={save}
+        onclick={preventDefault(stopPropagation(save))}
         disabled={loading}
-        {...prefixFilter($$restProps, 'saveButton$')}
+        {...prefixFilter(restProps, 'saveButton$')}
       >
         <Label>Save Changes</Label>
       </Button>
@@ -201,14 +207,14 @@
     {User}
     bind:open={changePasswordOpen}
     bind:user
-    {...prefixFilter($$restProps, 'changePassword$')}
+    {...prefixFilter(restProps, 'changePassword$')}
   />
 
   <RevokeTokens
     {User}
     bind:open={revokeTokensOpen}
     bind:user
-    {...prefixFilter($$restProps, 'revokeTokens$')}
+    {...prefixFilter(restProps, 'revokeTokens$')}
   />
 
   <TwoFactor
@@ -216,98 +222,204 @@
     bind:open={twoFactorOpen}
     bind:user
     bind:hasTOTPSecret
-    {...prefixFilter($$restProps, 'twoFactor$')}
+    {...prefixFilter(restProps, 'twoFactor$')}
   />
 {/if}
 
 <script lang="ts">
+  import type { ComponentProps, Snippet } from 'svelte';
   import { onMount, onDestroy } from 'svelte';
-  import { get_current_component } from 'svelte/internal';
+  import type { Writable } from 'svelte/store';
+  import { writable } from 'svelte/store';
   import CircularProgress from '@smui/circular-progress';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
   import Textfield from '@smui/textfield';
   import HelperText from '@smui/textfield/helper-text';
   import Button, { Label } from '@smui/button';
   import type { ActionArray } from '@smui/common/internal';
-  import {
-    forwardEventsBuilder,
-    exclude,
-    prefixFilter,
-  } from '@smui/common/internal';
+  import { exclude, prefixFilter } from '@smui/common/internal';
+  import { preventDefault, stopPropagation } from '@smui/common/events';
+  import type { SmuiElementPropMap } from '@smui/common';
   import type { ClientConfig, CurrentUserData } from '@nymphjs/tilmeld-client';
   import type { User as UserClass } from '@nymphjs/tilmeld-client';
   import ChangePassword from './ChangePassword.svelte';
   import RevokeTokens from './RevokeTokens.svelte';
   import TwoFactor from './TwoFactor.svelte';
 
-  const forwardEvents = forwardEventsBuilder(get_current_component());
+  type OwnProps = {
+    /**
+     * An array of Action or [Action, ActionProps] to be applied to the element.
+     */
+    use?: ActionArray;
+    /**
+     * Whether the dialog is open.
+     */
+    open?: boolean;
+    /**
+     * The title of the dialog.
+     */
+    title?: string;
+    /**
+     * A writable store of the Nymph client config.
+     *
+     * It will be retrieved from the server if not provided.
+     */
+    clientConfig?: Writable<ClientConfig | undefined>;
+    /**
+     * The User class from Nymph.
+     */
+    User: typeof UserClass;
+    /**
+     * A writable store of the current user.
+     *
+     * It will be retrieved from the server if not provided.
+     */
+    user?: Writable<(UserClass & CurrentUserData) | null | undefined>;
 
-  export let use: ActionArray = [];
-  $: usePass = [forwardEvents, ...use] as ActionArray;
-  export let open = false;
-  export let title = 'Your Account';
-  export let clientConfig: ClientConfig | undefined = undefined;
-  export let User: typeof UserClass;
-  export let user: (UserClass & CurrentUserData) | undefined = undefined;
+    /**
+     * A spot for additional content.
+     */
+    additional?: Snippet;
+  };
+  let {
+    use = [],
+    open = $bindable(false),
+    title = 'Your Account',
+    clientConfig = $bindable(writable(false as unknown as undefined)),
+    User,
+    user = $bindable(writable(false as unknown as undefined)),
+    additional,
+    ...restProps
+  }: OwnProps & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `username\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `email\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `nameFirst\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `nameMiddle\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `nameLast\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Textfield
+    > as `phone\$${k}`]?: ComponentProps<typeof Textfield>[k];
+  } & {
+    [k in keyof SmuiElementPropMap['a'] as `changePasswordLink\$${k}`]?: SmuiElementPropMap['a'][k];
+  } & {
+    [k in keyof SmuiElementPropMap['a'] as `revokeTokensLink\$${k}`]?: SmuiElementPropMap['a'][k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof CircularProgress
+    > as `progress\$${k}`]?: ComponentProps<typeof CircularProgress>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Button<undefined, 'button'>
+    > as `closeButton\$${k}`]?: ComponentProps<
+      typeof Button<undefined, 'button'>
+    >[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof Button<undefined, 'button'>
+    > as `saveButton\$${k}`]?: ComponentProps<
+      typeof Button<undefined, 'button'>
+    >[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof ChangePassword
+    > as `changePassword\$${k}`]?: ComponentProps<typeof ChangePassword>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof RevokeTokens
+    > as `revokeTokens\$${k}`]?: ComponentProps<typeof RevokeTokens>[k];
+  } & {
+    [k in keyof ComponentProps<
+      typeof TwoFactor
+    > as `twoFactor\$${k}`]?: ComponentProps<typeof TwoFactor>[k];
+  } = $props();
 
-  let loading = false;
-  let originalUsername: string | undefined = undefined;
-  let originalEmail: string | undefined = undefined;
-  let failureMessage: string | undefined = undefined;
+  let loading = $state(false);
+  let originalUsername: string | undefined = $user?.username;
+  let originalEmail: string | undefined = $user?.email;
+  let failureMessage: string | undefined = $state();
   let usernameTimer: NodeJS.Timeout | undefined = undefined;
-  let usernameVerified: boolean | undefined = undefined;
-  let usernameVerifiedMessage: string | undefined = undefined;
+  let usernameVerified: boolean | undefined = $state();
+  let usernameVerifiedMessage: string | undefined = $state();
   let emailTimer: NodeJS.Timeout | undefined = undefined;
-  let emailVerified: boolean | undefined = undefined;
-  let emailVerifiedMessage: string | undefined = undefined;
-  let hasTOTPSecret: boolean | null = null;
-  let changePasswordOpen = false;
-  let revokeTokensOpen = false;
-  let twoFactorOpen = false;
+  let emailVerified: boolean | undefined = $state();
+  let emailVerifiedMessage: string | undefined = $state();
+  let hasTOTPSecret: boolean | null = $state(null);
+  let changePasswordOpen = $state(false);
+  let revokeTokensOpen = $state(false);
+  let twoFactorOpen = $state(false);
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
-    user = currentUser;
-    originalUsername = user?.username;
-    originalEmail = user?.email;
+    $user = currentUser;
+    originalUsername = $user?.username;
+    originalEmail = $user?.email;
   };
   const onLogout = () => {
-    user = undefined;
+    $user = null;
     originalUsername = undefined;
     originalEmail = undefined;
   };
 
-  $: if (user && user.username !== originalUsername) {
-    checkUsername();
-  } else {
-    if (usernameTimer) {
-      clearTimeout(usernameTimer);
+  $effect(() => {
+    if ($user && $user.username !== originalUsername) {
+      if ($user.$isDirty('username')) {
+        checkUsername();
+      } else {
+        originalUsername = $user.username;
+      }
+    } else {
+      if (usernameTimer) {
+        clearTimeout(usernameTimer);
+      }
+      usernameVerified = true;
+      usernameVerifiedMessage = undefined;
     }
-    usernameVerified = true;
-    usernameVerifiedMessage = undefined;
-  }
+  });
 
-  $: if (user && user.email !== originalEmail) {
-    checkEmail();
-  } else {
-    if (emailTimer) {
-      clearTimeout(emailTimer);
+  $effect(() => {
+    if ($user && $user.email !== originalEmail) {
+      if ($user.$isDirty('email')) {
+        checkEmail();
+      } else {
+        originalEmail = $user.email;
+      }
+    } else {
+      if (emailTimer) {
+        clearTimeout(emailTimer);
+      }
+      emailVerified = true;
+      emailVerifiedMessage = undefined;
     }
-    emailVerified = true;
-    emailVerifiedMessage = undefined;
-  }
+  });
 
   onMount(async () => {
     User.on('login', onLogin);
     User.on('logout', onLogout);
-    if (user === undefined) {
-      user = (await User.current()) ?? undefined;
+    if ($user === (false as unknown as undefined)) {
+      $user = undefined;
+      $user = await User.current();
     }
-    originalUsername = user?.username;
-    originalEmail = user?.email;
+    originalUsername = $user?.username;
+    originalEmail = $user?.email;
   });
   onMount(async () => {
-    if (clientConfig === undefined) {
-      clientConfig = await User.getClientConfig();
+    if ($clientConfig === (false as unknown as undefined)) {
+      $clientConfig = undefined;
+      $clientConfig = await User.getClientConfig();
     }
   });
 
@@ -317,20 +429,20 @@
   });
 
   async function save() {
-    if (user == null) {
+    if ($user == null) {
       return;
     }
 
     failureMessage = undefined;
     loading = true;
 
-    if (clientConfig?.emailUsernames) {
-      user.username = user.email;
+    if ($clientConfig?.emailUsernames) {
+      $user.username = $user.email;
     }
 
     try {
-      if (await user.$save()) {
-        originalEmail = user.email;
+      if (await $user.$save()) {
+        originalEmail = $user.email;
         open = false;
         usernameVerifiedMessage = undefined;
         emailVerifiedMessage = undefined;
@@ -352,7 +464,7 @@
     }
     usernameTimer = setTimeout(async () => {
       try {
-        const data = await user?.$checkUsername();
+        const data = await $user?.$checkUsername();
         usernameVerified = data?.result ?? false;
         usernameVerifiedMessage =
           data?.message ?? 'Error getting verification.';
@@ -372,7 +484,7 @@
     }
     emailTimer = setTimeout(async () => {
       try {
-        const data = await user?.$checkEmail();
+        const data = await $user?.$checkEmail();
         emailVerified = data?.result ?? false;
         emailVerifiedMessage = data?.message ?? 'Error getting verification.';
       } catch (e: any) {

@@ -1,19 +1,19 @@
-export * from './Entity';
-import Entity from './Entity';
+export * from './Entity.js';
+import Entity from './Entity.js';
 export { Entity };
 
-export * from './Entity.types';
+export * from './Entity.types.js';
 
-export * from './HttpRequester';
+export * from './HttpRequester.js';
 
-export * from './Nymph';
-import Nymph from './Nymph';
+export * from './Nymph.js';
+import Nymph from './Nymph.js';
 export { Nymph };
 
-export * from './Nymph.types';
+export * from './Nymph.types.js';
 
-export * from './PubSub';
-import PubSub from './PubSub';
+export * from './PubSub.js';
+import PubSub from './PubSub.js';
 export { PubSub };
 
-export * from './PubSub.types';
+export * from './PubSub.types.js';

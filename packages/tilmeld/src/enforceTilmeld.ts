@@ -1,6 +1,6 @@
 import { Entity, EntityConstructor, Nymph } from '@nymphjs/nymph';
 
-import Tilmeld from './Tilmeld';
+import Tilmeld from './Tilmeld.js';
 
 export function enforceTilmeld(object: Nymph | Entity | EntityConstructor) {
   let tilmeld: Tilmeld | undefined;
