@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.82](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.81...v1.0.0-beta.82) (2024-12-15)
+
+### Features
+
+- migrate to es modules, upgrade all packages, migrate to Svelte 5 ([3f2b9e5](https://github.com/sciactive/nymphjs/commit/3f2b9e517b39934eddce66601d7fc747fbf3f9e6))
+
 # [1.0.0-beta.81](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.80...v1.0.0-beta.81) (2024-09-28)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-client

@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.82](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.81...v1.0.0-beta.82) (2024-12-15)
+
+### Bug Fixes
+
+- use async generator for data export in postgres to solve out of memory issue ([25abf2a](https://github.com/sciactive/nymphjs/commit/25abf2a30b401a6d5d0fe42e057176ed258e4e29))
+
+### Features
+
+- migrate to es modules, upgrade all packages, migrate to Svelte 5 ([3f2b9e5](https://github.com/sciactive/nymphjs/commit/3f2b9e517b39934eddce66601d7fc747fbf3f9e6))
+
 # [1.0.0-beta.81](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.80...v1.0.0-beta.81) (2024-09-28)
 
 ### Features
