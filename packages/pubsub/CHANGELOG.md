@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.83](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.82...v1.0.0-beta.83) (2024-12-20)
+
+### Bug Fixes
+
+- flaky pubsub tests ([b580f78](https://github.com/sciactive/nymphjs/commit/b580f78461d78c11682dc2bba99dc5a8d82f6f5b))
+
 # [1.0.0-beta.82](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.81...v1.0.0-beta.82) (2024-12-15)
 
 ### Features
