@@ -28,6 +28,7 @@ export default {
   cacheThreshold: 4,
   cacheLimit: 50,
   emptyListError: false,
+  updateMDate: true,
   debugInfo: (source, message) => {
     getDebuggers(source).info(message);
   },

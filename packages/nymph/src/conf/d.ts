@@ -22,6 +22,14 @@ export interface Config {
    */
   emptyListError: boolean;
   /**
+   * Whether to update the mdate property when saving an entity.
+   *
+   * You should probably only set this to false if you're doing migrations. Some
+   * things depend on having updated mdates (like conflict detection to avoid
+   * lost updates).
+   */
+  updateMDate: boolean;
+  /**
    * A function to log info messages. By default, uses the `debug` package.
    */
   debugInfo: (source: string, message: string) => void;
