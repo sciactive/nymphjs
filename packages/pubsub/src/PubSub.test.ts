@@ -105,7 +105,7 @@ describe('Nymph REST Server and Client', () => {
   it('notified of new match', async () => {
     let jane: Promise<EmployeeClass>;
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let updated = false;
       const subscription = pubsub.subscribeEntities(
         { class: Employee },
@@ -120,7 +120,7 @@ describe('Nymph REST Server and Client', () => {
             (await jane).guid,
           );
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         } else {
           expect(update).toEqual([]);
           updated = true;
@@ -134,7 +134,7 @@ describe('Nymph REST Server and Client', () => {
     let guid: string;
     let committed = false;
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let updated = false;
       const subscription = pubsub.subscribeEntities(
         { class: Employee },
@@ -151,7 +151,7 @@ describe('Nymph REST Server and Client', () => {
             throw new Error('Update arrived before transaction committed.');
           }
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         } else {
           expect(update).toEqual([]);
           updated = true;
@@ -167,7 +167,7 @@ describe('Nymph REST Server and Client', () => {
           try {
             await steve.$save();
             guid = steve.guid as string;
-            await new Promise((res) => setTimeout(res, 1000));
+            await new Promise<void>((res) => setTimeout(res, 1000));
             committed = true;
             await tnymph.commit('steve');
           } catch (e: any) {
@@ -182,7 +182,7 @@ describe('Nymph REST Server and Client', () => {
   it('not notified of new match when transaction rolled back', async () => {
     let guid: string;
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let updated = false;
       const subscription = pubsub.subscribeEntities(
         { class: Employee },
@@ -211,11 +211,11 @@ describe('Nymph REST Server and Client', () => {
           try {
             await steve.$save();
             guid = steve.guid as string;
-            await new Promise((res) => setTimeout(res, 600));
+            await new Promise<void>((res) => setTimeout(res, 600));
             await tnymph.rollback('steve');
-            await new Promise((res) => setTimeout(res, 600));
+            await new Promise<void>((res) => setTimeout(res, 600));
             subscription.unsubscribe();
-            resolve(true);
+            resolve();
           } catch (e: any) {
             console.error('Error creating entity: ', e);
             throw e;
@@ -229,7 +229,7 @@ describe('Nymph REST Server and Client', () => {
     let guid: string;
     let committed = false;
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let updated = false;
       const subscription = pubsub.subscribeEntities(
         { class: Employee },
@@ -246,7 +246,7 @@ describe('Nymph REST Server and Client', () => {
             throw new Error('Update arrived before transaction committed.');
           }
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         } else {
           expect(update).toEqual([]);
           updated = true;
@@ -264,9 +264,9 @@ describe('Nymph REST Server and Client', () => {
           badSteve.title = 'Seniorer Person';
           try {
             await badSteve.$save();
-            await new Promise((res) => setTimeout(res, 200));
+            await new Promise<void>((res) => setTimeout(res, 200));
             await tnymphB.rollback('steve-b');
-            await new Promise((res) => setTimeout(res, 200));
+            await new Promise<void>((res) => setTimeout(res, 200));
           } catch (e: any) {
             console.error('Error creating entity: ', e);
             throw e;
@@ -285,9 +285,9 @@ describe('Nymph REST Server and Client', () => {
           try {
             await goodSteve.$save();
             guid = goodSteve.guid as string;
-            await new Promise((res) => setTimeout(res, 200));
+            await new Promise<void>((res) => setTimeout(res, 200));
             await tnymphA.commit('steve-a');
-            await new Promise((res) => setTimeout(res, 400));
+            await new Promise<void>((res) => setTimeout(res, 400));
             committed = true;
             await tnymphTop.commit('steve-top');
           } catch (e: any) {
@@ -303,7 +303,7 @@ describe('Nymph REST Server and Client', () => {
     let jane = await createJane();
     let entities: (EmployeeClass & EmployeeData)[] = [];
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let mdate = 0;
       if (jane.guid == null) {
         throw new Error('Entity is null.');
@@ -319,7 +319,7 @@ describe('Nymph REST Server and Client', () => {
 
         if (mdate > 0 && (entities[0]?.mdate ?? -1) === mdate) {
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         } else if (Array.isArray(update)) {
           expect(update.length).toEqual(1);
           expect(entities[0].salary).toEqual(8000000);
@@ -338,7 +338,7 @@ describe('Nymph REST Server and Client', () => {
     let [jane, john] = await createBossJane();
     let entities: (EmployeeClass & EmployeeData)[] = [];
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let mdate = 0;
       if (jane.guid == null || john.guid == null) {
         throw new Error('Entity is null.');
@@ -357,7 +357,7 @@ describe('Nymph REST Server and Client', () => {
 
         if (mdate > 0 && (entities[0]?.mdate ?? -1) === mdate) {
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         } else if (Array.isArray(update)) {
           expect(update.length).toEqual(1);
           expect(entities[0].salary).toEqual(8000000);
@@ -385,7 +385,7 @@ describe('Nymph REST Server and Client', () => {
     await oldEmployee2.$save();
 
     expect(
-      await new Promise((resolve) => {
+      await new Promise<boolean>((resolve) => {
         if (jane.guid == null || john.guid == null) {
           throw new Error('Entity is null.');
         }
@@ -423,7 +423,7 @@ describe('Nymph REST Server and Client', () => {
     let [jane, john] = await createBossJane();
     let entities: (EmployeeClass & EmployeeData)[] = [];
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       if (jane.guid == null || john.guid == null) {
         throw new Error('Entity is null.');
       }
@@ -442,7 +442,7 @@ describe('Nymph REST Server and Client', () => {
 
         if (!entities.length) {
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         } else if (Array.isArray(update)) {
           expect(update.length).toEqual(1);
 
@@ -461,9 +461,9 @@ describe('Nymph REST Server and Client', () => {
     let entities: (EmployeeClass & EmployeeData)[] = [];
 
     // Wait for change to propagate. (Only needed since we're not going across network.)
-    await new Promise((resolve) => setTimeout(() => resolve(true), 10));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 10));
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       // Should only receive 1 update, since we waited.
       let updated = false;
       if (jane.guid == null) {
@@ -480,7 +480,7 @@ describe('Nymph REST Server and Client', () => {
 
         if (updated) {
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         } else if (Array.isArray(update)) {
           expect(update.length).toEqual(1);
           expect(entities[0].salary).toEqual(8000000);
@@ -500,7 +500,7 @@ describe('Nymph REST Server and Client', () => {
     let entities: (EmployeeClass & EmployeeData)[] = [];
 
     let removed = false;
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       const subscription = pubsub.subscribeEntities(
         { class: Employee },
         {
@@ -520,7 +520,7 @@ describe('Nymph REST Server and Client', () => {
         } else if ('removed' in update && update.removed === jane.guid) {
           subscription.unsubscribe();
           removed = true;
-          resolve(true);
+          resolve();
         }
       });
     });
@@ -534,9 +534,9 @@ describe('Nymph REST Server and Client', () => {
     await createJane();
 
     // Wait for change to propagate. (Only needed since we're not going across network.)
-    await new Promise((resolve) => setTimeout(() => resolve(true), 10));
+    await new Promise<void>((resolve) => setTimeout(() => resolve(), 10));
 
-    await new Promise((resolve) => {
+    await new Promise<void>((resolve) => {
       let receivedRemove = false;
       let receivedAdd = false;
       const subscription = pubsub.subscribeEntities(
@@ -557,7 +557,7 @@ describe('Nymph REST Server and Client', () => {
           }
           if (receivedAdd && receivedRemove) {
             subscription.unsubscribe();
-            resolve(true);
+            resolve();
           }
         } else if (Array.isArray(update)) {
           expect(update.length).toEqual(1);
@@ -573,13 +573,13 @@ describe('Nymph REST Server and Client', () => {
   it('entity subscription is updated', async () => {
     let jane = await createJane();
 
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       let mdate = 0;
       const subscription = pubsub.subscribeWith(jane, async () => {
         expect(jane.guid).not.toBeNull();
         if (mdate > 0 && (jane.mdate ?? -1) === mdate) {
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         }
       });
 
@@ -629,7 +629,7 @@ describe('Nymph REST Server and Client', () => {
   it("doesn't notify of new pubsub disabled entity class", async () => {
     let receivedBadUpdate = false;
 
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       const subscription = await new Promise<
         PubSubSubscription<
           PubSubUpdate<(PubSubDisabledClass & PubSubDisabledData)[]>
@@ -658,21 +658,21 @@ describe('Nymph REST Server and Client', () => {
           }
         });
       });
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise<void>((resolve) => setTimeout(resolve, 200));
       subscription.unsubscribe();
-      resolve(true);
+      resolve();
     });
 
     expect(receivedBadUpdate).toEqual(false);
   });
 
   it('new uid', async () => {
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       const subscription = pubsub.subscribeUID('testNewUID')(
         async (value) => {
           expect(value).toEqual(directValue);
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         },
         (err) => {
           expect(err.status).toEqual(404);
@@ -684,7 +684,7 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('increasing uids', async () => {
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       let receivedFirst = false;
       let lastUpdate: number = 0;
       const subscription = pubsub.subscribeUID('testIncUID')(
@@ -699,7 +699,7 @@ describe('Nymph REST Server and Client', () => {
           lastUpdate = value;
           if (value == 100) {
             subscription.unsubscribe();
-            resolve(true);
+            resolve();
           }
         },
         (err) => {
@@ -717,12 +717,12 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('set uid', async () => {
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       const subscription = pubsub.subscribeUID('testSetUID')(
         async (value) => {
           expect(value).toEqual(123);
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         },
         (err) => {
           expect(err.status).toEqual(404);
@@ -734,7 +734,7 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('rename uid from old name', async () => {
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       let updated = false;
       const subscription = pubsub.subscribeUID('testRenameUID')(
         async (value, event) => {
@@ -742,7 +742,7 @@ describe('Nymph REST Server and Client', () => {
             expect(event).toEqual('renameUID');
             expect(value).toEqual(null);
             subscription.unsubscribe();
-            resolve(true);
+            resolve();
           } else if (event === 'setUID') {
             expect(value).toEqual(456);
             updated = true;
@@ -759,13 +759,13 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('rename uid from new name', async () => {
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       const subscription = pubsub.subscribeUID('newRename2UID')(
         async (value, event) => {
           expect(event).toEqual('setUID');
           expect(value).toEqual(456);
           subscription.unsubscribe();
-          resolve(true);
+          resolve();
         },
         (err) => {
           expect(err.status).toEqual(404);
@@ -780,33 +780,39 @@ describe('Nymph REST Server and Client', () => {
   it('delete uid', async () => {
     await nymph.setUID('testDeleteUID', 789);
 
-    await new Promise(async (resolve) => {
+    await new Promise<void>(async (resolve) => {
       let updated = false;
       const subscription = pubsub.subscribeUID('testDeleteUID')(
         async (value, event) => {
           if (updated && event === 'deleteUID') {
             expect(value).toEqual(null);
             subscription.unsubscribe();
-            resolve(true);
+            resolve();
           } else {
             expect(value).toEqual(789);
             updated = true;
+            await nymph.deleteUID('testDeleteUID');
           }
         },
         (err) => {
           expect(err.status).toEqual(404);
         },
       );
-
-      await nymph.deleteUID('testDeleteUID');
     });
+  });
+
+  beforeEach(async () => {
+    pubsub.connect();
+    while (!pubsub.isConnectionOpen()) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 20));
+    }
   });
 
   afterAll(async () => {
     // avoid jest open handle error
-    const closed = new Promise((resolve) => {
+    const closed = new Promise<void>((resolve) => {
       pubsub.on('disconnect', () => {
-        resolve(true);
+        resolve();
       });
     });
     pubsub.close(); // close PubSub client.
