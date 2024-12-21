@@ -1038,9 +1038,14 @@ export default abstract class NymphDriver {
       | null = null,
   ) {
     // Get a modified date.
-    const mdate = this.nymph.config.updateMDate
-      ? Date.now()
-      : (entity.mdate ?? Date.now());
+    let mdate = Date.now();
+    if (entity.mdate != null) {
+      if (this.nymph.config.updateMDate === false) {
+        mdate = entity.mdate;
+      } else if (typeof this.nymph.config.updateMDate === 'number') {
+        mdate = entity.mdate + this.nymph.config.updateMDate;
+      }
+    }
     const tags = difference(entity.tags, ['']);
     const data = entity.$getData();
     const sdata = entity.$getSData();

@@ -27,8 +27,13 @@ export interface Config {
    * You should probably only set this to false if you're doing migrations. Some
    * things depend on having updated mdates (like conflict detection to avoid
    * lost updates).
+   *
+   * If you set this to a number, that amount of milliseconds will be added to
+   * the mdate on any entities that are saved. This should solve the lost update
+   * problem when set to a small number (~1000), and keep mdates relatively
+   * unchanged.
    */
-  updateMDate: boolean;
+  updateMDate: boolean | number;
   /**
    * A function to log info messages. By default, uses the `debug` package.
    */
