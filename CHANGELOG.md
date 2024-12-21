@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.84](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.83...v1.0.0-beta.84) (2024-12-21)
+
+### Features
+
+- add option to update mdate by a specific number ([b94995e](https://github.com/sciactive/nymphjs/commit/b94995e8daf5a02bd8464ae9a5ddfe6771e0d861))
+
 # [1.0.0-beta.83](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.82...v1.0.0-beta.83) (2024-12-20)
 
 ### Bug Fixes
