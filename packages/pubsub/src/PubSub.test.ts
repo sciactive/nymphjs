@@ -419,6 +419,102 @@ describe('Nymph REST Server and Client', () => {
     expect(entities.length).toEqual(1);
   });
 
+  it('notified of new match for qref query in transaction', async () => {
+    let entities: (EmployeeClass & EmployeeData)[] = [];
+
+    const john = await EmployeeModel.factory();
+    john.name = 'John Der';
+    john.current = true;
+    john.salary = 8000000;
+    john.startDate = Date.now();
+    john.subordinates = [];
+    john.title = 'Junior Person';
+    try {
+      await john.$save();
+    } catch (e: any) {
+      console.error('Error creating entity: ', e);
+      throw e;
+    }
+
+    const jane = await EmployeeModel.factory();
+    jane.name = 'Jane Doe';
+    jane.current = true;
+    jane.salary = 8000000;
+    jane.startDate = Date.now();
+    jane.subordinates = [john];
+    jane.title = 'Seniorer Person';
+    try {
+      await jane.$save();
+    } catch (e: any) {
+      console.error('Error creating entity: ', e);
+      throw e;
+    }
+
+    async function createNewBoss() {
+      // Create employee that matches qref.
+      const tnymph = await nymphServer.startTransaction('qref-test');
+      const tnymphDeep = await tnymph.startTransaction('qref-deep-test');
+
+      const TEmployeeModel = tnymph.getEntityClass(EmployeeModel);
+      const newBoss = await TEmployeeModel.factory();
+      newBoss.name = 'Jill Doe';
+      newBoss.current = false;
+      newBoss.salary = 8000000;
+      newBoss.startDate = Date.now();
+      newBoss.subordinates = [john];
+      newBoss.title = 'Seniorer Person';
+      try {
+        await newBoss.$save();
+      } catch (e: any) {
+        console.error('Error creating entity: ', e);
+        throw e;
+      }
+
+      newBoss.current = true;
+      try {
+        await newBoss.$save();
+      } catch (e: any) {
+        console.error('Error creating entity: ', e);
+        throw e;
+      }
+
+      await tnymphDeep.commit('qref-deep-test');
+      await tnymph.commit('qref-test');
+    }
+
+    expect(
+      await new Promise<boolean>((resolve) => {
+        if (jane.guid == null || john.guid == null) {
+          throw new Error('Entity is null.');
+        }
+        const subscription = pubsub.subscribeEntities(
+          { class: Employee },
+          {
+            type: '&',
+            truthy: 'current',
+            qref: [
+              'subordinates',
+              [{ class: Employee }, { type: '&', guid: john.guid }],
+            ],
+          },
+        )(async (update) => {
+          pubsub.updateArray(entities, update);
+
+          if (Array.isArray(update)) {
+            expect(entities.length).toEqual(1);
+            await createNewBoss();
+          } else {
+            expect(entities.length).toEqual(2);
+            subscription.unsubscribe();
+            resolve(true);
+          }
+        });
+      }),
+    ).toEqual(true);
+
+    expect(entities.length).toEqual(2);
+  });
+
   it('notified of removed match for qref query', async () => {
     let [jane, john] = await createBossJane();
     let entities: (EmployeeClass & EmployeeData)[] = [];
