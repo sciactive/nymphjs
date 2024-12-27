@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/tilmeld",
-  "version": "1.0.0-beta.84",
+  "version": "1.0.0-beta.85",
   "description": "Nymph.js - Tilmeld User and Group System",
   "type": "module",
   "main": "dist/index.js",
@@ -31,9 +31,9 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.84",
-    "@nymphjs/nymph": "^1.0.0-beta.84",
-    "@nymphjs/server": "^1.0.0-beta.84",
+    "@nymphjs/guid": "^1.0.0-beta.85",
+    "@nymphjs/nymph": "^1.0.0-beta.85",
+    "@nymphjs/server": "^1.0.0-beta.85",
     "email-templates": "^12.0.1",
     "express": "^4.21.2",
     "joi": "^17.13.3",
@@ -45,9 +45,9 @@
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
-    "@nymphjs/client": "^1.0.0-beta.84",
-    "@nymphjs/client-node": "^1.0.0-beta.84",
-    "@nymphjs/driver-sqlite3": "^1.0.0-beta.84",
+    "@nymphjs/client": "^1.0.0-beta.85",
+    "@nymphjs/client-node": "^1.0.0-beta.85",
+    "@nymphjs/driver-sqlite3": "^1.0.0-beta.85",
     "@tsconfig/recommended": "^1.0.8",
     "@types/email-templates": "^10.0.4",
     "@types/express": "^5.0.0",
