@@ -162,6 +162,9 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async inTransaction() {
+    if (this.transaction && this.transaction.count === 0) {
+      this.transaction = null;
+    }
     return !!this.transaction;
   }
 
