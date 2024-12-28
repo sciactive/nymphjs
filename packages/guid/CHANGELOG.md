@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.86](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.85...v1.0.0-beta.86) (2024-12-28)
+
+**Note:** Version bump only for package @nymphjs/guid
+
 # [1.0.0-beta.85](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.84...v1.0.0-beta.85) (2024-12-27)
 
 **Note:** Version bump only for package @nymphjs/guid
