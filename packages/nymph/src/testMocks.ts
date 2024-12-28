@@ -54,7 +54,7 @@ export class MockNymphDriver {
     entity.cdate = entityJson.cdate;
     entity.mdate = entityJson.mdate;
     entity.tags = entityJson.tags;
-    entity.$putData(entityJson.data, {});
+    entity.$putData(entityJson.data, {}, 'server');
 
     return entity as EntityInstanceType<T>;
   }

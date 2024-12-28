@@ -257,15 +257,25 @@ export interface EntityInterface extends DataObjectInterface {
   /**
    * Used to set the data.
    *
-   * This should only be used by Nymph to push the data from storage.
+   * This should only be used by Nymph to push the data from storage or the
+   * client.
    *
    * `sdata` is used by Nymph to avoid unserializing data that hasn't been
    * requested yet.
    *
+   * If `source` is set to "server", the data is coming from the DB or the
+   * cache. If not, assume the data is coming from the client and can't be
+   * trusted.
+   *
    * @param data The data object.
    * @param sdata The serialized data object.
+   * @param source If this is set to "server", the data is coming from the DB.
    */
-  $putData(data: EntityData, sdata?: SerializedEntityData): void;
+  $putData(
+    data: EntityData,
+    sdata?: SerializedEntityData,
+    source?: 'server',
+  ): void;
   /**
    * Remove one or more tags.
    *

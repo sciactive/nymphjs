@@ -279,9 +279,13 @@
 
   const onLogin = (currentUser: UserClass & CurrentUserData) => {
     $user = currentUser;
+    // Helps with admin and debugging.
+    (window as any).user = currentUser;
   };
   const onLogout = () => {
     $user = null;
+    // Helps with admin and debugging.
+    (window as any).user = null;
   };
 
   onMount(setMiniWindow);
@@ -292,6 +296,8 @@
     $clientConfig = await User.getClientConfig();
 
     $user = await User.current();
+    // Helps with admin and debugging.
+    (window as any).user = $user;
   });
 
   function setMiniWindow() {

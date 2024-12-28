@@ -47,8 +47,27 @@ export interface Config {
    * Instead of a "username", a user logs in and is referred to by their email
    * address. Enabling this after many users have been created can be messy.
    * Make sure they all have email addresses first.
+   *
+   * Email usernames cannot be enabled if domain support is.
    */
   emailUsernames: boolean;
+  /**
+   * Enable domain support.
+   *
+   * If domain support is enabled, usernames can be either bare, meaning they
+   * belong to the root domain, or can include a domain part (username@domain),
+   * meaning they belong to that domain.
+   *
+   * It also enables domain admin abilities, meaning a domain admin has the
+   * ability to create and modify users on the domain
+   * ("tilmeld/domain/example.com/admin").
+   *
+   * Once a user is created, whether it has a domain part can't be changed.
+   * However, it can be moved to a different domain.
+   *
+   * Domain support cannot be enabled if email usernames is.
+   */
+  domainSupport: boolean;
   /**
    * Allow users to register.
    */
@@ -207,6 +226,18 @@ export interface Config {
    * be displayed.
    */
   validEmailRegexNotice: string;
+  /**
+   * Domains must match this regular expression. By default, this uses a regex
+   * that should match most domains:
+   *
+   * https://stackoverflow.com/a/26987741
+   */
+  validDomainRegex: RegExp;
+  /**
+   * When a user enters a domain that doesn't match the regex, this message will
+   * be displayed.
+   */
+  validDomainRegexNotice: string;
   /**
    * The minimum length for usernames.
    */

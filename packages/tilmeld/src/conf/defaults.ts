@@ -20,6 +20,7 @@ export default {
   setupPath: '/tilmeld',
   createAdmin: true,
   emailUsernames: true,
+  domainSupport: false,
   allowRegistration: true,
   allowUsernameChange: true,
   enableUserSearch: false,
@@ -51,6 +52,9 @@ export default {
   validEmailRegex:
     /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/,
   validEmailRegexNotice: 'Email must be a correctly formatted address.',
+  validDomainRegex:
+    /^(((?!-))(xn--|_)?[a-z0-9\-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9\-]{0,60}|[a-z0-9\-]{1,30}\.[a-z]{2,})$/,
+  validDomainRegexNotice: 'Domain must be a correctly formatted domain name.',
   minUsernameLength: 1,
   maxUsernameLength: 128,
   jwtSecret: '',

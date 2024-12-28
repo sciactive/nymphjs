@@ -985,7 +985,7 @@ export default abstract class NymphDriver {
               if (this.putDataCounter == 100) {
                 throw new Error('Infinite loop detected in Entity loading.');
               }
-              entity.$putData(data, sdata);
+              entity.$putData(data, sdata, 'server');
               this.putDataCounter--;
               if (this.nymph.config.cache) {
                 this.pushCache(guid, cdate, mdate, tags, data, sdata);
@@ -1037,6 +1037,9 @@ export default abstract class NymphDriver {
       | ((success: boolean) => Promise<boolean>)
       | null = null,
   ) {
+    const originalGuid = entity.guid;
+    const originalCdate = entity.cdate;
+    const originalMdate = entity.mdate;
     // Get a modified date.
     let mdate = Date.now();
     if (entity.mdate != null) {
@@ -1056,56 +1059,68 @@ export default abstract class NymphDriver {
       await startTransactionCallback();
     }
     let success = false;
-    if (entity.guid == null) {
-      const cdate = mdate;
-      const newId = guid();
-      success = await saveNewEntityCallback({
-        entity,
-        guid: newId,
-        tags,
-        data,
-        sdata,
-        uniques,
-        cdate,
-        etype,
-      });
-      if (success) {
-        entity.guid = newId;
-        entity.cdate = cdate;
-        entity.mdate = mdate;
+    try {
+      if (entity.guid == null) {
+        const cdate = mdate;
+        const newId = guid();
+        success = await saveNewEntityCallback({
+          entity,
+          guid: newId,
+          tags,
+          data,
+          sdata,
+          uniques,
+          cdate,
+          etype,
+        });
+        if (success) {
+          entity.guid = newId;
+          entity.cdate = cdate;
+          entity.mdate = mdate;
+        }
+      } else {
+        // Removed any cached versions of this entity.
+        if (this.nymph.config.cache) {
+          this.cleanCache(entity.guid);
+        }
+        success = await saveExistingEntityCallback({
+          entity,
+          guid: entity.guid,
+          tags,
+          data,
+          sdata,
+          uniques,
+          mdate,
+          etype,
+        });
+        if (success) {
+          entity.mdate = mdate;
+        }
       }
-    } else {
-      // Removed any cached versions of this entity.
-      if (this.nymph.config.cache) {
-        this.cleanCache(entity.guid);
+      if (commitTransactionCallback) {
+        success = await commitTransactionCallback(success);
       }
-      success = await saveExistingEntityCallback({
-        entity,
-        guid: entity.guid,
-        tags,
-        data,
-        sdata,
-        uniques,
-        mdate,
-        etype,
-      });
-      if (success) {
-        entity.mdate = mdate;
+      // Cache the entity.
+      if (success && this.nymph.config.cache) {
+        this.pushCache(
+          entity.guid as string,
+          entity.cdate as number,
+          entity.mdate as number,
+          entity.tags,
+          data,
+          sdata,
+        );
       }
+    } catch (e: any) {
+      entity.guid = originalGuid;
+      entity.cdate = originalCdate;
+      entity.mdate = originalMdate;
+      throw e;
     }
-    if (commitTransactionCallback) {
-      success = await commitTransactionCallback(success);
-    }
-    // Cache the entity.
-    if (success && this.nymph.config.cache) {
-      this.pushCache(
-        entity.guid as string,
-        entity.cdate as number,
-        entity.mdate as number,
-        entity.tags,
-        data,
-        sdata,
-      );
+    if (!success) {
+      entity.guid = originalGuid;
+      entity.cdate = originalCdate;
+      entity.mdate = originalMdate;
     }
     return success;
   }
@@ -1140,6 +1155,7 @@ export default abstract class NymphDriver {
         entity.$putData(
           this.entityCache[guid]['data'],
           this.entityCache[guid]['sdata'],
+          'server',
         );
         return entity;
       }

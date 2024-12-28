@@ -3,6 +3,7 @@ import { Nymph, EntityUniqueConstraintError } from '@nymphjs/nymph';
 
 import Tilmeld from './Tilmeld.js';
 import defaults from './conf/defaults.js';
+import { AccessControlError } from './errors/index.js';
 
 const tilmeld = new Tilmeld({
   appName: 'My App',
@@ -11,6 +12,7 @@ const tilmeld = new Tilmeld({
   cookiePath: '/',
   setupPath: '/user',
   emailUsernames: false,
+  domainSupport: true,
   verifyRedirect: 'http://localhost:8080',
   verifyChangeRedirect: 'http://localhost:8080',
   cancelChangeRedirect: 'http://localhost:8080',
@@ -129,6 +131,85 @@ describe('User', () => {
     await Promise.allSettled(promises);
 
     for (const user of [newUserA, newUserB]) {
+      if (user.guid != null) {
+        expect(await user.$deleteSkipAC()).toEqual(true);
+      }
+    }
+  });
+
+  it('allows a domain user', async () => {
+    const domainAdmin = await User.factory();
+
+    domainAdmin.username = 'admin';
+    domainAdmin.email = 'admin@localhost';
+    domainAdmin.nameFirst = 'Admin';
+    domainAdmin.nameLast = 'User';
+    domainAdmin.name = 'Admin User';
+    domainAdmin.$password('password');
+    domainAdmin.$grant('tilmeld/domain/example.com/admin');
+
+    expect(await domainAdmin.$saveSkipAC()).toEqual(true);
+
+    // Log in the domain admin.
+    await tilmeld.fillSession(domainAdmin);
+
+    const domainUser = await User.factory();
+
+    domainUser.username = 'new-user@example.com';
+    domainUser.email = 'newuser@localhost';
+    domainUser.nameFirst = 'New';
+    domainUser.nameLast = 'User';
+    domainUser.name = 'New User';
+    domainUser.$password('password');
+
+    expect(await domainUser.$save()).toEqual(true);
+
+    tilmeld.clearSession();
+
+    for (const user of [domainAdmin, domainUser]) {
+      if (user.guid != null) {
+        expect(await user.$deleteSkipAC()).toEqual(true);
+      }
+    }
+  });
+
+  it('disallows a domain user with no admin permission', async () => {
+    const domainAdmin = await User.factory();
+
+    domainAdmin.username = 'admin';
+    domainAdmin.email = 'admin@localhost';
+    domainAdmin.nameFirst = 'Admin';
+    domainAdmin.nameLast = 'User';
+    domainAdmin.name = 'Admin User';
+    domainAdmin.$password('password');
+    domainAdmin.$grant('tilmeld/domain/example.com/admin');
+
+    expect(await domainAdmin.$saveSkipAC()).toEqual(true);
+
+    // Log in the domain admin.
+    await tilmeld.fillSession(domainAdmin);
+
+    const domainUser = await User.factory();
+
+    // The wrong domain name.
+    domainUser.username = 'new-user@example.net';
+    domainUser.email = 'newuser@localhost';
+    domainUser.nameFirst = 'New';
+    domainUser.nameLast = 'User';
+    domainUser.name = 'New User';
+    domainUser.$password('password');
+
+    try {
+      await domainUser.$save();
+
+      throw new Error("Shouldn't get here because of access control.");
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(AccessControlError);
+    }
+
+    tilmeld.clearSession();
+
+    for (const user of [domainAdmin, domainUser]) {
       if (user.guid != null) {
         expect(await user.$deleteSkipAC()).toEqual(true);
       }

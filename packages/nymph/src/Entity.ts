@@ -813,7 +813,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.$addTag(...protectedTags, ...tags);
 
     // Accept the data.
-    const data = input.data;
+    const data = { ...input.data };
     const privateData: EntityData = {};
     for (const name of this.$privateData) {
       if (name in this.$data) {
@@ -970,7 +970,11 @@ export default class Entity<T extends EntityData = EntityData>
     }
   }
 
-  public $putData(data: EntityData, sdata?: SerializedEntityData) {
+  public $putData(
+    data: EntityData,
+    sdata?: SerializedEntityData,
+    _source?: 'server',
+  ) {
     this.$check();
 
     const mySdata = sdata ?? this.$getSData();
@@ -1079,7 +1083,7 @@ export default class Entity<T extends EntityData = EntityData>
           this.tags = entity.tags;
           this.cdate = entity.cdate;
           this.mdate = entity.mdate;
-          this.$putData(entity.$getData(), entity.$getSData());
+          this.$putData(entity.$getData(), entity.$getSData(), 'server');
 
           return this;
         })
@@ -1160,7 +1164,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.tags = refresh.tags;
     this.cdate = refresh.cdate;
     this.mdate = refresh.mdate;
-    this.$putData(refresh.$getData(), refresh.$getSData());
+    this.$putData(refresh.$getData(), refresh.$getSData(), 'server');
     return true;
   }
 

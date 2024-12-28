@@ -10,15 +10,17 @@ import type {
 import { humanSecret, nanoid } from '@nymphjs/guid';
 import type { EmailOptions } from 'email-templates';
 import strtotime from 'locutus/php/datetime/strtotime.js';
-import { difference } from 'lodash-es';
+import { difference, xor } from 'lodash-es';
 import { TOTP, Secret } from 'otpauth';
 import { toDataURL } from 'qrcode';
+import { splitn } from '@sciactive/splitn';
 
 import { enforceTilmeld } from './enforceTilmeld.js';
 import AbleObject from './AbleObject.js';
 import type Group from './Group.js';
 import type { GroupData } from './Group.js';
 import {
+  AccessControlError,
   BadDataError,
   BadEmailError,
   BadUsernameError,
@@ -259,6 +261,7 @@ export default class User extends AbleObject<UserData> {
     'sendRecovery',
     'recover',
     'getClientConfig',
+    'getDomainUsers',
   ];
   protected $privateData = [...User.DEFAULT_PRIVATE_DATA];
   public static searchRestrictedData = [...User.DEFAULT_PRIVATE_DATA];
@@ -292,6 +295,10 @@ export default class User extends AbleObject<UserData> {
    * verification, don't set this.
    */
   public $originalEmail?: string;
+  /**
+   * Used to save the current username for domain admin permissions.
+   */
+  public $originalUsername?: string;
 
   static async factoryUsername(username?: string): Promise<User & UserData> {
     const entity = new this();
@@ -496,6 +503,7 @@ export default class User extends AbleObject<UserData> {
       regFields: tilmeld.config.regFields,
       userFields: tilmeld.config.userFields,
       emailUsernames: tilmeld.config.emailUsernames,
+      domainSupport: tilmeld.config.domainSupport,
       allowRegistration: tilmeld.config.allowRegistration,
       allowUsernameChange: tilmeld.config.allowUsernameChange,
       pwRecovery: tilmeld.config.pwRecovery,
@@ -522,6 +530,70 @@ export default class User extends AbleObject<UserData> {
       result.user = user;
     }
     return result;
+  }
+
+  /**
+   * Get the users in a domain. This is only accessible to the domain's admins.
+   */
+  public static async getDomainUsers(
+    domain: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+      sort?: string;
+      reverse?: boolean;
+    },
+  ) {
+    const tilmeld = enforceTilmeld(this);
+
+    if (!tilmeld.config.domainSupport) {
+      throw new AccessControlError('Domain support is not enabled.');
+    }
+
+    if (!domain) {
+      throw new BadDataError('Domain is required.');
+    }
+
+    domain = domain.toLowerCase();
+    if (!tilmeld.config.validDomainRegex.test(domain)) {
+      throw new BadDataError(tilmeld.config.validDomainRegexNotice);
+    }
+
+    if (!tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)) {
+      throw new AccessControlError(
+        'You do not have the authority to manage this domain.',
+      );
+    }
+
+    return await this.nymph.getEntities(
+      {
+        class: this.nymph.getEntityClass(User),
+        ...(options?.limit != null
+          ? {
+              limit: options.limit,
+            }
+          : {}),
+        ...(options?.offset != null
+          ? {
+              offset: options.offset,
+            }
+          : {}),
+        ...(options?.sort != null
+          ? {
+              sort: options.sort,
+            }
+          : {}),
+        ...(options?.reverse != null
+          ? {
+              reverse: options.reverse,
+            }
+          : {}),
+      },
+      {
+        type: '&',
+        like: ['username', `%@${domain.replace(/([\\%_])/g, (s) => `\\${s}`)}`],
+      },
+    );
   }
 
   constructor() {
@@ -811,53 +883,69 @@ export default class User extends AbleObject<UserData> {
     const tilmeld = enforceTilmeld(this);
     this.$check();
 
-    if (
-      'abilities' in input.data &&
-      input.data.abilities?.includes('system/admin') !==
-        this.$data.abilities?.includes('system/admin') &&
-      (!tilmeld.currentUser ||
-        !tilmeld.currentUser.abilities?.includes('system/admin'))
-    ) {
-      throw new BadDataError(
-        "You don't have the authority to grant or revoke system/admin.",
-      );
+    if ('abilities' in input.data) {
+      this.$checkIncomingAbilities(input.data.abilities);
     }
 
-    if (
-      'abilities' in input.data &&
-      input.data.abilities?.includes('tilmeld/admin') !==
-        this.$data.abilities?.includes('tilmeld/admin') &&
-      (!tilmeld.currentUser ||
-        !tilmeld.currentUser.abilities?.includes('system/admin'))
-    ) {
-      throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/admin.",
-      );
+    // If the user is a new domain user, the data protection needs to be updated
+    // before the data is accepted, or else some things won't be accepted
+    // correctly (enabled, passwordTemp).
+    let reloadDataProtection = false;
+    if (tilmeld.config.domainSupport) {
+      let [_username, domain] = splitn(input.data.username ?? '', '@', 2);
+      // Lowercase the domain part.
+      if (domain) {
+        domain = domain.toLowerCase();
+      }
+      const user = tilmeld.User.current();
+      const isCurrentUser = user != null && user.$is(this);
+      // While loading, accessing abilities on the current user will infinitely
+      // loop, but if this is the current user, we can use its abilities.
+      const abilities =
+        (isCurrentUser || user == null
+          ? this.$data.abilities
+          : user?.abilities) ?? [];
+      const isNewUser = input.guid == null;
+      const isDomainUser =
+        !isCurrentUser &&
+        user != null &&
+        domain &&
+        abilities.includes(`tilmeld/domain/${domain}/admin`);
+
+      reloadDataProtection = !!(isNewUser && isDomainUser);
     }
 
-    if (
-      'abilities' in input.data &&
-      input.data.abilities?.includes('tilmeld/switch') !==
-        this.$data.abilities?.includes('tilmeld/switch') &&
-      (!tilmeld.currentUser ||
-        !tilmeld.currentUser.abilities?.includes('system/admin'))
-    ) {
-      throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/switch.",
-      );
-    }
-
-    this.$originalEmail = this.$data.email;
     super.$jsonAcceptData(input, allowConflict);
+
+    if (reloadDataProtection) {
+      // Load it again after data protection is run.
+      this.$updateDataProtection();
+      super.$jsonAcceptData(input, allowConflict);
+    }
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
-    const tilmeld = enforceTilmeld(this);
     this.$check();
 
+    if ('abilities' in patch.set) {
+      this.$checkIncomingAbilities(patch.set.abilities);
+    }
+
+    super.$jsonAcceptPatch(patch, allowConflict);
+  }
+
+  private $checkIncomingAbilities(incoming: any) {
+    const tilmeld = enforceTilmeld(this);
+
     if (
-      'abilities' in patch.set &&
-      patch.set.abilities?.includes('system/admin') !==
+      !Array.isArray(incoming) ||
+      incoming.find((ability) => typeof ability !== 'string')
+    ) {
+      throw new BadDataError('Abilities must be an array of strings.');
+    }
+
+    if (
+      incoming.includes('system/admin') !==
         this.$data.abilities?.includes('system/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
@@ -868,8 +956,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (
-      'abilities' in patch.set &&
-      patch.set.abilities?.includes('tilmeld/admin') !==
+      incoming.includes('tilmeld/admin') !==
         this.$data.abilities?.includes('tilmeld/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
@@ -880,8 +967,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     if (
-      'abilities' in patch.set &&
-      patch.set.abilities?.includes('tilmeld/switch') !==
+      incoming.includes('tilmeld/switch') !==
         this.$data.abilities?.includes('tilmeld/switch') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
@@ -891,12 +977,33 @@ export default class User extends AbleObject<UserData> {
       );
     }
 
-    this.$originalEmail = this.$data.email;
-    super.$jsonAcceptPatch(patch, allowConflict);
+    if (
+      xor(
+        incoming.filter((ability: string) => ability.startsWith('tilmeld/')),
+        this.$data.abilities?.filter((ability: string) =>
+          ability.startsWith('tilmeld/'),
+        ) ?? [],
+      ).length &&
+      (!tilmeld.currentUser ||
+        (!tilmeld.currentUser.abilities?.includes('system/admin') &&
+          !tilmeld.currentUser.abilities?.includes('tilmeld/admin')))
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke Tilmeld abilities.",
+      );
+    }
   }
 
-  public $putData(data: EntityData, sdata?: SerializedEntityData) {
-    super.$putData(data, sdata);
+  public $putData(
+    data: EntityData,
+    sdata?: SerializedEntityData,
+    source?: 'server',
+  ) {
+    super.$putData(data, sdata, source);
+    if (source === 'server') {
+      this.$originalEmail = this.$data.email;
+      this.$originalUsername = this.$data.username;
+    }
     this.$updateDataProtection();
   }
 
@@ -908,6 +1015,13 @@ export default class User extends AbleObject<UserData> {
   public $updateDataProtection(givenUser?: User & UserData) {
     const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
+    let [_username, domain] = tilmeld.config.domainSupport
+      ? splitn(this.$data.username ?? '', '@', 2)
+      : [this.$data.username, null];
+    // Lowercase the domain part.
+    if (domain) {
+      domain = domain.toLowerCase();
+    }
 
     this.$clientEnabledMethods = [...User.DEFAULT_CLIENT_ENABLED_METHODS];
     this.$privateData = [...User.DEFAULT_PRIVATE_DATA];
@@ -925,6 +1039,12 @@ export default class User extends AbleObject<UserData> {
         ? this.$data.abilities
         : user?.abilities) ?? [];
     const isNewUser = this.guid == null;
+    const isDomainUser =
+      tilmeld.config.domainSupport &&
+      !isCurrentUser &&
+      user != null &&
+      domain &&
+      abilities.includes(`tilmeld/domain/${domain}/admin`);
 
     if (isCurrentUser) {
       // Users can check to see what abilities they have.
@@ -933,6 +1053,17 @@ export default class User extends AbleObject<UserData> {
       this.$clientEnabledMethods.push('$revokeCurrentTokens');
       this.$clientEnabledMethods.push('$logout');
       this.$clientEnabledMethods.push('$sendEmailVerification');
+      this.$clientEnabledMethods.push('$hasTOTPSecret');
+      this.$clientEnabledMethods.push('$getNewTOTPSecret');
+      this.$clientEnabledMethods.push('$saveTOTPSecret');
+      this.$clientEnabledMethods.push('$removeTOTPSecret');
+    }
+
+    if (isDomainUser) {
+      // Domain admins can check to see what abilities their users have.
+      this.$clientEnabledMethods.push('$gatekeeper');
+      this.$clientEnabledMethods.push('$changePassword');
+      this.$clientEnabledMethods.push('$revokeCurrentTokens');
       this.$clientEnabledMethods.push('$hasTOTPSecret');
       this.$clientEnabledMethods.push('$getNewTOTPSecret');
       this.$clientEnabledMethods.push('$saveTOTPSecret');
@@ -949,6 +1080,55 @@ export default class User extends AbleObject<UserData> {
       this.$clientEnabledMethods.push('$hasTOTPSecret');
       this.$clientEnabledMethods.push('$removeTOTPSecret');
       this.$allowlistData = undefined;
+    } else if (isDomainUser) {
+      // Domain admins can see their users' data, and edit some of it.
+      if (tilmeld.config.allowUsernameChange || isNewUser) {
+        this.$allowlistData.push('username');
+      }
+      this.$allowlistData.push('avatar');
+      if (tilmeld.config.userFields.includes('name')) {
+        this.$allowlistData.push('nameFirst');
+        this.$allowlistData.push('nameMiddle');
+        this.$allowlistData.push('nameLast');
+        this.$allowlistData.push('name');
+      }
+      if (tilmeld.config.userFields.includes('email')) {
+        this.$allowlistData.push('email');
+      }
+      if (tilmeld.config.userFields.includes('phone')) {
+        this.$allowlistData.push('phone');
+      }
+      this.$allowlistData.push('enabled');
+      this.$allowlistData.push('passwordTemp');
+      this.$privateData = [
+        // The things commented are there to show what is _not_ private.
+        // 'abilities',
+        // 'username',
+        // 'nameFirst',
+        // 'nameMiddle',
+        // 'nameLast',
+        // 'name',
+        // 'email',
+        // 'avatar',
+        // 'phone',
+        // 'group',
+        // 'groups',
+        // 'inheritAbilities',
+        // 'enabled',
+        'secret',
+        'emailChangeDate',
+        'newEmailSecret',
+        // 'newEmailAddress',
+        'cancelEmailSecret',
+        'cancelEmailAddress',
+        'recoverSecret',
+        'recoverSecretDate',
+        'salt',
+        'password',
+        // 'passwordTemp',
+        // 'revokeTokenDate',
+        'totpSecret',
+      ];
     } else if (isCurrentUser || isNewUser) {
       // Users can see their own data, and edit some of it.
       if (tilmeld.config.allowUsernameChange || isNewUser) {
@@ -968,7 +1148,7 @@ export default class User extends AbleObject<UserData> {
         this.$allowlistData.push('phone');
       }
       this.$privateData = [
-        // The things that are commented are there to show what is _not_ private.
+        // The things commented are there to show what is _not_ private.
         // 'abilities',
         // 'username',
         // 'nameFirst',
@@ -1590,10 +1770,25 @@ export default class User extends AbleObject<UserData> {
     );
 
     if (!tilmeld.config.emailUsernames) {
-      if (this.$data.username == null || !this.$data.username.length) {
+      let [username, domain] = tilmeld.config.domainSupport
+        ? splitn(this.$data.username ?? '', '@', 2)
+        : [this.$data.username, null];
+
+      // Lowercase the domain part.
+      if (domain) {
+        domain = domain.toLowerCase();
+        this.$data.username = `${username}@${domain}`;
+      }
+
+      if (
+        this.$data.username == null ||
+        !this.$data.username.length ||
+        username == null ||
+        !username.length
+      ) {
         return { result: false, message: 'Please specify a username.' };
       }
-      if (this.$data.username.length < tilmeld.config.minUsernameLength) {
+      if (username.length < tilmeld.config.minUsernameLength) {
         return {
           result: false,
           message:
@@ -1602,7 +1797,7 @@ export default class User extends AbleObject<UserData> {
             ' characters.',
         };
       }
-      if (this.$data.username.length > tilmeld.config.maxUsernameLength) {
+      if (username.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:
@@ -1613,21 +1808,37 @@ export default class User extends AbleObject<UserData> {
       }
 
       if (
-        difference(
-          this.$data.username.split(''),
-          tilmeld.config.validChars.split(''),
-        ).length
+        difference(username.split(''), tilmeld.config.validChars.split(''))
+          .length
       ) {
         return {
           result: false,
           message: tilmeld.config.validCharsNotice,
         };
       }
-      if (!tilmeld.config.validRegex.test(this.$data.username)) {
+      if (!tilmeld.config.validRegex.test(username)) {
         return {
           result: false,
           message: tilmeld.config.validRegexNotice,
         };
+      }
+      if (domain != null) {
+        if (!tilmeld.config.validDomainRegex.test(domain)) {
+          return {
+            result: false,
+            message: tilmeld.config.validDomainRegexNotice,
+          };
+        }
+        if (
+          !this.$is(tilmeld.currentUser) &&
+          !tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
+        ) {
+          return {
+            result: false,
+            message:
+              "You don't have the authority to manage users on this domain.",
+          };
+        }
       }
 
       const selector: Selector = {
@@ -2017,9 +2228,62 @@ export default class User extends AbleObject<UserData> {
       !tilmeld.gatekeeper('system/admin') &&
       this.$data.abilities?.includes('system/admin')
     ) {
-      throw new BadDataError(
+      throw new AccessControlError(
         "You don't have the authority to modify system admins.",
       );
+    }
+
+    // Lowercase the domain part.
+    if (tilmeld.config.domainSupport) {
+      const [username, domain] = splitn(this.$data.username ?? '', '@', 2);
+      if (domain) {
+        this.$data.username = `${username}@${domain.toLowerCase()}`;
+      }
+    }
+
+    if (tilmeld.config.domainSupport) {
+      const [_username, domain] = splitn(this.$data.username ?? '', '@', 2);
+      const [_originalUsername, originalDomain] = splitn(
+        this.$originalUsername ?? '',
+        '@',
+        2,
+      );
+
+      if (
+        this.guid != null &&
+        ((originalDomain == null && domain != null) ||
+          (domain == null && originalDomain != null))
+      ) {
+        throw new AccessControlError(
+          "Users can't switch to or from having a domain once created.",
+        );
+      }
+
+      if (
+        !this.$skipAcWhenSaving &&
+        !tilmeld.gatekeeper('tilmeld/admin') &&
+        !tilmeld.gatekeeper('system/admin')
+      ) {
+        if (
+          domain != null &&
+          !this.$is(tilmeld.currentUser) &&
+          !tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
+        ) {
+          throw new AccessControlError(
+            "You don't have the authority to modify users on this domain.",
+          );
+        }
+        if (
+          originalDomain != null &&
+          originalDomain !== domain &&
+          (!tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`) ||
+            !tilmeld.gatekeeper(`tilmeld/domain/${originalDomain}/admin`))
+        ) {
+          throw new AccessControlError(
+            "You don't have the authority to modify users on this domain.",
+          );
+        }
+      }
     }
 
     let sendVerification = false;
@@ -2364,7 +2628,7 @@ export default class User extends AbleObject<UserData> {
       throw e;
     }
 
-    let ret: boolean;
+    let ret = false;
     let preGuid = this.guid;
     let preCdate = this.cdate;
     let preMdate = this.mdate;
@@ -2387,6 +2651,9 @@ export default class User extends AbleObject<UserData> {
       }
     } catch (e: any) {
       await tnymph.rollback(transaction);
+      this.guid = preGuid;
+      this.cdate = preCdate;
+      this.mdate = preMdate;
       this.$setNymph(nymph);
       throw e;
     }
@@ -2406,7 +2673,15 @@ export default class User extends AbleObject<UserData> {
 
       this.$descendantGroups = undefined;
       this.$gatekeeperCache = undefined;
-      await tnymph.commit(transaction);
+      ret = await tnymph.commit(transaction);
+    } else {
+      await tnymph.rollback(transaction);
+    }
+    this.$setNymph(nymph);
+
+    if (ret) {
+      this.$originalEmail = this.$data.email;
+      this.$originalUsername = this.$data.username;
 
       const tilmeld = enforceTilmeld(nymph);
 
@@ -2414,10 +2689,8 @@ export default class User extends AbleObject<UserData> {
         // Update the user in the session cache.
         await tilmeld.fillSession(this);
       }
-    } else {
-      await tnymph.rollback(transaction);
     }
-    this.$setNymph(nymph);
+
     return ret;
   }
 
@@ -2440,21 +2713,61 @@ export default class User extends AbleObject<UserData> {
   public async $delete() {
     const tilmeld = enforceTilmeld(this);
     if (!this.$skipAcWhenDeleting && !tilmeld.gatekeeper('tilmeld/admin')) {
-      throw new BadDataError("You don't have the authority to delete users.");
+      throw new AccessControlError(
+        "You don't have the authority to delete users.",
+      );
     }
     if (
       !this.$skipAcWhenDeleting &&
       !tilmeld.gatekeeper('system/admin') &&
       this.$data.abilities?.includes('system/admin')
     ) {
-      throw new BadDataError(
+      throw new AccessControlError(
         "You don't have the authority to delete system admins.",
       );
     }
+    if (this.$data.username !== this.$originalUsername) {
+      throw new AccessControlError(
+        "You can't delete a user while switching their username.",
+      );
+    }
+
     if (tilmeld.User.current(true).$is(this)) {
       await this.$logout();
     }
-    return await super.$delete();
+
+    if (this.$data.group != null && this.$is(this.$data.group.user)) {
+      const transaction = 'tilmeld-delete-' + this.guid;
+      const nymph = this.$nymph;
+      const tnymph = await nymph.startTransaction(transaction);
+      this.$setNymph(tnymph);
+
+      // Read the skip ac value here, because super.$delete changes it.
+      const $skipAcWhenDeleting = this.$skipAcWhenDeleting;
+
+      // Delete the user.
+      let success = await super.$delete();
+      if (!success) {
+        await tnymph.rollback(transaction);
+        this.$setNymph(nymph);
+        return success;
+      }
+
+      // Delete the generated group.
+      success = $skipAcWhenDeleting
+        ? await this.$data.group.$deleteSkipAC()
+        : await this.$data.group.$delete();
+
+      if (success) {
+        success = await tnymph.commit(transaction);
+      } else {
+        await tnymph.rollback(transaction);
+      }
+      this.$setNymph(nymph);
+      return success;
+    } else {
+      return await super.$delete();
+    }
   }
 
   /*

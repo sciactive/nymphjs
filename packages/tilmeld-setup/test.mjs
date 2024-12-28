@@ -17,6 +17,7 @@ const nymph = new Nymph(
     cookiePath: '/',
     setupPath: '/user',
     emailUsernames: false,
+    domainSupport: true,
     clientEnabledUIDs: ['test'],
     verifyRedirect: 'http://localhost:8080',
     verifyChangeRedirect: 'http://localhost:8080',

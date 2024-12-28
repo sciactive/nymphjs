@@ -8,11 +8,13 @@ import type {
   Selector,
   SerializedEntityData,
 } from '@nymphjs/nymph';
-import { difference } from 'lodash-es';
+import { difference, xor } from 'lodash-es';
+import { splitn } from '@sciactive/splitn';
 
 import { enforceTilmeld } from './enforceTilmeld.js';
 import AbleObject from './AbleObject.js';
 import {
+  AccessControlError,
   BadDataError,
   BadEmailError,
   BadUsernameError,
@@ -119,6 +121,10 @@ export default class Group extends AbleObject<GroupData> {
    * This should only be used by the backend.
    */
   private $skipAcWhenDeleting = false;
+  /**
+   * Used to save the current groupname for domain admin permissions.
+   */
+  public $originalGroupname?: string;
 
   static async factoryGroupname(
     groupname?: string,
@@ -281,55 +287,37 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
-    const tilmeld = enforceTilmeld(this);
     this.$check();
 
-    if (
-      'abilities' in input.data &&
-      input.data.abilities?.includes('system/admin') !==
-        this.$data.abilities?.includes('system/admin') &&
-      (!tilmeld.currentUser ||
-        !tilmeld.currentUser.abilities?.includes('system/admin'))
-    ) {
-      throw new BadDataError(
-        "You don't have the authority to grant or revoke system/admin.",
-      );
-    }
-
-    if (
-      'abilities' in input.data &&
-      input.data.abilities?.includes('tilmeld/admin') !==
-        this.$data.abilities?.includes('tilmeld/admin') &&
-      (!tilmeld.currentUser ||
-        !tilmeld.currentUser.abilities?.includes('system/admin'))
-    ) {
-      throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/admin.",
-      );
-    }
-
-    if (
-      'abilities' in input.data &&
-      input.data.abilities?.includes('tilmeld/switch') !==
-        this.$data.abilities?.includes('tilmeld/switch') &&
-      (!tilmeld.currentUser ||
-        !tilmeld.currentUser.abilities?.includes('system/admin'))
-    ) {
-      throw new BadDataError(
-        "You don't have the authority to grant or revoke tilmeld/switch.",
-      );
+    if ('abilities' in input.data) {
+      this.$checkIncomingAbilities(input.data.abilities);
     }
 
     super.$jsonAcceptData(input, allowConflict);
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
-    const tilmeld = enforceTilmeld(this);
     this.$check();
 
+    if ('abilities' in patch.set) {
+      this.$checkIncomingAbilities(patch.set.abilities);
+    }
+
+    super.$jsonAcceptPatch(patch, allowConflict);
+  }
+
+  private $checkIncomingAbilities(incoming: any) {
+    const tilmeld = enforceTilmeld(this);
+
     if (
-      'abilities' in patch.set &&
-      patch.set.abilities?.includes('system/admin') !==
+      !Array.isArray(incoming) ||
+      incoming.find((ability) => typeof ability !== 'string')
+    ) {
+      throw new BadDataError('Abilities must be an array of strings.');
+    }
+
+    if (
+      incoming.includes('system/admin') !==
         this.$data.abilities?.includes('system/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
@@ -340,8 +328,7 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     if (
-      'abilities' in patch.set &&
-      patch.set.abilities?.includes('tilmeld/admin') !==
+      incoming.includes('tilmeld/admin') !==
         this.$data.abilities?.includes('tilmeld/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
@@ -352,8 +339,7 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     if (
-      'abilities' in patch.set &&
-      patch.set.abilities?.includes('tilmeld/switch') !==
+      incoming.includes('tilmeld/switch') !==
         this.$data.abilities?.includes('tilmeld/switch') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
@@ -363,11 +349,32 @@ export default class Group extends AbleObject<GroupData> {
       );
     }
 
-    super.$jsonAcceptPatch(patch, allowConflict);
+    if (
+      xor(
+        incoming.filter((ability: string) => ability.startsWith('tilmeld/')),
+        this.$data.abilities?.filter((ability: string) =>
+          ability.startsWith('tilmeld/'),
+        ) ?? [],
+      ).length &&
+      (!tilmeld.currentUser ||
+        (!tilmeld.currentUser.abilities?.includes('system/admin') &&
+          !tilmeld.currentUser.abilities?.includes('tilmeld/admin')))
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke Tilmeld abilities.",
+      );
+    }
   }
 
-  public $putData(data: EntityData, sdata?: SerializedEntityData) {
-    super.$putData(data, sdata);
+  public $putData(
+    data: EntityData,
+    sdata?: SerializedEntityData,
+    source?: 'server',
+  ) {
+    super.$putData(data, sdata, source);
+    if (source === 'server') {
+      this.$originalGroupname = this.$data.groupname;
+    }
     this.$updateDataProtection();
   }
 
@@ -379,6 +386,13 @@ export default class Group extends AbleObject<GroupData> {
   public $updateDataProtection(givenUser?: User & UserData) {
     const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
+    let [_groupname, domain] = tilmeld.config.domainSupport
+      ? splitn(this.$data.groupname ?? '', '@', 2)
+      : [this.$data.groupname, null];
+    // Lowercase the domain part.
+    if (domain) {
+      domain = domain.toLowerCase();
+    }
 
     this.$privateData = [...Group.DEFAULT_PRIVATE_DATA];
     this.$allowlistData = [...Group.DEFAULT_ALLOWLIST_DATA];
@@ -401,6 +415,14 @@ export default class Group extends AbleObject<GroupData> {
       this.$data.user.guid === user.guid
     ) {
       // Users can see their group's data.
+      this.$privateData = [];
+    } else if (
+      user != null &&
+      tilmeld.config.domainSupport &&
+      domain &&
+      user.abilities?.includes(`tilmeld/domain/${domain}/admin`)
+    ) {
+      // Domain admins can see their groups' data.
       this.$privateData = [];
     }
   }
@@ -567,10 +589,25 @@ export default class Group extends AbleObject<GroupData> {
   }> {
     const tilmeld = enforceTilmeld(this);
     if (!tilmeld.config.emailUsernames) {
-      if (this.$data.groupname == null || !this.$data.groupname.length) {
+      let [groupname, domain] = tilmeld.config.domainSupport
+        ? splitn(this.$data.groupname ?? '', '@', 2)
+        : [this.$data.groupname, null];
+
+      // Lowercase the domain part.
+      if (domain) {
+        domain = domain.toLowerCase();
+        this.$data.groupname = `${groupname}@${domain}`;
+      }
+
+      if (
+        this.$data.groupname == null ||
+        !this.$data.groupname.length ||
+        groupname == null ||
+        !groupname.length
+      ) {
         return { result: false, message: 'Please specify a groupname.' };
       }
-      if (this.$data.groupname.length < tilmeld.config.minUsernameLength) {
+      if (groupname.length < tilmeld.config.minUsernameLength) {
         return {
           result: false,
           message:
@@ -579,7 +616,7 @@ export default class Group extends AbleObject<GroupData> {
             ' characters.',
         };
       }
-      if (this.$data.groupname.length > tilmeld.config.maxUsernameLength) {
+      if (groupname.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:
@@ -589,21 +626,37 @@ export default class Group extends AbleObject<GroupData> {
         };
       }
       if (
-        difference(
-          this.$data.groupname.split(''),
-          tilmeld.config.validChars.split(''),
-        ).length
+        difference(groupname.split(''), tilmeld.config.validChars.split(''))
+          .length
       ) {
         return {
           result: false,
           message: tilmeld.config.validCharsNotice,
         };
       }
-      if (!tilmeld.config.validRegex.test(this.$data.groupname)) {
+      if (!tilmeld.config.validRegex.test(groupname)) {
         return {
           result: false,
           message: tilmeld.config.validRegexNotice,
         };
+      }
+      if (domain != null) {
+        if (!tilmeld.config.validDomainRegex.test(domain)) {
+          return {
+            result: false,
+            message: tilmeld.config.validDomainRegexNotice,
+          };
+        }
+        if (
+          !this.$is(tilmeld.currentUser?.group) &&
+          !tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
+        ) {
+          return {
+            result: false,
+            message:
+              "You don't have the authority to manage groups on this domain.",
+          };
+        }
       }
 
       const selector: Selector = {
@@ -707,6 +760,59 @@ export default class Group extends AbleObject<GroupData> {
       return false;
     }
 
+    // Lowercase the domain part.
+    if (tilmeld.config.domainSupport) {
+      const [groupname, domain] = splitn(this.$data.groupname ?? '', '@', 2);
+      if (domain) {
+        this.$data.groupname = `${groupname}@${domain.toLowerCase()}`;
+      }
+    }
+
+    if (tilmeld.config.domainSupport) {
+      const [_groupname, domain] = splitn(this.$data.groupname ?? '', '@', 2);
+      const [_originalGroupname, originalDomain] = splitn(
+        this.$originalGroupname ?? '',
+        '@',
+        2,
+      );
+
+      if (
+        this.guid != null &&
+        ((originalDomain == null && domain != null) ||
+          (domain == null && originalDomain != null))
+      ) {
+        throw new AccessControlError(
+          "Groups can't switch to or from having a domain once created.",
+        );
+      }
+
+      if (
+        !this.$skipAcWhenSaving &&
+        !tilmeld.gatekeeper('tilmeld/admin') &&
+        !tilmeld.gatekeeper('system/admin')
+      ) {
+        if (
+          domain != null &&
+          !this.$is(tilmeld.currentUser) &&
+          !tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
+        ) {
+          throw new AccessControlError(
+            "You don't have the authority to modify groups on this domain.",
+          );
+        }
+        if (
+          originalDomain != null &&
+          originalDomain !== domain &&
+          (!tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`) ||
+            !tilmeld.gatekeeper(`tilmeld/domain/${originalDomain}/admin`))
+        ) {
+          throw new AccessControlError(
+            "You don't have the authority to modify groups on this domain.",
+          );
+        }
+      }
+    }
+
     // Formatting.
     this.$data.groupname = this.$data.groupname.trim();
     if (tilmeld.config.emailUsernames) {
@@ -752,15 +858,23 @@ export default class Group extends AbleObject<GroupData> {
       delete this.$data.unverifiedSecondary;
     }
 
-    // Groups should never have 'system/admin', 'tilmeld/admin', or
-    // 'tilmeld/switch' abilities.
-    this.$data.abilities = difference(this.$data.abilities ?? [], [
-      'system/admin',
-      'tilmeld/admin',
-      'tilmeld/switch',
-      null,
-      undefined,
-    ]) as string[];
+    // Groups should never have 'system/admin', 'tilmeld/admin',
+    // 'tilmeld/switch', or domain admin abilities.
+    this.$data.abilities = (this.$data.abilities ?? []).filter((ability) => {
+      if (
+        ['system/admin', 'tilmeld/admin', 'tilmeld/switch'].indexOf(ability) !==
+        -1
+      ) {
+        return false;
+      }
+      if (ability == null) {
+        return false;
+      }
+      if (ability.startsWith('tilmeld/domain/') && ability.endsWith('/admin')) {
+        return false;
+      }
+      return true;
+    }) as string[];
 
     // Verification.
     const unCheck = await this.$checkGroupname();
@@ -818,7 +932,11 @@ export default class Group extends AbleObject<GroupData> {
       }
     }
 
-    return await super.$save();
+    const ret = await super.$save();
+    if (ret) {
+      this.$originalGroupname = this.$data.groupname;
+    }
+    return ret;
   }
 
   /*
@@ -840,7 +958,14 @@ export default class Group extends AbleObject<GroupData> {
   public async $delete() {
     let tilmeld = enforceTilmeld(this);
     if (!this.$skipAcWhenDeleting && !tilmeld.gatekeeper('tilmeld/admin')) {
-      throw new BadDataError("You don't have the authority to delete groups.");
+      throw new AccessControlError(
+        "You don't have the authority to delete groups.",
+      );
+    }
+    if (this.$data.groupname !== this.$originalGroupname) {
+      throw new AccessControlError(
+        "You can't delete a group while switching its groupname.",
+      );
     }
 
     const transaction = 'tilmeld-delete-' + this.guid;
@@ -913,9 +1038,9 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     // Delete the group.
-    const success = await super.$delete();
+    let success = await super.$delete();
     if (success) {
-      await tnymph.commit(transaction);
+      success = await tnymph.commit(transaction);
     } else {
       await tnymph.rollback(transaction);
     }

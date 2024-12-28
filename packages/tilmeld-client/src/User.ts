@@ -197,6 +197,18 @@ export default class User extends Entity<UserData> {
     return entity;
   }
 
+  static async getDomainUsers(
+    domain: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+      sort?: string;
+      reverse?: boolean;
+    },
+  ): Promise<(User & UserData)[]> {
+    return await this.serverCallStatic('getDomainUsers', [domain, options]);
+  }
+
   constructor() {
     super();
 

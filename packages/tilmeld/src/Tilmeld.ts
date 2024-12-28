@@ -10,10 +10,11 @@ import {
 } from '@nymphjs/nymph';
 import { Request, Response } from 'express';
 import { xor } from 'lodash-es';
+import { splitn } from '@sciactive/splitn';
 
 import { Config, ConfigDefaults as defaults } from './conf/index.js';
 import { AccessControlError } from './errors/index.js';
-import Group from './Group.js';
+import Group, { GroupData } from './Group.js';
 import User, { UserData } from './User.js';
 import { AccessControlData } from './Tilmeld.types.js';
 import { enforceTilmeld } from './enforceTilmeld.js';
@@ -108,6 +109,12 @@ export default class Tilmeld implements TilmeldInterface {
         );
       }
     }
+
+    if (this.config.emailUsernames && this.config.domainSupport) {
+      throw new Error(
+        'Email usernames and domain support cannot both be enabled.',
+      );
+    }
   }
 
   /**
@@ -165,6 +172,8 @@ export default class Tilmeld implements TilmeldInterface {
       user.mdate = currentUserMDate;
       user.tags = currentUserTags;
       user.$putData(currentUserData, currentUserSData);
+      user.$originalEmail = this.currentUser.$originalEmail;
+      user.$originalUsername = this.currentUser.$originalUsername;
       this.currentUser = user;
       this.currentUser.$updateDataProtection();
       this.currentUser.$updateGroupDataProtection();
@@ -736,6 +745,27 @@ export default class Tilmeld implements TilmeldInterface {
         userOrEmpty.abilities?.includes('system/admin'))
     ) {
       return true;
+    }
+
+    // Users and groups that belong to a domain are readable and editable by
+    // that domain's admins.
+    if (
+      this.config.domainSupport &&
+      (entity instanceof User || entity instanceof Group)
+    ) {
+      const [_local, domain] = splitn(
+        (entity instanceof User
+          ? (entity as User & UserData).username
+          : (entity as Group & GroupData).groupname) ?? '',
+        '@',
+        2,
+      );
+      if (
+        domain &&
+        userOrEmpty.abilities?.includes(`tilmeld/domain/${domain}/admin`)
+      ) {
+        return true;
+      }
     }
 
     // Load access control, since we need it now...
