@@ -88,7 +88,12 @@ export function classNamesToEntityConstructors(
 }
 
 export function entitiesToReferences(item: any): any {
-  if (item instanceof Entity && typeof item.$toReference === 'function') {
+  if (item == null) {
+    return item;
+  } else if (
+    item instanceof Entity &&
+    typeof item.$toReference === 'function'
+  ) {
     // Convert entities to references.
     return item.$toReference();
   } else if (Array.isArray(item)) {
@@ -110,7 +115,9 @@ export function referencesToEntities(
   nymph: Nymph,
   useSkipAc = false,
 ): any {
-  if (Array.isArray(item)) {
+  if (item == null) {
+    return item;
+  } else if (Array.isArray(item)) {
     // Check if it's a reference.
     if (item[0] === 'nymph_entity_reference') {
       try {

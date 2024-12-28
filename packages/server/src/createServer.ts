@@ -847,7 +847,9 @@ export function createServer(
    * @returns The item, converted.
    */
   function referencesToEntities(item: any, nymph: Nymph): any {
-    if (Array.isArray(item)) {
+    if (item == null) {
+      return item;
+    } else if (Array.isArray(item)) {
       if (item.length === 3 && item[0] === 'nymph_entity_reference') {
         try {
           const EntityClass = nymph.getEntityClass(item[1]);

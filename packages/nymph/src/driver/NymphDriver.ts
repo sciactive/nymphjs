@@ -609,7 +609,7 @@ export default abstract class NymphDriver {
       return true;
     }
     // Search through arrays and objects looking for the reference.
-    if (Array.isArray(value) || typeof value === 'object') {
+    if (value != null && (Array.isArray(value) || typeof value === 'object')) {
       for (const key in value) {
         if (this.entityReferenceSearch(value[key], guids)) {
           return true;
