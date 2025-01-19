@@ -138,6 +138,17 @@ export interface EntityInterface extends DataObjectInterface {
    */
   tags: string[];
   /**
+   * Get a GUID for the entity.
+   *
+   * If the entity has already been saved, this will just return the GUID.
+   *
+   * If the entity has not yet been saved, this will return a new GUID that gets
+   * held by the entity. The `guid` property will remain null, but this method
+   * will then always return the same GUID. When the entity is eventually saved
+   * into the database, this GUID will be used.
+   */
+  $getGuaranteedGUID(): string;
+  /**
    * Add one or more tags.
    *
    * @param tags List of tags.

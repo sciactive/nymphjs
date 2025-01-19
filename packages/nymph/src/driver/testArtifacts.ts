@@ -159,6 +159,35 @@ export function EntitiesTest(
     expect(testEntity.$is(resultEntity)).toEqual(false);
   });
 
+  it('guaranteed guid', async () => {
+    // Creating entity...
+    const testEntity = await TestModel.factory();
+
+    // Saving entity...
+    testEntity.name = 'Entity Test ' + new Date().toLocaleString();
+    testEntity.null = null;
+    testEntity.string = 'test';
+    testEntity.array = [];
+    testEntity.match = matchValue;
+    testEntity.number = 30;
+    testEntity.numberString = '30';
+    testEntity.timestamp = Date.now();
+
+    // Get the guaranteed GUID.
+    const testGuid = testEntity.$getGuaranteedGUID();
+
+    expect(await testEntity.$save()).toEqual(true);
+    expect(testEntity.guid).not.toBeNull();
+    expect(testEntity.guid).toEqual(testGuid);
+
+    // Retrieving entity by GUID...
+    let resultEntity = await nymph.getEntity({ class: TestModel }, testGuid);
+    expect(testEntity.$is(resultEntity)).toEqual(true);
+
+    // Delete the entity.
+    expect(await testEntity.$delete()).toEqual(true);
+  });
+
   it('transactions', async () => {
     await createTestEntities();
 

@@ -1,4 +1,5 @@
 import { difference, intersection, isEqual } from 'lodash-es';
+import { guid } from '@nymphjs/guid';
 
 import type Nymph from './Nymph.js';
 import type { Options } from './Nymph.types.js';
@@ -236,6 +237,10 @@ export default class Entity<T extends EntityData = EntityData>
    * The AC properties' values when the entity was loaded.
    */
   private $originalAcValues: ACProperties | null = null;
+  /**
+   * This is used to hold a generated GUID for a new entity.
+   */
+  private $guaranteedGUID: string | null = null;
 
   /**
    * Alter the options for a query for this entity.
@@ -570,6 +575,16 @@ export default class Entity<T extends EntityData = EntityData>
       }
     }
     return obj;
+  }
+
+  public $getGuaranteedGUID() {
+    if (this.guid !== null) {
+      return this.guid;
+    }
+    if (this.$guaranteedGUID == null) {
+      this.$guaranteedGUID = guid();
+    }
+    return this.$guaranteedGUID;
   }
 
   public $addTag(...tags: string[]) {
