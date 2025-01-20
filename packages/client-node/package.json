@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/client-node",
-  "version": "1.0.0-beta.86",
+  "version": "1.0.0-beta.87",
   "description": "Nymph.js - Node Client",
   "type": "module",
   "main": "dist/index.js",
@@ -30,7 +30,6 @@
     "url": "https://github.com/sciactive/nymphjs/issues"
   },
   "license": "Apache-2.0",
-  "dependencies": {},
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.8",
     "@types/jest": "^29.5.14",
