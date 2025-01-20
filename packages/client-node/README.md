@@ -6,7 +6,7 @@ This package is no longer needed, because Node.js since version 22 provides both
 
 # License
 
-Copyright 2021-2024 SciActive Inc
+Copyright 2021-2025 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
