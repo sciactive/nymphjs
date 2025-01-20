@@ -30,16 +30,10 @@
     "url": "https://github.com/sciactive/nymphjs/issues"
   },
   "license": "Apache-2.0",
-  "dependencies": {
-    "@nymphjs/client": "^1.0.0-beta.86",
-    "node-fetch": "^3.3.2",
-    "websocket": "^1.0.35"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.8",
     "@types/jest": "^29.5.14",
-    "@types/node-fetch": "^2.6.12",
-    "@types/websocket": "^1.0.10",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",

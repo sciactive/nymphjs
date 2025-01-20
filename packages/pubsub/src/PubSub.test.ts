@@ -2,7 +2,7 @@ import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import { Nymph as NymphServer } from '@nymphjs/nymph';
 import type { PubSubSubscription, PubSubUpdate } from '@nymphjs/client';
-import { Nymph, PubSub } from '@nymphjs/client-node';
+import { Nymph, PubSub } from '@nymphjs/client';
 import createRestServer from '@nymphjs/server';
 import {
   EmployeeModel as EmployeeModelClass,

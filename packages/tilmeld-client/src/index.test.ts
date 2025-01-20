@@ -2,7 +2,7 @@ import { type Server } from 'node:http';
 import express from 'express';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import { Nymph as NymphServer } from '@nymphjs/nymph';
-import { Nymph } from '@nymphjs/client-node';
+import { Nymph } from '@nymphjs/client';
 import { type NymphOptions } from '@nymphjs/client';
 import {
   Tilmeld,

@@ -91,8 +91,9 @@ export default class Nymph {
    * Nymph and return it. You can then use this class's constructor and methods,
    * which will use this instance of Nymph.
    *
-   * Because this creates a subclass, don't use the class
-   * returned from `getEntityClass` to check with `instanceof`.
+   * Because this creates a subclass, don't use the class returned from
+   * `getEntityClass` to check with `instanceof`. Instead, use the base class
+   * that you passed into this method.
    */
   public addEntityClass<T extends EntityConstructor>(entityClass: T): T {
     const nymph = this;

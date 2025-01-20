@@ -2,36 +2,7 @@
 
 Powerful object data storage and querying.
 
-The Nymph Node Client lets you do everything the Nymph Client does, but from Node.JS instead of the browser.
-
-## Installation
-
-```sh
-npm install --save @nymphjs/client-node
-```
-
-This package is the Nymph client for Node.js. You can find ES modules in `dist`, or TS source in `src`. There is also a **[browser client](https://github.com/sciactive/nymphjs/packages/client)**.
-
-This package provides fetch and WebSocket ponyfills to Nymph and handles Tilmeld auth tokens.
-
-## Usage
-
-To use, require it instead of `@nymphjs/client`:
-
-```ts
-const { Nymph, PubSub } = require('@nymphjs/client-node');
-```
-
-Then set up Nymph and PubSub like normal:
-
-```ts
-const nymphOptions = {
-  restUrl: 'https://yournymphrestserver/path/to/your/endpoint',
-  pubsubUrl: 'wss://yournymphpubsubserver',
-};
-const nymph = new Nymph(nymphOptions);
-const pubsub = new PubSub(nymphOptions, nymph);
-```
+This package is no longer needed, because Node.js since version 22 provides both `fetch` and `WebSocket`. Instead, use the [regular Nymph.js client package](https://www.npmjs.com/package/@nymphjs/client).
 
 # License
 

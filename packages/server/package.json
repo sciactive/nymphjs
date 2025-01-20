@@ -37,7 +37,6 @@
   },
   "devDependencies": {
     "@nymphjs/client": "^1.0.0-beta.86",
-    "@nymphjs/client-node": "^1.0.0-beta.86",
     "@nymphjs/driver-sqlite3": "^1.0.0-beta.86",
     "@tsconfig/recommended": "^1.0.8",
     "@types/cookie-parser": "^1.4.8",

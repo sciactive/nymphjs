@@ -135,8 +135,6 @@ export type AdminUserData = CurrentUserData & {
   revokeTokenDate?: number;
 };
 
-let currentToken: string | null = null;
-
 type InstanceStore = {
   registerCallbacks: RegisterCallback[];
   loginCallbacks: LoginCallback[];
@@ -144,6 +142,7 @@ type InstanceStore = {
   clientConfig?: ClientConfig;
   clientConfigPromise?: Promise<ClientConfig>;
   removeNymphResponseListener?: () => void;
+  currentToken?: string;
 };
 
 export default class User extends Entity<UserData> {
@@ -441,8 +440,18 @@ export default class User extends Entity<UserData> {
   }
 
   private static handleToken(response?: Response) {
+    const store = User.stores.get(this.nymph);
+
+    if (store == null) {
+      throw new Error(
+        'This user class was never initialized with an instance of Nymph',
+      );
+    }
+
     let token: string | null = null;
     let switchToken: string | null = null;
+    let hasNoCookie =
+      typeof document === 'undefined' || typeof document.cookie === 'undefined';
     const authCookiePattern =
       /(?:(?:^|.*;\s*)TILMELDAUTH\s*=\s*([^;]*).*$)|^.*$/;
     const switchCookiePattern =
@@ -459,14 +468,16 @@ export default class User extends Entity<UserData> {
     } else {
       return;
     }
-    if (currentToken !== token) {
+    if (store.currentToken != token) {
       if (token == null || token === '') {
-        if (currentToken != null) {
+        if (store.currentToken != null) {
           delete this.nymph.headers['X-Xsrf-Token'];
+          delete this.nymph.headers['X-TILMELDAUTH'];
+          delete this.nymph.headers['X-TILMELDSWITCH'];
           if (this.nymph.pubsub) {
             this.nymph.pubsub.authenticate(null);
           }
-          currentToken = null;
+          delete store.currentToken;
         }
       } else {
         const base64Url = token.split('.')[1];
@@ -477,10 +488,17 @@ export default class User extends Entity<UserData> {
             : atob(base64); // browser
         const jwt = JSON.parse(json);
         this.nymph.headers['X-Xsrf-Token'] = jwt.xsrfToken;
+        if (hasNoCookie) {
+          this.nymph.headers['X-TILMELDAUTH'] = token;
+          delete this.nymph.headers['X-TILMELDSWITCH'];
+          if (switchToken != null) {
+            this.nymph.headers['X-TILMELDSWITCH'] = switchToken;
+          }
+        }
         if (this.nymph.pubsub) {
           this.nymph.pubsub.authenticate(token, switchToken);
         }
-        currentToken = token;
+        store.currentToken = token;
       }
     }
   }

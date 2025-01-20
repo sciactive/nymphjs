@@ -34,7 +34,6 @@
     "@nymphjs/client": "^1.0.0-beta.86"
   },
   "devDependencies": {
-    "@nymphjs/client-node": "^1.0.0-beta.86",
     "@nymphjs/driver-sqlite3": "^1.0.0-beta.86",
     "@nymphjs/nymph": "^1.0.0-beta.86",
     "@nymphjs/server": "^1.0.0-beta.86",

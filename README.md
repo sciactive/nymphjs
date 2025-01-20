@@ -38,11 +38,11 @@ The PubSub server provides a WebSocket server that allows Nymph to publish chang
 
 ## [Client](packages/client)
 
-The Nymph Client allows you to query and push data to a Nymph REST server from the browser. You can also subscribe to entities and queries on a Nymph PubSub server and be notified of changes.
+The Nymph Client allows you to query and push data to a Nymph REST server from the browser or Node.js. You can also subscribe to entities and queries on a Nymph PubSub server and be notified of changes.
 
 ## [Node Client](packages/client-node)
 
-The Nymph Node Client let's you do everything the Nymph Client does, but from Node.JS instead of the browser.
+This package is no longer needed, because Node.js since version 22 provides both `fetch` and `WebSocket`. Instead, use the [regular Nymph.js client package](https://www.npmjs.com/package/@nymphjs/client).
 
 ## [Tilmeld](packages/tilmeld)
 
@@ -73,6 +73,8 @@ The Query Parser is a utility for creating complex Nymph entity queries from a s
 The GUID and unique code generators are used to generate new GUIDs for Nymph objects and various random unique strings.
 
 # Breaking Changes
+
+In version 1.0.0-beta.87, the Node Client package has been deprecated. It is no longer needed since Node.js 22, and you should instead use the regular client package.
 
 In version 1.0.0-beta.78, the database schema changed significantly, and data will need to be exported with an older version, then imported into a fresh database with this version. The meaning of the `contain` clause also changed to only check if the given value exists in an array.
 

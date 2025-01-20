@@ -2,7 +2,7 @@
 
 Powerful object data storage and querying.
 
-The Nymph Client allows you to query and push data to a Nymph REST server from the browser. You can also subscribe to entities and queries on a Nymph PubSub server and be notified of changes.
+The Nymph Client allows you to query and push data to a Nymph REST server from the browser or Node.js. You can also subscribe to entities and queries on a Nymph PubSub server and be notified of changes.
 
 ## Installation
 
@@ -10,7 +10,7 @@ The Nymph Client allows you to query and push data to a Nymph REST server from t
 npm install --save @nymphjs/client
 ```
 
-This package is the Nymph client for browsers. You can find ES modules in `dist`, or TS source in `src`. There is also a **[Node.js client](https://github.com/sciactive/nymphjs/packages/client-node)**.
+This package is the Nymph client for browsers and Node.js, but requires at least Node.js 22 to be used in Node. You can find ES modules in `dist`, or TS source in `src`.
 
 ## Usage
 
