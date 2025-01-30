@@ -88,7 +88,7 @@ export function classNamesToEntityConstructors(
 }
 
 export function entitiesToReferences(item: any): any {
-  if (item == null) {
+  if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
     return item;
   } else if (
     item instanceof Entity &&
@@ -115,7 +115,7 @@ export function referencesToEntities(
   nymph: Nymph,
   useSkipAc = false,
 ): any {
-  if (item == null) {
+  if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
     return item;
   } else if (Array.isArray(item)) {
     // Check if it's a reference.
