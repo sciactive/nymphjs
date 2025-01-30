@@ -34,7 +34,7 @@ const RestrictedModel = nymphServer.addEntityClass(RestrictedModelClass);
 const PubSubDisabledModel = nymphServer.addEntityClass(
   PubSubDisabledModelClass,
 );
-PubSubServer.initPublisher(pubSubConfig, nymphServer);
+const removePublisher = PubSubServer.initPublisher(pubSubConfig, nymphServer);
 
 const app = express();
 app.use(createRestServer(nymphServer));
@@ -905,7 +905,10 @@ describe('Nymph REST Server and Client', () => {
   });
 
   afterAll(async () => {
-    // avoid jest open handle error
+    // Don't publish anything after the tests.
+    removePublisher();
+
+    // Avoid jest open handle errors.
     const closed = new Promise<void>((resolve) => {
       pubsub.on('disconnect', () => {
         resolve();

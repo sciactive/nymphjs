@@ -69,229 +69,255 @@ export default class PubSub {
 
   public static initPublisher(config: Partial<Config>, nymph: Nymph) {
     const configWithDefaults: Config = { ...defaults, ...config };
+    const unsubscribers: (() => boolean)[] = [];
 
-    nymph.on('beforeSaveEntity', async (enymph, entity) => {
-      const guid = entity.guid;
-      const EntityClass = entity.constructor as EntityConstructor;
-      const etype = EntityClass.ETYPE;
-
-      if (!EntityClass.pubSubEnabled) {
-        return;
-      }
-
-      const off = enymph.on('afterSaveEntity', async (curNymph, result) => {
-        off();
-        off2();
-        if (!(await result)) {
-          return;
-        }
-        const payload = JSON.stringify({
-          action: 'publish',
-          event: guid == null ? 'create' : 'update',
-          guid: entity.guid,
-          entity: entity.toJSON(),
-          etype: etype,
-        });
-        this.transactionPublishes.push({
-          nymph: curNymph,
-          payload,
-          config: configWithDefaults,
-        });
-        await this.publishTransactionPublishes(curNymph);
-      });
-      const off2 = enymph.on('failedSaveEntity', async () => {
-        off();
-        off2();
-      });
-    });
-
-    nymph.on('beforeDeleteEntity', async (enymph, entity) => {
-      const guid = entity.guid;
-      const EntityClass = entity.constructor as EntityConstructor;
-      const etype = EntityClass.ETYPE;
-
-      if (!EntityClass.pubSubEnabled) {
-        return;
-      }
-
-      const off = enymph.on('afterDeleteEntity', async (curNymph, result) => {
-        off();
-        off2();
-        if (!(await result)) {
-          return;
-        }
-        const payload = JSON.stringify({
-          action: 'publish',
-          event: 'delete',
-          guid: guid,
-          etype: etype,
-        });
-        this.transactionPublishes.push({
-          nymph: curNymph,
-          payload,
-          config: configWithDefaults,
-        });
-        await this.publishTransactionPublishes(curNymph);
-      });
-      const off2 = enymph.on('failedDeleteEntity', async () => {
-        off();
-        off2();
-      });
-    });
-
-    nymph.on('beforeDeleteEntityByID', async (enymph, guid, className) => {
-      try {
-        const EntityClass = enymph.getEntityClass(className ?? 'Entity');
+    unsubscribers.push(
+      nymph.on('beforeSaveEntity', async (enymph, entity) => {
+        const guid = entity.guid;
+        const EntityClass = entity.constructor as EntityConstructor;
         const etype = EntityClass.ETYPE;
 
         if (!EntityClass.pubSubEnabled) {
           return;
         }
 
-        const off = enymph.on(
-          'afterDeleteEntityByID',
-          async (curNymph, result) => {
-            off();
-            off2();
-            if (!(await result)) {
-              return;
-            }
-            const payload = JSON.stringify({
-              action: 'publish',
-              event: 'delete',
-              guid: guid,
-              etype: etype,
-            });
-            this.transactionPublishes.push({
-              nymph: curNymph,
-              payload,
-              config: configWithDefaults,
-            });
-            await this.publishTransactionPublishes(curNymph);
-          },
-        );
-        const off2 = enymph.on('failedDeleteEntityByID', async () => {
+        const off = enymph.on('afterSaveEntity', async (curNymph, result) => {
+          off();
+          off2();
+          if (!(await result)) {
+            return;
+          }
+          const payload = JSON.stringify({
+            action: 'publish',
+            event: guid == null ? 'create' : 'update',
+            guid: entity.guid,
+            entity: entity.toJSON(),
+            etype: etype,
+          });
+          this.transactionPublishes.push({
+            nymph: curNymph,
+            payload,
+            config: configWithDefaults,
+          });
+          await this.publishTransactionPublishes(curNymph);
+        });
+        const off2 = enymph.on('failedSaveEntity', async () => {
           off();
           off2();
         });
-      } catch (e: any) {
-        return;
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('beforeDeleteEntity', async (enymph, entity) => {
+        const guid = entity.guid;
+        const EntityClass = entity.constructor as EntityConstructor;
+        const etype = EntityClass.ETYPE;
+
+        if (!EntityClass.pubSubEnabled) {
+          return;
+        }
+
+        const off = enymph.on('afterDeleteEntity', async (curNymph, result) => {
+          off();
+          off2();
+          if (!(await result)) {
+            return;
+          }
+          const payload = JSON.stringify({
+            action: 'publish',
+            event: 'delete',
+            guid: guid,
+            etype: etype,
+          });
+          this.transactionPublishes.push({
+            nymph: curNymph,
+            payload,
+            config: configWithDefaults,
+          });
+          await this.publishTransactionPublishes(curNymph);
+        });
+        const off2 = enymph.on('failedDeleteEntity', async () => {
+          off();
+          off2();
+        });
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('beforeDeleteEntityByID', async (enymph, guid, className) => {
+        try {
+          const EntityClass = enymph.getEntityClass(className ?? 'Entity');
+          const etype = EntityClass.ETYPE;
+
+          if (!EntityClass.pubSubEnabled) {
+            return;
+          }
+
+          const off = enymph.on(
+            'afterDeleteEntityByID',
+            async (curNymph, result) => {
+              off();
+              off2();
+              if (!(await result)) {
+                return;
+              }
+              const payload = JSON.stringify({
+                action: 'publish',
+                event: 'delete',
+                guid: guid,
+                etype: etype,
+              });
+              this.transactionPublishes.push({
+                nymph: curNymph,
+                payload,
+                config: configWithDefaults,
+              });
+              await this.publishTransactionPublishes(curNymph);
+            },
+          );
+          const off2 = enymph.on('failedDeleteEntityByID', async () => {
+            off();
+            off2();
+          });
+        } catch (e: any) {
+          return;
+        }
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('beforeNewUID', async (enymph, name) => {
+        const off = enymph.on('afterNewUID', async (curNymph, result) => {
+          off();
+          off2();
+          const value = await result;
+          if (value == null) {
+            return;
+          }
+          const payload = JSON.stringify({
+            action: 'publish',
+            event: 'newUID',
+            name: name,
+            value: value,
+          });
+          this.transactionPublishes.push({
+            nymph: curNymph,
+            payload,
+            config: configWithDefaults,
+          });
+          await this.publishTransactionPublishes(curNymph);
+        });
+        const off2 = enymph.on('failedNewUID', async () => {
+          off();
+          off2();
+        });
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('beforeSetUID', async (enymph, name, value) => {
+        const off = enymph.on('afterSetUID', async (curNymph, result) => {
+          off();
+          off2();
+          if (!(await result)) {
+            return;
+          }
+          const payload = JSON.stringify({
+            action: 'publish',
+            event: 'setUID',
+            name: name,
+            value: value,
+          });
+          this.transactionPublishes.push({
+            nymph: curNymph,
+            payload,
+            config: configWithDefaults,
+          });
+          await this.publishTransactionPublishes(curNymph);
+        });
+        const off2 = enymph.on('failedSetUID', async () => {
+          off();
+          off2();
+        });
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('beforeRenameUID', async (enymph, oldName, newName) => {
+        const off = enymph.on('afterRenameUID', async (curNymph, result) => {
+          off();
+          off2();
+          if (!(await result)) {
+            return;
+          }
+          const payload = JSON.stringify({
+            action: 'publish',
+            event: 'renameUID',
+            oldName: oldName,
+            newName: newName,
+          });
+          this.transactionPublishes.push({
+            nymph: curNymph,
+            payload,
+            config: configWithDefaults,
+          });
+          await this.publishTransactionPublishes(curNymph);
+        });
+        const off2 = enymph.on('failedRenameUID', async () => {
+          off();
+          off2();
+        });
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('beforeDeleteUID', async (enymph, name) => {
+        const off = enymph.on('afterDeleteUID', async (curNymph, result) => {
+          off();
+          off2();
+          if (!(await result)) {
+            return;
+          }
+          const payload = JSON.stringify({
+            action: 'publish',
+            event: 'deleteUID',
+            name: name,
+          });
+          this.transactionPublishes.push({
+            nymph: curNymph,
+            payload,
+            config: configWithDefaults,
+          });
+          await this.publishTransactionPublishes(curNymph);
+        });
+        const off2 = enymph.on('failedDeleteUID', async () => {
+          off();
+          off2();
+        });
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('afterCommitTransaction', async (enymph, _name, result) => {
+        if (result) {
+          await this.publishTransactionPublishes(enymph);
+        }
+      }),
+    );
+
+    unsubscribers.push(
+      nymph.on('afterRollbackTransaction', async (enymph) => {
+        this.removeTransactionPublishes(enymph);
+      }),
+    );
+
+    return () => {
+      for (let unsubscribe of unsubscribers) {
+        unsubscribe();
       }
-    });
-
-    nymph.on('beforeNewUID', async (enymph, name) => {
-      const off = enymph.on('afterNewUID', async (curNymph, result) => {
-        off();
-        off2();
-        const value = await result;
-        if (value == null) {
-          return;
-        }
-        const payload = JSON.stringify({
-          action: 'publish',
-          event: 'newUID',
-          name: name,
-          value: value,
-        });
-        this.transactionPublishes.push({
-          nymph: curNymph,
-          payload,
-          config: configWithDefaults,
-        });
-        await this.publishTransactionPublishes(curNymph);
-      });
-      const off2 = enymph.on('failedNewUID', async () => {
-        off();
-        off2();
-      });
-    });
-
-    nymph.on('beforeSetUID', async (enymph, name, value) => {
-      const off = enymph.on('afterSetUID', async (curNymph, result) => {
-        off();
-        off2();
-        if (!(await result)) {
-          return;
-        }
-        const payload = JSON.stringify({
-          action: 'publish',
-          event: 'setUID',
-          name: name,
-          value: value,
-        });
-        this.transactionPublishes.push({
-          nymph: curNymph,
-          payload,
-          config: configWithDefaults,
-        });
-        await this.publishTransactionPublishes(curNymph);
-      });
-      const off2 = enymph.on('failedSetUID', async () => {
-        off();
-        off2();
-      });
-    });
-
-    nymph.on('beforeRenameUID', async (enymph, oldName, newName) => {
-      const off = enymph.on('afterRenameUID', async (curNymph, result) => {
-        off();
-        off2();
-        if (!(await result)) {
-          return;
-        }
-        const payload = JSON.stringify({
-          action: 'publish',
-          event: 'renameUID',
-          oldName: oldName,
-          newName: newName,
-        });
-        this.transactionPublishes.push({
-          nymph: curNymph,
-          payload,
-          config: configWithDefaults,
-        });
-        await this.publishTransactionPublishes(curNymph);
-      });
-      const off2 = enymph.on('failedRenameUID', async () => {
-        off();
-        off2();
-      });
-    });
-
-    nymph.on('beforeDeleteUID', async (enymph, name) => {
-      const off = enymph.on('afterDeleteUID', async (curNymph, result) => {
-        off();
-        off2();
-        if (!(await result)) {
-          return;
-        }
-        const payload = JSON.stringify({
-          action: 'publish',
-          event: 'deleteUID',
-          name: name,
-        });
-        this.transactionPublishes.push({
-          nymph: curNymph,
-          payload,
-          config: configWithDefaults,
-        });
-        await this.publishTransactionPublishes(curNymph);
-      });
-      const off2 = enymph.on('failedDeleteUID', async () => {
-        off();
-        off2();
-      });
-    });
-
-    nymph.on('afterCommitTransaction', async (enymph, _name, result) => {
-      if (result) {
-        await this.publishTransactionPublishes(enymph);
-      }
-    });
-
-    nymph.on('afterRollbackTransaction', async (enymph) => {
-      this.removeTransactionPublishes(enymph);
-    });
+      this.transactionPublishes = [];
+    };
   }
 
   private static publish(message: string, config: Config) {
