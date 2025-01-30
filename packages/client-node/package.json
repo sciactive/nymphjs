@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/client-node",
-  "version": "1.0.0-beta.87",
+  "version": "1.0.0-beta.88",
   "description": "Nymph.js - Node Client",
   "type": "module",
   "main": "dist/index.js",

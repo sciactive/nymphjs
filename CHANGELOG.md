@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.88](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.87...v1.0.0-beta.88) (2025-01-30)
+
+### Bug Fixes
+
+- allow removing pubsub publisher ([10fa223](https://github.com/sciactive/nymphjs/commit/10fa22322447d9295ed06413f19b9c86adb4c4ab))
+- don't mutate buffers and typed arrays when converting references ([e605056](https://github.com/sciactive/nymphjs/commit/e605056603839ed42c12769b621495ebe616b970))
+
 # [1.0.0-beta.87](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.86...v1.0.0-beta.87) (2025-01-20)
 
 ### Features
