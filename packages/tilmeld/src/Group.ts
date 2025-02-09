@@ -20,7 +20,7 @@ import {
   BadUsernameError,
   CouldNotChangeDefaultPrimaryGroupError,
 } from './errors/index.js';
-import type User from './User.js';
+import UserClass from './User.js';
 import type { UserData } from './User.js';
 
 export type GroupData = {
@@ -55,7 +55,7 @@ export type GroupData = {
   /**
    * If generatePrimary is on, this will be the user who generated this group.
    */
-  user?: (User & UserData) | null;
+  user?: (UserClass & UserData) | null;
 
   /**
    * Whether the group can be used.
@@ -383,7 +383,7 @@ export default class Group extends AbleObject<GroupData> {
    *
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
-  public $updateDataProtection(givenUser?: User & UserData) {
+  public $updateDataProtection(givenUser?: UserClass & UserData) {
     const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
     let [_groupname, domain] = tilmeld.config.domainSupport
@@ -544,7 +544,7 @@ export default class Group extends AbleObject<GroupData> {
     descendants = false,
     limit?: number,
     offset?: number,
-  ): Promise<(User & UserData)[]> {
+  ): Promise<(UserClass & UserData)[]> {
     const tilmeld = enforceTilmeld(this);
     let groups: (Group & GroupData)[] = [];
     if (descendants) {
@@ -973,79 +973,86 @@ export default class Group extends AbleObject<GroupData> {
     const tnymph = await nymph.startTransaction(transaction);
     this.$setNymph(tnymph);
     tilmeld = enforceTilmeld(this);
+    const User = tnymph.getEntityClass(UserClass);
 
-    // Delete descendants.
-    const descendants = await this.$getDescendants();
-    if (descendants.length) {
-      for (let curGroup of descendants) {
+    try {
+      // Delete descendants.
+      const descendants = await this.$getDescendants();
+      if (descendants.length) {
+        for (let curGroup of descendants) {
+          if (
+            this.$skipAcWhenDeleting
+              ? !(await curGroup.$deleteSkipAC())
+              : !(await curGroup.$delete())
+          ) {
+            await tnymph.rollback(transaction);
+            this.$setNymph(nymph);
+            return false;
+          }
+        }
+      }
+
+      // Remove users from this primary group.
+      const primaryUsers = await tnymph.getEntities(
+        {
+          class: User,
+          skipAc: true,
+        },
+        {
+          type: '&',
+          ref: ['group', this],
+        },
+      );
+      for (let user of primaryUsers) {
+        delete user.group;
         if (
           this.$skipAcWhenDeleting
-            ? !(await curGroup.$deleteSkipAC())
-            : !(await curGroup.$delete())
+            ? !(await user.$saveSkipAC())
+            : !(await user.$save())
         ) {
           await tnymph.rollback(transaction);
           this.$setNymph(nymph);
           return false;
         }
       }
-    }
 
-    // Remove users from this primary group.
-    const primaryUsers = await tnymph.getEntities(
-      {
-        class: tilmeld.User,
-        skipAc: true,
-      },
-      {
-        type: '&',
-        ref: ['group', this],
-      },
-    );
-    for (let user of primaryUsers) {
-      delete user.group;
-      if (
-        this.$skipAcWhenDeleting
-          ? !(await user.$saveSkipAC())
-          : !(await user.$save())
-      ) {
-        await tnymph.rollback(transaction);
-        this.$setNymph(nymph);
-        return false;
+      // Remove users from this secondary group.
+      const secondaryUsers = await tnymph.getEntities(
+        {
+          class: User,
+          skipAc: true,
+        },
+        {
+          type: '&',
+          ref: ['groups', this],
+        },
+      );
+      for (let user of secondaryUsers) {
+        user.$delGroup(this);
+        if (
+          this.$skipAcWhenDeleting
+            ? !(await user.$saveSkipAC())
+            : !(await user.$save())
+        ) {
+          await tnymph.rollback(transaction);
+          return false;
+        }
       }
-    }
 
-    // Remove users from this secondary group.
-    const secondaryUsers = await tnymph.getEntities(
-      {
-        class: tilmeld.User,
-        skipAc: true,
-      },
-      {
-        type: '&',
-        ref: ['groups', this],
-      },
-    );
-    for (let user of secondaryUsers) {
-      user.$delGroup(this);
-      if (
-        this.$skipAcWhenDeleting
-          ? !(await user.$saveSkipAC())
-          : !(await user.$save())
-      ) {
+      // Delete the group.
+      let success = await super.$delete();
+      if (success) {
+        success = await tnymph.commit(transaction);
+      } else {
         await tnymph.rollback(transaction);
-        return false;
       }
-    }
-
-    // Delete the group.
-    let success = await super.$delete();
-    if (success) {
-      success = await tnymph.commit(transaction);
-    } else {
+      this.$setNymph(nymph);
+      return success;
+    } catch (e: any) {
       await tnymph.rollback(transaction);
+      this.$setNymph(nymph);
+      throw e;
     }
-    this.$setNymph(nymph);
-    return success;
   }
 
   /*

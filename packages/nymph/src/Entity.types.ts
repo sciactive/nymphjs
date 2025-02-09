@@ -296,12 +296,12 @@ export interface EntityInterface extends DataObjectInterface {
   /**
    * Return a Nymph Entity Reference for this entity.
    *
-   * If the entity hasn't been saved yet (and has no GUID), it will be
-   * returned instead.
+   * If the entity hasn't been saved yet (and has no GUID), it will use the
+   * guaranteed GUID from `$getGuaranteedGUID`.
    *
-   * @returns A Nymph Entity Reference array as an unsaved entity.
+   * @returns A Nymph Entity Reference array.
    */
-  $toReference(): EntityReference | EntityInterface;
+  $toReference(): EntityReference;
   /**
    * Set whether to use "skipAc" when accessing entity references.
    *

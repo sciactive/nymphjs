@@ -17,7 +17,7 @@ import { splitn } from '@sciactive/splitn';
 
 import { enforceTilmeld } from './enforceTilmeld.js';
 import AbleObject from './AbleObject.js';
-import type Group from './Group.js';
+import GroupClass from './Group.js';
 import type { GroupData } from './Group.js';
 import {
   AccessControlError,
@@ -122,11 +122,11 @@ export type UserData = {
   /**
    * The user's primary group.
    */
-  group?: Group & GroupData;
+  group?: GroupClass & GroupData;
   /**
    * The user's secondary groups.
    */
-  groups?: (Group & GroupData)[];
+  groups?: (GroupClass & GroupData)[];
   /**
    * Whether the user should inherit the abilities of his groups.
    */
@@ -286,7 +286,7 @@ export default class User extends AbleObject<UserData> {
   /**
    * The user's group descendants.
    */
-  private $descendantGroups?: (Group & GroupData)[];
+  private $descendantGroups?: (GroupClass & GroupData)[];
   /**
    * Used to save the current email address to send verification if it changes
    * from the frontend.
@@ -862,7 +862,7 @@ export default class User extends AbleObject<UserData> {
   /**
    * Get the user's group descendants.
    */
-  public async $getDescendantGroups(): Promise<(Group & GroupData)[]> {
+  public async $getDescendantGroups(): Promise<(GroupClass & GroupData)[]> {
     if (this.$descendantGroups == null) {
       this.$descendantGroups = [];
       if (this.$data.group != null) {
@@ -1362,7 +1362,7 @@ export default class User extends AbleObject<UserData> {
    * @param group The group.
    * @returns True if the user is already in the group. The resulting array of groups if the user was not.
    */
-  public async $addGroup(group: Group & GroupData) {
+  public async $addGroup(group: GroupClass & GroupData) {
     await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
     let groups = this.$data.groups;
     if (groups == null) {
@@ -1410,11 +1410,11 @@ export default class User extends AbleObject<UserData> {
    * @param group The group.
    * @returns True if the user wasn't in the group. The resulting array of groups if the user was.
    */
-  public async $delGroup(group: Group & GroupData) {
+  public async $delGroup(group: GroupClass & GroupData) {
     await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
     let groups = this.$data.groups || [];
     if (this.$data.groups != null && group.$inArray(groups)) {
-      const newGroups: (Group & GroupData)[] = [];
+      const newGroups: (GroupClass & GroupData)[] = [];
       for (let curGroup of groups) {
         if (!group.$is(curGroup)) {
           newGroups.push(curGroup);
@@ -1432,7 +1432,7 @@ export default class User extends AbleObject<UserData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public async $inGroup(group: (Group & GroupData) | string) {
+  public async $inGroup(group: (GroupClass & GroupData) | string) {
     if (typeof group === 'string') {
       if (this.$data.group?.guid === group) {
         return true;
@@ -1455,7 +1455,7 @@ export default class User extends AbleObject<UserData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public async $isDescendant(group: (Group & GroupData) | string) {
+  public async $isDescendant(group: (GroupClass & GroupData) | string) {
     // Check to see if the user is in a descendant group of the given group.
     await this.$data.group?.$wake();
     if (
@@ -2509,10 +2509,7 @@ export default class User extends AbleObject<UserData> {
     const tnymph = await this.$nymph.startTransaction(transaction);
     this.$setNymph(tnymph);
     tilmeld = enforceTilmeld(this);
-
-    // If the primary group is generated now, the user assigned to it won't have
-    // a guid yet, so it needs to be assigned after the user is saved.
-    let saveGeneratedPrimaryGroupAgain = false;
+    const Group = tnymph.getEntityClass(GroupClass);
 
     try {
       let group = this.$data.group;
@@ -2520,13 +2517,10 @@ export default class User extends AbleObject<UserData> {
       if (group == null && this.guid == null) {
         if (tilmeld.config.generatePrimary) {
           // Generate a new primary group for the user.
-          group = await tilmeld.Group.factory();
-          // This user doesn't have a guid yet, so that's why we set
-          // saveGeneratedPrimaryGroupAgain.
+          group = await Group.factory();
           group.user = this;
-          saveGeneratedPrimaryGroupAgain = true;
           const parent = await tnymph.getEntity(
-            { class: tilmeld.Group },
+            { class: Group },
             {
               type: '&',
               equal: ['defaultPrimary', true],
@@ -2538,7 +2532,7 @@ export default class User extends AbleObject<UserData> {
         } else {
           // Add the default primary.
           const group = await tnymph.getEntity(
-            { class: tilmeld.Group },
+            { class: Group },
             {
               type: '&',
               equal: ['defaultPrimary', true],
@@ -2581,7 +2575,7 @@ export default class User extends AbleObject<UserData> {
           group.phone = this.$data.phone;
           changed = true;
         }
-        if (changed) {
+        if (changed || group.guid == null) {
           if (!(await group.$saveSkipAC())) {
             throw Error('Error updating primary group for user.');
           }
@@ -2599,7 +2593,7 @@ export default class User extends AbleObject<UserData> {
         ) {
           // Add the default secondaries for unverified users.
           this.$data.groups = await tnymph.getEntities(
-            { class: tilmeld.Group },
+            { class: Group },
             {
               type: '&',
               equal: ['unverifiedSecondary', true],
@@ -2608,7 +2602,7 @@ export default class User extends AbleObject<UserData> {
         } else {
           // Add the default secondaries.
           this.$data.groups = await tnymph.getEntities(
-            { class: tilmeld.Group },
+            { class: Group },
             {
               type: '&',
               equal: ['defaultSecondary', true],
@@ -2635,20 +2629,6 @@ export default class User extends AbleObject<UserData> {
 
     try {
       ret = await super.$save();
-
-      if (ret && saveGeneratedPrimaryGroupAgain) {
-        const group = this.$data.group;
-        if (group == null) {
-          throw Error('Generated primary group not found.');
-        }
-        await group.$wake();
-        // Now this user has a GUID, so saving it on the group will succeed.
-        group.user = this;
-        if (!(await group.$saveSkipAC())) {
-          throw Error("Generated primary group couldn't be saved.");
-        }
-        this.$data.group = group;
-      }
     } catch (e: any) {
       await tnymph.rollback(transaction);
       this.guid = preGuid;

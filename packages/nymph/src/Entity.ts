@@ -779,7 +779,11 @@ export default class Entity<T extends EntityData = EntityData>
       return false;
     }
 
-    if (this.guid || object.guid) {
+    if (this === object) {
+      return true;
+    }
+
+    if (this.guid != null || object.guid != null) {
       return this.guid === object.guid;
     }
 
@@ -1199,12 +1203,9 @@ export default class Entity<T extends EntityData = EntityData>
     if (this.$isASleepingReference && this.$sleepingReference != null) {
       return this.$sleepingReference;
     }
-    if (this.guid == null) {
-      return this;
-    }
     return [
       'nymph_entity_reference',
-      this.guid,
+      this.$getGuaranteedGUID(),
       (this.constructor as any).class as string,
     ] as EntityReference;
   }

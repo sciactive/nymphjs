@@ -159,6 +159,18 @@ describe('Entity', () => {
     ]);
   });
 
+  it('toReference works even on an unsaved entity', () => {
+    const unsavedEntity = TestModel.factorySync();
+    const reference = unsavedEntity.$toReference();
+
+    expect(unsavedEntity.guid).toBeNull();
+    expect(reference).toEqual([
+      'nymph_entity_reference',
+      unsavedEntity.$getGuaranteedGUID(),
+      'TestModel',
+    ]);
+  });
+
   it('tags work', async () => {
     expect(testEntity.$hasTag('test')).toEqual(true);
     testEntity.$addTag('test', 'test2');
