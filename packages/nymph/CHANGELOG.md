@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.90](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.89...v1.0.0-beta.90) (2025-02-09)
+
+### Bug Fixes
+
+- don't turn new entities to references in json ([40bd388](https://github.com/sciactive/nymphjs/commit/40bd388279c80c7094a9150058031122142e30c4))
+
 # [1.0.0-beta.89](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.88...v1.0.0-beta.89) (2025-02-09)
 
 ### Bug Fixes
