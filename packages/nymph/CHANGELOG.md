@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.89](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.88...v1.0.0-beta.89) (2025-02-09)
+
+### Bug Fixes
+
+- use guaranteed guid in references, update generated primary group code ([5f22f8a](https://github.com/sciactive/nymphjs/commit/5f22f8a9c71f373251cd4946c465fa29b86d91e7))
+
 # [1.0.0-beta.88](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.87...v1.0.0-beta.88) (2025-01-30)
 
 ### Bug Fixes
