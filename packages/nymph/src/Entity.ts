@@ -568,10 +568,12 @@ export default class Entity<T extends EntityData = EntityData>
       tags: [...this.tags],
       data: {},
     };
-    const data = this.$getData(true);
-    for (const key in data) {
+    for (const key of [
+      ...Object.keys(this.$dataStore),
+      ...Object.keys(this.$sdata),
+    ]) {
       if (this.$privateData.indexOf(key) === -1) {
-        obj.data[key] = entitiesToReferences(data[key]);
+        obj.data[key] = entitiesToReferences(this.$data[key], true);
       }
     }
     return obj;
@@ -614,7 +616,7 @@ export default class Entity<T extends EntityData = EntityData>
   public $clearCache() {
     this.$check();
 
-    this.$putData(this.$getData(), this.$getSData());
+    this.$putData(this.$getData(false, true), this.$getSData());
   }
 
   public $getClientEnabledMethods() {
@@ -649,12 +651,12 @@ export default class Entity<T extends EntityData = EntityData>
     if (!isEqual(obTags, myTags)) {
       return false;
     }
-    const obData = object.$getData(true);
-    const myData = this.$getData(true);
+    const obData = object.$getData(true, true);
+    const myData = this.$getData(true, true);
     return isEqual(obData, myData);
   }
 
-  public $getData(includeSData = false) {
+  public $getData(includeSData = false, referenceOnlyExisting?: boolean) {
     this.$check();
 
     if (includeSData) {
@@ -663,7 +665,7 @@ export default class Entity<T extends EntityData = EntityData>
         const _unused: any = (this as any)[key];
       }
     }
-    return entitiesToReferences({ ...this.$dataStore });
+    return entitiesToReferences({ ...this.$dataStore }, referenceOnlyExisting);
   }
 
   public $getSData() {
@@ -796,8 +798,8 @@ export default class Entity<T extends EntityData = EntityData>
       if (!isEqual(obTags, myTags)) {
         return false;
       }
-      const obData = object.$getData(true);
-      const myData = this.$getData(true);
+      const obData = object.$getData(true, true);
+      const myData = this.$getData(true, true);
       return isEqual(obData, myData);
     }
   }
@@ -878,7 +880,7 @@ export default class Entity<T extends EntityData = EntityData>
 
     let nonAllowlistData: EntityData = {};
     if (this.$allowlistData != null) {
-      nonAllowlistData = { ...this.$getData(true) };
+      nonAllowlistData = { ...this.$getData(true, true) };
       for (const name of this.$allowlistData) {
         delete nonAllowlistData[name];
       }
@@ -1102,7 +1104,11 @@ export default class Entity<T extends EntityData = EntityData>
           this.tags = entity.tags;
           this.cdate = entity.cdate;
           this.mdate = entity.mdate;
-          this.$putData(entity.$getData(), entity.$getSData(), 'server');
+          this.$putData(
+            entity.$getData(false, true),
+            entity.$getSData(),
+            'server',
+          );
 
           return this;
         })
@@ -1183,7 +1189,7 @@ export default class Entity<T extends EntityData = EntityData>
     this.tags = refresh.tags;
     this.cdate = refresh.cdate;
     this.mdate = refresh.mdate;
-    this.$putData(refresh.$getData(), refresh.$getSData(), 'server');
+    this.$putData(refresh.$getData(false, true), refresh.$getSData(), 'server');
     return true;
   }
 
@@ -1199,9 +1205,12 @@ export default class Entity<T extends EntityData = EntityData>
     return await this.$nymph.saveEntity(this);
   }
 
-  public $toReference() {
+  public $toReference(existingOnly?: boolean) {
     if (this.$isASleepingReference && this.$sleepingReference != null) {
       return this.$sleepingReference;
+    }
+    if (existingOnly && this.guid == null) {
+      return this;
     }
     return [
       'nymph_entity_reference',

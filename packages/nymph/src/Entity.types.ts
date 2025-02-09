@@ -173,9 +173,10 @@ export interface EntityInterface extends DataObjectInterface {
    * This should only be used by Nymph to save the data into storage.
    *
    * @param includeSData Whether to include the serialized data as well.
+   * @param referenceOnlyExisting Whether to only turn existing entities into references.
    * @returns The entity's data object.
    */
-  $getData(includeSData?: boolean): EntityData;
+  $getData(includeSData?: boolean, referenceOnlyExisting?: boolean): EntityData;
   /**
    * Used to retrieve the serialized data object.
    *
@@ -297,11 +298,13 @@ export interface EntityInterface extends DataObjectInterface {
    * Return a Nymph Entity Reference for this entity.
    *
    * If the entity hasn't been saved yet (and has no GUID), it will use the
-   * guaranteed GUID from `$getGuaranteedGUID`.
+   * guaranteed GUID from `$getGuaranteedGUID`, unless `existingOnly` is true,
+   * then it will return the entity.
    *
+   * @param existingOnly Whether to only turn existing entities into references.
    * @returns A Nymph Entity Reference array.
    */
-  $toReference(): EntityReference;
+  $toReference(existingOnly?: boolean): EntityReference | EntityInterface;
   /**
    * Set whether to use "skipAc" when accessing entity references.
    *

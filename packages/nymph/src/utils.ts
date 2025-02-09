@@ -87,7 +87,7 @@ export function classNamesToEntityConstructors(
   return newSelectors;
 }
 
-export function entitiesToReferences(item: any): any {
+export function entitiesToReferences(item: any, existingOnly?: boolean): any {
   if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
     return item;
   } else if (
@@ -95,14 +95,14 @@ export function entitiesToReferences(item: any): any {
     typeof item.$toReference === 'function'
   ) {
     // Convert entities to references.
-    return item.$toReference();
+    return item.$toReference(existingOnly);
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
-    return item.map((entry) => entitiesToReferences(entry));
+    return item.map((entry) => entitiesToReferences(entry, existingOnly));
   } else if (item instanceof Object) {
     let newObj = Object.create(item);
     for (let [key, value] of Object.entries(item)) {
-      newObj[key] = entitiesToReferences(value);
+      newObj[key] = entitiesToReferences(value, existingOnly);
     }
     return newObj;
   }

@@ -434,4 +434,18 @@ describe('Entity', () => {
 
     expect(thrown).toEqual(true);
   });
+
+  it('JSON with new entities works', async () => {
+    testEntity.reference = await TestModel.factory();
+
+    // Test that an old JSON payload causes a conflict.
+    const json = JSON.stringify(testEntity);
+    const data = JSON.parse(json);
+
+    console.log(data.data.reference);
+
+    testEntity.$jsonAcceptData(data);
+
+    expect(testEntity.reference.guid).toBeNull();
+  });
 });
