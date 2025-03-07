@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.91](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.90...v1.0.0-beta.91) (2025-03-07)
+
+### Features
+
+- add callbacks for user and group save and delete ([8119127](https://github.com/sciactive/nymphjs/commit/81191276fe1884e5ee65f41815fc72a23cf1e2f2))
+
 # [1.0.0-beta.90](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.89...v1.0.0-beta.90) (2025-02-09)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
