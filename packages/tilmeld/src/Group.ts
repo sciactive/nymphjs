@@ -8,6 +8,7 @@ import type {
   Selector,
   SerializedEntityData,
 } from '@nymphjs/nymph';
+import { nanoid } from '@nymphjs/guid';
 import { difference, xor } from 'lodash-es';
 import { splitn } from '@sciactive/splitn';
 
@@ -22,6 +23,52 @@ import {
 } from './errors/index.js';
 import UserClass from './User.js';
 import type { UserData } from './User.js';
+
+export type GroupEventType =
+  | 'checkGroupname'
+  | 'beforeSave'
+  | 'afterSave'
+  | 'beforeDelete'
+  | 'afterDelete';
+/**
+ * This is run when the user has entered an otherwise valid groupname into the
+ * signup form. It should return a result, which when false will stop the
+ * process and return the included message, disallowing the groupname.
+ */
+export type TilmeldCheckGroupnameCallback = (
+  group: Group & GroupData,
+  data: { groupname: string },
+) => Promise<{ result: boolean; message?: string }>;
+/**
+ * This is run just before the group is saved, so all checks have passed.
+ *
+ * The transaction is available in `group.$nymph`.
+ */
+export type TilmeldBeforeGroupSaveCallback = (
+  group: Group & GroupData,
+) => Promise<void>;
+/**
+ * This is run before the transaction is committed, and you can perform
+ * additional functions on the transaction, which is available in
+ * `group.$nymph`.
+ */
+export type TilmeldAfterGroupSaveCallback = (
+  group: Group & GroupData,
+) => Promise<void>;
+/**
+ * The transaction is available in `group.$nymph`.
+ */
+export type TilmeldBeforeGroupDeleteCallback = (
+  group: Group & GroupData,
+) => Promise<void>;
+/**
+ * This is run before the transaction is committed, and you can perform
+ * additional functions on the transaction, which is available in
+ * `group.$nymph`.
+ */
+export type TilmeldAfterGroupDeleteCallback = (
+  group: Group & GroupData,
+) => Promise<void>;
 
 export type GroupData = {
   /**
@@ -90,6 +137,11 @@ export default class Group extends AbleObject<GroupData> {
    */
   static ETYPE = 'tilmeld_group';
   static class = 'Group';
+  private static checkGroupnameCallbacks: TilmeldCheckGroupnameCallback[] = [];
+  private static beforeSaveCallbacks: TilmeldBeforeGroupSaveCallback[] = [];
+  private static afterSaveCallbacks: TilmeldAfterGroupSaveCallback[] = [];
+  private static beforeDeleteCallbacks: TilmeldBeforeGroupDeleteCallback[] = [];
+  private static afterDeleteCallbacks: TilmeldAfterGroupDeleteCallback[] = [];
 
   private static DEFAULT_PRIVATE_DATA = ['email', 'phone', 'abilities', 'user'];
   private static DEFAULT_ALLOWLIST_DATA: string[] = [];
@@ -677,6 +729,18 @@ export default class Group extends AbleObject<GroupData> {
         return { result: false, message: 'That groupname is taken.' };
       }
 
+      for (let callback of (this.constructor as typeof Group)
+        .checkGroupnameCallbacks) {
+        if (callback) {
+          const result = await callback(this, {
+            groupname: this.$data.groupname,
+          });
+          if (!result.result) {
+            return { message: 'Groupname is not available.', ...result };
+          }
+        }
+      }
+
       return {
         result: true,
         message:
@@ -755,7 +819,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public async $save() {
-    const tilmeld = enforceTilmeld(this);
+    let tilmeld = enforceTilmeld(this);
     if (this.$data.groupname == null || !this.$data.groupname.trim().length) {
       return false;
     }
@@ -932,11 +996,45 @@ export default class Group extends AbleObject<GroupData> {
       }
     }
 
-    const ret = await super.$save();
-    if (ret) {
-      this.$originalGroupname = this.$data.groupname;
+    const transaction = 'tilmeld-save-group-' + (this.guid || nanoid());
+    const nymph = this.$nymph;
+    const tnymph = await nymph.startTransaction(transaction);
+    this.$setNymph(tnymph);
+    tilmeld = enforceTilmeld(this);
+
+    let preGuid = this.guid;
+    let preCdate = this.cdate;
+    let preMdate = this.mdate;
+
+    try {
+      for (let callback of (this.constructor as typeof Group)
+        .beforeSaveCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
+      }
+
+      let ret = await super.$save();
+      if (ret) {
+        this.$originalGroupname = this.$data.groupname;
+      }
+      for (let callback of (this.constructor as typeof Group)
+        .afterSaveCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
+      }
+      ret = await tnymph.commit(transaction);
+      this.$setNymph(nymph);
+      return ret;
+    } catch (e: any) {
+      await tnymph.rollback(transaction);
+      this.guid = preGuid;
+      this.cdate = preCdate;
+      this.mdate = preMdate;
+      this.$setNymph(nymph);
+      throw e;
     }
-    return ret;
   }
 
   /*
@@ -968,7 +1066,7 @@ export default class Group extends AbleObject<GroupData> {
       );
     }
 
-    const transaction = 'tilmeld-delete-' + this.guid;
+    const transaction = 'tilmeld-delete-group-' + this.guid;
     const nymph = this.$nymph;
     const tnymph = await nymph.startTransaction(transaction);
     this.$setNymph(tnymph);
@@ -976,6 +1074,13 @@ export default class Group extends AbleObject<GroupData> {
     const User = tnymph.getEntityClass(UserClass);
 
     try {
+      for (let callback of (this.constructor as typeof Group)
+        .beforeDeleteCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
+      }
+
       // Delete descendants.
       const descendants = await this.$getDescendants();
       if (descendants.length) {
@@ -1035,6 +1140,7 @@ export default class Group extends AbleObject<GroupData> {
             : !(await user.$save())
         ) {
           await tnymph.rollback(transaction);
+          this.$setNymph(nymph);
           return false;
         }
       }
@@ -1042,6 +1148,13 @@ export default class Group extends AbleObject<GroupData> {
       // Delete the group.
       let success = await super.$delete();
       if (success) {
+        for (let callback of (this.constructor as typeof Group)
+          .afterDeleteCallbacks) {
+          if (callback) {
+            await callback(this);
+          }
+        }
+
         success = await tnymph.commit(transaction);
       } else {
         await tnymph.rollback(transaction);
@@ -1069,5 +1182,75 @@ export default class Group extends AbleObject<GroupData> {
       return true;
     }
     return false;
+  }
+
+  public static on<T extends GroupEventType>(
+    event: T,
+    callback: T extends 'checkGroupname'
+      ? TilmeldCheckGroupnameCallback
+      : T extends 'beforeSave'
+        ? TilmeldBeforeGroupSaveCallback
+        : T extends 'afterSave'
+          ? TilmeldAfterGroupSaveCallback
+          : T extends 'beforeDelete'
+            ? TilmeldBeforeGroupDeleteCallback
+            : T extends 'afterDelete'
+              ? TilmeldAfterGroupDeleteCallback
+              : never,
+  ) {
+    const prop = (event + 'Callbacks') as T extends 'checkGroupname'
+      ? 'checkGroupnameCallbacks'
+      : T extends 'beforeSave'
+        ? 'beforeSaveCallbacks'
+        : T extends 'afterSave'
+          ? 'afterSaveCallbacks'
+          : T extends 'beforeDelete'
+            ? 'beforeDeleteCallbacks'
+            : T extends 'afterDelete'
+              ? 'afterDeleteCallbacks'
+              : never;
+    if (!(prop in this)) {
+      throw new Error('Invalid event type.');
+    }
+    // @ts-ignore: The callback should always be the right type here.
+    this[prop].push(callback);
+    return () => this.off(event, callback);
+  }
+
+  public static off<T extends GroupEventType>(
+    event: T,
+    callback: T extends 'checkGroupname'
+      ? TilmeldCheckGroupnameCallback
+      : T extends 'beforeSave'
+        ? TilmeldBeforeGroupSaveCallback
+        : T extends 'afterSave'
+          ? TilmeldAfterGroupSaveCallback
+          : T extends 'beforeDelete'
+            ? TilmeldBeforeGroupDeleteCallback
+            : T extends 'afterDelete'
+              ? TilmeldAfterGroupDeleteCallback
+              : never,
+  ) {
+    const prop = (event + 'Callbacks') as T extends 'checkGroupname'
+      ? 'checkGroupnameCallbacks'
+      : T extends 'beforeSave'
+        ? 'beforeSaveCallbacks'
+        : T extends 'afterSave'
+          ? 'afterSaveCallbacks'
+          : T extends 'beforeDelete'
+            ? 'beforeDeleteCallbacks'
+            : T extends 'afterDelete'
+              ? 'afterDeleteCallbacks'
+              : never;
+    if (!(prop in this)) {
+      return false;
+    }
+    // @ts-ignore: The callback should always be the right type here.
+    const i = this[prop].indexOf(callback);
+    if (i > -1) {
+      // @ts-ignore: The callback should always be the right type here.
+      this[prop].splice(i, 1);
+    }
+    return true;
   }
 }

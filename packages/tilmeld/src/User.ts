@@ -31,10 +31,14 @@ export type EventType =
   | 'checkUsername'
   | 'beforeRegister'
   | 'afterRegister'
+  | 'beforeSave'
+  | 'afterSave'
   | 'beforeLogin'
   | 'afterLogin'
   | 'beforeLogout'
-  | 'afterLogout';
+  | 'afterLogout'
+  | 'beforeDelete'
+  | 'afterDelete';
 /**
  * This is run when the user has entered an otherwise valid username into the
  * signup form. It should return a result, which when false will stop the
@@ -45,19 +49,39 @@ export type TilmeldCheckUsernameCallback = (
   data: { username: string },
 ) => Promise<{ result: boolean; message?: string }>;
 /**
- * Theses are run before the user data checks, so the only checks before are
+ * This is run before the user data checks, so the only checks before are
  * whether registration is allowed and whether the user is already registered.
  */
 export type TilmeldBeforeRegisterCallback = (
   user: User & UserData,
   data: { password: string; additionalData?: { [k: string]: any } },
 ) => Promise<void>;
+/**
+ * This is run before the transaction is committed, and you can perform
+ * additional functions on the transaction, which is available in `user.$nymph`.
+ */
 export type TilmeldAfterRegisterCallback = (
   user: User & UserData,
   result: { loggedin: boolean; message: string },
 ) => Promise<void>;
 /**
- * These are run after the authentication checks, but before the login action.
+ * This is run just before the user is saved, so all checks have passed.
+ *
+ * The transaction is available in `user.$nymph`.
+ */
+export type TilmeldBeforeSaveCallback = (
+  user: User & UserData,
+) => Promise<void>;
+/**
+ * This is run before the transaction is committed, and you can perform
+ * additional functions on the transaction, which is available in `user.$nymph`.
+ *
+ * This is run after a new email verification email has been sent, so throwing
+ * an error will cause confusion for the user if they've changed their email.
+ */
+export type TilmeldAfterSaveCallback = (user: User & UserData) => Promise<void>;
+/**
+ * This is run after the authentication checks, but before the login action.
  */
 export type TilmeldBeforeLoginCallback = (
   user: User & UserData,
@@ -67,10 +91,6 @@ export type TilmeldBeforeLoginCallback = (
     additionalData?: { [k: string]: any };
   },
 ) => Promise<void>;
-/**
- * This is run before the transaction is committed, and you can perform
- * additional functions on the transaction, which is available in `user.$nymph`.
- */
 export type TilmeldAfterLoginCallback = (
   user: User & UserData,
 ) => Promise<void>;
@@ -78,6 +98,22 @@ export type TilmeldBeforeLogoutCallback = (
   user: User & UserData,
 ) => Promise<void>;
 export type TilmeldAfterLogoutCallback = (
+  user: User & UserData,
+) => Promise<void>;
+/**
+ * This is run before the user is logged out (if the current user is being
+ * deleted).
+ *
+ * The transaction is available in `user.$nymph`.
+ */
+export type TilmeldBeforeDeleteCallback = (
+  user: User & UserData,
+) => Promise<void>;
+/**
+ * This is run before the transaction is committed, and you can perform
+ * additional functions on the transaction, which is available in `user.$nymph`.
+ */
+export type TilmeldAfterDeleteCallback = (
   user: User & UserData,
 ) => Promise<void>;
 
@@ -211,10 +247,14 @@ export default class User extends AbleObject<UserData> {
   private static checkUsernameCallbacks: TilmeldCheckUsernameCallback[] = [];
   private static beforeRegisterCallbacks: TilmeldBeforeRegisterCallback[] = [];
   private static afterRegisterCallbacks: TilmeldAfterRegisterCallback[] = [];
+  private static beforeSaveCallbacks: TilmeldBeforeSaveCallback[] = [];
+  private static afterSaveCallbacks: TilmeldAfterSaveCallback[] = [];
   private static beforeLoginCallbacks: TilmeldBeforeLoginCallback[] = [];
   private static afterLoginCallbacks: TilmeldAfterLoginCallback[] = [];
   private static beforeLogoutCallbacks: TilmeldBeforeLogoutCallback[] = [];
   private static afterLogoutCallbacks: TilmeldAfterLogoutCallback[] = [];
+  private static beforeDeleteCallbacks: TilmeldBeforeDeleteCallback[] = [];
+  private static afterDeleteCallbacks: TilmeldAfterDeleteCallback[] = [];
 
   private static DEFAULT_CLIENT_ENABLED_METHODS = [
     '$checkUsername',
@@ -2504,7 +2544,7 @@ export default class User extends AbleObject<UserData> {
     }
 
     // Start transaction.
-    const transaction = 'tilmeld-save-' + nanoid();
+    const transaction = 'tilmeld-save-user-' + (this.guid || nanoid());
     const nymph = this.$nymph;
     const tnymph = await this.$nymph.startTransaction(transaction);
     this.$setNymph(tnymph);
@@ -2628,6 +2668,13 @@ export default class User extends AbleObject<UserData> {
     let preMdate = this.mdate;
 
     try {
+      for (let callback of (this.constructor as typeof User)
+        .beforeSaveCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
+      }
+
       ret = await super.$save();
     } catch (e: any) {
       await tnymph.rollback(transaction);
@@ -2653,6 +2700,23 @@ export default class User extends AbleObject<UserData> {
 
       this.$descendantGroups = undefined;
       this.$gatekeeperCache = undefined;
+
+      try {
+        for (let callback of (this.constructor as typeof User)
+          .afterSaveCallbacks) {
+          if (callback) {
+            await callback(this);
+          }
+        }
+      } catch (e: any) {
+        await tnymph.rollback(transaction);
+        this.guid = preGuid;
+        this.cdate = preCdate;
+        this.mdate = preMdate;
+        this.$setNymph(nymph);
+        throw e;
+      }
+
       ret = await tnymph.commit(transaction);
     } else {
       await tnymph.rollback(transaction);
@@ -2712,42 +2776,65 @@ export default class User extends AbleObject<UserData> {
       );
     }
 
-    if (tilmeld.User.current(true).$is(this)) {
-      await this.$logout();
+    const transaction = 'tilmeld-delete-user-' + this.guid;
+    const nymph = this.$nymph;
+    const tnymph = await nymph.startTransaction(transaction);
+    this.$setNymph(tnymph);
+
+    let success = false;
+
+    try {
+      for (let callback of (this.constructor as typeof User)
+        .beforeDeleteCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
+      }
+
+      if (tilmeld.User.current(true).$is(this)) {
+        await this.$logout();
+      }
+
+      if (this.$data.group != null && this.$is(this.$data.group.user)) {
+        // Read the skip ac value here, because super.$delete changes it.
+        const $skipAcWhenDeleting = this.$skipAcWhenDeleting;
+
+        // Delete the user.
+        success = await super.$delete();
+        if (success) {
+          // Delete the generated group.
+          success = $skipAcWhenDeleting
+            ? await this.$data.group.$deleteSkipAC()
+            : await this.$data.group.$delete();
+        }
+      } else {
+        success = await super.$delete();
+      }
+    } catch (e: any) {
+      await tnymph.rollback(transaction);
+      this.$setNymph(nymph);
+      throw e;
     }
 
-    if (this.$data.group != null && this.$is(this.$data.group.user)) {
-      const transaction = 'tilmeld-delete-' + this.guid;
-      const nymph = this.$nymph;
-      const tnymph = await nymph.startTransaction(transaction);
-      this.$setNymph(tnymph);
-
-      // Read the skip ac value here, because super.$delete changes it.
-      const $skipAcWhenDeleting = this.$skipAcWhenDeleting;
-
-      // Delete the user.
-      let success = await super.$delete();
-      if (!success) {
+    if (success) {
+      try {
+        for (let callback of (this.constructor as typeof User)
+          .afterDeleteCallbacks) {
+          if (callback) {
+            await callback(this);
+          }
+        }
+      } catch (e: any) {
         await tnymph.rollback(transaction);
         this.$setNymph(nymph);
-        return success;
+        throw e;
       }
-
-      // Delete the generated group.
-      success = $skipAcWhenDeleting
-        ? await this.$data.group.$deleteSkipAC()
-        : await this.$data.group.$delete();
-
-      if (success) {
-        success = await tnymph.commit(transaction);
-      } else {
-        await tnymph.rollback(transaction);
-      }
-      this.$setNymph(nymph);
-      return success;
+      success = await tnymph.commit(transaction);
     } else {
-      return await super.$delete();
+      await tnymph.rollback(transaction);
     }
+    this.$setNymph(nymph);
+    return success;
   }
 
   /*
@@ -2774,15 +2861,23 @@ export default class User extends AbleObject<UserData> {
         ? TilmeldBeforeRegisterCallback
         : T extends 'afterRegister'
           ? TilmeldAfterRegisterCallback
-          : T extends 'beforeLogin'
-            ? TilmeldBeforeLoginCallback
-            : T extends 'afterLogin'
-              ? TilmeldAfterLoginCallback
-              : T extends 'beforeLogout'
-                ? TilmeldBeforeLogoutCallback
-                : T extends 'afterLogout'
-                  ? TilmeldAfterLogoutCallback
-                  : never,
+          : T extends 'beforeSave'
+            ? TilmeldBeforeSaveCallback
+            : T extends 'afterSave'
+              ? TilmeldAfterSaveCallback
+              : T extends 'beforeLogin'
+                ? TilmeldBeforeLoginCallback
+                : T extends 'afterLogin'
+                  ? TilmeldAfterLoginCallback
+                  : T extends 'beforeLogout'
+                    ? TilmeldBeforeLogoutCallback
+                    : T extends 'afterLogout'
+                      ? TilmeldAfterLogoutCallback
+                      : T extends 'beforeDelete'
+                        ? TilmeldBeforeDeleteCallback
+                        : T extends 'afterDelete'
+                          ? TilmeldAfterDeleteCallback
+                          : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'checkUsername'
       ? 'checkUsernameCallbacks'
@@ -2790,15 +2885,23 @@ export default class User extends AbleObject<UserData> {
         ? 'beforeRegisterCallbacks'
         : T extends 'afterRegister'
           ? 'afterRegisterCallbacks'
-          : T extends 'beforeLogin'
-            ? 'beforeLoginCallbacks'
-            : T extends 'afterLogin'
-              ? 'afterLoginCallbacks'
-              : T extends 'beforeLogout'
-                ? 'beforeLogoutCallbacks'
-                : T extends 'afterLogout'
-                  ? 'afterLogoutCallbacks'
-                  : never;
+          : T extends 'beforeSave'
+            ? 'beforeSaveCallbacks'
+            : T extends 'afterSave'
+              ? 'afterSaveCallbacks'
+              : T extends 'beforeLogin'
+                ? 'beforeLoginCallbacks'
+                : T extends 'afterLogin'
+                  ? 'afterLoginCallbacks'
+                  : T extends 'beforeLogout'
+                    ? 'beforeLogoutCallbacks'
+                    : T extends 'afterLogout'
+                      ? 'afterLogoutCallbacks'
+                      : T extends 'beforeDelete'
+                        ? 'beforeDeleteCallbacks'
+                        : T extends 'afterDelete'
+                          ? 'afterDeleteCallbacks'
+                          : never;
     if (!(prop in this)) {
       throw new Error('Invalid event type.');
     }
@@ -2815,15 +2918,23 @@ export default class User extends AbleObject<UserData> {
         ? TilmeldBeforeRegisterCallback
         : T extends 'afterRegister'
           ? TilmeldAfterRegisterCallback
-          : T extends 'beforeLogin'
-            ? TilmeldBeforeLoginCallback
-            : T extends 'afterLogin'
-              ? TilmeldAfterLoginCallback
-              : T extends 'beforeLogout'
-                ? TilmeldBeforeLogoutCallback
-                : T extends 'afterLogout'
-                  ? TilmeldAfterLogoutCallback
-                  : never,
+          : T extends 'beforeSave'
+            ? TilmeldBeforeSaveCallback
+            : T extends 'afterSave'
+              ? TilmeldAfterSaveCallback
+              : T extends 'beforeLogin'
+                ? TilmeldBeforeLoginCallback
+                : T extends 'afterLogin'
+                  ? TilmeldAfterLoginCallback
+                  : T extends 'beforeLogout'
+                    ? TilmeldBeforeLogoutCallback
+                    : T extends 'afterLogout'
+                      ? TilmeldAfterLogoutCallback
+                      : T extends 'beforeDelete'
+                        ? TilmeldBeforeDeleteCallback
+                        : T extends 'afterDelete'
+                          ? TilmeldAfterDeleteCallback
+                          : never,
   ) {
     const prop = (event + 'Callbacks') as T extends 'checkUsername'
       ? 'checkUsernameCallbacks'
@@ -2831,15 +2942,23 @@ export default class User extends AbleObject<UserData> {
         ? 'beforeRegisterCallbacks'
         : T extends 'afterRegister'
           ? 'afterRegisterCallbacks'
-          : T extends 'beforeLogin'
-            ? 'beforeLoginCallbacks'
-            : T extends 'afterLogin'
-              ? 'afterLoginCallbacks'
-              : T extends 'beforeLogout'
-                ? 'beforeLogoutCallbacks'
-                : T extends 'afterLogout'
-                  ? 'afterLogoutCallbacks'
-                  : never;
+          : T extends 'beforeSave'
+            ? 'beforeSaveCallbacks'
+            : T extends 'afterSave'
+              ? 'afterSaveCallbacks'
+              : T extends 'beforeLogin'
+                ? 'beforeLoginCallbacks'
+                : T extends 'afterLogin'
+                  ? 'afterLoginCallbacks'
+                  : T extends 'beforeLogout'
+                    ? 'beforeLogoutCallbacks'
+                    : T extends 'afterLogout'
+                      ? 'afterLogoutCallbacks'
+                      : T extends 'beforeDelete'
+                        ? 'beforeDeleteCallbacks'
+                        : T extends 'afterDelete'
+                          ? 'afterDeleteCallbacks'
+                          : never;
     if (!(prop in this)) {
       return false;
     }

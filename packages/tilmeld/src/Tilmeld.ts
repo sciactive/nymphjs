@@ -696,6 +696,8 @@ export default class Tilmeld implements TilmeldInterface {
    * whether the check passes:
    *
    * - It is a user or group. (True for READ_ACCESS or Tilmeld admins.)
+   * - It is a user or group that belongs to a domain the current user is an
+   *   admin for, and domain support is enabled. (Always true.)
    * - No user is logged in. (Check other AC.)
    * - The entity is the user. (Always true.)
    * - It is the user's primary group. (True for READ_ACCESS.)
