@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.92](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.91...v1.0.0-beta.92) (2025-04-06)
+
+### Bug Fixes
+
+- wait for an event loop after each iteration of server iterator to allow data to flush ([c0822ad](https://github.com/sciactive/nymphjs/commit/c0822ad3b7ebe56eb85915f4d950a9f656c5862a))
+
+### Features
+
+- add 'object' return type which returns plain entity data objects ([26a4cd3](https://github.com/sciactive/nymphjs/commit/26a4cd3226145408dc34bff52b1eafe3b046313b))
+
 # [1.0.0-beta.91](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.90...v1.0.0-beta.91) (2025-03-07)
 
 **Note:** Version bump only for package @nymphjs/server
