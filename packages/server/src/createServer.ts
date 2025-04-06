@@ -413,6 +413,8 @@ export function createServer(
                 while (!done) {
                   response.write('event: next\n');
                   response.write(`data: ${JSON.stringify(value)}\n\n`);
+                  // Wait for an event loop each iteration, to allow data to flush.
+                  await new Promise((resolve) => setImmediate(resolve));
 
                   ({ value, done } = await sequence.next(response.destroyed));
                 }
