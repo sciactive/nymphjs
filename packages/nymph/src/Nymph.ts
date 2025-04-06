@@ -1,8 +1,14 @@
 import { Config, ConfigDefaults as defaults } from './conf/index.js';
 import type { NymphDriver } from './driver/index.js';
-import Entity, { type EntityInstanceType } from './Entity.js';
+import Entity, {
+  type EntityInstanceType,
+  type EntityObjectType,
+} from './Entity.js';
 import type { EntityConstructor, EntityInterface } from './Entity.types.js';
-import { ClassNotAvailableError } from './errors/index.js';
+import {
+  ClassNotAvailableError,
+  InvalidParametersError,
+} from './errors/index.js';
 import type {
   Selector,
   Options,
@@ -702,8 +708,8 @@ export default class Nymph {
    *   a top-level property. The method of sorting properties other than cdate
    *   and mdate is driver dependent. The only hard rule is that numbers should
    *   be sorted numerically (2 before 10). Defaults to "cdate".
-   * - return - What to return. "entity", "guid", or "count". Defaults to
-   *   "entity".
+   * - return - What to return. "entity", "object", "guid", or "count". Defaults
+   *   to "entity".
    * - source - Will be 'client' if the query came from a REST call.
    * - skipCache - If true, Nymph will skip the cache and retrieve the entity
    *   from the DB.
@@ -858,13 +864,25 @@ export default class Nymph {
     ...selectors: Selector[]
   ): Promise<string[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    ...selectors: Selector[]
+  ): Promise<EntityObjectType<T>[]>;
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<EntityInstanceType<T>[] | string[] | number> {
+  ): Promise<
+    EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] | number
+  > {
+    if (options.source === 'client' && options.return === 'object') {
+      throw new InvalidParametersError(
+        'Object return type not allowed from client.',
+      );
+    }
+
     try {
       for (let callback of this.beforeGetEntitiesCallbacks) {
         if (callback) {
@@ -900,6 +918,10 @@ export default class Nymph {
     ...selectors: Selector[]
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    ...selectors: Selector[]
+  ): Promise<EntityObjectType<T> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T> | null>;
@@ -908,13 +930,25 @@ export default class Nymph {
     guid: string,
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    guid: string,
+  ): Promise<EntityObjectType<T> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string,
   ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<EntityInstanceType<T> | string | number | null> {
+  ): Promise<
+    EntityInstanceType<T> | EntityObjectType<T> | string | number | null
+  > {
+    if (options.source === 'client' && options.return === 'object') {
+      throw new InvalidParametersError(
+        'Object return type not allowed from client.',
+      );
+    }
+
     try {
       // Set up options and selectors.
       if (typeof selectors[0] === 'string') {

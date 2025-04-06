@@ -9,6 +9,7 @@ import type {
   EntityData,
   EntityInterface,
   EntityJson,
+  EntityObject,
   EntityPatch,
   EntityReference,
   SerializedEntityData,
@@ -30,6 +31,9 @@ export type EntityDataType<T> =
 
 export type EntityInstanceType<T extends EntityConstructor> =
   T extends new () => infer E ? E & EntityDataType<E> : never;
+
+export type EntityObjectType<T extends EntityConstructor> =
+  T extends new () => infer E ? EntityObject & EntityDataType<E> : never;
 
 /**
  * Database abstraction object.

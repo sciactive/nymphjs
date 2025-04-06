@@ -6,6 +6,7 @@ import {
   NymphDriver,
   type EntityConstructor,
   type EntityData,
+  type EntityObjectType,
   type EntityInterface,
   type EntityInstanceType,
   type SerializedEntityData,
@@ -2107,13 +2108,19 @@ export default class PostgreSQLDriver extends NymphDriver {
     ...selectors: Selector[]
   ): Promise<string[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    ...selectors: Selector[]
+  ): Promise<EntityObjectType<T>[]>;
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<EntityInstanceType<T>[] | string[] | number> {
+  ): Promise<
+    EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] | number
+  > {
     const { result: resultPromise, process } = this.getEntitiesRowLike<T>(
       // @ts-ignore: options is correct here.
       options,
@@ -2129,8 +2136,8 @@ export default class PostgreSQLDriver extends NymphDriver {
       (row) => row.guid,
       (row) => ({
         tags: row.tags.filter((tag: string) => tag),
-        cdate: isNaN(Number(row.cdate)) ? null : Number(row.cdate),
-        mdate: isNaN(Number(row.mdate)) ? null : Number(row.mdate),
+        cdate: isNaN(Number(row.cdate)) ? Date.now() : Number(row.cdate),
+        mdate: isNaN(Number(row.mdate)) ? Date.now() : Number(row.mdate),
       }),
       (row) => ({
         name: row.name,

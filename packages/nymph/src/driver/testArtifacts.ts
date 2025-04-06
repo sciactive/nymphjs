@@ -1530,6 +1530,61 @@ export function EntitiesTest(
     expect(resultGuid.indexOf(testEntity.guid ?? '')).toBeGreaterThan(-1);
   });
 
+  it('object return', async () => {
+    await createTestEntities();
+
+    // Testing object return using logic operations...
+    const resultObjects = await nymph.getEntities(
+      { class: TestModel, return: 'object' },
+      {
+        type: '&',
+        '!ref': [
+          ['refArray', guid()],
+          ['refArray', guid()],
+        ],
+        '!lte': ['number', 29.99],
+      },
+      {
+        type: '|',
+        '!lte': [
+          ['number', 29.99],
+          ['number', 30],
+        ],
+      },
+      {
+        type: '!&',
+        '!equal': ['string', 'test'],
+        '!contain': [
+          ['array', 'full'],
+          ['array', 'of'],
+          ['array', 'values'],
+          ['array', 500],
+          ['array', { test: true }],
+          ['array', { nullbyte: '\\\x00\u0000  \x00' }],
+        ],
+      },
+      {
+        type: '!|',
+        '!equal': ['string', 'test'],
+        contain: [
+          ['array', 'full'],
+          ['array', 'of'],
+          ['array', 'values'],
+          ['array', 500],
+        ],
+      },
+    );
+
+    const resultObject = resultObjects.find(
+      (entity) => entity.guid === testEntity.guid,
+    );
+
+    expect(resultObject).toBeInstanceOf(Object);
+    expect(resultObject).not.toBeInstanceOf(TestModel);
+    expect(Array.isArray(resultObject?.tags)).toBeTruthy();
+    expect(resultObject?.string).toEqual('test');
+  });
+
   it('deep selector', async () => {
     await createTestEntities();
 

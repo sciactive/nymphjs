@@ -162,6 +162,9 @@ export function createServer(
         options.class = EntityClass;
         options.source = 'client';
         options.skipAc = false;
+        if (options.return === 'object') {
+          options.return = 'entity';
+        }
         try {
           selectors = classNamesToEntityConstructors(
             response.locals.nymph,

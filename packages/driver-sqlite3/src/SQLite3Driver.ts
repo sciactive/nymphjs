@@ -3,6 +3,7 @@ import {
   NymphDriver,
   type EntityConstructor,
   type EntityData,
+  type EntityObjectType,
   type EntityInterface,
   type EntityInstanceType,
   type SerializedEntityData,
@@ -1709,13 +1710,19 @@ export default class SQLite3Driver extends NymphDriver {
     ...selectors: Selector[]
   ): Promise<string[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    ...selectors: Selector[]
+  ): Promise<EntityObjectType<T>[]>;
+  public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T>[]>;
   public async getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[]
-  ): Promise<EntityInstanceType<T>[] | string[] | number> {
+  ): Promise<
+    EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] | number
+  > {
     const { result, process } = this.getEntitiesRowLike<T>(
       options,
       selectors,

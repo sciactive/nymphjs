@@ -208,10 +208,15 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
    */
   sort?: 'cdate' | 'mdate' | string;
   /**
-   * What to return, the entities with their data, just the GUIDs, or just a
-   * count.
+   * What to return, the entities with their data, just the entity data, just
+   * the GUIDs, or just a count.
+   *
+   * 'object' is only available on the server, as there are substantial security
+   * implications with using it. It returns the full entity data as a simple
+   * object. You should only use it for operations where instantiating the
+   * entities has an unacceptable performance cost.
    */
-  return?: 'entity' | 'guid' | 'count';
+  return?: 'entity' | 'object' | 'guid' | 'count';
   /**
    * Will be 'client' if the query came from a REST request or the PubSub
    * server. (Mainly used in Tilmeld for access control.)

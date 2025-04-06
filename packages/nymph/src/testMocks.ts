@@ -1,7 +1,7 @@
 import { guid } from '@nymphjs/guid';
 
 import type Nymph from './Nymph.js';
-import type { EntityInstanceType } from './Entity.js';
+import type { EntityInstanceType, EntityObjectType } from './Entity.js';
 import type {
   EntityConstructor,
   EntityInterface,
@@ -25,6 +25,10 @@ export class MockNymphDriver {
     ...selectors: Selector[]
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    ...selectors: Selector[]
+  ): Promise<EntityObjectType<T> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T> | null>;
@@ -33,13 +37,17 @@ export class MockNymphDriver {
     guid: string,
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    guid: string,
+  ): Promise<EntityObjectType<T> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string,
   ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<EntityInstanceType<T> | string | null> {
+  ): Promise<EntityInstanceType<T> | EntityObjectType<T> | string | null> {
     const guid =
       typeof selectors[0] === 'string' ? selectors[0] : selectors[0].guid;
     if (!options || !guid || typeof guid !== 'string' || !(guid in entities)) {
@@ -118,6 +126,10 @@ export class MockNymph {
     ...selectors: Selector[]
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    ...selectors: Selector[]
+  ): Promise<EntityObjectType<T> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T> | null>;
@@ -126,13 +138,17 @@ export class MockNymph {
     guid: string,
   ): Promise<string | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    guid: string,
+  ): Promise<EntityObjectType<T> | null>;
+  public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     guid: string,
   ): Promise<EntityInstanceType<T> | null>;
   public async getEntity<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> = {},
     ...selectors: Selector[] | string[]
-  ): Promise<EntityInstanceType<T> | string | null> {
+  ): Promise<EntityInstanceType<T> | EntityObjectType<T> | string | null> {
     // @ts-ignore: The selector type is correct here.
     return await this.driver.getEntity(options, ...selectors);
   }

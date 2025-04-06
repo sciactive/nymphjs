@@ -5,7 +5,7 @@ import strtotime from 'locutus/php/datetime/strtotime.js';
 
 import type Nymph from '../Nymph.js';
 import type { Selector, Options, FormattedSelector } from '../Nymph.types.js';
-import Entity, { type EntityInstanceType } from '../Entity.js';
+import type { EntityInstanceType, EntityObjectType } from '../Entity.js';
 import type {
   EntityConstructor,
   EntityData,
@@ -109,13 +109,19 @@ export default abstract class NymphDriver {
     ...selectors: Selector[]
   ): Promise<string[]>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    ...selectors: Selector[]
+  ): Promise<EntityObjectType<T>[]>;
+  abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T>[]>;
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options?: Options<T>,
     ...selectors: Selector[]
-  ): Promise<EntityInstanceType<T>[] | string[] | number>;
+  ): Promise<
+    EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] | number
+  >;
   abstract getUID(name: string): Promise<number | null>;
   abstract importEntity(entity: {
     guid: string;
@@ -797,6 +803,30 @@ export default abstract class NymphDriver {
     },
   ): { result: any; process: () => string[] | Error };
   protected getEntitiesRowLike<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T> & { return: 'object' },
+    selectors: Selector[],
+    performQueryCallback: (data: {
+      options: Options<T>;
+      selectors: FormattedSelector[];
+      etype: string;
+    }) => {
+      result: any;
+    },
+    rowFetchCallback: () => any,
+    freeResultCallback: () => void,
+    getCountCallback: (row: any) => number,
+    getGUIDCallback: (row: any) => string,
+    getTagsAndDatesCallback: (row: any) => {
+      tags: string[];
+      cdate: number;
+      mdate: number;
+    },
+    getDataNameAndSValueCallback: (row: any) => {
+      name: string;
+      svalue: string;
+    },
+  ): { result: any; process: () => EntityObjectType<T>[] | Error };
+  protected getEntitiesRowLike<T extends EntityConstructor = EntityConstructor>(
     options: Options<T>,
     selectors: Selector[],
     performQueryCallback: (data: {
@@ -848,7 +878,12 @@ export default abstract class NymphDriver {
     },
   ): {
     result: any;
-    process: () => EntityInstanceType<T>[] | string[] | number | Error;
+    process: () =>
+      | EntityInstanceType<T>[]
+      | EntityObjectType<T>[]
+      | string[]
+      | number
+      | Error;
   } {
     if (!this.isConnected()) {
       throw new UnableToConnectError('not connected to DB');
@@ -866,11 +901,18 @@ export default abstract class NymphDriver {
       }
     }
 
-    let entities: EntityInstanceType<T>[] | string[] = [];
+    let entities: EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] =
+      [];
     let count = 0;
     const EntityClass =
       options.class ?? (this.nymph.getEntityClass('Entity') as T);
     const etype = EntityClass.ETYPE;
+
+    if (options.source === 'client' && options.return === 'object') {
+      throw new InvalidParametersError(
+        'Object return type not allowed from client.',
+      );
+    }
 
     // Check if the requested entity is cached.
     if (
@@ -888,33 +930,75 @@ export default abstract class NymphDriver {
         (Object.keys(selectors[0]).length === 2 ||
           (Object.keys(selectors[0]).length === 3 && 'tag' in selectors[0]))
       ) {
-        const entity = this.pullCache<EntityInstanceType<T>>(
-          selectors[0]['guid'],
-          EntityClass.class,
-          !!options.skipAc,
-        );
+        const cacheEntity = this.pullCache(selectors[0]['guid']);
+
         if (
-          entity != null &&
-          entity.guid != null &&
+          cacheEntity != null &&
+          cacheEntity.guid != null &&
           (!('tag' in selectors[0]) ||
-            entity.hasTag(
-              ...(Array.isArray(selectors[0].tag)
+            !(
+              Array.isArray(selectors[0].tag)
                 ? selectors[0].tag
-                : [selectors[0].tag]),
-            ))
+                : [selectors[0].tag]
+            ).find((tag) => tag == null || !cacheEntity.tags.includes(tag)))
         ) {
-          const guid = entity.guid;
-          return {
-            result: Promise.resolve(null),
-            process: () =>
-              options.return === 'count'
-                ? guid
-                  ? 1
-                  : 0
-                : options.return === 'guid'
-                  ? [guid]
-                  : [entity],
-          };
+          // Return the value from the cache.
+          const { guid, cdate, mdate, tags, data, sdata } = cacheEntity;
+
+          if (options.return === 'count') {
+            return {
+              result: Promise.resolve(null),
+              process: () => 1,
+            };
+          } else if (options.return === 'guid') {
+            return {
+              result: Promise.resolve(null),
+              process: () => [guid],
+            };
+          } else if (options.return === 'object') {
+            return {
+              result: Promise.resolve(null),
+              process: () => [
+                {
+                  guid,
+                  cdate,
+                  mdate,
+                  tags,
+                  ...data,
+                  ...Object.fromEntries(
+                    Object.entries(sdata).map(([name, value]) => [
+                      name,
+                      JSON.parse(value),
+                    ]),
+                  ),
+                } as EntityObjectType<T>,
+              ],
+            };
+          } else {
+            const entity = this.nymph
+              .getEntityClass(EntityClass.class)
+              .factorySync() as EntityInstanceType<T>;
+            if (entity) {
+              entity.$nymph = this.nymph;
+              if (options.skipAc != null) {
+                entity.$useSkipAc(!!options.skipAc);
+              }
+              entity.guid = guid;
+              entity.cdate = cdate;
+              entity.mdate = mdate;
+              entity.tags = tags;
+              entity.$putData(data, sdata, 'server');
+              return {
+                result: Promise.resolve(null),
+                process: () => [entity],
+              };
+            }
+
+            return {
+              result: Promise.resolve(null),
+              process: () => [],
+            };
+          }
         }
       }
     }
@@ -971,26 +1055,43 @@ export default abstract class NymphDriver {
                 // Make sure that $row is incremented :)
                 row = rowFetchCallback();
               }
-              const entity = EntityClass.factorySync() as EntityInstanceType<T>;
-              entity.$nymph = this.nymph;
-              if (options.skipAc != null) {
-                entity.$useSkipAc(!!options.skipAc);
+
+              if (options.return === 'object') {
+                (entities as EntityObjectType<T>[]).push({
+                  guid,
+                  cdate,
+                  mdate,
+                  tags,
+                  ...data,
+                  ...Object.fromEntries(
+                    Object.entries(sdata).map(([name, value]) => [
+                      name,
+                      JSON.parse(value),
+                    ]),
+                  ),
+                } as EntityObjectType<T>);
+              } else {
+                const entity =
+                  EntityClass.factorySync() as EntityInstanceType<T>;
+                entity.$nymph = this.nymph;
+                if (options.skipAc != null) {
+                  entity.$useSkipAc(!!options.skipAc);
+                }
+                entity.guid = guid;
+                entity.cdate = cdate;
+                entity.mdate = mdate;
+                entity.tags = tags;
+                this.putDataCounter++;
+                if (this.putDataCounter == 100) {
+                  throw new Error('Infinite loop detected in Entity loading.');
+                }
+                entity.$putData(data, sdata, 'server');
+                this.putDataCounter--;
+                entities.push(entity);
               }
-              entity.guid = guid;
-              entity.cdate = cdate;
-              entity.mdate = mdate;
-              entity.tags = tags;
-              this.putDataCounter++;
-              if (this.putDataCounter == 100) {
-                throw new Error('Infinite loop detected in Entity loading.');
-              }
-              entity.$putData(data, sdata, 'server');
-              this.putDataCounter--;
               if (this.nymph.config.cache) {
                 this.pushCache(guid, cdate, mdate, tags, data, sdata);
               }
-              // @ts-ignore: ts doesn't know the return type here.
-              entities.push(entity);
             }
           }
 
@@ -1128,36 +1229,30 @@ export default abstract class NymphDriver {
    * Pull an entity from the cache.
    *
    * @param guid The entity's GUID.
-   * @param className The entity's class.
-   * @param useSkipAc Whether to tell the entity to use skip_ac.
-   * @returns The entity or null if it's not cached.
+   * @returns The entity's data or null if it's not cached.
    */
-  protected pullCache<T extends Entity>(
-    guid: string,
-    className: string,
-    useSkipAc = false,
-  ): T | null {
+  protected pullCache(guid: string): {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    data: EntityData;
+    sdata: SerializedEntityData;
+  } | null {
     // Increment the entity access count.
     if (!(guid in this.entityCount)) {
       this.entityCount[guid] = 0;
     }
     this.entityCount[guid]++;
     if (guid in this.entityCache) {
-      const entity = this.nymph.getEntityClass(className).factorySync() as T;
-      if (entity) {
-        entity.$nymph = this.nymph;
-        entity.$useSkipAc(!!useSkipAc);
-        entity.guid = guid;
-        entity.cdate = this.entityCache[guid]['cdate'];
-        entity.mdate = this.entityCache[guid]['mdate'];
-        entity.tags = this.entityCache[guid]['tags'];
-        entity.$putData(
-          this.entityCache[guid]['data'],
-          this.entityCache[guid]['sdata'],
-          'server',
-        );
-        return entity;
-      }
+      return {
+        guid,
+        cdate: this.entityCache[guid]['cdate'],
+        mdate: this.entityCache[guid]['mdate'],
+        tags: this.entityCache[guid]['tags'],
+        data: this.entityCache[guid]['data'],
+        sdata: this.entityCache[guid]['sdata'],
+      };
     }
     return null;
   }
@@ -1194,11 +1289,11 @@ export default abstract class NymphDriver {
     }
     // Cache the entity.
     this.entityCache[guid] = {
-      cdate: cdate,
-      mdate: mdate,
-      tags: tags,
-      data: data,
-      sdata: sdata,
+      cdate,
+      mdate,
+      tags,
+      data,
+      sdata,
     };
     while (
       this.nymph.config.cacheLimit &&

@@ -22,6 +22,14 @@ export type SerializedEntityData = {
   [k: string]: string;
 };
 
+export type EntityObject = {
+  guid: string | null;
+  cdate: number | null;
+  mdate: number | null;
+  tags: string[];
+  [k: string]: any;
+};
+
 export type EntityJson = {
   class: string;
   guid: string | null;
