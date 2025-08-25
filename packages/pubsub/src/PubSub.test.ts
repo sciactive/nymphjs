@@ -1,4 +1,5 @@
 import express from 'express';
+import ws from 'websocket';
 import SQLite3Driver from '@nymphjs/driver-sqlite3';
 import { Nymph as NymphServer } from '@nymphjs/nymph';
 import type { PubSubSubscription, PubSubUpdate } from '@nymphjs/client';
@@ -46,6 +47,7 @@ const nymphOptions = {
   restUrl: 'http://localhost:5082/',
   pubsubUrl: 'ws://localhost:5083/',
   noConsole: true,
+  WebSocket: ws.w3cwebsocket as unknown as typeof WebSocket,
 };
 const nymph = new Nymph(nymphOptions);
 const pubsub = new PubSub(nymphOptions, nymph);
@@ -918,5 +920,9 @@ describe('Nymph REST Server and Client', () => {
     await closed;
     pubsubServer.close(); // close PubSub server.
     server.close(); // close REST server.
+
+    // Wait for the next event loop to prevent websocket importing something
+    // after jest teardown.
+    await new Promise((resolve) => setImmediate(resolve));
   });
 });

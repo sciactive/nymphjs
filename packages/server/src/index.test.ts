@@ -24,8 +24,9 @@ const app = express();
 app.use('/test', createServer(nymphServer));
 const server = app.listen(5080);
 
+const REST_URL = 'http://localhost:5080/test/';
 const nymph = new Nymph({
-  restUrl: 'http://localhost:5080/test/',
+  restUrl: REST_URL,
 });
 const Employee = nymph.addEntityClass(EmployeeClass);
 const Restricted = nymph.addEntityClass(RestrictedClass);
@@ -241,6 +242,44 @@ describe('Nymph REST Server and Client', () => {
 
     expect(jane).not.toBeNull();
     expect(jane?.guid).not.toBeNull();
+  });
+
+  it('try to get a non-existent entity', async () => {
+    let error = { status: 200 };
+    try {
+      await nymph.getEntity(
+        {
+          class: Employee,
+        },
+        {
+          type: '&',
+          equal: ['name', 'Non Existent'],
+        },
+      );
+    } catch (e: any) {
+      error = e;
+    }
+    expect(error.status).toEqual(404);
+  });
+
+  it('try to get a non-existent entity without error', async () => {
+    const nymph = new Nymph({
+      restUrl: REST_URL,
+      returnNullOnNotFound: true,
+    });
+    const Employee = nymph.addEntityClass(EmployeeClass);
+
+    const nonexistent = await nymph.getEntity(
+      {
+        class: Employee,
+      },
+      {
+        type: '&',
+        equal: ['name', 'Non Existent'],
+      },
+    );
+
+    expect(nonexistent).toBeNull();
   });
 
   it('get entities', async () => {

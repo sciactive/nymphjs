@@ -275,6 +275,9 @@ export default class Tilmeld implements TilmeldInterface {
       guid: string,
       className?: string,
     ) {
+      if (className === 'User' || className === 'Group') {
+        throw new AccessControlError("You can't delete users or groups by ID.");
+      }
       const entity = await nymph.getEntity(
         { class: nymph.getEntityClass(className ?? 'Entity') },
         { type: '&', guid: guid },
@@ -794,9 +797,27 @@ export default class Tilmeld implements TilmeldInterface {
       return true;
     }
 
+    // Check if the entity is one of the user's secondary groups. Always
+    // readable.
+    const gids = userOrEmpty.$getGids();
+    if (
+      gids != null &&
+      entity.guid != null &&
+      gids.indexOf(entity.guid) !== -1 &&
+      type === TilmeldAccessLevels.READ_ACCESS
+    ) {
+      return true;
+    }
+
+    // At this point, if the entity is a user or group, it should not be
+    // accessible.
+    if (entity instanceof User || entity instanceof Group) {
+      return false;
+    }
+
     // Calculate all the groups the user belongs to.
     let allGids = gid == null ? [] : [gid];
-    allGids = allGids.concat(userOrEmpty.$getGids() ?? []);
+    allGids = allGids.concat(gids ?? []);
 
     // Check access ac properties.
     const checks = [

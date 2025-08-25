@@ -8,7 +8,7 @@ import type {
 } from './Entity.types.js';
 import EntityWeakCache from './EntityWeakCache.js';
 import type { AbortableAsyncIterator } from './HttpRequester.js';
-import HttpRequester from './HttpRequester.js';
+import HttpRequester, { ClientError } from './HttpRequester.js';
 import type {
   EventType,
   NymphOptions,
@@ -55,11 +55,21 @@ export default class Nymph {
    * The entity cache.
    */
   public cache = new EntityWeakCache();
+  /**
+   * Return `null` or empty array instead of error when entity/ies not found.
+   */
+  public returnNullOnNotFound = false;
 
   public constructor(NymphOptions: NymphOptions) {
     this.restUrl = NymphOptions.restUrl;
     // @ts-ignore TS doesn't know about WeakRef.
     this.weakCache = !!NymphOptions.weakCache && typeof WeakRef !== 'undefined';
+    if (
+      'returnNullOnNotFound' in NymphOptions &&
+      NymphOptions.returnNullOnNotFound != null
+    ) {
+      this.returnNullOnNotFound = NymphOptions.returnNullOnNotFound;
+    }
 
     this.Entity = this.addEntityClass(Entity);
 
@@ -285,12 +295,25 @@ export default class Nymph {
     options: Options<T>,
     ...selectors: Selector[] | string[]
   ): Promise<EntityInstanceType<T> | string | number | null> {
-    // @ts-ignore: Implementation signatures of overloads are not externally visible.
-    const data = (await this.getEntityData(options, ...selectors)) as
-      | EntityJson<T>
-      | string
-      | number
-      | null;
+    let data: any = null;
+    try {
+      // @ts-ignore: Implementation signatures of overloads are not externally visible.
+      data = (await this.getEntityData(options, ...selectors)) as
+        | EntityJson<T>
+        | string
+        | number
+        | null;
+    } catch (e: any) {
+      if (
+        this.returnNullOnNotFound &&
+        e instanceof ClientError &&
+        e.status === 404
+      ) {
+        data = null;
+      } else {
+        throw e;
+      }
+    }
 
     if (options.return && options.return === 'count') {
       return Number(data ?? 0) as number;
@@ -378,21 +401,37 @@ export default class Nymph {
     options: Options<T>,
     ...selectors: Selector[]
   ): Promise<EntityInstanceType<T>[] | string[] | number> {
-    const data = await requester.GET({
-      url: this.restUrl,
-      headers: { ...this.headers },
-      dataType: 'json',
-      data: {
-        action: 'entities',
-        data: [
-          { ...options, class: options.class.class },
-          ...entityConstructorsToClassNames(selectors),
-        ],
-      },
-    });
+    let data = null;
+    try {
+      data = await requester.GET({
+        url: this.restUrl,
+        headers: { ...this.headers },
+        dataType: 'json',
+        data: {
+          action: 'entities',
+          data: [
+            { ...options, class: options.class.class },
+            ...entityConstructorsToClassNames(selectors),
+          ],
+        },
+      });
+    } catch (e: any) {
+      if (
+        this.returnNullOnNotFound &&
+        e instanceof ClientError &&
+        e.status === 404
+      ) {
+        data = null;
+      } else {
+        throw e;
+      }
+    }
 
     if (options.return && options.return === 'count') {
-      return Number(data);
+      return Number(data ?? 0) as number;
+    }
+    if (data == null) {
+      return [];
     }
     if (options.return && options.return === 'guid') {
       return data;

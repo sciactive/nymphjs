@@ -18,6 +18,10 @@ export type NymphOptions = {
    */
   WebSocket?: typeof WebSocket;
   /**
+   * Return `null` or empty array instead of error when entity/ies not found.
+   */
+  returnNullOnNotFound?: boolean;
+  /**
    * Whether to not output status messages to the console.
    */
   noConsole?: boolean;

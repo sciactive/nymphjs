@@ -687,14 +687,14 @@ export default class User extends AbleObject<UserData> {
     if (this.guid == null) {
       return { result: false, message: 'Incorrect login/password.' };
     }
+    if (!this.$checkPassword(data.password)) {
+      return { result: false, message: 'Incorrect login/password.' };
+    }
     if (!this.$data.enabled) {
-      return { result: false, message: 'This user is disabled.' };
+      return { result: false, message: 'Your account is disabled.' };
     }
     if (await this.$gatekeeper()) {
       return { result: true, message: 'You are already logged in.' };
-    }
-    if (!this.$checkPassword(data.password)) {
-      return { result: false, message: 'Incorrect login/password.' };
     }
 
     if (this.$data.totpSecret != null) {
@@ -1056,8 +1056,8 @@ export default class User extends AbleObject<UserData> {
     const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
     let [_username, domain] = tilmeld.config.domainSupport
-      ? splitn(this.$data.username ?? '', '@', 2)
-      : [this.$data.username, null];
+      ? splitn(this.$originalUsername ?? this.$data.username ?? '', '@', 2)
+      : [this.$originalUsername ?? this.$data.username, null];
     // Lowercase the domain part.
     if (domain) {
       domain = domain.toLowerCase();
@@ -1870,6 +1870,7 @@ export default class User extends AbleObject<UserData> {
           };
         }
         if (
+          !this.$skipAcWhenSaving &&
           !this.$is(tilmeld.currentUser) &&
           !tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
         ) {
@@ -2139,6 +2140,13 @@ export default class User extends AbleObject<UserData> {
           return: 'guid',
         });
         // Make sure it's not just null, cause that means an error.
+        if (otherUsers == null) {
+          return {
+            result: false,
+            loggedin: false,
+            message: 'An error occurred.',
+          };
+        }
         if (!otherUsers.length) {
           this.$grant('system/admin');
           this.$data.enabled = true;
@@ -2553,7 +2561,16 @@ export default class User extends AbleObject<UserData> {
 
     try {
       let group = this.$data.group;
-      await group?.$wake();
+      if (group != null) {
+        // Make sure to get fresh group data.
+        if (group.$asleep()) {
+          await group.$wake();
+        } else {
+          if (!(await group.$refresh())) {
+            throw new Error("Couldn't retrieve primary group info.");
+          }
+        }
+      }
       if (group == null && this.guid == null) {
         if (tilmeld.config.generatePrimary) {
           // Generate a new primary group for the user.
