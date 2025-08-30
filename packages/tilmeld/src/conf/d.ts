@@ -339,6 +339,26 @@ export interface Config {
    */
   userRegisteredRecipient: string | null;
   /**
+   * A function to run on a failed login attempt.
+   *
+   * If the username the client attempted doesn't exist, user will be null.
+   *
+   * This defaults to a promise that resolves after 3-5 seconds. This rate
+   * limits failed login attempts.
+   *
+   * Please note that the data comes from the client, so the types have not been
+   * verified. For example, username might be an array or a number.
+   */
+  failedLoginAttempt: (
+    user: (User & UserData) | null,
+    data: {
+      username: string;
+      password: string;
+      code?: string;
+      additionalData?: { [k: string]: any };
+    },
+  ) => Promise<void>;
+  /**
    * The validator used to check groups before saving.
    */
   validatorGroup: (tilmeld: Tilmeld, group: Group & GroupData) => void;

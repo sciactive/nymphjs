@@ -177,6 +177,13 @@ export default {
     }
   },
   userRegisteredRecipient: null,
+  failedLoginAttempt: (_user, _data) => {
+    // Wait 3-5 seconds to return a failure. This rate limits failed login
+    // attempts.
+    return new Promise((resolve) =>
+      setTimeout(resolve, Math.random() * 2000 + 3000),
+    );
+  },
   validatorGroup: (tilmeld, group) => {
     const nameFields = tilmeld.config.userFields.includes('name')
       ? {

@@ -685,9 +685,11 @@ export default class User extends AbleObject<UserData> {
   }) {
     const tilmeld = enforceTilmeld(this);
     if (this.guid == null) {
+      await tilmeld.config.failedLoginAttempt(null, data);
       return { result: false, message: 'Incorrect login/password.' };
     }
     if (!this.$checkPassword(data.password)) {
+      await tilmeld.config.failedLoginAttempt(this, data);
       return { result: false, message: 'Incorrect login/password.' };
     }
     if (!this.$data.enabled) {
@@ -711,6 +713,7 @@ export default class User extends AbleObject<UserData> {
       }
 
       if (!this.$checkTOTPCode(data.code)) {
+        await tilmeld.config.failedLoginAttempt(this, data);
         return { result: false, message: 'Incorrect 2FA code.' };
       }
     }
