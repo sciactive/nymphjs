@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.96](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.95...v1.0.0-beta.96) (2025-09-01)
+
+### Bug Fixes
+
+- add ilike clauses to checkdata ([da77767](https://github.com/sciactive/nymphjs/commit/da777674b299b3c9de2e65cf3e9a408e193874cb))
+
 # [1.0.0-beta.95](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.94...v1.0.0-beta.95) (2025-08-30)
 
 **Note:** Version bump only for package @nymphjs/nymph
