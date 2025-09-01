@@ -453,6 +453,24 @@ export default abstract class NymphDriver {
                       xor(typeIsNot, clauseNot),
                     );
                     break;
+                  case 'ilike':
+                  case '!ilike':
+                    const testILikeValue = (
+                      curValue as [string, string]
+                    )[1] as string;
+                    pass = xor(
+                      propName in data &&
+                        new RegExp(
+                          '^' +
+                            escapeRegExp(testILikeValue)
+                              .replace('%', () => '.*')
+                              .replace('_', () => '.') +
+                            '$',
+                          'i',
+                        ).test(data[propName]),
+                      xor(typeIsNot, clauseNot),
+                    );
+                    break;
                   case 'match':
                   case '!match':
                     const testMatchValue = (
