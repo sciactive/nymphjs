@@ -2144,6 +2144,8 @@ export default class User extends AbleObject<UserData> {
         });
         // Make sure it's not just null, cause that means an error.
         if (otherUsers == null) {
+          await tnymph.rollback(transaction);
+          this.$setNymph(nymph);
           return {
             result: false,
             loggedin: false,
