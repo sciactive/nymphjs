@@ -503,7 +503,7 @@ function selectorParser({
   curQuery = curQuery.replace(guidRegex, '');
 
   // eg. [enabled] or [!defaultPrimaryGroup]
-  const truthyRegex = /(?: |^)\[(!?\w+)\](?= |$)/g;
+  const truthyRegex = /(?: |^)\[(!?[a-zA-Z0-9-_.+~]+)\](?= |$)/g;
   const truthyMatch = curQuery.match(truthyRegex);
   if (truthyMatch) {
     selector.truthy = [];
@@ -557,7 +557,7 @@ function selectorParser({
   curQuery = curQuery.replace(tagRegex, '');
 
   // eg. cdate>15
-  const gtRegex = /(?: |^)(\w+)>(-?\d+(?:\.\d+)?)(?= |$)/g;
+  const gtRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)>(-?\d+(?:\.\d+)?)(?= |$)/g;
   const gtMatch = curQuery.match(gtRegex);
   if (gtMatch) {
     selector.gt = [];
@@ -576,7 +576,7 @@ function selectorParser({
   curQuery = curQuery.replace(gtRegex, '');
 
   // eg. cdate>yesterday or cdate>"2 days ago"
-  const gtRelativeRegex = /(?: |^)(\w+)>(\w+|"[^"]+")(?= |$)/g;
+  const gtRelativeRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)>(\w+|"[^"]+")(?= |$)/g;
   const gtRelativeMatch = curQuery.match(gtRelativeRegex);
   if (gtRelativeMatch) {
     if (selector.gt == null) {
@@ -601,7 +601,7 @@ function selectorParser({
   curQuery = curQuery.replace(gtRelativeRegex, '');
 
   // eg. cdate>=15
-  const gteRegex = /(?: |^)(\w+)>=(-?\d+(?:\.\d+)?)(?= |$)/g;
+  const gteRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)>=(-?\d+(?:\.\d+)?)(?= |$)/g;
   const gteMatch = curQuery.match(gteRegex);
   if (gteMatch) {
     selector.gte = [];
@@ -620,7 +620,7 @@ function selectorParser({
   curQuery = curQuery.replace(gteRegex, '');
 
   // eg. cdate>=yesterday or cdate>="2 days ago"
-  const gteRelativeRegex = /(?: |^)(\w+)>=(\w+|"[^"]+")(?= |$)/g;
+  const gteRelativeRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)>=(\w+|"[^"]+")(?= |$)/g;
   const gteRelativeMatch = curQuery.match(gteRelativeRegex);
   if (gteRelativeMatch) {
     if (selector.gte == null) {
@@ -645,7 +645,7 @@ function selectorParser({
   curQuery = curQuery.replace(gteRelativeRegex, '');
 
   // eg. cdate<15
-  const ltRegex = /(?: |^)(\w+)<(-?\d+(?:\.\d+)?)(?= |$)/g;
+  const ltRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)<(-?\d+(?:\.\d+)?)(?= |$)/g;
   const ltMatch = curQuery.match(ltRegex);
   if (ltMatch) {
     selector.lt = [];
@@ -664,7 +664,7 @@ function selectorParser({
   curQuery = curQuery.replace(ltRegex, '');
 
   // eg. cdate<yesterday or cdate<"2 days ago"
-  const ltRelativeRegex = /(?: |^)(\w+)<(\w+|"[^"]+")(?= |$)/g;
+  const ltRelativeRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)<(\w+|"[^"]+")(?= |$)/g;
   const ltRelativeMatch = curQuery.match(ltRelativeRegex);
   if (ltRelativeMatch) {
     if (selector.lt == null) {
@@ -689,7 +689,7 @@ function selectorParser({
   curQuery = curQuery.replace(ltRelativeRegex, '');
 
   // eg. cdate<=15
-  const lteRegex = /(?: |^)(\w+)<=(-?\d+(?:\.\d+)?)(?= |$)/g;
+  const lteRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)<=(-?\d+(?:\.\d+)?)(?= |$)/g;
   const lteMatch = curQuery.match(lteRegex);
   if (lteMatch) {
     selector.lte = [];
@@ -708,7 +708,7 @@ function selectorParser({
   curQuery = curQuery.replace(lteRegex, '');
 
   // eg. cdate<=yesterday or cdate<="2 days ago"
-  const lteRelativeRegex = /(?: |^)(\w+)<=(\w+|"[^"]+")(?= |$)/g;
+  const lteRelativeRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)<=(\w+|"[^"]+")(?= |$)/g;
   const lteRelativeMatch = curQuery.match(lteRelativeRegex);
   if (lteRelativeMatch) {
     if (selector.lte == null) {
