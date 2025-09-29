@@ -233,7 +233,8 @@ function selectorParser({
   let curQuery = query;
 
   // eg. user<{User name="Hunter"}> or user!<{User name="Hunter"}>
-  const qrefRegex = /(?: |^)(\w+)!?<\{(\w+) (.*?[^\\])\}>(?= |$)/g;
+  const qrefRegex =
+    /(?: |^)([a-zA-Z0-9-_.+~]+)!?<\{(\w+) (.*?[^\\])\}>(?= |$)/g;
   const qrefMatch = curQuery.match(qrefRegex);
   if (qrefMatch) {
     selector.qref = [];
@@ -273,7 +274,8 @@ function selectorParser({
   curQuery = curQuery.replace(qrefRegex, '');
 
   // eg. name=Marty or name="Marty McFly" or enabled=true or someArray=[1,2]
-  const equalRegex = /(?: |^)(\w+)!?=(""|".*?[^\\]"|[^ ]+)(?= |$)/g;
+  const equalRegex =
+    /(?: |^)([a-zA-Z0-9-_.+~]+)!?=(""|".*?[^\\]"|[^ ]+)(?= |$)/g;
   const equalMatch = curQuery.match(equalRegex);
   if (equalMatch) {
     selector.equal = [];
@@ -308,7 +310,7 @@ function selectorParser({
   curQuery = curQuery.replace(equalRegex, '');
 
   // eg. user<{790274347f9b3a018c2cedee}> or user!<{790274347f9b3a018c2cedee}>
-  const refRegex = /(?: |^)(\w+)!?<\{([0-9a-f]{24})\}>(?= |$)/g;
+  const refRegex = /(?: |^)([a-zA-Z0-9-_.+~]+)!?<\{([0-9a-f]{24})\}>(?= |$)/g;
   const refMatch = curQuery.match(refRegex);
   if (refMatch) {
     selector.ref = [];
@@ -335,7 +337,8 @@ function selectorParser({
   curQuery = curQuery.replace(refRegex, '');
 
   // eg. someArrayOfNumbers<10> or someObject!<"some string">
-  const containRegex = /(?: |^)(\w+)!?(<.*?[^\\]>)(?= |$)/g;
+  const containRegex =
+    /(?: |^)([a-zA-Z0-9-_.+~]+)!?(<(?:[^"][^>]*?|".*?[^\\]"))>(?= |$)/g;
   const containMatch = curQuery.match(containRegex);
   if (containMatch) {
     selector.contain = [];
@@ -347,19 +350,19 @@ function selectorParser({
           if (name.endsWith('!')) {
             selector['!contain'].push([
               name.slice(0, -1),
-              JSON.parse(unQuoteAngles(value)),
+              JSON.parse(unQuoteString(value)),
             ]);
           } else {
-            selector.contain.push([name, JSON.parse(unQuoteAngles(value))]);
+            selector.contain.push([name, JSON.parse(unQuoteString(value))]);
           }
         } catch (e: any) {
           if (name.endsWith('!')) {
             selector['!contain'].push([
               name.slice(0, -1),
-              unQuoteAngles(value),
+              unQuoteString(value),
             ]);
           } else {
-            selector.contain.push([name, unQuoteAngles(value)]);
+            selector.contain.push([name, unQuoteString(value)]);
           }
         }
       } catch (e: any) {
@@ -376,7 +379,8 @@ function selectorParser({
   curQuery = curQuery.replace(containRegex, '');
 
   // eg. name~/Hunter/ or name!~/hunter/i
-  const posixRegex = /(?: |^)(\w+)!?~(\/\/|\/.*?[^\\]\/)i?(?= |$)/g;
+  const posixRegex =
+    /(?: |^)([a-zA-Z0-9-_.+~]+)!?~(\/\/|\/.*?[^\\]\/)i?(?= |$)/g;
   const posixMatch = curQuery.match(posixRegex);
   if (posixMatch) {
     selector.match = [];
@@ -425,7 +429,8 @@ function selectorParser({
   curQuery = curQuery.replace(posixRegex, '');
 
   // eg. name~Hunter or name!~"hunter"i
-  const likeRegex = /(?: |^)(\w+)!?~(""i?|".*?[^\\]"i?|[^ ]+)(?= |$)/g;
+  const likeRegex =
+    /(?: |^)([a-zA-Z0-9-_.+~]+)!?~(""i?|".*?[^\\]"i?|[^ ]+)(?= |$)/g;
   const likeMatch = curQuery.match(likeRegex);
   if (likeMatch) {
     selector.like = [];

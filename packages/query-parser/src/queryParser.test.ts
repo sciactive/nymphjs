@@ -150,6 +150,143 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses a query with lt and tag', () => {
+    const query = 'limit:4 foobar mdate<"2 weeks ago" <tag>';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        lt: [['mdate', null, '2 weeks ago']],
+        tag: ['tag'],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with contain that has brackets', () => {
+    const query = 'limit:4 foobar string<"a string with < and > characters">';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        contain: [['string', 'a string with < and > characters']],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with contain that has quotes', () => {
+    const query = 'limit:4 foobar string<"a string with a \\" characters">';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        contain: [['string', 'a string with a " characters']],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with a dash in the property name', () => {
+    const query = 'limit:4 foobar Test-Prop<"a string">';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        contain: [['Test-Prop', 'a string']],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
   it('parses all options', () => {
     const query = 'limit:10 offset:15 sort:someProp reverse:true search';
     const [options, ...selectors] = queryParser({
