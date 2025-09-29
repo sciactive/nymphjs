@@ -133,6 +133,9 @@ export default {
           address: `noreply@${appUrl.hostname}`,
         },
       },
+      preview: {
+        openSimulator: false,
+      },
     };
   },
   sendEmail: async (tilmeld, options, user) => {
