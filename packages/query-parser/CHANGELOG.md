@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.97](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.96...v1.0.0-beta.97) (2025-10-04)
+
+### Bug Fixes
+
+- more query parser issues ([38e9cfb](https://github.com/sciactive/nymphjs/commit/38e9cfb2f77f4696d601361825183493bba99065))
+- query parser issues ([1760e15](https://github.com/sciactive/nymphjs/commit/1760e15b252781cc745b9310f25ef73734b4b10e))
+- variable names and complex json in query parser ([7e475d3](https://github.com/sciactive/nymphjs/commit/7e475d3ef997c8ddd245b2f14c033e3fdda2d4bd))
+
 # [1.0.0-beta.96](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.95...v1.0.0-beta.96) (2025-09-01)
 
 **Note:** Version bump only for package @nymphjs/query-parser

@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.97](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.96...v1.0.0-beta.97) (2025-10-04)
+
+### Bug Fixes
+
+- add missing rollback ([8763ecb](https://github.com/sciactive/nymphjs/commit/8763ecbc0ad2bfa9ac302c9e72262e45f8383548))
+- more query parser issues ([38e9cfb](https://github.com/sciactive/nymphjs/commit/38e9cfb2f77f4696d601361825183493bba99065))
+- npm audit fix ([108e377](https://github.com/sciactive/nymphjs/commit/108e3777f93fdfd8b7b842885f26f74f948bdcfb))
+- password verify on user edit page when password is empty ([bf797f7](https://github.com/sciactive/nymphjs/commit/bf797f77cc08f73731b9e20e413be6e7c0cec213))
+- query parser issues ([1760e15](https://github.com/sciactive/nymphjs/commit/1760e15b252781cc745b9310f25ef73734b4b10e))
+- variable names and complex json in query parser ([7e475d3](https://github.com/sciactive/nymphjs/commit/7e475d3ef997c8ddd245b2f14c033e3fdda2d4bd))
+
 # [1.0.0-beta.96](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.95...v1.0.0-beta.96) (2025-09-01)
 
 ### Bug Fixes
