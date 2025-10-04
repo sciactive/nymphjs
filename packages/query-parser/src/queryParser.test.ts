@@ -150,6 +150,111 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses a query with json value with spaces', () => {
+    const query =
+      'obj={"prop": "my value"} foobar arr=["a value", "another value"]';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        equal: [
+          ['obj', { prop: 'my value' }],
+          ['arr', ['a value', 'another value']],
+        ],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with nested json value with spaces', () => {
+    const query =
+      'obj={"obj": {"sub": "my value"}, "prop": "my value"} foobar arr=["a value", "another value", {"prop": [1, 2, 3]}]';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        equal: [
+          ['obj', { obj: { sub: 'my value' }, prop: 'my value' }],
+          ['arr', ['a value', 'another value', { prop: [1, 2, 3] }]],
+        ],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with broken json', () => {
+    const query = 'obj={"obj":"val"';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        equal: [['obj', '{"obj":"val"']],
+      },
+    ]);
+  });
+
+  it('parses a query with broken json and correct json', () => {
+    const query = 'obj={"obj":"val" another={"prop":"value"}';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        equal: [
+          ['another', { prop: 'value' }],
+          ['obj', '{"obj":"val"'],
+        ],
+      },
+    ]);
+  });
+
   it('parses a query with lt and tag', () => {
     const query = 'limit:4 foobar mdate<"2 weeks ago" <tag>';
     const [options, ...selectors] = queryParser({
