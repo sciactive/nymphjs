@@ -1067,8 +1067,9 @@
       passwordVerify === ''
     ) {
       passwordVerified = undefined;
+    } else {
+      passwordVerified = $entity.passwordTemp === passwordVerify;
     }
-    passwordVerified = $entity.passwordTemp === passwordVerify;
   }
 
   function addAbility() {
