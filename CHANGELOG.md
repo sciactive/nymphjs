@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.98](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.97...v1.0.0-beta.98) (2025-10-24)
+
+### Bug Fixes
+
+- node client dependency ([574a20f](https://github.com/sciactive/nymphjs/commit/574a20f02b480b840d49d886184512a40665eab3))
+
+### Features
+
+- add identical resolver options to sorter ([7710dea](https://github.com/sciactive/nymphjs/commit/7710deac439134fc14eaf0ed9fdecaa2d62609f0))
+- add new indexes for better access control performance ([f76b001](https://github.com/sciactive/nymphjs/commit/f76b001c07aea38f21cb5a3373ad5a9eaadbb242))
+
 # [1.0.0-beta.97](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.96...v1.0.0-beta.97) (2025-10-04)
 
 ### Bug Fixes

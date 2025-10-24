@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.98](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.97...v1.0.0-beta.98) (2025-10-24)
+
+### Bug Fixes
+
+- node client dependency ([574a20f](https://github.com/sciactive/nymphjs/commit/574a20f02b480b840d49d886184512a40665eab3))
+
 # [1.0.0-beta.97](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.96...v1.0.0-beta.97) (2025-10-04)
 
 **Note:** Version bump only for package @nymphjs/client-node
