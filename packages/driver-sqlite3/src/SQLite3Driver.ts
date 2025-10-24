@@ -280,38 +280,10 @@ export default class SQLite3Driver extends NymphDriver {
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid__name_user`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid") WHERE "name" = \'user\';`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid__name_group`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid") WHERE "name" = \'group\';`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}_id_name`,
           )} ON ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}`,
           )} ("name");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_name__truthy`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("name") WHERE "truthy" = 1;`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_name__falsy`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("name") WHERE "truthy" <> 1;`,
         );
         this.queryRun(
           `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
@@ -326,6 +298,63 @@ export default class SQLite3Driver extends NymphDriver {
           )} ON ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}`,
           )} ("name", "number");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_guid_name_number`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("guid", "name", "number");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_name_truthy`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("name", "truthy");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_guid_name_truthy`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("guid", "name", "truthy");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_acuserread`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("guid") WHERE "name"=\'acUser\' AND "number" >= 1;`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_acgroupread`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("guid") WHERE "name"=\'acGroup\' AND "number" >= 1;`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_acotherread`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("guid") WHERE "name"=\'acOther\' AND "number" >= 1;`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_acuser`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("guid") WHERE "name"=\'user\';`,
+        );
+
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}_id_acgroup`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} ("guid") WHERE "name"=\'group\';`,
         );
         // Create the references table.
         this.queryRun(
@@ -355,6 +384,55 @@ export default class SQLite3Driver extends NymphDriver {
           )} ON ${SQLite3Driver.escape(
             `${this.prefix}references_${etype}`,
           )} ("name", "reference");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}_id_reference`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} ("reference");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}_id_guid_name`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} ("guid", "name");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}_id_guid_name_reference`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} ("guid", "name", "reference");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}_id_reference_name_guid`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} ("reference", "name", "guid");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}_id_reference_guid_name`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} ("reference", "guid", "name");`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}_id_guid_reference_nameuser`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} ("guid", "reference") WHERE "name"=\'user\';`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}_id_guid_reference_namegroup`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} ("guid", "reference") WHERE "name"=\'group\';`,
         );
         // Create the unique strings table.
         this.queryRun(

@@ -237,7 +237,14 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_name_json\` USING BTREE (\`name\`(255), (CAST(\`json\` AS CHAR(512)) COLLATE utf8mb4_bin)),
           INDEX \`id_name_string\` USING BTREE (\`name\`(255), \`string\`(512)),
           INDEX \`id_name_number\` USING BTREE (\`name\`(255), \`number\`),
-          INDEX \`id_name_truthy\` USING HASH (\`name\`(255), \`truthy\`)
+          INDEX \`id_guid_name_number\` USING BTREE (\`guid\`, \`name\`(255), \`number\`),
+          INDEX \`id_name_truthy\` USING HASH (\`name\`(255), \`truthy\`),
+          INDEX \`id_guid_name_truthy\` USING HASH (\`guid\`, \`name\`(255), \`truthy\`),
+          INDEX \`id_acuserread\` USING BTREE (((\`name\` = 'acUser') AND (\`number\` >= 1)), \`guid\`),
+          INDEX \`id_acgroupread\` USING BTREE (((\`name\` = 'acGroup') AND (\`number\` >= 1)), \`guid\`),
+          INDEX \`id_acotherread\` USING BTREE (((\`name\` = 'acOther') AND (\`number\` >= 1)), \`guid\`),
+          INDEX \`id_acuser\` USING BTREE (((\`name\` = 'user')), \`guid\`),
+          INDEX \`id_acgroup\` USING BTREE (((\`name\` = 'group')), \`guid\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
@@ -251,10 +258,15 @@ export default class MySQLDriver extends NymphDriver {
           \`reference\` BINARY(12) NOT NULL,
           PRIMARY KEY (\`guid\`, \`name\`(255), \`reference\`),
           INDEX \`id_guid\` USING HASH (\`guid\`),
+          INDEX \`id_name\` USING HASH (\`name\`(255)),
+          INDEX \`id_name_reference\` USING HASH (\`name\`(255), \`reference\`),
+          INDEX \`id_reference\` USING HASH (\`reference\`),
           INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
           INDEX \`id_guid_name_reference\` USING HASH (\`guid\`, \`name\`(255), \`reference\`),
-          INDEX \`id_name_reference\` USING HASH (\`name\`(255), \`reference\`),
-          INDEX \`id_name_reference_guid\` USING BTREE (\`name\`(255), \`reference\`, \`guid\`)
+          INDEX \`id_reference_name_guid\` USING BTREE (\`reference\`, \`name\`(255), \`guid\`),
+          INDEX \`id_reference_guid_name\` USING BTREE (\`reference\`, \`guid\`, \`name\`(255)),
+          INDEX \`id_guid_reference_nameuser\` USING HASH (((\`name\` = 'user')), \`guid\`, \`reference\`),
+          INDEX \`id_guid_reference_namegroup\` USING HASH (((\`name\` = 'group')), \`guid\`, \`reference\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
