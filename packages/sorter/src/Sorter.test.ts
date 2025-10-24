@@ -52,6 +52,60 @@ describe('Sorter', () => {
     ]);
   });
 
+  it('sorts entities by a number property with an identical resolver', () => {
+    const entities: TestModel[] = [];
+    for (const prop of [4, 300, 5, 1, 2]) {
+      const entity = new TestModel();
+      entity.number = 50;
+      entity.fallback = prop;
+      entities.push(entity);
+    }
+
+    const sorter = new Sorter(entities);
+
+    sorter.sort('number', {
+      identiticalResolver: (a, b) => (a.fallback || 0) - (b.fallback || 0),
+    });
+    expect(sorter.array.map((entity) => entity.fallback)).toEqual([
+      1, 2, 4, 5, 300,
+    ]);
+
+    sorter.sort('number', {
+      reverse: true,
+      identiticalResolver: (a, b) => (a.fallback || 0) - (b.fallback || 0),
+    });
+    expect(sorter.array.map((entity) => entity.fallback)).toEqual([
+      300, 5, 4, 2, 1,
+    ]);
+  });
+
+  it('sorts entities by a string property with an identical resolver', () => {
+    const entities: TestModel[] = [];
+    for (const prop of [4, 300, 5, 1, 2]) {
+      const entity = new TestModel();
+      entity.name = 'John';
+      entity.fallback = prop;
+      entities.push(entity);
+    }
+
+    const sorter = new Sorter(entities);
+
+    sorter.sort('name', {
+      identiticalResolver: (a, b) => (a.fallback || 0) - (b.fallback || 0),
+    });
+    expect(sorter.array.map((entity) => entity.fallback)).toEqual([
+      1, 2, 4, 5, 300,
+    ]);
+
+    sorter.sort('name', {
+      reverse: true,
+      identiticalResolver: (a, b) => (a.fallback || 0) - (b.fallback || 0),
+    });
+    expect(sorter.array.map((entity) => entity.fallback)).toEqual([
+      300, 5, 4, 2, 1,
+    ]);
+  });
+
   it('sorts entities case sensitively', () => {
     const entities: TestModel[] = [];
     for (const prop of ['America', 'america', 'baseball', 'Bernard', 'zebra']) {
@@ -192,6 +246,56 @@ describe('Sorter', () => {
     ]);
   });
 
+  it('sorts entities by parent with an identical resolver', () => {
+    const firstParent = new TestModel();
+    firstParent.name = 'Aaron';
+    firstParent.fallback = 1;
+    const secondParent = new TestModel();
+    secondParent.name = 'Kevin';
+    secondParent.fallback = 2;
+    const entities: TestModel[] = [
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Steve';
+        entity.fallback = 3;
+        entity.parent = firstParent;
+        return entity;
+      })(),
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Steve';
+        entity.fallback = 5;
+        entity.parent = firstParent;
+        return entity;
+      })(),
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Steve';
+        entity.fallback = 4;
+        entity.parent = firstParent;
+        return entity;
+      })(),
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Steve';
+        entity.fallback = 6;
+        entity.parent = secondParent;
+        return entity;
+      })(),
+      firstParent,
+      secondParent,
+    ];
+
+    const sorter = new Sorter(entities);
+
+    sorter.psort('name', 'parent', {
+      identiticalResolver: (a, b) => (a.fallback || 0) - (b.fallback || 0),
+    });
+    expect(sorter.array.map((entity) => entity.fallback)).toEqual([
+      1, 2, 3, 4, 5, 6,
+    ]);
+  });
+
   it('sorts entities hierarchically', () => {
     const getEntries = () => {
       const firstParent = new TestModel();
@@ -267,6 +371,76 @@ describe('Sorter', () => {
         .flat(),
       ...[...Array(100)].map(() => ['Herbert', '- Jacob', '- Joshua']).flat(),
     ]);
+  });
+
+  it('sorts entities hierarchically with an identical resolver', () => {
+    const firstParent = new TestModel();
+    firstParent.name = 'Herbert';
+    firstParent.fallback = 1;
+    const secondParent = new TestModel();
+    secondParent.name = 'Anthony';
+    secondParent.fallback = 2;
+    const subParent = new TestModel();
+    subParent.name = 'Lamar';
+    subParent.fallback = 3;
+    subParent.parent = secondParent;
+    const entities = [
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Peter';
+        entity.fallback = 5;
+        entity.parent = firstParent;
+        return entity;
+      })(),
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Peter';
+        entity.fallback = 4;
+        entity.parent = firstParent;
+        return entity;
+      })(),
+      subParent,
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Peter';
+        entity.fallback = 7;
+        entity.parent = secondParent;
+        return entity;
+      })(),
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Peter';
+        entity.fallback = 8;
+        entity.parent = subParent;
+        return entity;
+      })(),
+      (() => {
+        const entity = new TestModel();
+        entity.name = 'Peter';
+        entity.fallback = 6;
+        entity.parent = subParent;
+        return entity;
+      })(),
+      firstParent,
+      secondParent,
+    ];
+
+    const sorter = new Sorter(entities);
+
+    sorter.hsort('name', 'parent', {
+      identiticalResolver: (a, b) => (a.fallback || 0) - (b.fallback || 0),
+    });
+    expect(
+      sorter.array.map((entity) => {
+        let output = '';
+        let parent = entity.parent;
+        while (parent) {
+          output += '- ';
+          parent = parent.parent;
+        }
+        return output + entity.fallback;
+      }),
+    ).toEqual(['2', '- 3', '- - 6', '- - 8', '- 7', '1', '- 4', '- 5']);
   });
 
   it('sorts array in place', () => {

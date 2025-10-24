@@ -6,6 +6,7 @@ export class TestModel {
   public guid: string;
   public name?: string;
   public number?: number;
+  public fallback?: number;
   public parent?: TestModel;
 
   constructor() {

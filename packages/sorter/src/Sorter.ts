@@ -1,4 +1,4 @@
-export type SortOptions = {
+export type SortOptions<Entity extends Object> = {
   /** Sort case sensitively. */
   caseSensitive?: boolean;
   /** Reverse the sort order. */
@@ -7,6 +7,8 @@ export type SortOptions = {
   collatorOptions?: Intl.CollatorOptions;
   /** A custom comparator to use. This overrides all other options except reverse. */
   comparator?: (a: any, b: any) => number;
+  /** A function to resolve order of entities with identical properties. */
+  identiticalResolver?: (a: Entity, b: Entity) => number;
 };
 
 /**
@@ -20,6 +22,7 @@ export default class Sorter<Entity extends Object> {
   private sortParent: string | null = null;
   private collator: Intl.Collator = new Intl.Collator();
   private comparator: ((a: any, b: any) => number) | undefined = undefined;
+  private identiticalResolver: (a: Entity, b: Entity) => number = (a, b) => 0;
 
   constructor(array: Entity[]) {
     this.array = array as (Entity & { [k: string]: any })[];
@@ -68,15 +71,26 @@ export default class Sorter<Entity extends Object> {
     const aProp = a[prop];
     const bProp = b[prop];
     if (this.comparator != null) {
-      return this.comparator(aProp, bProp);
+      const result = this.comparator(aProp, bProp);
+      if (result === 0) {
+        return this.identiticalResolver(a, b);
+      } else {
+        return result;
+      }
     } else if (typeof aProp === 'string' && typeof bProp === 'string') {
-      return this.collator.compare(aProp, bProp);
+      const result = this.collator.compare(aProp, bProp);
+      if (result === 0) {
+        return this.identiticalResolver(a, b);
+      } else {
+        return result;
+      }
     } else if (aProp > bProp) {
       return 1;
     } else if (aProp < bProp) {
       return -1;
+    } else {
+      return this.identiticalResolver(a, b);
     }
-    return 0;
   }
 
   /**
@@ -97,7 +111,8 @@ export default class Sorter<Entity extends Object> {
       reverse = false,
       collatorOptions = undefined,
       comparator = undefined,
-    }: SortOptions = {},
+      identiticalResolver = (a, b) => 0,
+    }: SortOptions<Entity> = {},
   ): Entity[] {
     if (typeof parentProperty === 'undefined' || parentProperty === null) {
       // Just sort by the requested property.
@@ -119,6 +134,7 @@ export default class Sorter<Entity extends Object> {
       },
     );
     this.comparator = comparator;
+    this.identiticalResolver = identiticalResolver;
     const sort = (array: Entity[]) => {
       // Sort by the requested property.
       array.sort(this._arraySortProperty.bind(this));
@@ -207,7 +223,8 @@ export default class Sorter<Entity extends Object> {
       reverse = false,
       collatorOptions = undefined,
       comparator = undefined,
-    }: SortOptions = {},
+      identiticalResolver = (a, b) => 0,
+    }: SortOptions<Entity> = {},
   ): Entity[] {
     // Sort by the requested property.
     this.sortProperty = property;
@@ -220,6 +237,7 @@ export default class Sorter<Entity extends Object> {
       },
     );
     this.comparator = comparator;
+    this.identiticalResolver = identiticalResolver;
     this.array.sort(this._arraySortProperty.bind(this));
     if (reverse) {
       this.array.reverse();
@@ -231,6 +249,7 @@ export default class Sorter<Entity extends Object> {
    * Sort an array of entities by a specified property's value.
    *
    * @param property The name of the property to sort entities by.
+   * @param identiticalResolver A function to resolve order of identical entities.
    */
   public sort(
     property: string,
@@ -239,7 +258,8 @@ export default class Sorter<Entity extends Object> {
       reverse = false,
       collatorOptions = undefined,
       comparator = undefined,
-    }: SortOptions = {},
+      identiticalResolver = (a, b) => 0,
+    }: SortOptions<Entity> = {},
   ): Entity[] {
     // Sort by the requested property.
     this.sortProperty = property;
@@ -251,6 +271,7 @@ export default class Sorter<Entity extends Object> {
       },
     );
     this.comparator = comparator;
+    this.identiticalResolver = identiticalResolver;
     this.array.sort(this._arraySortProperty.bind(this));
     if (reverse) {
       this.array.reverse();
