@@ -30,6 +30,9 @@
     "url": "https://github.com/sciactive/nymphjs/issues"
   },
   "license": "Apache-2.0",
+  "dependencies": {
+    "@nymphjs/client": "^1.0.0-beta.97"
+  },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.8",
     "@types/jest": "^29.5.14",
