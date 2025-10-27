@@ -2806,6 +2806,20 @@ export default class User extends AbleObject<UserData> {
     let success = false;
 
     try {
+      if (!(await this.$refresh())) {
+        throw new BadDataError('User could not be refreshed.');
+      }
+
+      if (this.$data.group != null) {
+        if (this.$data.group.$asleep()) {
+          await this.$data.group.$wake();
+        } else {
+          if (!(await this.$data.group.$refresh())) {
+            throw new BadDataError('Group could not be refreshed.');
+          }
+        }
+      }
+
       for (let callback of (this.constructor as typeof User)
         .beforeDeleteCallbacks) {
         if (callback) {
