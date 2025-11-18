@@ -8,4 +8,5 @@ export default {
   database: 'nymph',
   customPoolConfig: null,
   prefix: 'nymph_',
+  ftsConfig: 'english',
 } as PostgreSQLDriverConfig;

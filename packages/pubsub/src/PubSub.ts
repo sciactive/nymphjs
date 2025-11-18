@@ -1095,13 +1095,13 @@ export default class PubSub {
           if (
             EntityClass.ETYPE === DataEntityClass.ETYPE &&
             (qrefQueries.length ||
-              this.nymph.driver.checkData(
+              (await this.nymph.driver.checkData(
                 entityData,
                 entitySData,
                 selectors,
                 data.guid,
                 data.entity?.tags ?? [],
-              ))
+              )))
           ) {
             // It either matches the query, or there are qref queries.
             for (let curClient of curClients.keys()) {
@@ -1123,13 +1123,13 @@ export default class PubSub {
                   selectors,
                 );
                 if (
-                  !this.nymph.driver.checkData(
+                  !(await this.nymph.driver.checkData(
                     entityData,
                     entitySData,
                     translatedSelectors,
                     data.guid,
                     data.entity?.tags ?? [],
-                  )
+                  ))
                 ) {
                   // The query doesn't match when the qref queries are filled.
                   continue;

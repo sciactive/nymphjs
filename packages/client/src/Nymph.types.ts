@@ -124,6 +124,9 @@ type PrimitiveSelector = {
   contain?: [string, any];
   '!contain'?: PrimitiveSelector['contain'];
 
+  search?: [string, string];
+  '!search'?: PrimitiveSelector['search'];
+
   match?: [string, string];
   '!match'?: PrimitiveSelector['match'];
 
@@ -178,6 +181,9 @@ export type Selector = {
 
   contain?: Clause<OrWithTime<PrimitiveSelector['contain']>>;
   '!contain'?: Clause<OrWithTime<PrimitiveSelector['contain']>>;
+
+  search?: Clause<PrimitiveSelector['search']>;
+  '!search'?: Clause<PrimitiveSelector['search']>;
 
   match?: Clause<PrimitiveSelector['match']>;
   '!match'?: Clause<PrimitiveSelector['match']>;

@@ -7,6 +7,7 @@ export type TestModelData = {
   test?: string;
   array?: any[];
   match?: string;
+  search?: string;
   number?: number;
   numberString?: string;
   timestamp?: Number;

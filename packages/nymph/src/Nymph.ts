@@ -742,6 +742,11 @@ export default class Nymph {
    * - contain - An array with a name, then value. True if the named property
    *   contains the value (its JSON string is found within the property's JSON
    *   string).
+   * - search - An array with a name, then search query. True if the
+   *   named property contains the query. Uses DB specific lexeme processing.
+   *   Use quotes to find sequential terms. Use "or" as the or operator. Use "-"
+   *   before a term as the negation operator. Stop words and punctuation are
+   *   stripped. Case insensitive.
    * - match - An array with a name, then regular expression. True if the
    *   named property matches. Uses POSIX RegExp. Case sensitive. Must *not* be
    *   surrounded by any delimiters.
