@@ -1053,6 +1053,9 @@ export default class MySQLDriver extends NymphDriver {
                 params[value] = svalue;
               }
               break;
+            case 'search':
+            case '!search':
+              throw new Error('Not implemented.');
             case 'match':
             case '!match':
               if (curValue[0] === 'cdate') {

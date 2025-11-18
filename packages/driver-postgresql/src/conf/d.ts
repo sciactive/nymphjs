@@ -34,10 +34,4 @@ export interface PostgreSQLDriverConfig {
    * The Postgres table name prefix.
    */
   prefix: string;
-  /**
-   * The full text search configuration to use.
-   *
-   * See: https://www.postgresql.org/docs/current/textsearch-tables.html
-   */
-  ftsConfig: string;
 }

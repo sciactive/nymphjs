@@ -874,7 +874,16 @@ export function EntitiesTest(
         type: '&',
         tag: 'test',
         search: ['search', '"excited domestic insurrections"'],
-      }, // quoted substring
+      }, // double quoted substring
+    );
+    expect(testEntity.$inArray(resultEntity)).toEqual(true);
+    resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      {
+        type: '&',
+        tag: 'test',
+        search: ['search', "'exciting domestic insurrected'"],
+      }, // single quoted substring
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
     resultEntity = await nymph.getEntities(

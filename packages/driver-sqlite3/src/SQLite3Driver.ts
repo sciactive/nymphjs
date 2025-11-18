@@ -355,52 +355,6 @@ export default class SQLite3Driver extends NymphDriver {
             `${this.prefix}data_${etype}`,
           )} ("guid") WHERE "name"=\'group\';`,
         );
-        // Full text search is done through a virtual table.
-        this.queryRun(
-          `CREATE VIRTUAL TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_fts`,
-          )} USING fts5("guid" UNINDEXED, "name" UNINDEXED, "string");`,
-        );
-        this.queryRun(
-          `CREATE TRIGGER ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_trigger_insert`,
-          )} AFTER INSERT ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} BEGIN
-            INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}_fts`,
-            )}("guid", "name", "string") VALUES (new."guid", new."name", new."string");
-          END;`,
-        );
-        this.queryRun(
-          `CREATE TRIGGER ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_trigger_delete`,
-          )} AFTER DELETE ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} BEGIN
-            INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}_fts`,
-            )}(${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}_fts`,
-            )}, "guid", "name", "string") VALUES ('delete', old."guid", old."name", old."string");
-          END;`,
-        );
-        this.queryRun(
-          `CREATE TRIGGER ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_trigger_update`,
-          )} AFTER UPDATE ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} BEGIN
-            INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}_fts`,
-            )}(${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}_fts`,
-            )}, "guid", "name", "string") VALUES ('delete', old."guid", old."name", old."string");
-            INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}data_${etype}_fts`,
-            )}("guid", "name", "string") VALUES (new."guid", new."name", new."string");
-          END;`,
-        );
         // Create the references table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
@@ -1113,6 +1067,9 @@ export default class SQLite3Driver extends NymphDriver {
                 params[value] = svalue;
               }
               break;
+            case 'search':
+            case '!search':
+              throw new Error('Not implemented.');
             case 'match':
             case '!match':
               if (curValue[0] === 'cdate') {

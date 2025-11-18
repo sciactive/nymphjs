@@ -497,22 +497,6 @@ export default class PostgreSQLDriver extends NymphDriver {
       );
       await this.queryRun(
         `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-          `${this.prefix}data_${etype}_id_string_fts`,
-        )};`,
-        { connection },
-      );
-      await this.queryRun(
-        `CREATE INDEX ${PostgreSQLDriver.escape(
-          `${this.prefix}data_${etype}_id_string_fts`,
-        )} ON ${PostgreSQLDriver.escape(
-          `${this.prefix}data_${etype}`,
-        )} USING GIN (to_tsvector(${PostgreSQLDriver.escapeValue(
-          this.config.ftsConfig,
-        )}, "string"));`,
-        { connection },
-      );
-      await this.queryRun(
-        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
           `${this.prefix}data_${etype}_id_json`,
         )};`,
         { connection },
@@ -1021,23 +1005,6 @@ export default class PostgreSQLDriver extends NymphDriver {
       `${query} -- ${JSON.stringify(params)}`,
       etypes,
     );
-  }
-
-  public async searchMatch(query: string, subject: string) {
-    const result = await this.queryGet(
-      'SELECT to_tsvector(' +
-        PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-        ', @subject) @@ websearch_to_tsquery(' +
-        PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-        ', @query) as "matches";',
-      {
-        params: {
-          subject: subject,
-          query: query,
-        },
-      },
-    );
-    return result?.matches == null ? false : result.matches == 1;
   }
 
   public async commit(name: string) {
@@ -1568,67 +1535,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               break;
             case 'search':
             case '!search':
-              if (curValue[0] === 'cdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const cdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(to_tsvector(' +
-                  PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-                  ', ' +
-                  ieTable +
-                  '."cdate") @@ websearch_to_tsquery(' +
-                  PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-                  ', @' +
-                  cdate +
-                  '))';
-                params[cdate] = curValue[1];
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(to_tsvector(' +
-                  PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-                  ', ' +
-                  ieTable +
-                  '."mdate") @@ websearch_to_tsquery(' +
-                  PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-                  ', @' +
-                  mdate +
-                  '))';
-                params[mdate] = curValue[1];
-                break;
-              } else {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const name = `param${++count.i}`;
-                const value = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'EXISTS (SELECT "guid" FROM ' +
-                  PostgreSQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE "guid"=' +
-                  ieTable +
-                  '."guid" AND "name"=@' +
-                  name +
-                  ' AND to_tsvector(' +
-                  PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-                  ', "string") @@ websearch_to_tsquery(' +
-                  PostgreSQLDriver.escapeValue(this.config.ftsConfig) +
-                  ', @' +
-                  value +
-                  '))';
-                params[name] = curValue[0];
-                params[value] = PostgreSQLDriver.escapeNulls(curValue[1]);
-              }
-              break;
+              throw new Error('Not implemented.');
             case 'match':
             case '!match':
               if (curValue[0] === 'cdate') {

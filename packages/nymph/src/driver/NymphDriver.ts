@@ -148,8 +148,6 @@ export default abstract class NymphDriver {
     this.nymph = nymph;
   }
 
-  abstract searchMatch(query: string, subject: string): Promise<boolean>;
-
   protected posixRegexMatch(
     pattern: string,
     subject: string,
@@ -328,7 +326,7 @@ export default abstract class NymphDriver {
     return await this.importDataIterator(lines, transaction);
   }
 
-  public async checkData(
+  public checkData(
     data: EntityData,
     sdata: SerializedEntityData,
     selectors: Selector[],
@@ -357,7 +355,7 @@ export default abstract class NymphDriver {
               Array.isArray(value) ? value : [value]
             ) as Selector[];
             pass = xor(
-              await this.checkData(data, sdata, tmpArr, guid, tags),
+              this.checkData(data, sdata, tmpArr, guid, tags),
               xor(typeIsNot, clauseNot),
             );
           } else {
@@ -503,15 +501,15 @@ export default abstract class NymphDriver {
                     break;
                   case 'search':
                   case '!search':
+                    const searchMatch = (_query: string, _text: string) => {
+                      throw new Error('Not implemented.');
+                    };
                     const testSearchValue = (
                       curValue as [string, string]
                     )[1] as string;
                     pass = xor(
                       propName in data &&
-                        (await this.searchMatch(
-                          testSearchValue,
-                          data[propName],
-                        )),
+                        searchMatch(testSearchValue, data[propName]),
                       xor(typeIsNot, clauseNot),
                     );
                     break;
