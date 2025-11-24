@@ -35,7 +35,7 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.98",
     "@nymphjs/nymph": "^1.0.0-beta.98",
-    "@sciactive/tokenizer": "^3.0.0",
+    "@sciactive/tokenizer": "^3.0.1",
     "pg": "^8.13.1",
     "pg-cursor": "^2.12.1",
     "pg-format": "^1.0.4"

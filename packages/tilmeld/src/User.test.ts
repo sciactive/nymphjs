@@ -18,7 +18,7 @@ const tilmeld = new Tilmeld({
   cancelChangeRedirect: 'http://localhost:8080',
   jwtSecret: 'shhhhh',
 });
-const _nymph = new Nymph(
+const nymph = new Nymph(
   {},
   new SQLite3Driver({
     filename: ':memory:',
@@ -62,7 +62,10 @@ describe('User', () => {
   });
 
   it("doesn't allow duplicate usernames", async () => {
-    const newUserA = await User.factory();
+    const transaction = 'duplicate-usernames';
+    const tnymph = await nymph.startTransaction(transaction);
+    const TUser = tnymph.getEntityClass(User.class) as typeof User;
+    const newUserA = await TUser.factory();
 
     newUserA.username = 'new-user';
     newUserA.email = 'newusera@localhost';
@@ -71,7 +74,7 @@ describe('User', () => {
     newUserA.name = 'New User';
     newUserA.$password('password');
 
-    const newUserB = await User.factory();
+    const newUserB = await TUser.factory();
 
     newUserB.username = 'new-user';
     newUserB.email = 'newuserb@localhost';
@@ -91,16 +94,14 @@ describe('User', () => {
     }
 
     await Promise.allSettled(promises);
-
-    for (const user of [newUserA, newUserB]) {
-      if (user.guid != null) {
-        expect(await user.$deleteSkipAC()).toEqual(true);
-      }
-    }
+    await tnymph.rollback(transaction);
   });
 
   it("doesn't allow duplicate emails", async () => {
-    const newUserA = await User.factory();
+    const transaction = 'duplicate-usernames';
+    const tnymph = await nymph.startTransaction(transaction);
+    const TUser = tnymph.getEntityClass(User.class) as typeof User;
+    const newUserA = await TUser.factory();
 
     newUserA.username = 'new-user-a';
     newUserA.email = 'newuser@localhost';
@@ -109,7 +110,7 @@ describe('User', () => {
     newUserA.name = 'New User';
     newUserA.$password('password');
 
-    const newUserB = await User.factory();
+    const newUserB = await TUser.factory();
 
     newUserB.username = 'new-user-b';
     newUserB.email = 'newuser@localhost';
@@ -129,12 +130,7 @@ describe('User', () => {
     }
 
     await Promise.allSettled(promises);
-
-    for (const user of [newUserA, newUserB]) {
-      if (user.guid != null) {
-        expect(await user.$deleteSkipAC()).toEqual(true);
-      }
-    }
+    await tnymph.rollback(transaction);
   });
 
   it('allows a domain user', async () => {
