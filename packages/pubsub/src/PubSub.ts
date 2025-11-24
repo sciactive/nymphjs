@@ -1096,6 +1096,7 @@ export default class PubSub {
             EntityClass.ETYPE === DataEntityClass.ETYPE &&
             (qrefQueries.length ||
               this.nymph.driver.checkData(
+                EntityClass.ETYPE,
                 entityData,
                 entitySData,
                 selectors,
@@ -1124,6 +1125,7 @@ export default class PubSub {
                 );
                 if (
                   !this.nymph.driver.checkData(
+                    EntityClass.ETYPE,
                     entityData,
                     entitySData,
                     translatedSelectors,

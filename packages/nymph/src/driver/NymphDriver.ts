@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { difference } from 'lodash-es';
 import ReadLines from 'n-readlines';
 import strtotime from 'locutus/php/datetime/strtotime.js';
+import { Tokenizer } from '@sciactive/tokenizer';
 
 import type Nymph from '../Nymph.js';
 import type { Selector, Options, FormattedSelector } from '../Nymph.types.js';
@@ -35,6 +36,8 @@ export default abstract class NymphDriver {
       );
     },
   });
+
+  protected tokenizer = new Tokenizer();
 
   /**
    * A cache to make entity retrieval faster.
@@ -327,6 +330,7 @@ export default abstract class NymphDriver {
   }
 
   public checkData(
+    etype: string,
     data: EntityData,
     sdata: SerializedEntityData,
     selectors: Selector[],
@@ -334,6 +338,7 @@ export default abstract class NymphDriver {
     tags: string[] | null = null,
   ) {
     try {
+      const EntityClass = this.nymph.getEntityClassByEtype(etype);
       const formattedSelectors = this.formatSelectors(selectors).selectors;
 
       for (const curSelector of formattedSelectors) {
@@ -355,7 +360,7 @@ export default abstract class NymphDriver {
               Array.isArray(value) ? value : [value]
             ) as Selector[];
             pass = xor(
-              this.checkData(data, sdata, tmpArr, guid, tags),
+              this.checkData(etype, data, sdata, tmpArr, guid, tags),
               xor(typeIsNot, clauseNot),
             );
           } else {
@@ -501,15 +506,20 @@ export default abstract class NymphDriver {
                     break;
                   case 'search':
                   case '!search':
-                    const searchMatch = (_query: string, _text: string) => {
-                      throw new Error('Not implemented.');
-                    };
                     const testSearchValue = (
                       curValue as [string, string]
                     )[1] as string;
+                    const tokenString =
+                      propName in data
+                        ? (EntityClass.getFTSText(propName, data[propName]) ??
+                          '')
+                        : '';
                     pass = xor(
                       propName in data &&
-                        searchMatch(testSearchValue, data[propName]),
+                        this.tokenizer.searchString(
+                          testSearchValue,
+                          tokenString,
+                        ),
                       xor(typeIsNot, clauseNot),
                     );
                     break;

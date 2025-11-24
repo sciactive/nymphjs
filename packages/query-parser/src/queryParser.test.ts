@@ -255,6 +255,83 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses a query with search', () => {
+    const query = 'limit:4 foobar prop(a search string)';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        search: [['prop', 'a search string']],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with search in a selector', () => {
+    const query =
+      'limit:4 foobar (| prop(a search string) prop2("another search string"))';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        selector: [
+          {
+            type: '|',
+            search: [
+              ['prop', 'a search string'],
+              ['prop2', '"another search string"'],
+            ],
+          },
+        ],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
   it('parses a query with lt and tag', () => {
     const query = 'limit:4 foobar mdate<"2 weeks ago" <tag>';
     const [options, ...selectors] = queryParser({

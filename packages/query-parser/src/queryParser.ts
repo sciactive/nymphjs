@@ -90,7 +90,8 @@ function selectorsParser({
     } else if (inQuote) {
       continue;
     } else if (curQuery[i] === '(') {
-      if (currentStart == null) {
+      const searchClause = i !== 0 && !curQuery[i - 1].match(/\s/);
+      if (currentStart == null && !searchClause) {
         currentStart = i;
       } else {
         nesting++;
@@ -231,6 +232,33 @@ function selectorParser({
   bareHandler: BareQueryHandler;
 }): string {
   let curQuery = query;
+
+  // eg. prop(some search string) or prop!(some search string)
+  const searchRegex = /(?: |^)([^\s=\[\]<>{}]+?)!?\([^\)]+\)(?= |$)/g;
+  const searchMatch = curQuery.match(searchRegex);
+  if (searchMatch) {
+    selector.search = [];
+    selector['!search'] = [];
+    for (let match of searchMatch) {
+      try {
+        let [name, value] = splitn(match.trim().slice(0, -1), '(', 2);
+        if (name.endsWith('!')) {
+          selector['!search'].push([name.slice(0, -1), value]);
+        } else {
+          selector.search.push([name, value]);
+        }
+      } catch (e: any) {
+        continue;
+      }
+    }
+    if (!selector.search.length) {
+      delete selector.search;
+    }
+    if (!selector['!search'].length) {
+      delete selector['!search'];
+    }
+  }
+  curQuery = curQuery.replace(searchRegex, '');
 
   // eg. user<{User name="Hunter"}> or user!<{User name="Hunter"}>
   const qrefRegex = /(?: |^)([^\s=\[\]<>{}]+?)!?<\{(\w+) (.*?[^\\])\}>(?= |$)/g;

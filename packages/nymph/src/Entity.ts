@@ -560,6 +560,27 @@ export default class Entity<T extends EntityData = EntityData>
     return await entity.$getUniques();
   }
 
+  /**
+   * Get a string for full text search for one of an entity's properties.
+   *
+   * The result will be tokenized and stored as the full text search index for
+   * use with "search" clauses.
+   *
+   * Return null to not include any tokens in the full text search storage.
+   *
+   * You shouldn't use any other entity data to transform the text, as it won't
+   * always be available. This function is meant for things like stripping HTML
+   * tags.
+   *
+   * @returns By default, returns the value if it is a string.
+   */
+  public static getFTSText(_name: string, value: any) {
+    if (typeof value === 'string') {
+      return value;
+    }
+    return null;
+  }
+
   public toJSON() {
     if (this.$isASleepingReference) {
       return this.$sleepingReference;

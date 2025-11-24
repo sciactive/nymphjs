@@ -35,6 +35,7 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.98",
     "@nymphjs/nymph": "^1.0.0-beta.98",
+    "@sciactive/tokenizer": "^3.0.0",
     "mysql2": "^3.11.5",
     "sqlstring": "^2.3.3"
   },

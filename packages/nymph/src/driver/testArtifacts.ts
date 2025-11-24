@@ -822,7 +822,7 @@ export function EntitiesTest(
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
   });
 
-  it('search', async () => {
+  it('basic search', async () => {
     await createTestEntities();
 
     // Retrieving entity by full text search...
@@ -859,7 +859,13 @@ export function EntitiesTest(
       }, // a string with a number
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await nymph.getEntities(
+  });
+
+  it('or search', async () => {
+    await createTestEntities();
+
+    // Retrieving entity by full text search...
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -868,7 +874,13 @@ export function EntitiesTest(
       }, // a string with an or
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await nymph.getEntities(
+  });
+
+  it('series search', async () => {
+    await createTestEntities();
+
+    // Retrieving entity by full text search...
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -886,7 +898,13 @@ export function EntitiesTest(
       }, // single quoted substring
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await nymph.getEntities(
+  });
+
+  it('negated search', async () => {
+    await createTestEntities();
+
+    // Retrieving entity by full text search...
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -895,7 +913,13 @@ export function EntitiesTest(
       }, // negated term
     );
     expect(testEntity.$inArray(resultEntity)).toEqual(true);
-    resultEntity = await nymph.getEntities(
+  });
+
+  it('combined search', async () => {
+    await createTestEntities();
+
+    // Retrieving entity by full text search...
+    let resultEntity = await nymph.getEntities(
       { class: TestModel },
       {
         type: '&',
@@ -953,7 +977,7 @@ export function EntitiesTest(
         tag: 'test',
         search: [
           'search',
-          'declaration of the thirteen united states of america',
+          'DECLARATION OF THE THIRTEEN UNITED STATES OF AMERICA',
         ],
       }, // a substring
     );

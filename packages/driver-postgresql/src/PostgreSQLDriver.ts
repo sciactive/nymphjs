@@ -2,6 +2,12 @@ import pg from 'pg';
 import type { Pool, PoolClient, PoolConfig, QueryResult } from 'pg';
 import format from 'pg-format';
 import Cursor from 'pg-cursor';
+import type {
+  SearchTerm,
+  SearchOrTerm,
+  SearchNotTerm,
+  SearchSeriesTerm,
+} from '@sciactive/tokenizer';
 import {
   NymphDriver,
   type EntityConstructor,
@@ -739,6 +745,50 @@ export default class PostgreSQLDriver extends NymphDriver {
         )} SET ( autovacuum_vacuum_scale_factor = 0.05, autovacuum_analyze_scale_factor = 0.05 );`,
         { connection },
       );
+      // Create the tokens table.
+      await this.queryRun(
+        `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} (
+          "guid" BYTEA NOT NULL,
+          "name" TEXT NOT NULL,
+          "token" INTEGER NOT NULL,
+          "position" INTEGER NOT NULL,
+          "stem" BOOLEAN NOT NULL,
+          PRIMARY KEY ("guid", "name", "token", "position"),
+          FOREIGN KEY ("guid")
+            REFERENCES ${PostgreSQLDriver.escape(
+              `${this.prefix}entities_${etype}`,
+            )} ("guid") MATCH SIMPLE ON UPDATE NO ACTION ON DELETE CASCADE
+        ) WITH ( OIDS=FALSE );`,
+        { connection },
+      );
+      await this.queryRun(
+        `ALTER TABLE ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} OWNER TO ${PostgreSQLDriver.escape(this.config.user)};`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}_id_name_token`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}_id_name_token`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} USING btree ("name", "token");`,
+        { connection },
+      );
+      await this.queryRun(
+        `ALTER TABLE ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} SET ( autovacuum_vacuum_scale_factor = 0.05, autovacuum_analyze_scale_factor = 0.05 );`,
+        { connection },
+      );
       // Create the unique strings table.
       await this.queryRun(
         `CREATE TABLE IF NOT EXISTS ${PostgreSQLDriver.escape(
@@ -1067,6 +1117,17 @@ export default class PostgreSQLDriver extends NymphDriver {
       await this.queryRun(
         `DELETE FROM ${PostgreSQLDriver.escape(
           `${this.prefix}references_${etype}`,
+        )} WHERE "guid"=decode(@guid, 'hex');`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+          },
+        },
+      );
+      await this.queryRun(
+        `DELETE FROM ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
         )} WHERE "guid"=decode(@guid, 'hex');`,
         {
           etypes: [etype],
@@ -1535,7 +1596,146 @@ export default class PostgreSQLDriver extends NymphDriver {
               break;
             case 'search':
             case '!search':
-              throw new Error('Not implemented.');
+              if (curValue[0] === 'cdate' || curValue[0] === 'mdate') {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') + '(FALSE)';
+                break;
+              } else {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+
+                const name = `param${++count.i}`;
+
+                const queryPartToken = (term: SearchTerm) => {
+                  const value = `param${++count.i}`;
+                  params[value] = term.token;
+                  return (
+                    'EXISTS (SELECT "guid" FROM ' +
+                    PostgreSQLDriver.escape(this.prefix + 'tokens_' + etype) +
+                    ' WHERE "guid"=' +
+                    ieTable +
+                    '."guid" AND "name"=@' +
+                    name +
+                    ' AND "token"=@' +
+                    value +
+                    (term.nostemmed ? ' AND "stem"=FALSE' : '') +
+                    ')'
+                  );
+                };
+
+                const queryPartSeries = (series: SearchSeriesTerm) => {
+                  const tokenTableSuffix = makeTableSuffix();
+                  const tokenParts = series.tokens.map((token, i) => {
+                    const value = `param${++count.i}`;
+                    params[value] = token.token;
+                    return {
+                      fromClause:
+                        i === 0
+                          ? 'FROM ' +
+                            PostgreSQLDriver.escape(
+                              this.prefix + 'tokens_' + etype,
+                            ) +
+                            ' t' +
+                            tokenTableSuffix +
+                            '0'
+                          : 'JOIN ' +
+                            PostgreSQLDriver.escape(
+                              this.prefix + 'tokens_' + etype,
+                            ) +
+                            ' t' +
+                            tokenTableSuffix +
+                            i +
+                            ' ON t' +
+                            tokenTableSuffix +
+                            i +
+                            '."guid" = t' +
+                            tokenTableSuffix +
+                            '0."guid" AND t' +
+                            tokenTableSuffix +
+                            i +
+                            '."name" = t' +
+                            tokenTableSuffix +
+                            '0."name" AND t' +
+                            tokenTableSuffix +
+                            i +
+                            '."position" = t' +
+                            tokenTableSuffix +
+                            '0."position" + ' +
+                            i,
+                      whereClause:
+                        't' +
+                        tokenTableSuffix +
+                        i +
+                        '."token"=@' +
+                        value +
+                        (token.nostemmed
+                          ? ' AND t' + tokenTableSuffix + i + '."stem"=FALSE'
+                          : ''),
+                    };
+                  });
+                  return (
+                    'EXISTS (SELECT t' +
+                    tokenTableSuffix +
+                    '0."guid" ' +
+                    tokenParts.map((part) => part.fromClause).join(' ') +
+                    ' WHERE t' +
+                    tokenTableSuffix +
+                    '0."guid"=' +
+                    ieTable +
+                    '."guid" AND t' +
+                    tokenTableSuffix +
+                    '0."name"=@' +
+                    name +
+                    ' AND ' +
+                    tokenParts.map((part) => part.whereClause).join(' AND ') +
+                    ')'
+                  );
+                };
+
+                const queryPartTerm = (
+                  term:
+                    | SearchTerm
+                    | SearchOrTerm
+                    | SearchNotTerm
+                    | SearchSeriesTerm,
+                ): string => {
+                  if (term.type === 'series') {
+                    return queryPartSeries(term);
+                  } else if (term.type === 'not') {
+                    return 'NOT ' + queryPartTerm(term.operand);
+                  } else if (term.type === 'or') {
+                    let queryParts: string[] = [];
+                    for (let operand of term.operands) {
+                      queryParts.push(queryPartTerm(operand));
+                    }
+                    return '(' + queryParts.join(' OR ') + ')';
+                  }
+                  return queryPartToken(term);
+                };
+
+                const parsedFTSQuery = this.tokenizer.parseSearchQuery(
+                  curValue[1],
+                );
+
+                // Run through the query and add terms.
+                let termStrings: string[] = [];
+                for (let term of parsedFTSQuery) {
+                  termStrings.push(queryPartTerm(term));
+                }
+
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  '(' +
+                  termStrings.join(' AND ') +
+                  ')';
+
+                params[name] = curValue[0];
+              }
+              break;
             case 'match':
             case '!match':
               if (curValue[0] === 'cdate') {
@@ -2433,6 +2633,19 @@ export default class PostgreSQLDriver extends NymphDriver {
       promises.push(
         this.queryRun(
           `DELETE FROM ${PostgreSQLDriver.escape(
+            `${this.prefix}tokens_${etype}`,
+          )} WHERE "guid"=decode(@guid, 'hex');`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
+          },
+        ),
+      );
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${PostgreSQLDriver.escape(
             `${this.prefix}uniques_${etype}`,
           )} WHERE "guid"=decode(@guid, 'hex');`,
           {
@@ -2443,8 +2656,10 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         ),
       );
+
       await Promise.all(promises);
       promises = [];
+
       await this.queryRun(
         `INSERT INTO ${PostgreSQLDriver.escape(
           `${this.prefix}entities_${etype}`,
@@ -2459,6 +2674,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         },
       );
+
       for (const name in sdata) {
         const value = sdata[name];
         const uvalue = JSON.parse(value);
@@ -2475,6 +2691,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           storageValue === 'J'
             ? PostgreSQLDriver.escapeNullSequences(value)
             : null;
+
         promises.push(
           this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
@@ -2497,6 +2714,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             },
           ),
         );
+
         const references = this.findReferences(value);
         for (const reference of references) {
           promises.push(
@@ -2516,9 +2734,66 @@ export default class PostgreSQLDriver extends NymphDriver {
           );
         }
       }
-      const uniques = await this.nymph
-        .getEntityClassByEtype(etype)
-        .getUniques({ guid, cdate, mdate, tags, data: {}, sdata });
+
+      const EntityClass = this.nymph.getEntityClassByEtype(etype);
+
+      for (let name in sdata) {
+        let tokenString: string | null = null;
+        try {
+          tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
+        } catch (e: any) {
+          // Ignore error.
+        }
+
+        if (tokenString != null) {
+          const tokens = this.tokenizer.tokenize(tokenString);
+          while (tokens.length) {
+            const currentTokens = tokens.splice(0, 100);
+            const params: { [k: string]: any } = {
+              guid,
+              name,
+            };
+            const values: string[] = [];
+
+            for (let i = 0; i < currentTokens.length; i++) {
+              const token = currentTokens[i];
+              params['token' + i] = token.token;
+              params['position' + i] = token.position;
+              params['stem' + i] = token.stem;
+              values.push(
+                "(decode(@guid, 'hex'), @name, @token" +
+                  i +
+                  ', @position' +
+                  i +
+                  ', @stem' +
+                  i +
+                  ')',
+              );
+            }
+
+            promises.push(
+              this.queryRun(
+                `INSERT INTO ${PostgreSQLDriver.escape(
+                  `${this.prefix}tokens_${etype}`,
+                )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
+                {
+                  etypes: [etype],
+                  params,
+                },
+              ),
+            );
+          }
+        }
+      }
+
+      const uniques = await EntityClass.getUniques({
+        guid,
+        cdate,
+        mdate,
+        tags,
+        data: {},
+        sdata,
+      });
       for (const unique of uniques) {
         promises.push(
           this.queryRun(
@@ -2543,6 +2818,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           }),
         );
       }
+
       await Promise.all(promises);
     } catch (e: any) {
       this.nymph.config.debugError('postgresql', `Import entity error: "${e}"`);
@@ -2686,6 +2962,8 @@ export default class PostgreSQLDriver extends NymphDriver {
       uniques: string[],
       etype: string,
     ) => {
+      const EntityClass = this.nymph.getEntityClassByEtype(etype);
+
       const runInsertQuery = async (
         name: string,
         value: any,
@@ -2704,7 +2982,9 @@ export default class PostgreSQLDriver extends NymphDriver {
           storageValue === 'J'
             ? PostgreSQLDriver.escapeNullSequences(svalue)
             : null;
+
         const promises = [];
+
         promises.push(
           this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
@@ -2727,6 +3007,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             },
           ),
         );
+
         const references = this.findReferences(svalue);
         for (const reference of references) {
           promises.push(
@@ -2745,8 +3026,57 @@ export default class PostgreSQLDriver extends NymphDriver {
             ),
           );
         }
+
+        let tokenString: string | null = null;
+        try {
+          tokenString = EntityClass.getFTSText(name, value);
+        } catch (e: any) {
+          // Ignore error.
+        }
+
+        if (tokenString != null) {
+          const tokens = this.tokenizer.tokenize(tokenString);
+          while (tokens.length) {
+            const currentTokens = tokens.splice(0, 100);
+            const params: { [k: string]: any } = {
+              guid,
+              name,
+            };
+            const values: string[] = [];
+
+            for (let i = 0; i < currentTokens.length; i++) {
+              const token = currentTokens[i];
+              params['token' + i] = token.token;
+              params['position' + i] = token.position;
+              params['stem' + i] = token.stem;
+              values.push(
+                "(decode(@guid, 'hex'), @name, @token" +
+                  i +
+                  ', @position' +
+                  i +
+                  ', @stem' +
+                  i +
+                  ')',
+              );
+            }
+
+            promises.push(
+              this.queryRun(
+                `INSERT INTO ${PostgreSQLDriver.escape(
+                  `${this.prefix}tokens_${etype}`,
+                )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
+                {
+                  etypes: [etype],
+                  params,
+                },
+              ),
+            );
+          }
+        }
+
         await Promise.all(promises);
       };
+
       for (const unique of uniques) {
         try {
           await this.queryRun(
@@ -2855,6 +3185,19 @@ export default class PostgreSQLDriver extends NymphDriver {
           promises.push(
             this.queryRun(
               `SELECT 1 FROM ${PostgreSQLDriver.escape(
+                `${this.prefix}tokens_${etype}`,
+              )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              },
+            ),
+          );
+          promises.push(
+            this.queryRun(
+              `SELECT 1 FROM ${PostgreSQLDriver.escape(
                 `${this.prefix}uniques_${etype}`,
               )} WHERE "guid"=decode(@guid, 'hex') FOR UPDATE;`,
               {
@@ -2900,6 +3243,19 @@ export default class PostgreSQLDriver extends NymphDriver {
               this.queryRun(
                 `DELETE FROM ${PostgreSQLDriver.escape(
                   `${this.prefix}references_${etype}`,
+                )} WHERE "guid"=decode(@guid, 'hex');`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                  },
+                },
+              ),
+            );
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${PostgreSQLDriver.escape(
+                  `${this.prefix}tokens_${etype}`,
                 )} WHERE "guid"=decode(@guid, 'hex');`,
                 {
                   etypes: [etype],

@@ -1,6 +1,12 @@
 import { Pool, PoolOptions, PoolConnection } from 'mysql2';
 import mysql from 'mysql2';
 import SqlString from 'sqlstring';
+import type {
+  SearchTerm,
+  SearchOrTerm,
+  SearchNotTerm,
+  SearchSeriesTerm,
+} from '@sciactive/tokenizer';
 import {
   NymphDriver,
   type EntityConstructor,
@@ -188,12 +194,16 @@ export default class MySQLDriver extends NymphDriver {
     await this.queryRun('SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";');
     let foreignKeyDataTableGuid = '';
     let foreignKeyReferencesTableGuid = '';
+    let foreignKeyTokensTableGuid = '';
     let foreignKeyUniquesTableGuid = '';
     if (this.config.foreignKeys) {
       foreignKeyDataTableGuid = ` REFERENCES ${MySQLDriver.escape(
         `${this.prefix}entities_${etype}`,
       )}(\`guid\`) ON DELETE CASCADE`;
       foreignKeyReferencesTableGuid = ` REFERENCES ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )}(\`guid\`) ON DELETE CASCADE`;
+      foreignKeyTokensTableGuid = ` REFERENCES ${MySQLDriver.escape(
         `${this.prefix}entities_${etype}`,
       )}(\`guid\`) ON DELETE CASCADE`;
       foreignKeyUniquesTableGuid = ` REFERENCES ${MySQLDriver.escape(
@@ -267,6 +277,22 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_reference_guid_name\` USING BTREE (\`reference\`, \`guid\`, \`name\`(255)),
           INDEX \`id_guid_reference_nameuser\` USING HASH (((\`name\` = 'user')), \`guid\`, \`reference\`),
           INDEX \`id_guid_reference_namegroup\` USING HASH (((\`name\` = 'group')), \`guid\`, \`reference\`)
+        ) ENGINE ${this.config.engine}
+        CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
+      );
+      // Create the tokens table.
+      await this.queryRun(
+        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} (
+          \`guid\` BINARY(12) NOT NULL${foreignKeyTokensTableGuid},
+          \`name\` TEXT NOT NULL,
+          \`token\` INT NOT NULL,
+          \`position\` INT UNSIGNED NOT NULL,
+          \`stem\` BOOLEAN NOT NULL,
+          PRIMARY KEY (\`guid\`, \`name\`(255), \`token\`, \`position\`),
+          INDEX \`id_guid_name_token_position\` USING HASH (\`guid\`, \`name\`(255), \`token\`, \`position\`),
+          INDEX \`id_name_token\` USING btree (\`name\`(255), \`token\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
@@ -558,6 +584,17 @@ export default class MySQLDriver extends NymphDriver {
       await this.queryRun(
         `DELETE FROM ${MySQLDriver.escape(
           `${this.prefix}references_${etype}`,
+        )} WHERE \`guid\`=UNHEX(@guid);`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+          },
+        },
+      );
+      await this.queryRun(
+        `DELETE FROM ${MySQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
         )} WHERE \`guid\`=UNHEX(@guid);`,
         {
           etypes: [etype],
@@ -1055,7 +1092,146 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'search':
             case '!search':
-              throw new Error('Not implemented.');
+              if (curValue[0] === 'cdate' || curValue[0] === 'mdate') {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') + '(FALSE)';
+                break;
+              } else {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+
+                const name = `param${++count.i}`;
+
+                const queryPartToken = (term: SearchTerm) => {
+                  const value = `param${++count.i}`;
+                  params[value] = term.token;
+                  return (
+                    'EXISTS (SELECT `guid` FROM ' +
+                    MySQLDriver.escape(this.prefix + 'tokens_' + etype) +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
+                    name +
+                    ' AND `token`=@' +
+                    value +
+                    (term.nostemmed ? ' AND `stem`=FALSE' : '') +
+                    ')'
+                  );
+                };
+
+                const queryPartSeries = (series: SearchSeriesTerm) => {
+                  const tokenTableSuffix = makeTableSuffix();
+                  const tokenParts = series.tokens.map((token, i) => {
+                    const value = `param${++count.i}`;
+                    params[value] = token.token;
+                    return {
+                      fromClause:
+                        i === 0
+                          ? 'FROM ' +
+                            MySQLDriver.escape(
+                              this.prefix + 'tokens_' + etype,
+                            ) +
+                            ' t' +
+                            tokenTableSuffix +
+                            '0'
+                          : 'JOIN ' +
+                            MySQLDriver.escape(
+                              this.prefix + 'tokens_' + etype,
+                            ) +
+                            ' t' +
+                            tokenTableSuffix +
+                            i +
+                            ' ON t' +
+                            tokenTableSuffix +
+                            i +
+                            '.`guid` = t' +
+                            tokenTableSuffix +
+                            '0.`guid` AND t' +
+                            tokenTableSuffix +
+                            i +
+                            '.`name` = t' +
+                            tokenTableSuffix +
+                            '0.`name` AND t' +
+                            tokenTableSuffix +
+                            i +
+                            '.`position` = t' +
+                            tokenTableSuffix +
+                            '0.`position` + ' +
+                            i,
+                      whereClause:
+                        't' +
+                        tokenTableSuffix +
+                        i +
+                        '.`token`=@' +
+                        value +
+                        (token.nostemmed
+                          ? ' AND t' + tokenTableSuffix + i + '.`stem`=FALSE'
+                          : ''),
+                    };
+                  });
+                  return (
+                    'EXISTS (SELECT t' +
+                    tokenTableSuffix +
+                    '0.`guid` ' +
+                    tokenParts.map((part) => part.fromClause).join(' ') +
+                    ' WHERE t' +
+                    tokenTableSuffix +
+                    '0.`guid`=' +
+                    ieTable +
+                    '.`guid` AND t' +
+                    tokenTableSuffix +
+                    '0.`name`=@' +
+                    name +
+                    ' AND ' +
+                    tokenParts.map((part) => part.whereClause).join(' AND ') +
+                    ')'
+                  );
+                };
+
+                const queryPartTerm = (
+                  term:
+                    | SearchTerm
+                    | SearchOrTerm
+                    | SearchNotTerm
+                    | SearchSeriesTerm,
+                ): string => {
+                  if (term.type === 'series') {
+                    return queryPartSeries(term);
+                  } else if (term.type === 'not') {
+                    return 'NOT ' + queryPartTerm(term.operand);
+                  } else if (term.type === 'or') {
+                    let queryParts: string[] = [];
+                    for (let operand of term.operands) {
+                      queryParts.push(queryPartTerm(operand));
+                    }
+                    return '(' + queryParts.join(' OR ') + ')';
+                  }
+                  return queryPartToken(term);
+                };
+
+                const parsedFTSQuery = this.tokenizer.parseSearchQuery(
+                  curValue[1],
+                );
+
+                // Run through the query and add terms.
+                let termStrings: string[] = [];
+                for (let term of parsedFTSQuery) {
+                  termStrings.push(queryPartTerm(term));
+                }
+
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  '(' +
+                  termStrings.join(' AND ') +
+                  ')';
+
+                params[name] = curValue[0];
+              }
+              break;
             case 'match':
             case '!match':
               if (curValue[0] === 'cdate') {
@@ -1957,6 +2133,19 @@ export default class MySQLDriver extends NymphDriver {
       promises.push(
         this.queryRun(
           `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}tokens_${etype}`,
+          )} WHERE \`guid\`=UNHEX(@guid);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
+          },
+        ),
+      );
+      promises.push(
+        this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
             `${this.prefix}uniques_${etype}`,
           )} WHERE \`guid\`=UNHEX(@guid);`,
           {
@@ -1967,8 +2156,10 @@ export default class MySQLDriver extends NymphDriver {
           },
         ),
       );
+
       await Promise.all(promises);
       promises = [];
+
       await this.queryRun(
         `INSERT INTO ${MySQLDriver.escape(
           `${this.prefix}entities_${etype}`,
@@ -1983,6 +2174,7 @@ export default class MySQLDriver extends NymphDriver {
           },
         },
       );
+
       for (const name in sdata) {
         const value = sdata[name];
         const uvalue = JSON.parse(value);
@@ -1996,6 +2188,7 @@ export default class MySQLDriver extends NymphDriver {
               ? 'S'
               : 'J';
         const jsonValue = storageValue === 'J' ? value : null;
+
         promises.push(
           this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
@@ -2015,6 +2208,7 @@ export default class MySQLDriver extends NymphDriver {
             },
           ),
         );
+
         const references = this.findReferences(value);
         for (const reference of references) {
           promises.push(
@@ -2034,9 +2228,66 @@ export default class MySQLDriver extends NymphDriver {
           );
         }
       }
-      const uniques = await this.nymph
-        .getEntityClassByEtype(etype)
-        .getUniques({ guid, cdate, mdate, tags, data: {}, sdata });
+
+      const EntityClass = this.nymph.getEntityClassByEtype(etype);
+
+      for (let name in sdata) {
+        let tokenString: string | null = null;
+        try {
+          tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
+        } catch (e: any) {
+          // Ignore error.
+        }
+
+        if (tokenString != null) {
+          const tokens = this.tokenizer.tokenize(tokenString);
+          while (tokens.length) {
+            const currentTokens = tokens.splice(0, 100);
+            const params: { [k: string]: any } = {
+              guid,
+              name,
+            };
+            const values: string[] = [];
+
+            for (let i = 0; i < currentTokens.length; i++) {
+              const token = currentTokens[i];
+              params['token' + i] = token.token;
+              params['position' + i] = token.position;
+              params['stem' + i] = token.stem;
+              values.push(
+                '(UNHEX(@guid), @name, @token' +
+                  i +
+                  ', @position' +
+                  i +
+                  ', @stem' +
+                  i +
+                  ')',
+              );
+            }
+
+            promises.push(
+              this.queryRun(
+                `INSERT INTO ${MySQLDriver.escape(
+                  `${this.prefix}tokens_${etype}`,
+                )} (\`guid\`, \`name\`, \`token\`, \`position\`, \`stem\`) VALUES ${values.join(', ')};`,
+                {
+                  etypes: [etype],
+                  params,
+                },
+              ),
+            );
+          }
+        }
+      }
+
+      const uniques = await EntityClass.getUniques({
+        guid,
+        cdate,
+        mdate,
+        tags,
+        data: {},
+        sdata,
+      });
       for (const unique of uniques) {
         promises.push(
           this.queryRun(
@@ -2061,6 +2312,7 @@ export default class MySQLDriver extends NymphDriver {
           }),
         );
       }
+
       await Promise.all(promises);
     } catch (e: any) {
       this.nymph.config.debugError('mysql', `Import entity error: "${e}"`);
@@ -2197,6 +2449,8 @@ export default class MySQLDriver extends NymphDriver {
       uniques: string[],
       etype: string,
     ) => {
+      const EntityClass = this.nymph.getEntityClassByEtype(etype);
+
       const runInsertQuery = async (
         name: string,
         value: any,
@@ -2212,7 +2466,9 @@ export default class MySQLDriver extends NymphDriver {
               ? 'S'
               : 'J';
         const jsonValue = storageValue === 'J' ? svalue : null;
+
         const promises = [];
+
         promises.push(
           this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
@@ -2232,6 +2488,7 @@ export default class MySQLDriver extends NymphDriver {
             },
           ),
         );
+
         const references = this.findReferences(svalue);
         for (const reference of references) {
           promises.push(
@@ -2250,8 +2507,57 @@ export default class MySQLDriver extends NymphDriver {
             ),
           );
         }
+
+        let tokenString: string | null = null;
+        try {
+          tokenString = EntityClass.getFTSText(name, value);
+        } catch (e: any) {
+          // Ignore error.
+        }
+
+        if (tokenString != null) {
+          const tokens = this.tokenizer.tokenize(tokenString);
+          while (tokens.length) {
+            const currentTokens = tokens.splice(0, 100);
+            const params: { [k: string]: any } = {
+              guid,
+              name,
+            };
+            const values: string[] = [];
+
+            for (let i = 0; i < currentTokens.length; i++) {
+              const token = currentTokens[i];
+              params['token' + i] = token.token;
+              params['position' + i] = token.position;
+              params['stem' + i] = token.stem;
+              values.push(
+                '(UNHEX(@guid), @name, @token' +
+                  i +
+                  ', @position' +
+                  i +
+                  ', @stem' +
+                  i +
+                  ')',
+              );
+            }
+
+            promises.push(
+              this.queryRun(
+                `INSERT INTO ${MySQLDriver.escape(
+                  `${this.prefix}tokens_${etype}`,
+                )} (\`guid\`, \`name\`, \`token\`, \`position\`, \`stem\`) VALUES ${values.join(', ')};`,
+                {
+                  etypes: [etype],
+                  params,
+                },
+              ),
+            );
+          }
+        }
+
         await Promise.all(promises);
       };
+
       for (const unique of uniques) {
         try {
           await this.queryRun(
@@ -2361,6 +2667,19 @@ export default class MySQLDriver extends NymphDriver {
             promises.push(
               this.queryRun(
                 `SELECT 1 FROM ${MySQLDriver.escape(
+                  `${this.prefix}tokens_${etype}`,
+                )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                  },
+                },
+              ),
+            );
+            promises.push(
+              this.queryRun(
+                `SELECT 1 FROM ${MySQLDriver.escape(
                   `${this.prefix}uniques_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid) GROUP BY 1 FOR UPDATE;`,
                 {
@@ -2381,6 +2700,8 @@ export default class MySQLDriver extends NymphDriver {
                 `${this.prefix}data_${etype}`,
               )} WRITE, ${MySQLDriver.escape(
                 `${this.prefix}references_${etype}`,
+              )} WRITE, ${MySQLDriver.escape(
+                `${this.prefix}tokens_${etype}`,
               )} WRITE, ${MySQLDriver.escape(
                 `${this.prefix}uniques_${etype}`,
               )} WRITE;`,
@@ -2420,6 +2741,19 @@ export default class MySQLDriver extends NymphDriver {
               this.queryRun(
                 `DELETE FROM ${MySQLDriver.escape(
                   `${this.prefix}references_${etype}`,
+                )} WHERE \`guid\`=UNHEX(@guid);`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                  },
+                },
+              ),
+            );
+            promises.push(
+              this.queryRun(
+                `DELETE FROM ${MySQLDriver.escape(
+                  `${this.prefix}tokens_${etype}`,
                 )} WHERE \`guid\`=UNHEX(@guid);`,
                 {
                   etypes: [etype],

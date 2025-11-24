@@ -1,4 +1,10 @@
 import SQLite3 from 'better-sqlite3';
+import type {
+  SearchTerm,
+  SearchOrTerm,
+  SearchNotTerm,
+  SearchSeriesTerm,
+} from '@sciactive/tokenizer';
 import {
   NymphDriver,
   type EntityConstructor,
@@ -433,6 +439,21 @@ export default class SQLite3Driver extends NymphDriver {
             `${this.prefix}references_${etype}`,
           )} ("guid", "reference") WHERE "name"=\'group\';`,
         );
+        // Create the tokens table.
+        this.queryRun(
+          `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}tokens_${etype}`,
+          )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "token" INTEGER NOT NULL, "position" INTEGER NOT NULL, "stem" INTEGER NOT NULL, PRIMARY KEY("guid", "name", "token", "position"));`,
+        );
+        this.queryRun(
+          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+            `${this.prefix}tokens_${etype}_id_name_token`,
+          )} ON ${SQLite3Driver.escape(
+            `${this.prefix}tokens_${etype}`,
+          )} ("name", "token");`,
+        );
         // Create the unique strings table.
         this.queryRun(
           `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
@@ -610,6 +631,17 @@ export default class SQLite3Driver extends NymphDriver {
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
           `${this.prefix}references_${etype}`,
+        )} WHERE "guid"=@guid;`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+          },
+        },
+      );
+      this.queryRun(
+        `DELETE FROM ${SQLite3Driver.escape(
+          `${this.prefix}tokens_${etype}`,
         )} WHERE "guid"=@guid;`,
         {
           etypes: [etype],
@@ -1069,7 +1101,145 @@ export default class SQLite3Driver extends NymphDriver {
               break;
             case 'search':
             case '!search':
-              throw new Error('Not implemented.');
+              if (curValue[0] === 'cdate' || curValue[0] === 'mdate') {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+                curQuery += (xor(typeIsNot, clauseNot) ? 'NOT ' : '') + '(0)';
+                break;
+              } else {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+
+                const name = `param${++count.i}`;
+
+                const queryPartToken = (term: SearchTerm) => {
+                  const value = `param${++count.i}`;
+                  params[value] = term.token;
+                  return (
+                    'EXISTS (SELECT "guid" FROM ' +
+                    SQLite3Driver.escape(this.prefix + 'tokens_' + etype) +
+                    ' WHERE "guid"=' +
+                    ieTable +
+                    '."guid" AND "name"=@' +
+                    name +
+                    ' AND "token"=@' +
+                    value +
+                    (term.nostemmed ? ' AND "stem"=0' : '') +
+                    ')'
+                  );
+                };
+
+                const queryPartSeries = (series: SearchSeriesTerm) => {
+                  const tokenTableSuffix = makeTableSuffix();
+                  const tokenParts = series.tokens.map((token, i) => {
+                    const value = `param${++count.i}`;
+                    params[value] = token.token;
+                    return {
+                      fromClause:
+                        i === 0
+                          ? 'FROM ' +
+                            SQLite3Driver.escape(
+                              this.prefix + 'tokens_' + etype,
+                            ) +
+                            ' t' +
+                            tokenTableSuffix +
+                            '0'
+                          : 'JOIN ' +
+                            SQLite3Driver.escape(
+                              this.prefix + 'tokens_' + etype,
+                            ) +
+                            ' t' +
+                            tokenTableSuffix +
+                            i +
+                            ' ON t' +
+                            tokenTableSuffix +
+                            i +
+                            '."guid" = t' +
+                            tokenTableSuffix +
+                            '0."guid" AND t' +
+                            tokenTableSuffix +
+                            i +
+                            '."name" = t' +
+                            tokenTableSuffix +
+                            '0."name" AND t' +
+                            tokenTableSuffix +
+                            i +
+                            '."position" = t' +
+                            tokenTableSuffix +
+                            '0."position" + ' +
+                            i,
+                      whereClause:
+                        't' +
+                        tokenTableSuffix +
+                        i +
+                        '."token"=@' +
+                        value +
+                        (token.nostemmed
+                          ? ' AND t' + tokenTableSuffix + i + '."stem"=0'
+                          : ''),
+                    };
+                  });
+                  return (
+                    'EXISTS (SELECT t' +
+                    tokenTableSuffix +
+                    '0."guid" ' +
+                    tokenParts.map((part) => part.fromClause).join(' ') +
+                    ' WHERE t' +
+                    tokenTableSuffix +
+                    '0."guid"=' +
+                    ieTable +
+                    '."guid" AND t' +
+                    tokenTableSuffix +
+                    '0."name"=@' +
+                    name +
+                    ' AND ' +
+                    tokenParts.map((part) => part.whereClause).join(' AND ') +
+                    ')'
+                  );
+                };
+
+                const queryPartTerm = (
+                  term:
+                    | SearchTerm
+                    | SearchOrTerm
+                    | SearchNotTerm
+                    | SearchSeriesTerm,
+                ): string => {
+                  if (term.type === 'series') {
+                    return queryPartSeries(term);
+                  } else if (term.type === 'not') {
+                    return 'NOT ' + queryPartTerm(term.operand);
+                  } else if (term.type === 'or') {
+                    let queryParts: string[] = [];
+                    for (let operand of term.operands) {
+                      queryParts.push(queryPartTerm(operand));
+                    }
+                    return '(' + queryParts.join(' OR ') + ')';
+                  }
+                  return queryPartToken(term);
+                };
+
+                const parsedFTSQuery = this.tokenizer.parseSearchQuery(
+                  curValue[1],
+                );
+
+                // Run through the query and add terms.
+                let termStrings: string[] = [];
+                for (let term of parsedFTSQuery) {
+                  termStrings.push(queryPartTerm(term));
+                }
+
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  '(' +
+                  termStrings.join(' AND ') +
+                  ')';
+
+                params[name] = curValue[0];
+              }
+              break;
             case 'match':
             case '!match':
               if (curValue[0] === 'cdate') {
@@ -1913,6 +2083,17 @@ export default class SQLite3Driver extends NymphDriver {
       );
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} WHERE "guid"=@guid;`,
+        {
+          etypes: [etype],
+          params: {
+            guid,
+          },
+        },
+      );
+      this.queryRun(
+        `DELETE FROM ${SQLite3Driver.escape(
           `${this.prefix}uniques_${etype}`,
         )} WHERE "guid"=@guid;`,
         {
@@ -1937,6 +2118,7 @@ export default class SQLite3Driver extends NymphDriver {
           },
         },
       );
+
       for (const name in sdata) {
         const value = sdata[name];
         const uvalue = JSON.parse(value);
@@ -1950,6 +2132,7 @@ export default class SQLite3Driver extends NymphDriver {
               ? 'S'
               : 'J';
         const jsonValue = storageValue === 'J' ? value : null;
+
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}`,
@@ -1967,6 +2150,7 @@ export default class SQLite3Driver extends NymphDriver {
             },
           },
         );
+
         const references = this.findReferences(value);
         for (const reference of references) {
           this.queryRun(
@@ -1984,9 +2168,64 @@ export default class SQLite3Driver extends NymphDriver {
           );
         }
       }
-      const uniques = await this.nymph
-        .getEntityClassByEtype(etype)
-        .getUniques({ guid, cdate, mdate, tags, data: {}, sdata });
+
+      const EntityClass = this.nymph.getEntityClassByEtype(etype);
+
+      for (let name in sdata) {
+        let tokenString: string | null = null;
+        try {
+          tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
+        } catch (e: any) {
+          // Ignore error.
+        }
+
+        if (tokenString != null) {
+          const tokens = this.tokenizer.tokenize(tokenString);
+          while (tokens.length) {
+            const currentTokens = tokens.splice(0, 100);
+            const params: { [k: string]: any } = {
+              guid,
+              name,
+            };
+            const values: string[] = [];
+
+            for (let i = 0; i < currentTokens.length; i++) {
+              const token = currentTokens[i];
+              params['token' + i] = token.token;
+              params['position' + i] = token.position;
+              params['stem' + i] = token.stem ? 1 : 0;
+              values.push(
+                '(@guid, @name, @token' +
+                  i +
+                  ', @position' +
+                  i +
+                  ', @stem' +
+                  i +
+                  ')',
+              );
+            }
+
+            this.queryRun(
+              `INSERT INTO ${SQLite3Driver.escape(
+                `${this.prefix}tokens_${etype}`,
+              )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
+              {
+                etypes: [etype],
+                params,
+              },
+            );
+          }
+        }
+      }
+
+      const uniques = await EntityClass.getUniques({
+        guid,
+        cdate,
+        mdate,
+        tags,
+        data: {},
+        sdata,
+      });
       for (const unique of uniques) {
         try {
           this.queryRun(
@@ -2159,6 +2398,8 @@ export default class SQLite3Driver extends NymphDriver {
       uniques: string[],
       etype: string,
     ) => {
+      const EntityClass = this.nymph.getEntityClassByEtype(etype);
+
       const runInsertQuery = (name: string, value: any, svalue: string) => {
         if (value === undefined) {
           return;
@@ -2170,6 +2411,7 @@ export default class SQLite3Driver extends NymphDriver {
               ? 'S'
               : 'J';
         const jsonValue = storageValue === 'J' ? svalue : null;
+
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
             `${this.prefix}data_${etype}`,
@@ -2187,6 +2429,7 @@ export default class SQLite3Driver extends NymphDriver {
             },
           },
         );
+
         const references = this.findReferences(svalue);
         for (const reference of references) {
           this.queryRun(
@@ -2203,7 +2446,53 @@ export default class SQLite3Driver extends NymphDriver {
             },
           );
         }
+
+        let tokenString: string | null = null;
+        try {
+          tokenString = EntityClass.getFTSText(name, value);
+        } catch (e: any) {
+          // Ignore error.
+        }
+
+        if (tokenString != null) {
+          const tokens = this.tokenizer.tokenize(tokenString);
+          while (tokens.length) {
+            const currentTokens = tokens.splice(0, 100);
+            const params: { [k: string]: any } = {
+              guid,
+              name,
+            };
+            const values: string[] = [];
+
+            for (let i = 0; i < currentTokens.length; i++) {
+              const token = currentTokens[i];
+              params['token' + i] = token.token;
+              params['position' + i] = token.position;
+              params['stem' + i] = token.stem ? 1 : 0;
+              values.push(
+                '(@guid, @name, @token' +
+                  i +
+                  ', @position' +
+                  i +
+                  ', @stem' +
+                  i +
+                  ')',
+              );
+            }
+
+            this.queryRun(
+              `INSERT INTO ${SQLite3Driver.escape(
+                `${this.prefix}tokens_${etype}`,
+              )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
+              {
+                etypes: [etype],
+                params,
+              },
+            );
+          }
+        }
       };
+
       for (const unique of uniques) {
         try {
           this.queryRun(
@@ -2299,6 +2588,17 @@ export default class SQLite3Driver extends NymphDriver {
             this.queryRun(
               `DELETE FROM ${SQLite3Driver.escape(
                 `${this.prefix}references_${etype}`,
+              )} WHERE "guid"=@guid;`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                },
+              },
+            );
+            this.queryRun(
+              `DELETE FROM ${SQLite3Driver.escape(
+                `${this.prefix}tokens_${etype}`,
               )} WHERE "guid"=@guid;`,
               {
                 etypes: [etype],
