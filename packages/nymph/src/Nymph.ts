@@ -743,7 +743,7 @@ export default class Nymph {
    *   contains the value (its JSON string is found within the property's JSON
    *   string).
    * - search - An array with a name, then search query. True if the named
-   *   property contains the query. Use single quotes to find sequential terms.
+   *   property matches the query. Use single quotes to find sequential terms.
    *   Use double quotes to find exact terms. Use "or" as the or operator. Use
    *   "-" before a term as the negation operator. Stop words and punctuation
    *   are stripped. Case insensitive.
