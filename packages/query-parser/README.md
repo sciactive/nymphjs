@@ -148,7 +148,7 @@ Check if the array at the named property contains a value.
 
 ### search and !search
 
-An array with a name, then search query. True if the named property matches the query. Use single quotes to find sequential terms and double quotes to find exact terms. Use "or" as the or operator. Use "-" before a term as the negation operator. Stop words and punctuation are stripped. Case insensitive.
+Check for full-text search query match. Use single quotes to find sequential terms and double quotes to find exact terms. Use "or" as the or operator. Use "-" before a term as the negation operator. Stop words and punctuation are stripped. Case insensitive.
 
 - `name(query)` or `name!(query)`
 
