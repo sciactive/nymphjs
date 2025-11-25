@@ -2714,7 +2714,20 @@ export default class SQLite3Driver extends NymphDriver {
           },
         },
       );
-      return !result?.exists;
+      if (!result?.exists) {
+        return true;
+      }
+    }
+    const table2: any = this.queryGet(
+      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @tokenTable LIMIT 1;",
+      {
+        params: {
+          tokenTable: this.prefix + 'tokens_' + '%',
+        },
+      },
+    );
+    if (!table2 || !table2.name) {
+      return true;
     }
     return false;
   }

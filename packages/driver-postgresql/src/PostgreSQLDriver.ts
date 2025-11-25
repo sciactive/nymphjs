@@ -3405,7 +3405,21 @@ export default class PostgreSQLDriver extends NymphDriver {
           },
         },
       );
-      return !result?.exists;
+      if (!result?.exists) {
+        return true;
+      }
+    }
+    const table2 = await this.queryGet(
+      'SELECT "table_name" AS "table_name" FROM "information_schema"."tables" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name" LIKE @tokenTable LIMIT 1;',
+      {
+        params: {
+          db: this.config.database,
+          tokenTable: this.prefix + 'tokens_' + '%',
+        },
+      },
+    );
+    if (!table2 || !table2.table_name) {
+      return true;
     }
     return false;
   }
