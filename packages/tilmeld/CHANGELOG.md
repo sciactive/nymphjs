@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.99](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.98...v1.0.0-beta.99) (2025-11-26)
+
+### Bug Fixes
+
+- refresh user and group before user delete ([dee2444](https://github.com/sciactive/nymphjs/commit/dee2444d99a187e9a90c98fe514eb6a8d4fbb7fd))
+- update tokenizer and fix issue with tilmeld test ([1df81fd](https://github.com/sciactive/nymphjs/commit/1df81fdeab2c639dc669bd92c09faa220bb9a6ff))
+
 # [1.0.0-beta.98](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.97...v1.0.0-beta.98) (2025-10-24)
 
 **Note:** Version bump only for package @nymphjs/tilmeld

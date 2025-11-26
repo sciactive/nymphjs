@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.99](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.98...v1.0.0-beta.99) (2025-11-26)
+
+### Features
+
+- add full-text-search, but this is interim and will be redesigned ([56333db](https://github.com/sciactive/nymphjs/commit/56333dbe6a25755baed4e108ba4d71b3187fe8d0))
+- add sciactive tokenizer based full text search ([173c96e](https://github.com/sciactive/nymphjs/commit/173c96e02827e8ca155f55e08f33e8cdef475ab9))
+
 # [1.0.0-beta.98](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.97...v1.0.0-beta.98) (2025-10-24)
 
 **Note:** Version bump only for package @nymphjs/query-parser

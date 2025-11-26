@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.99](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.98...v1.0.0-beta.99) (2025-11-26)
+
+### Bug Fixes
+
+- update tokenizer and fix issue with tilmeld test ([1df81fd](https://github.com/sciactive/nymphjs/commit/1df81fdeab2c639dc669bd92c09faa220bb9a6ff))
+
+### Features
+
+- add full-text-search, but this is interim and will be redesigned ([56333db](https://github.com/sciactive/nymphjs/commit/56333dbe6a25755baed4e108ba4d71b3187fe8d0))
+- add live migration and token import functions ([b81037d](https://github.com/sciactive/nymphjs/commit/b81037d5d9fd0676e98760d51dcdc3e414951287))
+- add sciactive tokenizer based full text search ([173c96e](https://github.com/sciactive/nymphjs/commit/173c96e02827e8ca155f55e08f33e8cdef475ab9))
+- clean up old fts code, get ready for new implementation ([e8d7a6d](https://github.com/sciactive/nymphjs/commit/e8d7a6d6c6cdbb3dd74bd3e6a104e02a4caf283b))
+
 # [1.0.0-beta.98](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.97...v1.0.0-beta.98) (2025-10-24)
 
 **Note:** Version bump only for package @nymphjs/nymph
