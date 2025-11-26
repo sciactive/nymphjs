@@ -226,6 +226,244 @@ export default class SQLite3Driver extends NymphDriver {
     return this.store.connected;
   }
 
+  private createEntitiesTable(etype: string) {
+    // Create the entity table.
+    this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("guid" CHARACTER(24) PRIMARY KEY, "tags" TEXT, "cdate" REAL NOT NULL, "mdate" REAL NOT NULL);`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_cdate`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("cdate");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_mdate`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("mdate");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_tags`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("tags");`,
+    );
+  }
+
+  private createDataTable(etype: string) {
+    // Create the data table.
+    this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "value" CHARACTER(1) NOT NULL, "json" BLOB, "string" TEXT, "number" REAL, "truthy" INTEGER, PRIMARY KEY("guid", "name"));`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_guid`,
+      )} ON ${SQLite3Driver.escape(`${this.prefix}data_${etype}`)} ("guid");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_guid_name`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid", "name");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_name`,
+      )} ON ${SQLite3Driver.escape(`${this.prefix}data_${etype}`)} ("name");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_name_string`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("name", "string");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_name_number`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("name", "number");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_guid_name_number`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid", "name", "number");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_name_truthy`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("name", "truthy");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_guid_name_truthy`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid", "name", "truthy");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_acuserread`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid") WHERE "name"=\'acUser\' AND "number" >= 1;`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_acgroupread`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid") WHERE "name"=\'acGroup\' AND "number" >= 1;`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_acotherread`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid") WHERE "name"=\'acOther\' AND "number" >= 1;`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_acuser`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid") WHERE "name"=\'user\';`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}_id_acgroup`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}data_${etype}`,
+      )} ("guid") WHERE "name"=\'group\';`,
+    );
+  }
+
+  private createReferencesTable(etype: string) {
+    // Create the references table.
+    this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "reference" CHARACTER(24) NOT NULL, PRIMARY KEY("guid", "name", "reference"));`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_guid`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("guid");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_name`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("name");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_name_reference`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("name", "reference");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_reference`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("reference");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_guid_name`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("guid", "name");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_guid_name_reference`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("guid", "name", "reference");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_reference_name_guid`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("reference", "name", "guid");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_reference_guid_name`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("reference", "guid", "name");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_guid_reference_nameuser`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("guid", "reference") WHERE "name"=\'user\';`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}_id_guid_reference_namegroup`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}references_${etype}`,
+      )} ("guid", "reference") WHERE "name"=\'group\';`,
+    );
+  }
+
+  private createTokensTable(etype: string) {
+    // Create the tokens table.
+    this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}tokens_${etype}`,
+      )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "token" INTEGER NOT NULL, "position" INTEGER NOT NULL, "stem" INTEGER NOT NULL, PRIMARY KEY("guid", "name", "token", "position"));`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}tokens_${etype}_id_name_token`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}tokens_${etype}`,
+      )} ("name", "token");`,
+    );
+  }
+
+  private createUniquesTable(etype: string) {
+    // Create the unique strings table.
+    this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}uniques_${etype}`,
+      )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("guid") ON DELETE CASCADE, "unique" TEXT NOT NULL UNIQUE, PRIMARY KEY("guid", "unique"));`,
+    );
+  }
+
   /**
    * Create entity tables in the database.
    *
@@ -235,233 +473,11 @@ export default class SQLite3Driver extends NymphDriver {
     this.startTransaction('nymph-tablecreation');
     try {
       if (etype != null) {
-        // Create the entity table.
-        this.queryRun(
-          `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("guid" CHARACTER(24) PRIMARY KEY, "tags" TEXT, "cdate" REAL NOT NULL, "mdate" REAL NOT NULL);`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}_id_cdate`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("cdate");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}_id_mdate`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("mdate");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}_id_tags`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("tags");`,
-        );
-        // Create the data table.
-        this.queryRun(
-          `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "value" CHARACTER(1) NOT NULL, "json" BLOB, "string" TEXT, "number" REAL, "truthy" INTEGER, PRIMARY KEY("guid", "name"));`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid_name`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid", "name");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_name`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("name");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_name_string`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("name", "string");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_name_number`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("name", "number");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid_name_number`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid", "name", "number");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_name_truthy`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("name", "truthy");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_guid_name_truthy`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid", "name", "truthy");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_acuserread`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid") WHERE "name"=\'acUser\' AND "number" >= 1;`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_acgroupread`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid") WHERE "name"=\'acGroup\' AND "number" >= 1;`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_acotherread`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid") WHERE "name"=\'acOther\' AND "number" >= 1;`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_acuser`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid") WHERE "name"=\'user\';`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}_id_acgroup`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid") WHERE "name"=\'group\';`,
-        );
-        // Create the references table.
-        this.queryRun(
-          `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "reference" CHARACTER(24) NOT NULL, PRIMARY KEY("guid", "name", "reference"));`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_guid`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("guid");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_name`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("name");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_name_reference`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("name", "reference");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_reference`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("reference");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_guid_name`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("guid", "name");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_guid_name_reference`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("guid", "name", "reference");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_reference_name_guid`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("reference", "name", "guid");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_reference_guid_name`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("reference", "guid", "name");`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_guid_reference_nameuser`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("guid", "reference") WHERE "name"=\'user\';`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}_id_guid_reference_namegroup`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}references_${etype}`,
-          )} ("guid", "reference") WHERE "name"=\'group\';`,
-        );
-        // Create the tokens table.
-        this.queryRun(
-          `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}tokens_${etype}`,
-          )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("guid") ON DELETE CASCADE, "name" TEXT NOT NULL, "token" INTEGER NOT NULL, "position" INTEGER NOT NULL, "stem" INTEGER NOT NULL, PRIMARY KEY("guid", "name", "token", "position"));`,
-        );
-        this.queryRun(
-          `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}tokens_${etype}_id_name_token`,
-          )} ON ${SQLite3Driver.escape(
-            `${this.prefix}tokens_${etype}`,
-          )} ("name", "token");`,
-        );
-        // Create the unique strings table.
-        this.queryRun(
-          `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
-            `${this.prefix}uniques_${etype}`,
-          )} ("guid" CHARACTER(24) NOT NULL REFERENCES ${SQLite3Driver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} ("guid") ON DELETE CASCADE, "unique" TEXT NOT NULL UNIQUE, PRIMARY KEY("guid", "unique"));`,
-        );
+        this.createEntitiesTable(etype);
+        this.createDataTable(etype);
+        this.createReferencesTable(etype);
+        this.createTokensTable(etype);
+        this.createUniquesTable(etype);
       } else {
         // Create the UID table.
         this.queryRun(
@@ -694,6 +710,23 @@ export default class SQLite3Driver extends NymphDriver {
     return true;
   }
 
+  public async getEtypes() {
+    const tables: IterableIterator<any> = this.queryArray(
+      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix;",
+      {
+        params: {
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
+    );
+    const etypes: string[] = [];
+    for (const table of tables) {
+      etypes.push(table.name.substr((this.prefix + 'entities_').length));
+    }
+
+    return etypes;
+  }
+
   public async *exportDataIterator(): AsyncGenerator<
     { type: 'comment' | 'uid' | 'entity'; content: string },
     void,
@@ -756,18 +789,7 @@ export default class SQLite3Driver extends NymphDriver {
     }
 
     // Get the etypes.
-    const tables: IterableIterator<any> = this.queryArray(
-      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix;",
-      {
-        params: {
-          prefix: this.prefix + 'entities_' + '%',
-        },
-      },
-    );
-    const etypes = [];
-    for (const table of tables) {
-      etypes.push(table.name.substr((this.prefix + 'entities_').length));
-    }
+    const etypes = await this.getEtypes();
 
     for (const etype of etypes) {
       // Export entities.
@@ -2032,14 +2054,7 @@ export default class SQLite3Driver extends NymphDriver {
     return (result?.cur_uid as number | null) ?? null;
   }
 
-  public async importEntity({
-    guid,
-    cdate,
-    mdate,
-    tags,
-    sdata,
-    etype,
-  }: {
+  public async importEntity(entity: {
     guid: string;
     cdate: number;
     mdate: number;
@@ -2047,40 +2062,74 @@ export default class SQLite3Driver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
+    return await this.importEntityInternal(entity, false);
+  }
+
+  public async importEntityTokens(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    return await this.importEntityInternal(entity, true);
+  }
+
+  private async importEntityInternal(
+    {
+      guid,
+      cdate,
+      mdate,
+      tags,
+      sdata,
+      etype,
+    }: {
+      guid: string;
+      cdate: number;
+      mdate: number;
+      tags: string[];
+      sdata: SerializedEntityData;
+      etype: string;
+    },
+    onlyTokens: boolean,
+  ) {
     try {
-      this.queryRun(
-        `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}entities_${etype}`,
-        )} WHERE "guid"=@guid;`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
+      if (!onlyTokens) {
+        this.queryRun(
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} WHERE "guid"=@guid;`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
           },
-        },
-      );
-      this.queryRun(
-        `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}`,
-        )} WHERE "guid"=@guid;`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
+        );
+        this.queryRun(
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} WHERE "guid"=@guid;`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
           },
-        },
-      );
-      this.queryRun(
-        `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}references_${etype}`,
-        )} WHERE "guid"=@guid;`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
+        );
+        this.queryRun(
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} WHERE "guid"=@guid;`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
           },
-        },
-      );
+        );
+      }
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
           `${this.prefix}tokens_${etype}`,
@@ -2092,80 +2141,84 @@ export default class SQLite3Driver extends NymphDriver {
           },
         },
       );
-      this.queryRun(
-        `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}uniques_${etype}`,
-        )} WHERE "guid"=@guid;`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
-          },
-        },
-      );
-
-      this.queryRun(
-        `INSERT INTO ${SQLite3Driver.escape(
-          `${this.prefix}entities_${etype}`,
-        )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
-            tags: ',' + tags.join(',') + ',',
-            cdate,
-            mdate,
-          },
-        },
-      );
-
-      for (const name in sdata) {
-        const value = sdata[name];
-        const uvalue = JSON.parse(value);
-        if (value === undefined) {
-          continue;
-        }
-        const storageValue =
-          typeof uvalue === 'number'
-            ? 'N'
-            : typeof uvalue === 'string'
-              ? 'S'
-              : 'J';
-        const jsonValue = storageValue === 'J' ? value : null;
-
+      if (!onlyTokens) {
         this.queryRun(
-          `INSERT INTO ${SQLite3Driver.escape(
-            `${this.prefix}data_${etype}`,
-          )} ("guid", "name", "value", "json", "string", "number", "truthy") VALUES (@guid, @name, @storageValue, jsonb(@jsonValue), @string, @number, @truthy);`,
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}uniques_${etype}`,
+          )} WHERE "guid"=@guid;`,
           {
             etypes: [etype],
             params: {
               guid,
-              name,
-              storageValue,
-              jsonValue,
-              string: storageValue === 'J' ? null : `${uvalue}`,
-              number: Number(uvalue),
-              truthy: uvalue ? 1 : 0,
+            },
+          },
+        );
+      }
+
+      if (!onlyTokens) {
+        this.queryRun(
+          `INSERT INTO ${SQLite3Driver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+              tags: ',' + tags.join(',') + ',',
+              cdate,
+              mdate,
             },
           },
         );
 
-        const references = this.findReferences(value);
-        for (const reference of references) {
+        for (const name in sdata) {
+          const value = sdata[name];
+          const uvalue = JSON.parse(value);
+          if (value === undefined) {
+            continue;
+          }
+          const storageValue =
+            typeof uvalue === 'number'
+              ? 'N'
+              : typeof uvalue === 'string'
+                ? 'S'
+                : 'J';
+          const jsonValue = storageValue === 'J' ? value : null;
+
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}references_${etype}`,
-            )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
+              `${this.prefix}data_${etype}`,
+            )} ("guid", "name", "value", "json", "string", "number", "truthy") VALUES (@guid, @name, @storageValue, jsonb(@jsonValue), @string, @number, @truthy);`,
             {
               etypes: [etype],
               params: {
                 guid,
                 name,
-                reference,
+                storageValue,
+                jsonValue,
+                string: storageValue === 'J' ? null : `${uvalue}`,
+                number: Number(uvalue),
+                truthy: uvalue ? 1 : 0,
               },
             },
           );
+
+          const references = this.findReferences(value);
+          for (const reference of references) {
+            this.queryRun(
+              `INSERT INTO ${SQLite3Driver.escape(
+                `${this.prefix}references_${etype}`,
+              )} ("guid", "name", "reference") VALUES (@guid, @name, @reference);`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                  name,
+                  reference,
+                },
+              },
+            );
+          }
         }
       }
 
@@ -2218,36 +2271,38 @@ export default class SQLite3Driver extends NymphDriver {
         }
       }
 
-      const uniques = await EntityClass.getUniques({
-        guid,
-        cdate,
-        mdate,
-        tags,
-        data: {},
-        sdata,
-      });
-      for (const unique of uniques) {
-        try {
-          this.queryRun(
-            `INSERT INTO ${SQLite3Driver.escape(
-              `${this.prefix}uniques_${etype}`,
-            )} ("guid", "unique") VALUES (@guid, @unique);`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-                unique,
+      if (!onlyTokens) {
+        const uniques = await EntityClass.getUniques({
+          guid,
+          cdate,
+          mdate,
+          tags,
+          data: {},
+          sdata,
+        });
+        for (const unique of uniques) {
+          try {
+            this.queryRun(
+              `INSERT INTO ${SQLite3Driver.escape(
+                `${this.prefix}uniques_${etype}`,
+              )} ("guid", "unique") VALUES (@guid, @unique);`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                  unique,
+                },
               },
-            },
-          );
-        } catch (e: any) {
-          if (e instanceof EntityUniqueConstraintError) {
-            this.nymph.config.debugError(
-              'sqlite3',
-              `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
             );
+          } catch (e: any) {
+            if (e instanceof EntityUniqueConstraintError) {
+              this.nymph.config.debugError(
+                'sqlite3',
+                `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
+              );
+            }
+            throw e;
           }
-          throw e;
         }
       }
     } catch (e: any) {
@@ -2696,7 +2751,7 @@ export default class SQLite3Driver extends NymphDriver {
     return this.nymph;
   }
 
-  public async needsMigration(): Promise<boolean> {
+  public async needsMigration(): Promise<'json' | 'tokens' | false> {
     const table: any = this.queryGet(
       "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix LIMIT 1;",
       {
@@ -2715,7 +2770,7 @@ export default class SQLite3Driver extends NymphDriver {
         },
       );
       if (!result?.exists) {
-        return true;
+        return 'json';
       }
     }
     const table2: any = this.queryGet(
@@ -2727,8 +2782,16 @@ export default class SQLite3Driver extends NymphDriver {
       },
     );
     if (!table2 || !table2.name) {
-      return true;
+      return 'tokens';
     }
     return false;
+  }
+
+  public async liveMigration(_migrationType: 'tokenTables') {
+    const etypes = await this.getEtypes();
+
+    for (let etype of etypes) {
+      this.createTokensTable(etype);
+    }
   }
 }

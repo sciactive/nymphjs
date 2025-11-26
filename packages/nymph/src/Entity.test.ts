@@ -442,8 +442,6 @@ describe('Entity', () => {
     const json = JSON.stringify(testEntity);
     const data = JSON.parse(json);
 
-    console.log(data.data.reference);
-
     testEntity.$jsonAcceptData(data);
 
     expect(testEntity.reference.guid).toBeNull();

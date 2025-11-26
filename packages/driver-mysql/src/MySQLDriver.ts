@@ -184,38 +184,12 @@ export default class MySQLDriver extends NymphDriver {
     return this.connected;
   }
 
-  /**
-   * Create entity tables in the database.
-   *
-   * @param etype The entity type to create a table for. If this is blank, the default tables are created.
-   * @returns True on success, false on failure.
-   */
-  private async createTables(etype: string | null = null) {
-    await this.queryRun('SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";');
-    let foreignKeyDataTableGuid = '';
-    let foreignKeyReferencesTableGuid = '';
-    let foreignKeyTokensTableGuid = '';
-    let foreignKeyUniquesTableGuid = '';
-    if (this.config.foreignKeys) {
-      foreignKeyDataTableGuid = ` REFERENCES ${MySQLDriver.escape(
+  private async createEntitiesTable(etype: string) {
+    // Create the entity table.
+    await this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
         `${this.prefix}entities_${etype}`,
-      )}(\`guid\`) ON DELETE CASCADE`;
-      foreignKeyReferencesTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`,
-      )}(\`guid\`) ON DELETE CASCADE`;
-      foreignKeyTokensTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`,
-      )}(\`guid\`) ON DELETE CASCADE`;
-      foreignKeyUniquesTableGuid = ` REFERENCES ${MySQLDriver.escape(
-        `${this.prefix}entities_${etype}`,
-      )}(\`guid\`) ON DELETE CASCADE`;
-    }
-    if (etype != null) {
-      // Create the entity table.
-      await this.queryRun(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}entities_${etype}`,
-        )} (
+      )} (
           \`guid\` BINARY(12) NOT NULL,
           \`tags\` LONGTEXT,
           \`cdate\` DOUBLE PRECISION NOT NULL,
@@ -227,13 +201,22 @@ export default class MySQLDriver extends NymphDriver {
           FULLTEXT \`id_tags\` (\`tags\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
-      );
-      // Create the data table.
-      await this.queryRun(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}data_${etype}`,
-        )} (
-          \`guid\` BINARY(12) NOT NULL${foreignKeyDataTableGuid},
+    );
+  }
+
+  private async createDataTable(etype: string) {
+    let foreignKey = '';
+    if (this.config.foreignKeys) {
+      foreignKey = ` REFERENCES ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )}(\`guid\`) ON DELETE CASCADE`;
+    }
+    // Create the data table.
+    await this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `${this.prefix}data_${etype}`,
+      )} (
+          \`guid\` BINARY(12) NOT NULL${foreignKey},
           \`name\` TEXT NOT NULL,
           \`value\` CHAR(1) NOT NULL,
           \`json\` JSON,
@@ -257,13 +240,22 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_acgroup\` USING BTREE (((\`name\` = 'group')), \`guid\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
-      );
-      // Create the references table.
-      await this.queryRun(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}references_${etype}`,
-        )} (
-          \`guid\` BINARY(12) NOT NULL${foreignKeyReferencesTableGuid},
+    );
+  }
+
+  private async createReferencesTable(etype: string) {
+    let foreignKey = '';
+    if (this.config.foreignKeys) {
+      foreignKey = ` REFERENCES ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )}(\`guid\`) ON DELETE CASCADE`;
+    }
+    // Create the references table.
+    await this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `${this.prefix}references_${etype}`,
+      )} (
+          \`guid\` BINARY(12) NOT NULL${foreignKey},
           \`name\` TEXT NOT NULL,
           \`reference\` BINARY(12) NOT NULL,
           PRIMARY KEY (\`guid\`, \`name\`(255), \`reference\`),
@@ -279,13 +271,22 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_guid_reference_namegroup\` USING HASH (((\`name\` = 'group')), \`guid\`, \`reference\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
-      );
-      // Create the tokens table.
-      await this.queryRun(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}tokens_${etype}`,
-        )} (
-          \`guid\` BINARY(12) NOT NULL${foreignKeyTokensTableGuid},
+    );
+  }
+
+  private async createTokensTable(etype: string) {
+    let foreignKey = '';
+    if (this.config.foreignKeys) {
+      foreignKey = ` REFERENCES ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )}(\`guid\`) ON DELETE CASCADE`;
+    }
+    // Create the tokens table.
+    await this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `${this.prefix}tokens_${etype}`,
+      )} (
+          \`guid\` BINARY(12) NOT NULL${foreignKey},
           \`name\` TEXT NOT NULL,
           \`token\` INT NOT NULL,
           \`position\` INT UNSIGNED NOT NULL,
@@ -295,21 +296,46 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_name_token\` USING btree (\`name\`(255), \`token\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
-      );
-      // Create the unique strings table.
-      // 255 key is max length for charset UTF8.
-      await this.queryRun(
-        `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
-          `${this.prefix}uniques_${etype}`,
-        )} (
-          \`guid\` BINARY(12) NOT NULL${foreignKeyUniquesTableGuid},
+    );
+  }
+
+  private async createUniquesTable(etype: string) {
+    let foreignKey = '';
+    if (this.config.foreignKeys) {
+      foreignKey = ` REFERENCES ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )}(\`guid\`) ON DELETE CASCADE`;
+    }
+    // Create the unique strings table.
+    // 255 key is max length for charset UTF8.
+    await this.queryRun(
+      `CREATE TABLE IF NOT EXISTS ${MySQLDriver.escape(
+        `${this.prefix}uniques_${etype}`,
+      )} (
+          \`guid\` BINARY(12) NOT NULL${foreignKey},
           \`unique\` TEXT NOT NULL,
           PRIMARY KEY (\`guid\`, \`unique\`(255)),
           INDEX \`id_guid\` USING HASH (\`guid\`),
           CONSTRAINT \`uc_unique\` UNIQUE (\`unique\`(255))
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
-      );
+    );
+  }
+
+  /**
+   * Create entity tables in the database.
+   *
+   * @param etype The entity type to create a table for. If this is blank, the default tables are created.
+   * @returns True on success, false on failure.
+   */
+  private async createTables(etype: string | null = null) {
+    await this.queryRun('SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";');
+    if (etype != null) {
+      await this.createEntitiesTable(etype);
+      await this.createDataTable(etype);
+      await this.createReferencesTable(etype);
+      await this.createTokensTable(etype);
+      await this.createUniquesTable(etype);
     } else {
       // Create the UID table.
       await this.queryRun(
@@ -645,6 +671,24 @@ export default class MySQLDriver extends NymphDriver {
     return true;
   }
 
+  public async getEtypes() {
+    const tables = await this.queryArray(
+      'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix;',
+      {
+        params: {
+          db: this.config.database,
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
+    );
+    const etypes: string[] = [];
+    for (const table of tables) {
+      etypes.push(table.table_name.substr((this.prefix + 'entities_').length));
+    }
+
+    return etypes;
+  }
+
   public async *exportDataIterator(): AsyncGenerator<
     { type: 'comment' | 'uid' | 'entity'; content: string },
     void,
@@ -707,19 +751,7 @@ export default class MySQLDriver extends NymphDriver {
     }
 
     // Get the etypes.
-    const tables = await this.queryArray(
-      'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix;',
-      {
-        params: {
-          db: this.config.database,
-          prefix: this.prefix + 'entities_' + '%',
-        },
-      },
-    );
-    const etypes = [];
-    for (const table of tables) {
-      etypes.push(table.table_name.substr((this.prefix + 'entities_').length));
-    }
+    const etypes = await this.getEtypes();
 
     for (const etype of etypes) {
       // Export entities.
@@ -2074,14 +2106,7 @@ export default class MySQLDriver extends NymphDriver {
     return (result?.cur_uid as number | null) ?? null;
   }
 
-  public async importEntity({
-    guid,
-    cdate,
-    mdate,
-    tags,
-    sdata,
-    etype,
-  }: {
+  public async importEntity(entity: {
     guid: string;
     cdate: number;
     mdate: number;
@@ -2089,47 +2114,81 @@ export default class MySQLDriver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
+    return await this.importEntityInternal(entity, false);
+  }
+
+  public async importEntityTokens(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    return await this.importEntityInternal(entity, true);
+  }
+
+  private async importEntityInternal(
+    {
+      guid,
+      cdate,
+      mdate,
+      tags,
+      sdata,
+      etype,
+    }: {
+      guid: string;
+      cdate: number;
+      mdate: number;
+      tags: string[];
+      sdata: SerializedEntityData;
+      etype: string;
+    },
+    onlyTokens: boolean,
+  ) {
     try {
       let promises = [];
-      promises.push(
-        this.queryRun(
-          `DELETE FROM ${MySQLDriver.escape(
-            `${this.prefix}entities_${etype}`,
-          )} WHERE \`guid\`=UNHEX(@guid);`,
-          {
-            etypes: [etype],
-            params: {
-              guid,
+      if (!onlyTokens) {
+        promises.push(
+          this.queryRun(
+            `DELETE FROM ${MySQLDriver.escape(
+              `${this.prefix}entities_${etype}`,
+            )} WHERE \`guid\`=UNHEX(@guid);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+              },
             },
-          },
-        ),
-      );
-      promises.push(
-        this.queryRun(
-          `DELETE FROM ${MySQLDriver.escape(
-            `${this.prefix}data_${etype}`,
-          )} WHERE \`guid\`=UNHEX(@guid);`,
-          {
-            etypes: [etype],
-            params: {
-              guid,
+          ),
+        );
+        promises.push(
+          this.queryRun(
+            `DELETE FROM ${MySQLDriver.escape(
+              `${this.prefix}data_${etype}`,
+            )} WHERE \`guid\`=UNHEX(@guid);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+              },
             },
-          },
-        ),
-      );
-      promises.push(
-        this.queryRun(
-          `DELETE FROM ${MySQLDriver.escape(
-            `${this.prefix}references_${etype}`,
-          )} WHERE \`guid\`=UNHEX(@guid);`,
-          {
-            etypes: [etype],
-            params: {
-              guid,
+          ),
+        );
+        promises.push(
+          this.queryRun(
+            `DELETE FROM ${MySQLDriver.escape(
+              `${this.prefix}references_${etype}`,
+            )} WHERE \`guid\`=UNHEX(@guid);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+              },
             },
-          },
-        ),
-      );
+          ),
+        );
+      }
       promises.push(
         this.queryRun(
           `DELETE FROM ${MySQLDriver.escape(
@@ -2143,89 +2202,93 @@ export default class MySQLDriver extends NymphDriver {
           },
         ),
       );
-      promises.push(
-        this.queryRun(
-          `DELETE FROM ${MySQLDriver.escape(
-            `${this.prefix}uniques_${etype}`,
-          )} WHERE \`guid\`=UNHEX(@guid);`,
-          {
-            etypes: [etype],
-            params: {
-              guid,
-            },
-          },
-        ),
-      );
-
-      await Promise.all(promises);
-      promises = [];
-
-      await this.queryRun(
-        `INSERT INTO ${MySQLDriver.escape(
-          `${this.prefix}entities_${etype}`,
-        )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
-            tags: ' ' + tags.join(' ') + ' ',
-            cdate: isNaN(cdate) ? null : cdate,
-            mdate: isNaN(mdate) ? null : mdate,
-          },
-        },
-      );
-
-      for (const name in sdata) {
-        const value = sdata[name];
-        const uvalue = JSON.parse(value);
-        if (value === undefined) {
-          continue;
-        }
-        const storageValue =
-          typeof uvalue === 'number'
-            ? 'N'
-            : typeof uvalue === 'string'
-              ? 'S'
-              : 'J';
-        const jsonValue = storageValue === 'J' ? value : null;
-
+      if (!onlyTokens) {
         promises.push(
           this.queryRun(
-            `INSERT INTO ${MySQLDriver.escape(
-              `${this.prefix}data_${etype}`,
-            )} (\`guid\`, \`name\`, \`value\`, \`json\`, \`string\`, \`number\`, \`truthy\`) VALUES (UNHEX(@guid), @name, @storageValue, @jsonValue, @string, @number, @truthy);`,
+            `DELETE FROM ${MySQLDriver.escape(
+              `${this.prefix}uniques_${etype}`,
+            )} WHERE \`guid\`=UNHEX(@guid);`,
             {
               etypes: [etype],
               params: {
                 guid,
-                name,
-                storageValue,
-                jsonValue,
-                string: storageValue === 'J' ? null : `${uvalue}`,
-                number: isNaN(Number(uvalue)) ? null : Number(uvalue),
-                truthy: !!uvalue,
               },
             },
           ),
         );
+      }
 
-        const references = this.findReferences(value);
-        for (const reference of references) {
+      await Promise.all(promises);
+      promises = [];
+
+      if (!onlyTokens) {
+        await this.queryRun(
+          `INSERT INTO ${MySQLDriver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+              tags: ' ' + tags.join(' ') + ' ',
+              cdate: isNaN(cdate) ? null : cdate,
+              mdate: isNaN(mdate) ? null : mdate,
+            },
+          },
+        );
+
+        for (const name in sdata) {
+          const value = sdata[name];
+          const uvalue = JSON.parse(value);
+          if (value === undefined) {
+            continue;
+          }
+          const storageValue =
+            typeof uvalue === 'number'
+              ? 'N'
+              : typeof uvalue === 'string'
+                ? 'S'
+                : 'J';
+          const jsonValue = storageValue === 'J' ? value : null;
+
           promises.push(
             this.queryRun(
               `INSERT INTO ${MySQLDriver.escape(
-                `${this.prefix}references_${etype}`,
-              )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
+                `${this.prefix}data_${etype}`,
+              )} (\`guid\`, \`name\`, \`value\`, \`json\`, \`string\`, \`number\`, \`truthy\`) VALUES (UNHEX(@guid), @name, @storageValue, @jsonValue, @string, @number, @truthy);`,
               {
                 etypes: [etype],
                 params: {
                   guid,
                   name,
-                  reference,
+                  storageValue,
+                  jsonValue,
+                  string: storageValue === 'J' ? null : `${uvalue}`,
+                  number: isNaN(Number(uvalue)) ? null : Number(uvalue),
+                  truthy: !!uvalue,
                 },
               },
             ),
           );
+
+          const references = this.findReferences(value);
+          for (const reference of references) {
+            promises.push(
+              this.queryRun(
+                `INSERT INTO ${MySQLDriver.escape(
+                  `${this.prefix}references_${etype}`,
+                )} (\`guid\`, \`name\`, \`reference\`) VALUES (UNHEX(@guid), @name, UNHEX(@reference));`,
+                {
+                  etypes: [etype],
+                  params: {
+                    guid,
+                    name,
+                    reference,
+                  },
+                },
+              ),
+            );
+          }
         }
       }
 
@@ -2280,37 +2343,39 @@ export default class MySQLDriver extends NymphDriver {
         }
       }
 
-      const uniques = await EntityClass.getUniques({
-        guid,
-        cdate,
-        mdate,
-        tags,
-        data: {},
-        sdata,
-      });
-      for (const unique of uniques) {
-        promises.push(
-          this.queryRun(
-            `INSERT INTO ${MySQLDriver.escape(
-              `${this.prefix}uniques_${etype}`,
-            )} (\`guid\`, \`unique\`) VALUES (UNHEX(@guid), @unique);`,
-            {
-              etypes: [etype],
-              params: {
-                guid,
-                unique,
+      if (!onlyTokens) {
+        const uniques = await EntityClass.getUniques({
+          guid,
+          cdate,
+          mdate,
+          tags,
+          data: {},
+          sdata,
+        });
+        for (const unique of uniques) {
+          promises.push(
+            this.queryRun(
+              `INSERT INTO ${MySQLDriver.escape(
+                `${this.prefix}uniques_${etype}`,
+              )} (\`guid\`, \`unique\`) VALUES (UNHEX(@guid), @unique);`,
+              {
+                etypes: [etype],
+                params: {
+                  guid,
+                  unique,
+                },
               },
-            },
-          ).catch((e: any) => {
-            if (e instanceof EntityUniqueConstraintError) {
-              this.nymph.config.debugError(
-                'mysql',
-                `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
-              );
-            }
-            return e;
-          }),
-        );
+            ).catch((e: any) => {
+              if (e instanceof EntityUniqueConstraintError) {
+                this.nymph.config.debugError(
+                  'mysql',
+                  `Import entity unique constraint violation for GUID "${guid}" on etype "${etype}": "${unique}"`,
+                );
+              }
+              return e;
+            }),
+          );
+        }
       }
 
       await Promise.all(promises);
@@ -2871,7 +2936,7 @@ export default class MySQLDriver extends NymphDriver {
     return nymph;
   }
 
-  public async needsMigration(): Promise<boolean> {
+  public async needsMigration(): Promise<'json' | 'tokens' | false> {
     const table = await this.queryGet(
       'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix LIMIT 1;',
       {
@@ -2892,7 +2957,7 @@ export default class MySQLDriver extends NymphDriver {
         },
       );
       if (!result?.exists) {
-        return true;
+        return 'json';
       }
     }
     const table2 = await this.queryGet(
@@ -2905,8 +2970,16 @@ export default class MySQLDriver extends NymphDriver {
       },
     );
     if (!table2 || !table2.table_name) {
-      return true;
+      return 'tokens';
     }
     return false;
+  }
+
+  public async liveMigration(_migrationType: 'tokenTables') {
+    const etypes = await this.getEtypes();
+
+    for (let etype of etypes) {
+      await this.createTokensTable(etype);
+    }
   }
 }

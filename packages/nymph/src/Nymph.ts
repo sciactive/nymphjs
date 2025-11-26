@@ -4,7 +4,11 @@ import Entity, {
   type EntityInstanceType,
   type EntityObjectType,
 } from './Entity.js';
-import type { EntityConstructor, EntityInterface } from './Entity.types.js';
+import type {
+  EntityConstructor,
+  EntityInterface,
+  SerializedEntityData,
+} from './Entity.types.js';
 import {
   ClassNotAvailableError,
   InvalidParametersError,
@@ -1133,13 +1137,83 @@ export default class Nymph {
   }
 
   /**
+   * Import a single entity.
+   *
+   * @param entity The entity data to import.
+   */
+  public async importEntity(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    try {
+      return await this.driver.importEntity(entity);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to import: ${e}`);
+      throw e;
+    }
+  }
+
+  /**
+   * Import a single entity's tokens.
+   *
+   * This does not update any of the actual data, only the tokens used for full
+   * text search.
+   *
+   * Be careful with this function, since you can overwrite existing tokens with
+   * data that is out of sync. The DB _should_ prevent you from inserting tokens
+   * for an entity that doesn't exist, but it _won't_ prevent you from inserting
+   * tokens for properties that don't exist on an entity.
+   *
+   * @param entity The entity data to import.
+   */
+  public async importEntityTokens(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    try {
+      return await this.driver.importEntityTokens(entity);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to import: ${e}`);
+      throw e;
+    }
+  }
+
+  /**
    * Detect whether the database needs to be migrated.
    *
-   * If true, the database should be exported with an old version of Nymph, then
-   * imported into a fresh database with this version.
+   * If not false (so, one of the string values), the database should be
+   * exported with an old version of Nymph, then imported into a fresh database
+   * with this version.
+   *
+   * 'json' means the data tables are missing the JSON field, and the DB
+   * **must** be exported and imported to fix it.
+   *
+   * 'tokens' means the FTS token tables are missing, and you can get away with
+   * a live migration with `liveMigration('tokenTables')` and doing
+   * `importEntityTokens(entity)` for each entity.
    */
-  public async needsMigration(): Promise<boolean> {
+  public async needsMigration() {
     return await this.driver.needsMigration();
+  }
+
+  /**
+   * Perform a live migration on the DB.
+   *
+   * A 'tokenTables' migration will simply add the missing token tables. It will
+   * **not** fill them. You must use `importEntityTokens` on each entity after
+   * running this to fill the token tables and enable full text search matching
+   * on existing entities.
+   */
+  public async liveMigration(migrationType: 'tokenTables') {
+    return await this.driver.liveMigration(migrationType);
   }
 
   public on<T extends NymphEventType>(

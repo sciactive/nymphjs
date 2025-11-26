@@ -90,13 +90,13 @@ export default abstract class NymphDriver {
    */
   abstract disconnect(): Promise<boolean>;
 
+  abstract needsMigration(): Promise<'json' | 'tokens' | false>;
+  abstract liveMigration(migrationType: 'tokenTables'): Promise<void>;
+
   /**
-   * Detect whether the database needs to be migrated.
-   *
-   * If true, the database should be exported with an old version of Nymph, then
-   * imported into a fresh database with this version.
+   * Returns a list of the etypes stored in the DB.
    */
-  abstract needsMigration(): Promise<boolean>;
+  abstract getEtypes(): Promise<string[]>;
 
   abstract exportDataIterator(): AsyncGenerator<
     { type: 'comment' | 'uid' | 'entity'; content: string },
@@ -127,6 +127,14 @@ export default abstract class NymphDriver {
   >;
   abstract getUID(name: string): Promise<number | null>;
   abstract importEntity(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }): Promise<void>;
+  abstract importEntityTokens(entity: {
     guid: string;
     cdate: number;
     mdate: number;

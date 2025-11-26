@@ -2434,6 +2434,55 @@ export function ExportImportTest(
 
     fs.unlinkSync(__dirname + '/testentityexport.nex');
   });
+
+  it('import tokens only', async () => {
+    const model = await nymph.getEntity({ class: TestModel });
+
+    expect(model).not.toBeNull();
+
+    if (model != null) {
+      const data = model.$getData(true);
+      // These should not actually be saved in the DB.
+      data.number = 424242424242;
+      // But this should become searchable.
+      data.search = 'peanuts and pickles on a hot bun';
+
+      const sdata = Object.fromEntries(
+        Object.entries(data).map(([name, value]) => [
+          name,
+          JSON.stringify(value),
+        ]),
+      );
+
+      if (model.guid == null || model.cdate == null || model.mdate == null) {
+        throw new Error('Model data is wrong.');
+      }
+
+      await nymph.importEntityTokens({
+        guid: model.guid,
+        // Again, these should not actually be changed in the DB.
+        cdate: model.cdate + 1000,
+        mdate: model.mdate + 1000,
+        tags: [...model.tags, 'helicopter'],
+        sdata,
+        etype: TestModel.ETYPE,
+      });
+
+      const modelCheck = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', search: ['search', '"peanuts and pickles on a hot bun"'] },
+      );
+
+      expect(modelCheck?.guid).toEqual(model.guid);
+      expect(modelCheck?.cdate).toEqual(model.cdate);
+      expect(modelCheck?.mdate).toEqual(model.mdate);
+      expect(modelCheck?.$hasTag('helicopter')).toEqual(false);
+      expect(modelCheck?.number).not.toEqual(424242424242);
+      expect(modelCheck?.search).not.toEqual(
+        'peanuts and pickles on a hot bun',
+      );
+    }
+  });
 }
 
 const matchValue = `Hello, my name is Edward McCheese. It is a pleasure to meet you. As you can see, I have several hats of the most pleasant nature.
