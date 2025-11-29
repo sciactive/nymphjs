@@ -340,6 +340,34 @@ export default class User extends AbleObject<UserData> {
    */
   public $originalUsername?: string;
 
+  public static getFTSText(name: string, value: any) {
+    if (
+      [
+        'abilities',
+        'group',
+        'groups',
+        'inheritAbilities',
+        'enabled',
+        'secret',
+        'emailChangeDate',
+        'newEmailSecret',
+        'newEmailAddress',
+        'cancelEmailSecret',
+        'cancelEmailAddress',
+        'recoverSecret',
+        'recoverSecretDate',
+        'salt',
+        'password',
+        'passwordTemp',
+        'revokeTokenDate',
+        'totpSecret',
+      ].indexOf(name) !== -1
+    ) {
+      return null;
+    }
+    return super.getFTSText(name, value);
+  }
+
   static async factoryUsername(username?: string): Promise<User & UserData> {
     const entity = new this();
     if (username != null) {

@@ -178,6 +178,23 @@ export default class Group extends AbleObject<GroupData> {
    */
   public $originalGroupname?: string;
 
+  public static getFTSText(name: string, value: any) {
+    if (
+      [
+        'abilities',
+        'parent',
+        'user',
+        'enabled',
+        'defaultPrimary',
+        'defaultSecondary',
+        'unverifiedSecondary',
+      ].indexOf(name) !== -1
+    ) {
+      return null;
+    }
+    return super.getFTSText(name, value);
+  }
+
   static async factoryGroupname(
     groupname?: string,
   ): Promise<Group & GroupData> {
