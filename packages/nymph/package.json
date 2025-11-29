@@ -34,7 +34,7 @@
     "@nymphjs/guid": "^1.0.0-beta.100",
     "@sciactive/tokenizer": "^3.0.2",
     "debug": "^4.4.0",
-    "joi": "^17.13.3",
+    "joi": "^18.0.2",
     "locutus": "^2.0.32",
     "lodash-es": "^4.17.21",
     "n-readlines": "^1.0.3"
