@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.100](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.99...v1.0.0-beta.100) (2025-11-29)
+
+### Bug Fixes
+
+- update tokenizer to get the packaging fix ([4cfbbb4](https://github.com/sciactive/nymphjs/commit/4cfbbb460f8f3f8f1f19df40203263cfd9c1585e))
+
 # [1.0.0-beta.99](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.98...v1.0.0-beta.99) (2025-11-26)
 
 ### Bug Fixes
