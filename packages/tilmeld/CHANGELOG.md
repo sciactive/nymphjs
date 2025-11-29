@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.102](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.101...v1.0.0-beta.102) (2025-11-29)
+
+### Bug Fixes
+
+- don't add non language user data to tokens tables ([1be9193](https://github.com/sciactive/nymphjs/commit/1be919392d31511f5ba022fe4dda9ee8ad5d610c))
+
 # [1.0.0-beta.101](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.100...v1.0.0-beta.101) (2025-11-29)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
