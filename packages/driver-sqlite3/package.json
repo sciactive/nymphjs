@@ -33,7 +33,7 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.99",
     "@nymphjs/nymph": "^1.0.0-beta.99",
-    "@sciactive/tokenizer": "^3.0.1",
+    "@sciactive/tokenizer": "^3.0.2",
     "better-sqlite3": "^11.7.0"
   },
   "devDependencies": {
