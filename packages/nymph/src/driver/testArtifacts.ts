@@ -966,6 +966,17 @@ export function EntitiesTest(
     expect(testEntity.$inArray(resultEntity)).toEqual(false);
   });
 
+  it('search with only stop words', async () => {
+    await createTestEntities();
+
+    // Testing wrong search...
+    let resultEntity = await nymph.getEntities(
+      { class: TestModel },
+      { type: '&', search: ['search', 'i am'] },
+    );
+    expect(resultEntity).toEqual([]);
+  });
+
   it('search must be case insensitive', async () => {
     await createTestEntities();
 

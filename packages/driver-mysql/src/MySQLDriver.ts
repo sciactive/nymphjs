@@ -1136,132 +1136,137 @@ export default class MySQLDriver extends NymphDriver {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
 
-                const name = `param${++count.i}`;
-
-                const queryPartToken = (term: SearchTerm) => {
-                  const value = `param${++count.i}`;
-                  params[value] = term.token;
-                  return (
-                    'EXISTS (SELECT `guid` FROM ' +
-                    MySQLDriver.escape(this.prefix + 'tokens_' + etype) +
-                    ' WHERE `guid`=' +
-                    ieTable +
-                    '.`guid` AND `name`=@' +
-                    name +
-                    ' AND `token`=@' +
-                    value +
-                    (term.nostemmed ? ' AND `stem`=FALSE' : '') +
-                    ')'
-                  );
-                };
-
-                const queryPartSeries = (series: SearchSeriesTerm) => {
-                  const tokenTableSuffix = makeTableSuffix();
-                  const tokenParts = series.tokens.map((token, i) => {
-                    const value = `param${++count.i}`;
-                    params[value] = token.token;
-                    return {
-                      fromClause:
-                        i === 0
-                          ? 'FROM ' +
-                            MySQLDriver.escape(
-                              this.prefix + 'tokens_' + etype,
-                            ) +
-                            ' t' +
-                            tokenTableSuffix +
-                            '0'
-                          : 'JOIN ' +
-                            MySQLDriver.escape(
-                              this.prefix + 'tokens_' + etype,
-                            ) +
-                            ' t' +
-                            tokenTableSuffix +
-                            i +
-                            ' ON t' +
-                            tokenTableSuffix +
-                            i +
-                            '.`guid` = t' +
-                            tokenTableSuffix +
-                            '0.`guid` AND t' +
-                            tokenTableSuffix +
-                            i +
-                            '.`name` = t' +
-                            tokenTableSuffix +
-                            '0.`name` AND t' +
-                            tokenTableSuffix +
-                            i +
-                            '.`position` = t' +
-                            tokenTableSuffix +
-                            '0.`position` + ' +
-                            i,
-                      whereClause:
-                        't' +
-                        tokenTableSuffix +
-                        i +
-                        '.`token`=@' +
-                        value +
-                        (token.nostemmed
-                          ? ' AND t' + tokenTableSuffix + i + '.`stem`=FALSE'
-                          : ''),
-                    };
-                  });
-                  return (
-                    'EXISTS (SELECT t' +
-                    tokenTableSuffix +
-                    '0.`guid` ' +
-                    tokenParts.map((part) => part.fromClause).join(' ') +
-                    ' WHERE t' +
-                    tokenTableSuffix +
-                    '0.`guid`=' +
-                    ieTable +
-                    '.`guid` AND t' +
-                    tokenTableSuffix +
-                    '0.`name`=@' +
-                    name +
-                    ' AND ' +
-                    tokenParts.map((part) => part.whereClause).join(' AND ') +
-                    ')'
-                  );
-                };
-
-                const queryPartTerm = (
-                  term:
-                    | SearchTerm
-                    | SearchOrTerm
-                    | SearchNotTerm
-                    | SearchSeriesTerm,
-                ): string => {
-                  if (term.type === 'series') {
-                    return queryPartSeries(term);
-                  } else if (term.type === 'not') {
-                    return 'NOT ' + queryPartTerm(term.operand);
-                  } else if (term.type === 'or') {
-                    let queryParts: string[] = [];
-                    for (let operand of term.operands) {
-                      queryParts.push(queryPartTerm(operand));
-                    }
-                    return '(' + queryParts.join(' OR ') + ')';
-                  }
-                  return queryPartToken(term);
-                };
-
                 const parsedFTSQuery = this.tokenizer.parseSearchQuery(
                   curValue[1],
                 );
 
-                // Run through the query and add terms.
-                let termStrings: string[] = [];
-                for (let term of parsedFTSQuery) {
-                  termStrings.push(queryPartTerm(term));
+                if (!parsedFTSQuery.length) {
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') + '(FALSE)';
+                } else {
+                  const name = `param${++count.i}`;
+
+                  const queryPartToken = (term: SearchTerm) => {
+                    const value = `param${++count.i}`;
+                    params[value] = term.token;
+                    return (
+                      'EXISTS (SELECT `guid` FROM ' +
+                      MySQLDriver.escape(this.prefix + 'tokens_' + etype) +
+                      ' WHERE `guid`=' +
+                      ieTable +
+                      '.`guid` AND `name`=@' +
+                      name +
+                      ' AND `token`=@' +
+                      value +
+                      (term.nostemmed ? ' AND `stem`=FALSE' : '') +
+                      ')'
+                    );
+                  };
+
+                  const queryPartSeries = (series: SearchSeriesTerm) => {
+                    const tokenTableSuffix = makeTableSuffix();
+                    const tokenParts = series.tokens.map((token, i) => {
+                      const value = `param${++count.i}`;
+                      params[value] = token.token;
+                      return {
+                        fromClause:
+                          i === 0
+                            ? 'FROM ' +
+                              MySQLDriver.escape(
+                                this.prefix + 'tokens_' + etype,
+                              ) +
+                              ' t' +
+                              tokenTableSuffix +
+                              '0'
+                            : 'JOIN ' +
+                              MySQLDriver.escape(
+                                this.prefix + 'tokens_' + etype,
+                              ) +
+                              ' t' +
+                              tokenTableSuffix +
+                              i +
+                              ' ON t' +
+                              tokenTableSuffix +
+                              i +
+                              '.`guid` = t' +
+                              tokenTableSuffix +
+                              '0.`guid` AND t' +
+                              tokenTableSuffix +
+                              i +
+                              '.`name` = t' +
+                              tokenTableSuffix +
+                              '0.`name` AND t' +
+                              tokenTableSuffix +
+                              i +
+                              '.`position` = t' +
+                              tokenTableSuffix +
+                              '0.`position` + ' +
+                              i,
+                        whereClause:
+                          't' +
+                          tokenTableSuffix +
+                          i +
+                          '.`token`=@' +
+                          value +
+                          (token.nostemmed
+                            ? ' AND t' + tokenTableSuffix + i + '.`stem`=FALSE'
+                            : ''),
+                      };
+                    });
+                    return (
+                      'EXISTS (SELECT t' +
+                      tokenTableSuffix +
+                      '0.`guid` ' +
+                      tokenParts.map((part) => part.fromClause).join(' ') +
+                      ' WHERE t' +
+                      tokenTableSuffix +
+                      '0.`guid`=' +
+                      ieTable +
+                      '.`guid` AND t' +
+                      tokenTableSuffix +
+                      '0.`name`=@' +
+                      name +
+                      ' AND ' +
+                      tokenParts.map((part) => part.whereClause).join(' AND ') +
+                      ')'
+                    );
+                  };
+
+                  const queryPartTerm = (
+                    term:
+                      | SearchTerm
+                      | SearchOrTerm
+                      | SearchNotTerm
+                      | SearchSeriesTerm,
+                  ): string => {
+                    if (term.type === 'series') {
+                      return queryPartSeries(term);
+                    } else if (term.type === 'not') {
+                      return 'NOT ' + queryPartTerm(term.operand);
+                    } else if (term.type === 'or') {
+                      let queryParts: string[] = [];
+                      for (let operand of term.operands) {
+                        queryParts.push(queryPartTerm(operand));
+                      }
+                      return '(' + queryParts.join(' OR ') + ')';
+                    }
+                    return queryPartToken(term);
+                  };
+
+                  // Run through the query and add terms.
+                  let termStrings: string[] = [];
+                  for (let term of parsedFTSQuery) {
+                    termStrings.push(queryPartTerm(term));
+                  }
+
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                    '(' +
+                    termStrings.join(' AND ') +
+                    ')';
+
+                  params[name] = curValue[0];
                 }
-
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(' +
-                  termStrings.join(' AND ') +
-                  ')';
-
-                params[name] = curValue[0];
               }
               break;
             case 'match':
