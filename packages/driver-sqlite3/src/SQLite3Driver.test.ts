@@ -8,6 +8,7 @@ import SQLite3Driver from './SQLite3Driver.js';
 describe('SQLite3Driver In-Memory', () => {
   const sqliteConfig = {
     filename: ':memory:',
+    explicitWrite: true,
   };
   const nymph = new Nymph({}, new SQLite3Driver(sqliteConfig));
 
@@ -24,6 +25,7 @@ describe('SQLite3Driver DB File', () => {
   const filename = resolve(tmpdir(), `nymph-test-${Date.now()}.db`);
   const sqliteConfig = {
     filename,
+    explicitWrite: true,
   };
   const nymph = new Nymph({}, new SQLite3Driver(sqliteConfig));
 

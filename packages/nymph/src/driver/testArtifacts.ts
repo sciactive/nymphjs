@@ -189,6 +189,119 @@ export function EntitiesTest(
     expect(await testEntity.$delete()).toEqual(true);
   });
 
+  it('create, list, and delete indexes', async () => {
+    // Delete existing indexes.
+    const existingIndexes = await nymph.getIndexes(TestModel.ETYPE);
+    for (let index of existingIndexes) {
+      await nymph.deleteIndex(TestModel.ETYPE, index.scope, index.name);
+    }
+    const existingBIndexes = await nymph.getIndexes(TestBModel.ETYPE);
+    for (let index of existingBIndexes) {
+      await nymph.deleteIndex(TestBModel.ETYPE, index.scope, index.name);
+    }
+
+    const sortByName = (arr: { name: string }[]) => {
+      arr.sort((a, b) => a.name.localeCompare(b.name));
+      return arr;
+    };
+
+    expect(
+      await nymph.addIndex(TestModel.ETYPE, {
+        scope: 'data',
+        name: 'testindex',
+        property: 'test',
+      }),
+    ).toEqual(true);
+
+    expect(sortByName(await nymph.getIndexes(TestModel.ETYPE))).toEqual([
+      { scope: 'data', name: 'testindex', property: 'test' },
+    ]);
+
+    expect(
+      await nymph.addIndex(TestModel.ETYPE, {
+        scope: 'data',
+        name: 'secondone',
+        property: 'match',
+      }),
+    ).toEqual(true);
+
+    expect(sortByName(await nymph.getIndexes(TestModel.ETYPE))).toEqual([
+      { scope: 'data', name: 'secondone', property: 'match' },
+      { scope: 'data', name: 'testindex', property: 'test' },
+    ]);
+
+    expect(
+      await nymph.addIndex(TestModel.ETYPE, {
+        scope: 'references',
+        name: 'refone',
+        property: 'reference',
+      }),
+    ).toEqual(true);
+
+    expect(sortByName(await nymph.getIndexes(TestModel.ETYPE))).toEqual([
+      { scope: 'references', name: 'refone', property: 'reference' },
+      { scope: 'data', name: 'secondone', property: 'match' },
+      { scope: 'data', name: 'testindex', property: 'test' },
+    ]);
+
+    expect(
+      await nymph.addIndex(TestModel.ETYPE, {
+        scope: 'tokens',
+        name: 'tokenone',
+        property: 'search',
+      }),
+    ).toEqual(true);
+
+    expect(sortByName(await nymph.getIndexes(TestModel.ETYPE))).toEqual([
+      { scope: 'references', name: 'refone', property: 'reference' },
+      { scope: 'data', name: 'secondone', property: 'match' },
+      { scope: 'data', name: 'testindex', property: 'test' },
+      { scope: 'tokens', name: 'tokenone', property: 'search' },
+    ]);
+
+    expect(
+      await nymph.addIndex(TestBModel.ETYPE, {
+        scope: 'data',
+        name: 'flooflab',
+        property: 'string',
+      }),
+    ).toEqual(true);
+
+    expect(sortByName(await nymph.getIndexes(TestBModel.ETYPE))).toEqual([
+      { scope: 'data', name: 'flooflab', property: 'string' },
+    ]);
+
+    expect(sortByName(await nymph.getIndexes(TestModel.ETYPE))).toEqual([
+      { scope: 'references', name: 'refone', property: 'reference' },
+      { scope: 'data', name: 'secondone', property: 'match' },
+      { scope: 'data', name: 'testindex', property: 'test' },
+      { scope: 'tokens', name: 'tokenone', property: 'search' },
+    ]);
+
+    expect(
+      await nymph.deleteIndex(TestBModel.ETYPE, 'data', 'flooflab'),
+    ).toEqual(true);
+
+    expect(await nymph.getIndexes(TestBModel.ETYPE)).toEqual([]);
+
+    expect(sortByName(await nymph.getIndexes(TestModel.ETYPE))).toEqual([
+      { scope: 'references', name: 'refone', property: 'reference' },
+      { scope: 'data', name: 'secondone', property: 'match' },
+      { scope: 'data', name: 'testindex', property: 'test' },
+      { scope: 'tokens', name: 'tokenone', property: 'search' },
+    ]);
+
+    expect(
+      await nymph.deleteIndex(TestModel.ETYPE, 'data', 'testindex'),
+    ).toEqual(true);
+
+    expect(sortByName(await nymph.getIndexes(TestModel.ETYPE))).toEqual([
+      { scope: 'references', name: 'refone', property: 'reference' },
+      { scope: 'data', name: 'secondone', property: 'match' },
+      { scope: 'tokens', name: 'tokenone', property: 'search' },
+    ]);
+  });
+
   it('transactions', async () => {
     await createTestEntities();
 

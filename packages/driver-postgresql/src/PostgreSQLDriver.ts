@@ -729,21 +729,21 @@ export default class PostgreSQLDriver extends NymphDriver {
         `${this.prefix}references_${etype}_id_guid_reference_nameuser`,
       )} ON ${PostgreSQLDriver.escape(
         `${this.prefix}references_${etype}`,
-      )} USING btree ("guid", "reference") WHERE "name"='user';`,
+      )} USING btree ("reference", "guid") WHERE "name"='user';`,
       { connection },
     );
     await this.queryRun(
       `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_guid_reference_namegroup`,
+        `${this.prefix}references_${etype}_id_reference_guid_namegroup`,
       )};`,
       { connection },
     );
     await this.queryRun(
       `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_guid_reference_namegroup`,
+        `${this.prefix}references_${etype}_id_reference_guid_namegroup`,
       )} ON ${PostgreSQLDriver.escape(
         `${this.prefix}references_${etype}`,
-      )} USING btree ("guid", "reference") WHERE "name"='group';`,
+      )} USING btree ("reference", "guid") WHERE "name"='group';`,
       { connection },
     );
     await this.queryRun(
@@ -915,6 +915,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           throw new QueryFailedError(
             'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query,
+            e2?.code,
           );
         }
       } else if (errorCode === '23505') {
@@ -923,6 +924,7 @@ export default class PostgreSQLDriver extends NymphDriver {
         throw new QueryFailedError(
           'Query failed: ' + e?.code + ' - ' + e?.message,
           query,
+          e?.code,
         );
       }
     }
@@ -1210,6 +1212,180 @@ export default class PostgreSQLDriver extends NymphDriver {
         },
       },
     );
+    return true;
+  }
+
+  public async getIndexes(etype: string) {
+    const indexes: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    }[] = [];
+
+    for (let [scope, suffix] of [
+      ['data', '_json'],
+      ['references', '_reference_guid'],
+      ['tokens', '_token_position_stem'],
+    ] as (
+      | ['data', '_json']
+      | ['references', '_reference_guid']
+      | ['tokens', '_token_position_stem']
+    )[]) {
+      const indexDefinitions = await this.queryArray(
+        `SELECT * FROM "pg_indexes" WHERE "indexname" LIKE @pattern;`,
+        {
+          params: {
+            pattern: `${this.prefix}${scope}_${etype}_id_custom_%${suffix}`,
+          },
+        },
+      );
+      for (const indexDefinition of indexDefinitions) {
+        indexes.push({
+          scope,
+          name: (indexDefinition.indexname as string).substring(
+            `${this.prefix}${scope}_${etype}_id_custom_`.length,
+            indexDefinition.indexname.length - suffix.length,
+          ),
+          property:
+            ((indexDefinition.indexdef as string).match(
+              /WHERE\s+\(?\s*name\s*=\s*'(.*)'/,
+            ) ?? [])[1] ?? '',
+        });
+      }
+    }
+
+    return indexes;
+  }
+
+  public async addIndex(
+    etype: string,
+    definition: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    },
+  ) {
+    this.checkIndexName(definition.name);
+    await this.deleteIndex(etype, definition.scope, definition.name);
+    const connection = await this.getConnection(true);
+    if (definition.scope === 'data') {
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_json`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING gin ("json") WHERE "name"=${PostgreSQLDriver.escapeValue(definition.property)};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_string_gin`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING gin ("string" gin_trgm_ops) WHERE "name"=${PostgreSQLDriver.escapeValue(definition.property)};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_string_btree`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree (LEFT("string", 1024)) WHERE "name"=${PostgreSQLDriver.escapeValue(definition.property)};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_number`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree ("number") WHERE "name"=${PostgreSQLDriver.escapeValue(definition.property)};`,
+        { connection },
+      );
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_truthy`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} USING btree ("truthy") WHERE "name"=${PostgreSQLDriver.escapeValue(definition.property)};`,
+        { connection },
+      );
+    } else if (definition.scope === 'references') {
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_custom_${definition.name}_reference_guid`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}`,
+        )} USING btree ("reference", "guid") WHERE "name"=${PostgreSQLDriver.escapeValue(definition.property)};`,
+        { connection },
+      );
+    } else if (definition.scope === 'tokens') {
+      await this.queryRun(
+        `CREATE INDEX ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}_id_custom_${definition.name}_token_position_stem`,
+        )} ON ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} USING btree ("token", "position", "stem") WHERE "name"=${PostgreSQLDriver.escapeValue(definition.property)};`,
+        { connection },
+      );
+    }
+    connection.done();
+    return true;
+  }
+
+  public async deleteIndex(
+    etype: string,
+    scope: 'data' | 'references' | 'tokens',
+    name: string,
+  ) {
+    this.checkIndexName(name);
+    const connection = await this.getConnection(true);
+    if (scope === 'data') {
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_json`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_string_gin`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_string_btree`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_number`,
+        )};`,
+        { connection },
+      );
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_truthy`,
+        )};`,
+        { connection },
+      );
+    } else if (scope === 'references') {
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}references_${etype}_id_custom_${name}_reference_guid`,
+        )};`,
+        { connection },
+      );
+    } else if (scope === 'tokens') {
+      await this.queryRun(
+        `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+          `${this.prefix}tokens_${etype}_id_custom_${name}_token_position_stem`,
+        )};`,
+        { connection },
+      );
+    }
+    connection.done();
     return true;
   }
 

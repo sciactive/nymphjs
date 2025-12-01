@@ -267,8 +267,8 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_guid_name_reference\` USING HASH (\`guid\`, \`name\`(255), \`reference\`),
           INDEX \`id_reference_name_guid\` USING BTREE (\`reference\`, \`name\`(255), \`guid\`),
           INDEX \`id_reference_guid_name\` USING BTREE (\`reference\`, \`guid\`, \`name\`(255)),
-          INDEX \`id_guid_reference_nameuser\` USING HASH (((\`name\` = 'user')), \`guid\`, \`reference\`),
-          INDEX \`id_guid_reference_namegroup\` USING HASH (((\`name\` = 'group')), \`guid\`, \`reference\`)
+          INDEX \`id_reference_guid_nameuser\` USING HASH (((\`name\` = 'user')), \`reference\`, \`guid\`),
+          INDEX \`id_reference_guid_namegroup\` USING HASH (((\`name\` = 'group')), \`reference\`, \`guid\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
     );
@@ -402,6 +402,7 @@ export default class MySQLDriver extends NymphDriver {
           throw new QueryFailedError(
             'Query failed: ' + e2?.errno + ' - ' + e2?.message,
             query,
+            e2?.errno,
           );
         }
       } else if (errorCode === 1062) {
@@ -412,6 +413,7 @@ export default class MySQLDriver extends NymphDriver {
           throw new QueryFailedError(
             'Query failed: ' + e?.errno + ' - ' + e?.message,
             query,
+            e?.errno,
           );
         }
         try {
@@ -420,12 +422,14 @@ export default class MySQLDriver extends NymphDriver {
           throw new QueryFailedError(
             'Query failed: ' + e2?.errno + ' - ' + e2?.message,
             query,
+            e2?.errno,
           );
         }
       } else {
         throw new QueryFailedError(
           'Query failed: ' + e?.errno + ' - ' + e?.message,
           query,
+          e?.errno,
         );
       }
     }
@@ -668,6 +672,158 @@ export default class MySQLDriver extends NymphDriver {
         },
       },
     );
+    return true;
+  }
+
+  public async getIndexes(etype: string) {
+    const indexes: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    }[] = [];
+
+    for (let [scope, suffix] of [
+      ['data', '_json'],
+      ['references', '_reference_guid'],
+      ['tokens', '_token_position_stem'],
+    ] as (
+      | ['data', '_json']
+      | ['references', '_reference_guid']
+      | ['tokens', '_token_position_stem']
+    )[]) {
+      const indexDefinitions = await this.queryArray(
+        `SHOW INDEXES FROM ${MySQLDriver.escape(
+          `${this.prefix}${scope}_${etype}`,
+        )} WHERE \`Key_name\` LIKE @pattern AND \`Seq_in_index\`=1;`,
+        {
+          params: {
+            pattern: `${this.prefix}${scope}_${etype}_id_custom_%${suffix}`,
+          },
+        },
+      );
+      for (const indexDefinition of indexDefinitions) {
+        indexes.push({
+          scope,
+          name: (indexDefinition.Key_name as string).substring(
+            `${this.prefix}${scope}_${etype}_id_custom_`.length,
+            indexDefinition.Key_name.length - suffix.length,
+          ),
+          property:
+            ((indexDefinition.Expression as string).match(
+              /\s*\(?\s*`?name`?\s*=\s*(?:\w*)\\*'(.*?)\\*'/,
+            ) ?? [])[1] ?? '',
+        });
+      }
+    }
+
+    return indexes;
+  }
+
+  public async addIndex(
+    etype: string,
+    definition: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    },
+  ) {
+    this.checkIndexName(definition.name);
+    await this.deleteIndex(etype, definition.scope, definition.name);
+    if (definition.scope === 'data') {
+      await this.queryRun(
+        `CREATE INDEX ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_json`,
+        )} USING btree ON ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), (CAST(\`json\` AS CHAR(512)) COLLATE utf8mb4_bin));`,
+      );
+      await this.queryRun(
+        `CREATE INDEX ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_string`,
+        )} USING btree ON ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`string\`(512));`,
+      );
+      await this.queryRun(
+        `CREATE INDEX ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_number`,
+        )} USING btree ON ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`number\`);`,
+      );
+      await this.queryRun(
+        `CREATE INDEX ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_truthy`,
+        )} USING btree ON ${MySQLDriver.escape(
+          `${this.prefix}data_${etype}`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`truthy\`);`,
+      );
+    } else if (definition.scope === 'references') {
+      await this.queryRun(
+        `CREATE INDEX ${MySQLDriver.escape(
+          `${this.prefix}references_${etype}_id_custom_${definition.name}_reference_guid`,
+        )} USING btree ON ${MySQLDriver.escape(
+          `${this.prefix}references_${etype}`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`reference\`, \`guid\`);`,
+      );
+    } else if (definition.scope === 'tokens') {
+      await this.queryRun(
+        `CREATE INDEX ${MySQLDriver.escape(
+          `${this.prefix}tokens_${etype}_id_custom_${definition.name}_token_position_stem`,
+        )} USING btree ON ${MySQLDriver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`token\`, \`position\`, \`stem\`);`,
+      );
+    }
+    return true;
+  }
+
+  public async deleteIndex(
+    etype: string,
+    scope: 'data' | 'references' | 'tokens',
+    name: string,
+  ) {
+    this.checkIndexName(name);
+    try {
+      if (scope === 'data') {
+        await this.queryRun(
+          `DROP INDEX ${MySQLDriver.escape(
+            `${this.prefix}data_${etype}_id_custom_${name}_json`,
+          )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
+        );
+        await this.queryRun(
+          `DROP INDEX ${MySQLDriver.escape(
+            `${this.prefix}data_${etype}_id_custom_${name}_string`,
+          )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
+        );
+        await this.queryRun(
+          `DROP INDEX ${MySQLDriver.escape(
+            `${this.prefix}data_${etype}_id_custom_${name}_number`,
+          )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
+        );
+        await this.queryRun(
+          `DROP INDEX ${MySQLDriver.escape(
+            `${this.prefix}data_${etype}_id_custom_${name}_truthy`,
+          )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
+        );
+      } else if (scope === 'references') {
+        await this.queryRun(
+          `DROP INDEX ${MySQLDriver.escape(
+            `${this.prefix}references_${etype}_id_custom_${name}_reference_guid`,
+          )} ON ${MySQLDriver.escape(`${this.prefix}references_${etype}`)};`,
+        );
+      } else if (scope === 'tokens') {
+        await this.queryRun(
+          `DROP INDEX ${MySQLDriver.escape(
+            `${this.prefix}tokens_${etype}_id_custom_${name}_token_position_stem`,
+          )} ON ${MySQLDriver.escape(`${this.prefix}tokens_${etype}`)};`,
+        );
+      }
+    } catch (e: any) {
+      if (e?.errorCode !== 1091) {
+        throw e;
+      }
+    }
     return true;
   }
 

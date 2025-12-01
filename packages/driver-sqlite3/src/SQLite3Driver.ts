@@ -60,6 +60,10 @@ export default class SQLite3Driver extends NymphDriver {
     return '"' + input.replace(/"/g, () => '""') + '"';
   }
 
+  static escapeValue(input: string) {
+    return "'" + input.replace(/'/g, () => "''") + "'";
+  }
+
   constructor(config: Partial<SQLite3DriverConfig>, store?: InternalStore) {
     super();
     this.config = { ...defaults, ...config };
@@ -421,17 +425,17 @@ export default class SQLite3Driver extends NymphDriver {
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_guid_reference_nameuser`,
+        `${this.prefix}references_${etype}_id_reference_guid_nameuser`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}references_${etype}`,
-      )} ("guid", "reference") WHERE "name"=\'user\';`,
+      )} ("reference", "guid") WHERE "name"=\'user\';`,
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_guid_reference_namegroup`,
+        `${this.prefix}references_${etype}_id_reference_guid_namegroup`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}references_${etype}`,
-      )} ("guid", "reference") WHERE "name"=\'group\';`,
+      )} ("reference", "guid") WHERE "name"=\'group\';`,
     );
   }
 
@@ -520,6 +524,7 @@ export default class SQLite3Driver extends NymphDriver {
           throw new QueryFailedError(
             'Query failed: ' + e2?.code + ' - ' + e2?.message,
             query,
+            e2?.code,
           );
         }
       } else if (
@@ -531,6 +536,7 @@ export default class SQLite3Driver extends NymphDriver {
         throw new QueryFailedError(
           'Query failed: ' + e?.code + ' - ' + e?.message,
           query,
+          e?.code,
         );
       }
     }
@@ -707,6 +713,150 @@ export default class SQLite3Driver extends NymphDriver {
       },
     );
     await this.commit('nymph-delete-uid');
+    return true;
+  }
+
+  public async getIndexes(etype: string) {
+    const indexes: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    }[] = [];
+
+    for (let [scope, suffix] of [
+      ['data', '_json'],
+      ['references', '_reference_guid'],
+      ['tokens', '_token_position_stem'],
+    ] as (
+      | ['data', '_json']
+      | ['references', '_reference_guid']
+      | ['tokens', '_token_position_stem']
+    )[]) {
+      const indexDefinitions: IterableIterator<any> = this.queryArray(
+        `SELECT "name", "sql" FROM "sqlite_master" WHERE "type"='index' AND "name" LIKE @pattern;`,
+        {
+          params: {
+            pattern: `${this.prefix}${scope}_${etype}_id_custom_%${suffix}`,
+          },
+        },
+      );
+      for (const indexDefinition of indexDefinitions) {
+        indexes.push({
+          scope,
+          name: (indexDefinition.name as string).substring(
+            `${this.prefix}${scope}_${etype}_id_custom_`.length,
+            indexDefinition.name.length - suffix.length,
+          ),
+          property:
+            ((indexDefinition.sql as string).match(
+              /WHERE\s+"name"\s*=\s*'(.*)'/,
+            ) ?? [])[1] ?? '',
+        });
+      }
+    }
+
+    return indexes;
+  }
+
+  public async addIndex(
+    etype: string,
+    definition: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    },
+  ) {
+    this.checkIndexName(definition.name);
+    await this.deleteIndex(etype, definition.scope, definition.name);
+    if (definition.scope === 'data') {
+      this.queryRun(
+        `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_json`,
+        )} ON ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}`,
+        )} ("json") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+      );
+      this.queryRun(
+        `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_string`,
+        )} ON ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}`,
+        )} ("string") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+      );
+      this.queryRun(
+        `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_number`,
+        )} ON ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}`,
+        )} ("number") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+      );
+      this.queryRun(
+        `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_truthy`,
+        )} ON ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}`,
+        )} ("truthy") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+      );
+    } else if (definition.scope === 'references') {
+      this.queryRun(
+        `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}references_${etype}_id_custom_${definition.name}_reference_guid`,
+        )} ON ${SQLite3Driver.escape(
+          `${this.prefix}references_${etype}`,
+        )} ("reference", "guid") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+      );
+    } else if (definition.scope === 'tokens') {
+      this.queryRun(
+        `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}tokens_${etype}_id_custom_${definition.name}_token_position_stem`,
+        )} ON ${SQLite3Driver.escape(
+          `${this.prefix}tokens_${etype}`,
+        )} ("token", "position", "stem") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+      );
+    }
+    return true;
+  }
+
+  public async deleteIndex(
+    etype: string,
+    scope: 'data' | 'references' | 'tokens',
+    name: string,
+  ) {
+    this.checkIndexName(name);
+    if (scope === 'data') {
+      this.queryRun(
+        `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_json`,
+        )};`,
+      );
+      this.queryRun(
+        `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_string`,
+        )};`,
+      );
+      this.queryRun(
+        `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_number`,
+        )};`,
+      );
+      this.queryRun(
+        `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}data_${etype}_id_custom_${name}_truthy`,
+        )};`,
+      );
+    } else if (scope === 'references') {
+      this.queryRun(
+        `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}references_${etype}_id_custom_${name}_reference_guid`,
+        )};`,
+      );
+    } else if (scope === 'tokens') {
+      this.queryRun(
+        `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
+          `${this.prefix}tokens_${etype}_id_custom_${name}_token_position_stem`,
+        )};`,
+      );
+    }
     return true;
   }
 

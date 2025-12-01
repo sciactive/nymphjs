@@ -93,10 +93,27 @@ export default abstract class NymphDriver {
   abstract needsMigration(): Promise<'json' | 'tokens' | false>;
   abstract liveMigration(migrationType: 'tokenTables'): Promise<void>;
 
-  /**
-   * Returns a list of the etypes stored in the DB.
-   */
   abstract getEtypes(): Promise<string[]>;
+  abstract getIndexes(etype: string): Promise<
+    {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    }[]
+  >;
+  abstract addIndex(
+    etype: string,
+    definition: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    },
+  ): Promise<boolean>;
+  abstract deleteIndex(
+    etype: string,
+    scope: 'data' | 'references' | 'tokens',
+    name: string,
+  ): Promise<boolean>;
 
   abstract exportDataIterator(): AsyncGenerator<
     { type: 'comment' | 'uid' | 'entity'; content: string },
@@ -211,6 +228,14 @@ export default abstract class NymphDriver {
     let re = new RegExp(newPattern, caseInsensitive ? 'mi' : 'm');
 
     return re.test(subject);
+  }
+
+  public checkIndexName(name: string) {
+    if (name.match(/[^a-z0-9_]/)) {
+      throw new Error(
+        'Index names can only contain lowercase letters, numbers, and underscores.',
+      );
+    }
   }
 
   public async export(filename: string) {

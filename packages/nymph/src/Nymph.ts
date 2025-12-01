@@ -1216,6 +1216,76 @@ export default class Nymph {
     return await this.driver.liveMigration(migrationType);
   }
 
+  /**
+   * Returns a list of the etypes stored in the DB.
+   */
+  public async getEtypes() {
+    return await this.driver.getEtypes();
+  }
+
+  /**
+   * Get all the indexes defined for a specific etype.
+   *
+   * @param etype The etype to get indexes for.
+   */
+  public async getIndexes(etype: string) {
+    return await this.driver.getIndexes(etype);
+  }
+
+  /**
+   * Add an index on a specific property to an etype.
+   *
+   * Nymph adds general indexes on etypes, but they span across all properties,
+   * so they can only speed up a query so much. You can add indexes that are
+   * specific to a property with this function, which will speed up queries for
+   * that property. If an etype only has one or two properties, you may not need
+   * a specific index, but if your etypes include many properties or properties
+   * that generally contain large amounts of data, adding a specific index can
+   * drastically improve the performance of your queries.
+   *
+   * The scope of the index will affect which queries it will speed up:
+   *
+   * - data: This will speed up comparisons and equality checks in queries.
+   * - references: This will speed up ref and qref clauses in queries.
+   * - tokens: This will speed up search clauses in queries.
+   *
+   * The name must be unique within the etype and scope or the existing index
+   * will be overwritten.
+   *
+   * You do not need to add reference indexes for the "user" and "group"
+   * properties, because these are already specifically indexed by Nymph.
+   *
+   * @param etype The etype to add the index on.
+   * @param definition The definition of the index.
+   */
+  public async addIndex(
+    etype: string,
+    definition: {
+      scope: 'data' | 'references' | 'tokens';
+      name: string;
+      property: string;
+    },
+  ) {
+    this.driver.checkIndexName(definition.name);
+    return await this.driver.addIndex(etype, definition);
+  }
+
+  /**
+   * Delete an index from an etype.
+   *
+   * @param etype The etype to delete the index on.
+   * @param scope The scope of the index.
+   * @param name The name of the index to delete.
+   */
+  public async deleteIndex(
+    etype: string,
+    scope: 'data' | 'references' | 'tokens',
+    name: string,
+  ) {
+    this.driver.checkIndexName(name);
+    return await this.driver.deleteIndex(etype, scope, name);
+  }
+
   public on<T extends NymphEventType>(
     event: T,
     callback: T extends 'connect'

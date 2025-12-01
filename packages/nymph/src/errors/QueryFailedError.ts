@@ -1,10 +1,12 @@
 export class QueryFailedError extends Error {
   private query?: string;
+  public errorCode?: number;
 
-  constructor(message: string, query?: string) {
+  constructor(message: string, query?: string, errorCode?: number) {
     super(message);
     this.name = 'QueryFailedError';
     this.query = query;
+    this.errorCode = errorCode;
   }
 
   public getQuery() {
