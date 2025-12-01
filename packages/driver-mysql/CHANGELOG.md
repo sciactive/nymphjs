@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.104](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.103...v1.0.0-beta.104) (2025-12-01)
+
+### Features
+
+- add support for indexing on specific properties and scopes ([ed3cbf1](https://github.com/sciactive/nymphjs/commit/ed3cbf12ee3d83b750188998501c3c89fd4c040f))
+
 # [1.0.0-beta.103](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.102...v1.0.0-beta.103) (2025-11-30)
 
 ### Bug Fixes
