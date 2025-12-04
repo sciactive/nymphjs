@@ -395,7 +395,7 @@ export function EntitiesTest(
     await createTestEntities();
 
     // Testing entity order, offset, limit...
-    const resultEntities = await nymph.getEntities(
+    let resultEntities = await nymph.getEntities(
       {
         class: TestModel,
         reverse: true,
@@ -407,6 +407,17 @@ export function EntitiesTest(
     );
     expect(resultEntities.length).toEqual(1);
     expect(testEntity.$is(resultEntities[0])).toEqual(true);
+
+    // Testing null sort...
+    resultEntities = await nymph.getEntities(
+      {
+        class: TestModel,
+        reverse: true,
+        sort: null,
+      },
+      { type: '&', tag: 'test' },
+    );
+    expect(testEntity.$inArray(resultEntities)).toEqual(true);
   });
 
   it('guid and tags', async () => {

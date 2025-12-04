@@ -993,7 +993,7 @@ export default class MySQLDriver extends NymphDriver {
     const ieTable = `ie${tableSuffix}`;
     const countTable = `count${tableSuffix}`;
     const sTable = `s${tableSuffix}`;
-    const sort = options.sort ?? 'cdate';
+    const sort = options.sort === undefined ? 'cdate' : options.sort;
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
       ({ key, value, typeIsOr, typeIsNot }) => {
@@ -1945,33 +1945,38 @@ export default class MySQLDriver extends NymphDriver {
     let sortJoin = '';
     let sortJoinInner = '';
     const order = options.reverse ? ' DESC' : '';
-    switch (sort) {
-      case 'mdate':
-        sortBy = `${eTable}.\`mdate\`${order}`;
-        sortByInner = `${ieTable}.\`mdate\`${order}`;
-        break;
-      case 'cdate':
-        sortBy = `${eTable}.\`cdate\`${order}`;
-        sortByInner = `${ieTable}.\`cdate\`${order}`;
-        break;
-      default:
-        const name = `param${++count.i}`;
-        sortJoin = `LEFT JOIN (
-            SELECT \`guid\`, \`string\`, \`number\`
-            FROM ${MySQLDriver.escape(this.prefix + 'data_' + etype)}
-            WHERE \`name\`=@${name}
-            ORDER BY \`number\`${order}, \`string\`${order}
-          ) ${sTable} ON ${eTable}.\`guid\`=${sTable}.\`guid\``;
-        sortJoinInner = `LEFT JOIN (
-            SELECT \`guid\`, \`string\`, \`number\`
-            FROM ${MySQLDriver.escape(this.prefix + 'data_' + etype)}
-            WHERE \`name\`=@${name}
-            ORDER BY \`number\`${order}, \`string\`${order}
-          ) ${sTable} ON ${ieTable}.\`guid\`=${sTable}.\`guid\``;
-        sortBy = `${sTable}.\`number\`${order}, ${sTable}.\`string\`${order}`;
-        sortByInner = sortBy;
-        params[name] = sort;
-        break;
+    if (sort == null) {
+      sortBy = '';
+      sortByInner = '';
+    } else {
+      switch (sort) {
+        case 'mdate':
+          sortBy = `ORDER BY ${eTable}.\`mdate\`${order}`;
+          sortByInner = `ORDER BY ${ieTable}.\`mdate\`${order}`;
+          break;
+        case 'cdate':
+          sortBy = `ORDER BY ${eTable}.\`cdate\`${order}`;
+          sortByInner = `ORDER BY ${ieTable}.\`cdate\`${order}`;
+          break;
+        default:
+          const name = `param${++count.i}`;
+          sortJoin = `LEFT JOIN (
+              SELECT \`guid\`, \`string\`, \`number\`
+              FROM ${MySQLDriver.escape(this.prefix + 'data_' + etype)}
+              WHERE \`name\`=@${name}
+              ORDER BY \`number\`${order}, \`string\`${order}
+            ) ${sTable} ON ${eTable}.\`guid\`=${sTable}.\`guid\``;
+          sortJoinInner = `LEFT JOIN (
+              SELECT \`guid\`, \`string\`, \`number\`
+              FROM ${MySQLDriver.escape(this.prefix + 'data_' + etype)}
+              WHERE \`name\`=@${name}
+              ORDER BY \`number\`${order}, \`string\`${order}
+            ) ${sTable} ON ${ieTable}.\`guid\`=${sTable}.\`guid\``;
+          sortBy = `ORDER BY ${sTable}.\`number\`${order}, ${sTable}.\`string\`${order}`;
+          sortByInner = sortBy;
+          params[name] = sort;
+          break;
+      }
     }
 
     let query: string;
@@ -2022,7 +2027,7 @@ export default class MySQLDriver extends NymphDriver {
             )} ${ieTable}
             ${sortJoinInner}
             WHERE ${guidClause}(${whereClause})
-            ORDER BY ${sortByInner}, ${ieTable}.\`guid\`${limit}${offset}`;
+            ${sortByInner ? sortByInner + ', ' : 'ORDER BY '}${ieTable}.\`guid\`${limit}${offset}`;
         } else {
           query = `SELECT
               LOWER(HEX(${eTable}.\`guid\`)) AS \`guid\`,
@@ -2048,9 +2053,9 @@ export default class MySQLDriver extends NymphDriver {
               )} ${ieTable}
               ${sortJoinInner}
               WHERE ${guidClause}(${whereClause})
-              ORDER BY ${sortByInner}${limit}${offset}
+              ${sortByInner}${limit}${offset}
             ) ${fTable} ON ${eTable}.\`guid\`=${fTable}.\`guid\`
-            ORDER BY ${sortBy}, ${eTable}.\`guid\``;
+            ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}.\`guid\``;
         }
       }
     } else {
@@ -2097,7 +2102,7 @@ export default class MySQLDriver extends NymphDriver {
             )} ${ieTable}
             ${sortJoinInner}
             ${guidClause}
-            ORDER BY ${sortByInner}, ${ieTable}.\`guid\`${limit}${offset}`;
+            ${sortByInner ? sortByInner + ', ' : 'ORDER BY '}${ieTable}.\`guid\`${limit}${offset}`;
         } else {
           if (limit || offset) {
             query = `SELECT
@@ -2124,9 +2129,9 @@ export default class MySQLDriver extends NymphDriver {
                 )} ${ieTable}
                 ${sortJoinInner}
                 ${guidClause}
-                ORDER BY ${sortByInner}${limit}${offset}
+                ${sortByInner}${limit}${offset}
               ) ${fTable} ON ${eTable}.\`guid\`=${fTable}.\`guid\`
-              ORDER BY ${sortBy}, ${eTable}.\`guid\``;
+              ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}.\`guid\``;
           } else {
             query = `SELECT
                 LOWER(HEX(${eTable}.\`guid\`)) AS \`guid\`,
@@ -2146,7 +2151,7 @@ export default class MySQLDriver extends NymphDriver {
               )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
               ${sortJoin}
               ${guidSelector ? `WHERE ${eTable}.\`guid\`=${guidSelector}` : ''}
-              ORDER BY ${sortBy}, ${eTable}.\`guid\``;
+              ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}.\`guid\``;
           }
         }
       }

@@ -86,10 +86,10 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
    */
   reverse?: boolean;
   /**
-   * How to sort the entities. Should be "cdate", "mdate", or the name of a
-   * property.
+   * How to sort the entities. Should be "cdate", "mdate", the name of a
+   * property, or null.
    */
-  sort?: 'cdate' | 'mdate' | string;
+  sort?: 'cdate' | 'mdate' | string | null;
   /**
    * What to return, the entities with their data, just the GUIDs, or just a
    * count.

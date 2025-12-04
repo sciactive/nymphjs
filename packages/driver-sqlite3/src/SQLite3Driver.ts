@@ -1017,7 +1017,7 @@ export default class SQLite3Driver extends NymphDriver {
     const fTable = `f${tableSuffix}`;
     const ieTable = `ie${tableSuffix}`;
     const sTable = `s${tableSuffix}`;
-    const sort = options.sort ?? 'cdate';
+    const sort = options.sort === undefined ? 'cdate' : options.sort;
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
       ({ key, value, typeIsOr, typeIsNot }) => {
@@ -1911,27 +1911,32 @@ export default class SQLite3Driver extends NymphDriver {
     let sortByInner: string;
     let sortJoin = '';
     const order = options.reverse ? ' DESC' : '';
-    switch (sort) {
-      case 'mdate':
-        sortBy = `${eTable}."mdate"${order}`;
-        sortByInner = `${ieTable}."mdate"${order}`;
-        break;
-      case 'cdate':
-        sortBy = `${eTable}."cdate"${order}`;
-        sortByInner = `${ieTable}."cdate"${order}`;
-        break;
-      default:
-        const name = `param${++count.i}`;
-        sortJoin = `LEFT JOIN (
-            SELECT "guid", "string", "number"
-            FROM ${SQLite3Driver.escape(this.prefix + 'data_' + etype)}
-            WHERE "name"=@${name}
-            ORDER BY "number"${order}, "string"${order}
-          ) ${sTable} USING ("guid")`;
-        sortBy = `${sTable}."number"${order}, ${sTable}."string"${order}`;
-        sortByInner = sortBy;
-        params[name] = sort;
-        break;
+    if (sort == null) {
+      sortBy = '';
+      sortByInner = '';
+    } else {
+      switch (sort) {
+        case 'mdate':
+          sortBy = `ORDER BY ${eTable}."mdate"${order}`;
+          sortByInner = `ORDER BY ${ieTable}."mdate"${order}`;
+          break;
+        case 'cdate':
+          sortBy = `ORDER BY ${eTable}."cdate"${order}`;
+          sortByInner = `ORDER BY ${ieTable}."cdate"${order}`;
+          break;
+        default:
+          const name = `param${++count.i}`;
+          sortJoin = `LEFT JOIN (
+              SELECT "guid", "string", "number"
+              FROM ${SQLite3Driver.escape(this.prefix + 'data_' + etype)}
+              WHERE "name"=@${name}
+              ORDER BY "number"${order}, "string"${order}
+            ) ${sTable} USING ("guid")`;
+          sortBy = `ORDER BY ${sTable}."number"${order}, ${sTable}."string"${order}`;
+          sortByInner = sortBy;
+          params[name] = sort;
+          break;
+      }
     }
 
     let query: string;
@@ -1974,7 +1979,7 @@ export default class SQLite3Driver extends NymphDriver {
             )} ${ieTable}
             ${sortJoin}
             WHERE ${guidClause}(${whereClause})
-            ORDER BY ${sortByInner}, "guid"${limit}${offset}`;
+            ${sortByInner ? sortByInner + ', ' : 'ORDER BY '}"guid"${limit}${offset}`;
         } else {
           query = `SELECT
               ${eTable}."guid",
@@ -2000,9 +2005,9 @@ export default class SQLite3Driver extends NymphDriver {
               )} ${ieTable}
               ${sortJoin}
               WHERE ${guidClause}(${whereClause})
-              ORDER BY ${sortByInner}${limit}${offset}
+              ${sortByInner}${limit}${offset}
             ) ${fTable} USING ("guid")
-            ORDER BY ${sortBy}, ${eTable}."guid"`;
+            ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}."guid"`;
         }
       }
     } else {
@@ -2041,7 +2046,7 @@ export default class SQLite3Driver extends NymphDriver {
             )} ${ieTable}
             ${sortJoin}
             ${guidClause}
-            ORDER BY ${sortByInner}, "guid"${limit}${offset}`;
+            ${sortByInner ? sortByInner + ', ' : 'ORDER BY '}"guid"${limit}${offset}`;
         } else {
           if (limit || offset) {
             query = `SELECT
@@ -2068,9 +2073,9 @@ export default class SQLite3Driver extends NymphDriver {
                 )} ${ieTable}
                 ${sortJoin}
                 ${guidClause}
-                ORDER BY ${sortByInner}${limit}${offset}
+                ${sortByInner}${limit}${offset}
               ) ${fTable} USING ("guid")
-              ORDER BY ${sortBy}, ${eTable}."guid"`;
+              ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}."guid"`;
           } else {
             query = `SELECT
                 ${eTable}."guid",
@@ -2090,7 +2095,7 @@ export default class SQLite3Driver extends NymphDriver {
               )} ${dTable} USING ("guid")
               ${sortJoin}
               ${guidSelector ? `WHERE ${eTable}."guid"=${guidSelector}` : ''}
-              ORDER BY ${sortBy}, ${eTable}."guid"`;
+              ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}."guid"`;
           }
         }
       }

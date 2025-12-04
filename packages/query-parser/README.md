@@ -86,10 +86,12 @@ You can set limit, offset, sort, and reverse like this.
 
 - `limit:number`
 - `offset:number`
-- `sort:string`
+- `sort:string`, `sort:-`
 - `reverse:true`, `reverse:false`, `reverse:1`, or `reverse:0`
 
 These must appear in the top level of the query (outside of any parentheses).
+
+Using a dash for sort means the results will not be sorted in any particular order. You can also use "cdate" for created date and "mdate" for modified date.
 
 ## Clauses
 

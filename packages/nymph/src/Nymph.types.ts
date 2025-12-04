@@ -205,8 +205,12 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
   /**
    * How to sort the entities. Should be "cdate", "mdate", or the name of a
    * property.
+   *
+   * When null, the result set will not be sorted in any particular way. It's
+   * really up to the DB how the results are returned. In this case, limit and
+   * offset may work for pagination, but shouldn't be relied on.
    */
-  sort?: 'cdate' | 'mdate' | string;
+  sort?: 'cdate' | 'mdate' | string | null;
   /**
    * What to return, the entities with their data, just the entity data, just
    * the GUIDs, or just a count.

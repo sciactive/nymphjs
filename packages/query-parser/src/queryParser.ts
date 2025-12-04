@@ -175,10 +175,10 @@ function selectorsParser({
     // JavaScript variable names are ridiculously infeasable to check
     // thoroughly, so this is a "best attempt".
     const sortRegex =
-      /(?: |^)sort:([_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)(?= |$)/;
+      /(?: |^)sort:(-|[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)(?= |$)/;
     const sortMatch = curQuery.match(sortRegex);
     if (sortMatch) {
-      options.sort = sortMatch[1];
+      options.sort = sortMatch[1] === '-' ? null : sortMatch[1];
     }
     curQuery = curQuery.replace(sortRegex, '');
 

@@ -493,6 +493,30 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses null sort option', () => {
+    const query = 'limit:10 offset:15 sort:- reverse:true search';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['text'],
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 10,
+      offset: 15,
+      sort: null,
+      reverse: true,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '|',
+        ilike: [['text', '%search%']],
+      },
+    ]);
+  });
+
   it('parses simple equal clauses', () => {
     const query = 'prop=string';
     const [options, ...selectors] = queryParser({

@@ -720,13 +720,13 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
     await this.queryRun(
       `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_guid_reference_nameuser`,
+        `${this.prefix}references_${etype}_id_reference_guid_nameuser`,
       )};`,
       { connection },
     );
     await this.queryRun(
       `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_guid_reference_nameuser`,
+        `${this.prefix}references_${etype}_id_reference_guid_nameuser`,
       )} ON ${PostgreSQLDriver.escape(
         `${this.prefix}references_${etype}`,
       )} USING btree ("reference", "guid") WHERE "name"='user';`,
@@ -1553,7 +1553,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     const ieTable = `ie${tableSuffix}`;
     const countTable = `count${tableSuffix}`;
     const sTable = `s${tableSuffix}`;
-    const sort = options.sort ?? 'cdate';
+    const sort = options.sort === undefined ? 'cdate' : options.sort;
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
       ({ key, value, typeIsOr, typeIsNot }) => {
@@ -2478,33 +2478,38 @@ export default class PostgreSQLDriver extends NymphDriver {
     let sortJoin = '';
     let sortJoinInner = '';
     const order = options.reverse ? ' DESC' : '';
-    switch (sort) {
-      case 'mdate':
-        sortBy = `${eTable}."mdate"${order}`;
-        sortByInner = `${ieTable}."mdate"${order}`;
-        break;
-      case 'cdate':
-        sortBy = `${eTable}."cdate"${order}`;
-        sortByInner = `${ieTable}."cdate"${order}`;
-        break;
-      default:
-        const name = `param${++count.i}`;
-        sortJoin = `LEFT JOIN (
-            SELECT "guid", "string", "number"
-            FROM ${PostgreSQLDriver.escape(this.prefix + 'data_' + etype)}
-            WHERE "name"=@${name}
-            ORDER BY "number"${order}, "string"${order}
-          ) ${sTable} ON ${eTable}."guid"=${sTable}."guid"`;
-        sortJoinInner = `LEFT JOIN (
-            SELECT "guid", "string", "number"
-            FROM ${PostgreSQLDriver.escape(this.prefix + 'data_' + etype)}
-            WHERE "name"=@${name}
-            ORDER BY "number"${order}, "string"${order}
-          ) ${sTable} ON ${ieTable}."guid"=${sTable}."guid"`;
-        sortBy = `${sTable}."number"${order}, ${sTable}."string"${order}`;
-        sortByInner = sortBy;
-        params[name] = sort;
-        break;
+    if (sort == null) {
+      sortBy = '';
+      sortByInner = '';
+    } else {
+      switch (sort) {
+        case 'mdate':
+          sortBy = `ORDER BY ${eTable}."mdate"${order}`;
+          sortByInner = `ORDER BY ${ieTable}."mdate"${order}`;
+          break;
+        case 'cdate':
+          sortBy = `ORDER BY ${eTable}."cdate"${order}`;
+          sortByInner = `ORDER BY ${ieTable}."cdate"${order}`;
+          break;
+        default:
+          const name = `param${++count.i}`;
+          sortJoin = `LEFT JOIN (
+              SELECT "guid", "string", "number"
+              FROM ${PostgreSQLDriver.escape(this.prefix + 'data_' + etype)}
+              WHERE "name"=@${name}
+              ORDER BY "number"${order}, "string"${order}
+            ) ${sTable} ON ${eTable}."guid"=${sTable}."guid"`;
+          sortJoinInner = `LEFT JOIN (
+              SELECT "guid", "string", "number"
+              FROM ${PostgreSQLDriver.escape(this.prefix + 'data_' + etype)}
+              WHERE "name"=@${name}
+              ORDER BY "number"${order}, "string"${order}
+            ) ${sTable} ON ${ieTable}."guid"=${sTable}."guid"`;
+          sortBy = `ORDER BY ${sTable}."number"${order}, ${sTable}."string"${order}`;
+          sortByInner = sortBy;
+          params[name] = sort;
+          break;
+      }
     }
 
     let query: string;
@@ -2555,7 +2560,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             )} ${ieTable}
             ${sortJoinInner}
             WHERE ${guidClause}(${whereClause})
-            ORDER BY ${sortByInner}, ${ieTable}."guid"${limit}${offset}`;
+            ${sortByInner ? sortByInner + ', ' : 'ORDER BY '}${ieTable}."guid"${limit}${offset}`;
         } else {
           query = `SELECT
               encode(${eTable}."guid", 'hex') AS "guid",
@@ -2581,9 +2586,9 @@ export default class PostgreSQLDriver extends NymphDriver {
               )} ${ieTable}
               ${sortJoinInner}
               WHERE ${guidClause}(${whereClause})
-              ORDER BY ${sortByInner}${limit}${offset}
+              ${sortByInner}${limit}${offset}
             ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
-            ORDER BY ${sortBy}, ${eTable}."guid"`;
+            ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}."guid"`;
         }
       }
     } else {
@@ -2630,7 +2635,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             )} ${ieTable}
             ${sortJoinInner}
             ${guidClause}
-            ORDER BY ${sortByInner}, ${ieTable}."guid"${limit}${offset}`;
+            ${sortByInner ? sortByInner + ', ' : 'ORDER BY '}${ieTable}."guid"${limit}${offset}`;
         } else {
           if (limit || offset) {
             query = `SELECT
@@ -2657,9 +2662,9 @@ export default class PostgreSQLDriver extends NymphDriver {
                 )} ${ieTable}
                 ${sortJoinInner}
                 ${guidClause}
-                ORDER BY ${sortByInner}${limit}${offset}
+                ${sortByInner}${limit}${offset}
               ) ${fTable} ON ${eTable}."guid"=${fTable}."guid"
-              ORDER BY ${sortBy}, ${eTable}."guid"`;
+              ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}."guid"`;
           } else {
             query = `SELECT
                 encode(${eTable}."guid", 'hex') AS "guid",
@@ -2679,7 +2684,7 @@ export default class PostgreSQLDriver extends NymphDriver {
               )} ${dTable} ON ${eTable}."guid"=${dTable}."guid"
               ${sortJoin}
               ${guidSelector ? `WHERE ${eTable}."guid"=${guidSelector}` : ''}
-              ORDER BY ${sortBy}, ${eTable}."guid"`;
+              ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}."guid"`;
           }
         }
       }

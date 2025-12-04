@@ -708,10 +708,11 @@ export default class Nymph {
    * - offset - The offset from the oldest matching entity to start retrieving.
    * - reverse - If true, entities will be retrieved from newest to oldest.
    *   Therefore, offset will be from the newest entity.
-   * - sort - How to sort the entities. Accepts "cdate", "mdate", or the name of
-   *   a top-level property. The method of sorting properties other than cdate
-   *   and mdate is driver dependent. The only hard rule is that numbers should
-   *   be sorted numerically (2 before 10). Defaults to "cdate".
+   * - sort - How to sort the entities. Accepts "cdate", "mdate", the name of a
+   *   top-level property, or null for no particular order. The method of
+   *   sorting properties other than cdate and mdate is driver dependent. The
+   *   only hard rule is that numbers should be sorted numerically (2 before
+   *   10). Defaults to "cdate".
    * - return - What to return. "entity", "object", "guid", or "count". Defaults
    *   to "entity".
    * - source - Will be 'client' if the query came from a REST call.
