@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.106](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.105...v1.0.0-beta.106) (2025-12-05)
+
+### Bug Fixes
+
+- don't sort qref queries unless explicitly told to ([e92c413](https://github.com/sciactive/nymphjs/commit/e92c413800032a9347a06f965281263a55c9547b))
+
 # [1.0.0-beta.105](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.104...v1.0.0-beta.105) (2025-12-04)
 
 ### Features
