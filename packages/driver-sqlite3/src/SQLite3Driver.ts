@@ -1839,8 +1839,8 @@ export default class SQLite3Driver extends NymphDriver {
               break;
             case 'selector':
             case '!selector':
-              const subquery = this.makeEntityQuery(
-                options,
+              const innerquery = this.makeEntityQuery(
+                { ...options, sort: null, limit: undefined },
                 [curValue],
                 etype,
                 count,
@@ -1855,7 +1855,7 @@ export default class SQLite3Driver extends NymphDriver {
               curQuery +=
                 (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                 '(' +
-                subquery.query +
+                innerquery.query +
                 ')';
               break;
             case 'qref':
@@ -1868,7 +1868,12 @@ export default class SQLite3Driver extends NymphDriver {
               const QrefEntityClass = qrefOptions.class as EntityConstructor;
               etypes.push(QrefEntityClass.ETYPE);
               const qrefQuery = this.makeEntityQuery(
-                { ...qrefOptions, return: 'guid', class: QrefEntityClass },
+                {
+                  ...qrefOptions,
+                  sort: qrefOptions.sort ?? null,
+                  return: 'guid',
+                  class: QrefEntityClass,
+                },
                 qrefSelectors,
                 QrefEntityClass.ETYPE,
                 count,
