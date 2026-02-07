@@ -15,6 +15,9 @@ const tilmeld = new Tilmeld({
   verifyChangeRedirect: 'http://localhost:8080',
   cancelChangeRedirect: 'http://localhost:8080',
   jwtSecret: 'shhhhh',
+  sendEmail: async (_tilmeld, _options, _user) => {
+    return true;
+  },
 });
 const _nymph = new Nymph(
   {},
