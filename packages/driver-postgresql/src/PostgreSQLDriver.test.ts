@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 
 import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { TilmeldTest } from '@nymphjs/tilmeld/dist/testArtifacts.js';
 
 import PostgreSQLDriver from './PostgreSQLDriver.js';
 
@@ -20,6 +21,9 @@ describe('PostgreSQLDriver', () => {
   EntitiesTest(nymph, it);
   UIDTest(nymph, it);
   ExportImportTest(nymph, it);
+
+  const tilmeldNymph = nymph.clone();
+  TilmeldTest(tilmeldNymph, it);
 
   afterAll(async () => {
     await nymph.driver.disconnect(); // avoid jest open handle error

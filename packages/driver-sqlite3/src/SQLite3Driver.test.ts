@@ -2,6 +2,7 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import fs from 'node:fs';
 import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { TilmeldTest } from '@nymphjs/tilmeld/dist/testArtifacts.js';
 
 import SQLite3Driver from './SQLite3Driver.js';
 
@@ -19,6 +20,9 @@ describe('SQLite3Driver In-Memory', () => {
   EntitiesTest(nymph, it);
   UIDTest(nymph, it);
   ExportImportTest(nymph, it);
+
+  const tilmeldNymph = nymph.clone();
+  TilmeldTest(tilmeldNymph, it);
 });
 
 describe('SQLite3Driver DB File', () => {
@@ -36,6 +40,9 @@ describe('SQLite3Driver DB File', () => {
   EntitiesTest(nymph, it);
   UIDTest(nymph, it);
   ExportImportTest(nymph, it);
+
+  const tilmeldNymph = nymph.clone();
+  TilmeldTest(tilmeldNymph, it);
 
   it('cleans up the db', () => {
     try {

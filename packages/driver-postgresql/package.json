@@ -41,6 +41,7 @@
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
+    "@nymphjs/tilmeld": "^1.0.0-beta.106",
     "@tsconfig/recommended": "^1.0.8",
     "@types/jest": "^29.5.14",
     "@types/pg": "^8.11.10",
