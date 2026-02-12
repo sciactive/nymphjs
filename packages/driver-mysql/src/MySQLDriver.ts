@@ -194,13 +194,116 @@ export default class MySQLDriver extends NymphDriver {
           \`tags\` LONGTEXT,
           \`cdate\` DOUBLE PRECISION NOT NULL,
           \`mdate\` DOUBLE PRECISION NOT NULL,
+          \`user\` BINARY(12),
+          \`group\` BINARY(12),
+          \`acUser\` TINYINT UNSIGNED,
+          \`acGroup\` TINYINT UNSIGNED,
+          \`acOther\` TINYINT UNSIGNED,
+          \`acRead\` LONGTEXT,
+          \`acWrite\` LONGTEXT,
+          \`acFull\` LONGTEXT,
           PRIMARY KEY (\`guid\`),
           INDEX \`id_guid\` USING HASH (\`guid\`),
           INDEX \`id_cdate\` USING BTREE (\`cdate\`),
           INDEX \`id_mdate\` USING BTREE (\`mdate\`),
-          FULLTEXT \`id_tags\` (\`tags\`)
+          FULLTEXT \`id_tags\` (\`tags\`),
+          INDEX \`id_user_acUser\` USING BTREE (\`user\`, \`acUser\`),
+          INDEX \`id_group_acGroup\` USING BTREE (\`group\`, \`acGroup\`),
+          INDEX \`id_acUser\` USING BTREE (\`acUser\`),
+          INDEX \`id_acGroup\` USING BTREE (\`acGroup\`),
+          INDEX \`id_acOther\` USING BTREE (\`acOther\`),
+          FULLTEXT \`id_acRead\` (\`acRead\`),
+          FULLTEXT \`id_acWrite\` (\`acWrite\`),
+          FULLTEXT \`id_acFull\` (\`acFull\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
+    );
+  }
+
+  private async addTilmeldColumnsAndIndexes(etype: string) {
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`user\` BINARY(12);`,
+    );
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`group\` BINARY(12);`,
+    );
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`acUser\` TINYINT UNSIGNED;`,
+    );
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`acGroup\` TINYINT UNSIGNED;`,
+    );
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`acOther\` TINYINT UNSIGNED;`,
+    );
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`acRead\` LONGTEXT;`,
+    );
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`acWrite\` LONGTEXT;`,
+    );
+    await this.queryRun(
+      `ALTER TABLE ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN \`acFull\` LONGTEXT;`,
+    );
+    await this.createEntitiesTilmeldIndexes(etype);
+  }
+
+  private async createEntitiesTilmeldIndexes(etype: string) {
+    await this.queryRun(
+      `CREATE INDEX \`id_user_acUser\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`user\`, \`acUser\`) USING BTREE;`,
+    );
+    await this.queryRun(
+      `CREATE INDEX \`id_group_acGroup\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`group\`, \`acGroup\`) USING BTREE;`,
+    );
+    await this.queryRun(
+      `CREATE INDEX \`id_acUser\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`acUser\`) USING BTREE;`,
+    );
+    await this.queryRun(
+      `CREATE INDEX \`id_acGroup\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`acGroup\`) USING BTREE;`,
+    );
+    await this.queryRun(
+      `CREATE INDEX \`id_acOther\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`acOther\`) USING BTREE;`,
+    );
+    await this.queryRun(
+      `CREATE FULLTEXT INDEX \`id_acRead\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`acRead\`);`,
+    );
+    await this.queryRun(
+      `CREATE FULLTEXT INDEX \`id_acWrite\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`acWrite\`);`,
+    );
+    await this.queryRun(
+      `CREATE FULLTEXT INDEX \`id_acFull\` ON ${MySQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} (\`acFull\`);`,
     );
   }
 
@@ -2285,7 +2388,7 @@ export default class MySQLDriver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
-    return await this.importEntityInternal(entity, false);
+    return await this.importEntityInternal(entity);
   }
 
   public async importEntityTokens(entity: {
@@ -2296,7 +2399,18 @@ export default class MySQLDriver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
-    return await this.importEntityInternal(entity, true);
+    return await this.importEntityInternal(entity, { only: 'tokens' });
+  }
+
+  public async importEntityTilmeldAC(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    return await this.importEntityInternal(entity, { only: 'tilmeldAC' });
   }
 
   private async importEntityInternal(
@@ -2315,11 +2429,11 @@ export default class MySQLDriver extends NymphDriver {
       sdata: SerializedEntityData;
       etype: string;
     },
-    onlyTokens: boolean,
+    { only = undefined }: { only?: 'tokens' | 'tilmeldAC' } = {},
   ) {
     try {
       let promises = [];
-      if (!onlyTokens) {
+      if (only == null) {
         promises.push(
           this.queryRun(
             `DELETE FROM ${MySQLDriver.escape(
@@ -2360,20 +2474,22 @@ export default class MySQLDriver extends NymphDriver {
           ),
         );
       }
-      promises.push(
-        this.queryRun(
-          `DELETE FROM ${MySQLDriver.escape(
-            `${this.prefix}tokens_${etype}`,
-          )} WHERE \`guid\`=UNHEX(@guid);`,
-          {
-            etypes: [etype],
-            params: {
-              guid,
+      if (only == null || only === 'tokens') {
+        promises.push(
+          this.queryRun(
+            `DELETE FROM ${MySQLDriver.escape(
+              `${this.prefix}tokens_${etype}`,
+            )} WHERE \`guid\`=UNHEX(@guid);`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+              },
             },
-          },
-        ),
-      );
-      if (!onlyTokens) {
+          ),
+        );
+      }
+      if (only == null) {
         promises.push(
           this.queryRun(
             `DELETE FROM ${MySQLDriver.escape(
@@ -2392,11 +2508,14 @@ export default class MySQLDriver extends NymphDriver {
       await Promise.all(promises);
       promises = [];
 
-      if (!onlyTokens) {
+      if (only == null) {
+        let { user, group, acUser, acGroup, acOther, acRead, acWrite, acFull } =
+          this.removeAndReturnACValues(etype, {}, sdata);
+
         await this.queryRun(
           `INSERT INTO ${MySQLDriver.escape(
             `${this.prefix}entities_${etype}`,
-          )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate);`,
+          )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`, \`user\`, \`group\`, \`acUser\`, \`acGroup\`, \`acOther\`, \`acRead\`, \`acWrite\`, \`acFull\`) VALUES (UNHEX(@guid), @tags, @cdate, @mdate, ${user == null ? '@user' : 'UNHEX(@user)'}, ${group == null ? '@group' : 'UNHEX(@group)'}, @acUser, @acGroup, @acOther, @acRead, @acWrite, @acFull);`,
           {
             etypes: [etype],
             params: {
@@ -2404,6 +2523,14 @@ export default class MySQLDriver extends NymphDriver {
               tags: ' ' + tags.join(' ') + ' ',
               cdate: isNaN(cdate) ? null : cdate,
               mdate: isNaN(mdate) ? null : mdate,
+              user,
+              group,
+              acUser,
+              acGroup,
+              acOther,
+              acRead: acRead && ' ' + acRead.join(' ') + ' ',
+              acWrite: acWrite && ' ' + acWrite.join(' ') + ' ',
+              acFull: acFull && ' ' + acFull.join(' ') + ' ',
             },
           },
         );
@@ -2463,58 +2590,87 @@ export default class MySQLDriver extends NymphDriver {
         }
       }
 
+      if (only === 'tilmeldAC') {
+        let { user, group, acUser, acGroup, acOther, acRead, acWrite, acFull } =
+          this.removeAndReturnACValues(etype, {}, sdata);
+
+        promises.push(
+          this.queryRun(
+            `UPDATE ${MySQLDriver.escape(
+              `${this.prefix}entities_${etype}`,
+            )} SET \`user\`=${user == null ? '@user' : 'UNHEX(@user)'}, \`group\`=${group == null ? '@group' : 'UNHEX(@group)'}, \`acUser\`=@acUser, \`acGroup\`=@acGroup, \`acOther\`=@acOther, \`acRead\`=@acRead, \`acWrite\`=@acWrite, \`acFull\`=@acFull WHERE \`guid\`=UNHEX(@guid);`,
+            {
+              etypes: [etype],
+              params: {
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead: acRead && ' ' + acRead.join(' ') + ' ',
+                acWrite: acWrite && ' ' + acWrite.join(' ') + ' ',
+                acFull: acFull && ' ' + acFull.join(' ') + ' ',
+                guid,
+              },
+            },
+          ),
+        );
+      }
+
       const EntityClass = this.nymph.getEntityClassByEtype(etype);
 
-      for (let name in sdata) {
-        let tokenString: string | null = null;
-        try {
-          tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
-        } catch (e: any) {
-          // Ignore error.
-        }
+      if (only == null || only === 'tokens') {
+        for (let name in sdata) {
+          let tokenString: string | null = null;
+          try {
+            tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
+          } catch (e: any) {
+            // Ignore error.
+          }
 
-        if (tokenString != null) {
-          const tokens = this.tokenizer.tokenize(tokenString);
-          while (tokens.length) {
-            const currentTokens = tokens.splice(0, 100);
-            const params: { [k: string]: any } = {
-              guid,
-              name,
-            };
-            const values: string[] = [];
+          if (tokenString != null) {
+            const tokens = this.tokenizer.tokenize(tokenString);
+            while (tokens.length) {
+              const currentTokens = tokens.splice(0, 100);
+              const params: { [k: string]: any } = {
+                guid,
+                name,
+              };
+              const values: string[] = [];
 
-            for (let i = 0; i < currentTokens.length; i++) {
-              const token = currentTokens[i];
-              params['token' + i] = token.token;
-              params['position' + i] = token.position;
-              params['stem' + i] = token.stem;
-              values.push(
-                '(UNHEX(@guid), @name, @token' +
-                  i +
-                  ', @position' +
-                  i +
-                  ', @stem' +
-                  i +
-                  ')',
+              for (let i = 0; i < currentTokens.length; i++) {
+                const token = currentTokens[i];
+                params['token' + i] = token.token;
+                params['position' + i] = token.position;
+                params['stem' + i] = token.stem;
+                values.push(
+                  '(UNHEX(@guid), @name, @token' +
+                    i +
+                    ', @position' +
+                    i +
+                    ', @stem' +
+                    i +
+                    ')',
+                );
+              }
+
+              promises.push(
+                this.queryRun(
+                  `INSERT INTO ${MySQLDriver.escape(
+                    `${this.prefix}tokens_${etype}`,
+                  )} (\`guid\`, \`name\`, \`token\`, \`position\`, \`stem\`) VALUES ${values.join(', ')};`,
+                  {
+                    etypes: [etype],
+                    params,
+                  },
+                ),
               );
             }
-
-            promises.push(
-              this.queryRun(
-                `INSERT INTO ${MySQLDriver.escape(
-                  `${this.prefix}tokens_${etype}`,
-                )} (\`guid\`, \`name\`, \`token\`, \`position\`, \`stem\`) VALUES ${values.join(', ')};`,
-                {
-                  etypes: [etype],
-                  params,
-                },
-              ),
-            );
           }
         }
       }
 
-      if (!onlyTokens) {
+      if (only == null) {
         const uniques = await EntityClass.getUniques({
           guid,
           cdate,
@@ -2836,16 +2992,34 @@ export default class MySQLDriver extends NymphDriver {
           ) {
             return false;
           }
+          let {
+            user,
+            group,
+            acUser,
+            acGroup,
+            acOther,
+            acRead,
+            acWrite,
+            acFull,
+          } = this.removeAndReturnACValues(etype, data, sdata);
           await this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
               `${this.prefix}entities_${etype}`,
-            )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`) VALUES (UNHEX(@guid), @tags, @cdate, @cdate);`,
+            )} (\`guid\`, \`tags\`, \`cdate\`, \`mdate\`, \`user\`, \`group\`, \`acUser\`, \`acGroup\`, \`acOther\`, \`acRead\`, \`acWrite\`, \`acFull\`) VALUES (UNHEX(@guid), @tags, @cdate, @cdate, ${user == null ? '@user' : 'UNHEX(@user)'}, ${group == null ? '@group' : 'UNHEX(@group)'}, @acUser, @acGroup, @acOther, @acRead, @acWrite, @acFull);`,
             {
               etypes: [etype],
               params: {
                 guid,
                 tags: ' ' + tags.join(' ') + ' ',
                 cdate,
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead: acRead && ' ' + acRead.join(' ') + ' ',
+                acWrite: acWrite && ' ' + acWrite.join(' ') + ' ',
+                acFull: acFull && ' ' + acFull.join(' ') + ' ',
               },
             },
           );
@@ -2859,6 +3033,16 @@ export default class MySQLDriver extends NymphDriver {
           ) {
             return false;
           }
+          let {
+            user,
+            group,
+            acUser,
+            acGroup,
+            acOther,
+            acRead,
+            acWrite,
+            acFull,
+          } = this.removeAndReturnACValues(etype, data, sdata);
           if (this.config.rowLocking) {
             const promises = [];
             promises.push(
@@ -2946,12 +3130,20 @@ export default class MySQLDriver extends NymphDriver {
           const info = await this.queryRun(
             `UPDATE ${MySQLDriver.escape(
               `${this.prefix}entities_${etype}`,
-            )} SET \`tags\`=@tags, \`mdate\`=@mdate WHERE \`guid\`=UNHEX(@guid) AND \`mdate\` <= @emdate;`,
+            )} SET \`tags\`=@tags, \`mdate\`=@mdate, \`user\`=${user == null ? '@user' : 'UNHEX(@user)'}, \`group\`=${group == null ? '@group' : 'UNHEX(@group)'}, \`acUser\`=@acUser, \`acGroup\`=@acGroup, \`acOther\`=@acOther, \`acRead\`=@acRead, \`acWrite\`=@acWrite, \`acFull\`=@acFull WHERE \`guid\`=UNHEX(@guid) AND \`mdate\` <= @emdate;`,
             {
               etypes: [etype],
               params: {
                 tags: ' ' + tags.join(' ') + ' ',
                 mdate,
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead: acRead && ' ' + acRead.join(' ') + ' ',
+                acWrite: acWrite && ' ' + acWrite.join(' ') + ' ',
+                acFull: acFull && ' ' + acFull.join(' ') + ' ',
                 guid,
                 emdate: isNaN(Number(entity.mdate)) ? 0 : Number(entity.mdate),
               },
@@ -3107,7 +3299,9 @@ export default class MySQLDriver extends NymphDriver {
     return nymph;
   }
 
-  public async needsMigration(): Promise<'json' | 'tokens' | false> {
+  public async needsMigration(): Promise<
+    'json' | 'tokens' | 'tilmeldColumns' | false
+  > {
     const table = await this.queryGet(
       'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix LIMIT 1;',
       {
@@ -3143,14 +3337,45 @@ export default class MySQLDriver extends NymphDriver {
     if (!table2 || !table2.table_name) {
       return 'tokens';
     }
+    const table3 = await this.queryGet(
+      'SELECT `table_name` AS `table_name` FROM `information_schema`.`tables` WHERE `table_schema`=@db AND `table_name` LIKE @prefix LIMIT 1;',
+      {
+        params: {
+          db: this.config.database,
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
+    );
+    if (table3?.name) {
+      const result = await this.queryGet(
+        "SELECT 1 AS `exists` FROM `information_schema`.`columns` WHERE `table_schema`=@db AND `table_name`=@table AND `column_name`='user';",
+        {
+          params: {
+            db: this.config.database,
+            table: table3.table_name,
+          },
+        },
+      );
+      if (!result?.exists) {
+        return 'tilmeldColumns';
+      }
+    }
     return false;
   }
 
-  public async liveMigration(_migrationType: 'tokenTables') {
-    const etypes = await this.getEtypes();
+  public async liveMigration(migrationType: 'tokenTables' | 'tilmeldColumns') {
+    if (migrationType === 'tokenTables') {
+      const etypes = await this.getEtypes();
 
-    for (let etype of etypes) {
-      await this.createTokensTable(etype);
+      for (let etype of etypes) {
+        await this.createTokensTable(etype);
+      }
+    } else if (migrationType === 'tilmeldColumns') {
+      const etypes = await this.getEtypes();
+
+      for (let etype of etypes) {
+        await this.addTilmeldColumnsAndIndexes(etype);
+      }
     }
   }
 }

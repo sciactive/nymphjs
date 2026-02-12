@@ -12,7 +12,7 @@ npm install --save @nymphjs/nymph
 
 ## Drivers
 
-To use Nymph, you need a database driver. Nymph.js provides a [MySQL driver](../driver-mysql/README.md), a [PostgreSQL driver](../driver-postgresql/README.md), and a [SQLite3 driver](../driver-sqlite3/README.md). They all provide the exact same functionality.
+To use Nymph, you need a database driver. Nymph.js provides a [MySQL driver](../driver-mysql/README.md), a [PostgreSQL driver](../driver-postgresql/README.md), and a [SQLite3 driver](../driver-sqlite3/README.md). They all provide the exact same functionality (with the exception of how the database returns sorted data).
 
 ## Usage
 
@@ -97,6 +97,18 @@ export default class Todo extends Entity<TodoData> {
 ## Options
 
 See the [config declaration file](src/conf/d.ts).
+
+# Live Migrations
+
+Sometimes database changes can be live migrated. In these cases, running `needsMigration()` will tell you about them, and the docblock for that method will give you more information. You should always run this method after updating to a new version of Nymph to see what needs to be migrated, if anything.
+
+If a migration is needed, you should export the DB in the version you were using before, in case anything goes wrong during the migration.
+
+The next step is to use the `liveMigration(migrationType)` method with the correct migration type.
+
+If required (explained in the docblock), you might then need to run a specific import on all of your entities. This is very important, and you might not be able to use new features or upgrade further without performing this step.
+
+Note that you can always export the DB in the version you were previously using, completely clear the DB (drop all of the tables), then import the DB in the new version.
 
 # License
 

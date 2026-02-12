@@ -235,7 +235,7 @@ export default class SQLite3Driver extends NymphDriver {
     this.queryRun(
       `CREATE TABLE IF NOT EXISTS ${SQLite3Driver.escape(
         `${this.prefix}entities_${etype}`,
-      )} ("guid" CHARACTER(24) PRIMARY KEY, "tags" TEXT, "cdate" REAL NOT NULL, "mdate" REAL NOT NULL);`,
+      )} ("guid" CHARACTER(24) PRIMARY KEY, "tags" TEXT, "cdate" REAL NOT NULL, "mdate" REAL NOT NULL, "user" CHARACTER(24), "group" CHARACTER(24), "acUser" INT(1), "acGroup" INT(1), "acOther" INT(1), "acRead" TEXT, "acWrite" TEXT, "acFull" TEXT);`,
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
@@ -257,6 +257,75 @@ export default class SQLite3Driver extends NymphDriver {
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}entities_${etype}`,
       )} ("tags");`,
+    );
+    this.createEntitiesTilmeldIndexes(etype);
+  }
+
+  private addTilmeldColumnsAndIndexes(etype: string) {
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "user" CHARACTER(24), ADD COLUMN "group" CHARACTER(24), ADD COLUMN "acUser" INT(1), ADD COLUMN "acGroup" INT(1), ADD COLUMN "acOther" INT(1), ADD COLUMN "acRead" TEXT, ADD COLUMN "acWrite" TEXT, ADD COLUMN "acFull" TEXT;`,
+    );
+    this.createEntitiesTilmeldIndexes(etype);
+  }
+
+  private createEntitiesTilmeldIndexes(etype: string) {
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_user_acUser`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("user", "acUser");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_group_acGroup`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("group", "acGroup");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_acUser`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("acUser");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_acGroup`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("acGroup");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_acOther`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("acOther");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_acRead`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("acRead");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_acWrite`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("acWrite");`,
+    );
+    this.queryRun(
+      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}_id_acFull`,
+      )} ON ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ("acFull");`,
     );
   }
 
@@ -2226,7 +2295,7 @@ export default class SQLite3Driver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
-    return await this.importEntityInternal(entity, false);
+    return await this.importEntityInternal(entity);
   }
 
   public async importEntityTokens(entity: {
@@ -2237,7 +2306,18 @@ export default class SQLite3Driver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
-    return await this.importEntityInternal(entity, true);
+    return await this.importEntityInternal(entity, { only: 'tokens' });
+  }
+
+  public async importEntityTilmeldAC(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    return await this.importEntityInternal(entity, { only: 'tilmeldAC' });
   }
 
   private async importEntityInternal(
@@ -2256,10 +2336,10 @@ export default class SQLite3Driver extends NymphDriver {
       sdata: SerializedEntityData;
       etype: string;
     },
-    onlyTokens: boolean,
+    { only = undefined }: { only?: 'tokens' | 'tilmeldAC' } = {},
   ) {
     try {
-      if (!onlyTokens) {
+      if (only == null) {
         this.queryRun(
           `DELETE FROM ${SQLite3Driver.escape(
             `${this.prefix}entities_${etype}`,
@@ -2294,18 +2374,20 @@ export default class SQLite3Driver extends NymphDriver {
           },
         );
       }
-      this.queryRun(
-        `DELETE FROM ${SQLite3Driver.escape(
-          `${this.prefix}tokens_${etype}`,
-        )} WHERE "guid"=@guid;`,
-        {
-          etypes: [etype],
-          params: {
-            guid,
+      if (only == null || only === 'tokens') {
+        this.queryRun(
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}tokens_${etype}`,
+          )} WHERE "guid"=@guid;`,
+          {
+            etypes: [etype],
+            params: {
+              guid,
+            },
           },
-        },
-      );
-      if (!onlyTokens) {
+        );
+      }
+      if (only == null) {
         this.queryRun(
           `DELETE FROM ${SQLite3Driver.escape(
             `${this.prefix}uniques_${etype}`,
@@ -2319,11 +2401,14 @@ export default class SQLite3Driver extends NymphDriver {
         );
       }
 
-      if (!onlyTokens) {
+      if (only == null) {
+        let { user, group, acUser, acGroup, acOther, acRead, acWrite, acFull } =
+          this.removeAndReturnACValues(etype, {}, sdata);
+
         this.queryRun(
           `INSERT INTO ${SQLite3Driver.escape(
             `${this.prefix}entities_${etype}`,
-          )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @mdate);`,
+          )} ("guid", "tags", "cdate", "mdate", "user", "group", "acUser", "acGroup", "acOther", "acRead", "acWrite", "acFull") VALUES (@guid, @tags, @cdate, @mdate, @user, @group, @acUser, @acGroup, @acOther, @acRead, @acWrite, @acFull);`,
           {
             etypes: [etype],
             params: {
@@ -2331,6 +2416,14 @@ export default class SQLite3Driver extends NymphDriver {
               tags: ',' + tags.join(',') + ',',
               cdate,
               mdate,
+              user,
+              group,
+              acUser,
+              acGroup,
+              acOther,
+              acRead: acRead && ',' + acRead.join(',') + ',',
+              acWrite: acWrite && ',' + acWrite.join(',') + ',',
+              acFull: acFull && ',' + acFull.join(',') + ',',
             },
           },
         );
@@ -2386,56 +2479,83 @@ export default class SQLite3Driver extends NymphDriver {
         }
       }
 
+      if (only === 'tilmeldAC') {
+        let { user, group, acUser, acGroup, acOther, acRead, acWrite, acFull } =
+          this.removeAndReturnACValues(etype, {}, sdata);
+
+        this.queryRun(
+          `UPDATE OR IGNORE ${SQLite3Driver.escape(
+            `${this.prefix}entities_${etype}`,
+          )} SET "user"=@user, "group"=@group, "acUser"=@acUser, "acGroup"=@acGroup, "acOther"=@acOther, "acRead"=@acRead, "acWrite"=@acWrite, "acFull"=@acFull WHERE "guid"=@guid;`,
+          {
+            etypes: [etype],
+            params: {
+              user,
+              group,
+              acUser,
+              acGroup,
+              acOther,
+              acRead: acRead && ',' + acRead.join(',') + ',',
+              acWrite: acWrite && ',' + acWrite.join(',') + ',',
+              acFull: acFull && ',' + acFull.join(',') + ',',
+              guid,
+            },
+          },
+        );
+      }
+
       const EntityClass = this.nymph.getEntityClassByEtype(etype);
 
-      for (let name in sdata) {
-        let tokenString: string | null = null;
-        try {
-          tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
-        } catch (e: any) {
-          // Ignore error.
-        }
+      if (only == null || only === 'tokens') {
+        for (let name in sdata) {
+          let tokenString: string | null = null;
+          try {
+            tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
+          } catch (e: any) {
+            // Ignore error.
+          }
 
-        if (tokenString != null) {
-          const tokens = this.tokenizer.tokenize(tokenString);
-          while (tokens.length) {
-            const currentTokens = tokens.splice(0, 100);
-            const params: { [k: string]: any } = {
-              guid,
-              name,
-            };
-            const values: string[] = [];
+          if (tokenString != null) {
+            const tokens = this.tokenizer.tokenize(tokenString);
+            while (tokens.length) {
+              const currentTokens = tokens.splice(0, 100);
+              const params: { [k: string]: any } = {
+                guid,
+                name,
+              };
+              const values: string[] = [];
 
-            for (let i = 0; i < currentTokens.length; i++) {
-              const token = currentTokens[i];
-              params['token' + i] = token.token;
-              params['position' + i] = token.position;
-              params['stem' + i] = token.stem ? 1 : 0;
-              values.push(
-                '(@guid, @name, @token' +
-                  i +
-                  ', @position' +
-                  i +
-                  ', @stem' +
-                  i +
-                  ')',
+              for (let i = 0; i < currentTokens.length; i++) {
+                const token = currentTokens[i];
+                params['token' + i] = token.token;
+                params['position' + i] = token.position;
+                params['stem' + i] = token.stem ? 1 : 0;
+                values.push(
+                  '(@guid, @name, @token' +
+                    i +
+                    ', @position' +
+                    i +
+                    ', @stem' +
+                    i +
+                    ')',
+                );
+              }
+
+              this.queryRun(
+                `INSERT INTO ${SQLite3Driver.escape(
+                  `${this.prefix}tokens_${etype}`,
+                )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
+                {
+                  etypes: [etype],
+                  params,
+                },
               );
             }
-
-            this.queryRun(
-              `INSERT INTO ${SQLite3Driver.escape(
-                `${this.prefix}tokens_${etype}`,
-              )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
-              {
-                etypes: [etype],
-                params,
-              },
-            );
           }
         }
       }
 
-      if (!onlyTokens) {
+      if (only == null) {
         const uniques = await EntityClass.getUniques({
           guid,
           cdate,
@@ -2754,16 +2874,34 @@ export default class SQLite3Driver extends NymphDriver {
           ) {
             return false;
           }
+          let {
+            user,
+            group,
+            acUser,
+            acGroup,
+            acOther,
+            acRead,
+            acWrite,
+            acFull,
+          } = this.removeAndReturnACValues(etype, data, sdata);
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
               `${this.prefix}entities_${etype}`,
-            )} ("guid", "tags", "cdate", "mdate") VALUES (@guid, @tags, @cdate, @cdate);`,
+            )} ("guid", "tags", "cdate", "mdate", "user", "group", "acUser", "acGroup", "acOther", "acRead", "acWrite", "acFull") VALUES (@guid, @tags, @cdate, @cdate, @user, @group, @acUser, @acGroup, @acOther, @acRead, @acWrite, @acFull);`,
             {
               etypes: [etype],
               params: {
                 guid,
                 tags: ',' + tags.join(',') + ',',
                 cdate,
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead: acRead && ',' + acRead.join(',') + ',',
+                acWrite: acWrite && ',' + acWrite.join(',') + ',',
+                acFull: acFull && ',' + acFull.join(',') + ',',
               },
             },
           );
@@ -2777,15 +2915,33 @@ export default class SQLite3Driver extends NymphDriver {
           ) {
             return false;
           }
+          let {
+            user,
+            group,
+            acUser,
+            acGroup,
+            acOther,
+            acRead,
+            acWrite,
+            acFull,
+          } = this.removeAndReturnACValues(etype, data, sdata);
           const info = this.queryRun(
             `UPDATE ${SQLite3Driver.escape(
               `${this.prefix}entities_${etype}`,
-            )} SET "tags"=@tags, "mdate"=@mdate WHERE "guid"=@guid AND "mdate" <= @emdate;`,
+            )} SET "tags"=@tags, "mdate"=@mdate, "user"=@user, "group"=@group, "acUser"=@acUser, "acGroup"=@acGroup, "acOther"=@acOther, "acRead"=@acRead, "acWrite"=@acWrite, "acFull"=@acFull WHERE "guid"=@guid AND "mdate" <= @emdate;`,
             {
               etypes: [etype],
               params: {
                 tags: ',' + tags.join(',') + ',',
                 mdate,
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead: acRead && ',' + acRead.join(',') + ',',
+                acWrite: acWrite && ',' + acWrite.join(',') + ',',
+                acFull: acFull && ',' + acFull.join(',') + ',',
                 guid,
                 emdate: Number(entity.mdate),
               },
@@ -2915,7 +3071,9 @@ export default class SQLite3Driver extends NymphDriver {
     return this.nymph;
   }
 
-  public async needsMigration(): Promise<'json' | 'tokens' | false> {
+  public async needsMigration(): Promise<
+    'json' | 'tokens' | 'tilmeldColumns' | false
+  > {
     const table: any = this.queryGet(
       "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix LIMIT 1;",
       {
@@ -2948,14 +3106,43 @@ export default class SQLite3Driver extends NymphDriver {
     if (!table2 || !table2.name) {
       return 'tokens';
     }
+    const table3: any = this.queryGet(
+      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix LIMIT 1;",
+      {
+        params: {
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
+    );
+    if (table3?.name) {
+      const result: any = this.queryGet(
+        "SELECT 1 AS `exists` FROM pragma_table_info(@table) WHERE `name`='user';",
+        {
+          params: {
+            table: table3.name,
+          },
+        },
+      );
+      if (!result?.exists) {
+        return 'tilmeldColumns';
+      }
+    }
     return false;
   }
 
-  public async liveMigration(_migrationType: 'tokenTables') {
-    const etypes = await this.getEtypes();
+  public async liveMigration(migrationType: 'tokenTables' | 'tilmeldColumns') {
+    if (migrationType === 'tokenTables') {
+      const etypes = await this.getEtypes();
 
-    for (let etype of etypes) {
-      this.createTokensTable(etype);
+      for (let etype of etypes) {
+        this.createTokensTable(etype);
+      }
+    } else if (migrationType === 'tilmeldColumns') {
+      const etypes = await this.getEtypes();
+
+      for (let etype of etypes) {
+        this.addTilmeldColumnsAndIndexes(etype);
+      }
     }
   }
 }

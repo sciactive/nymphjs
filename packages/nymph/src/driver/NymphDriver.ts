@@ -90,8 +90,12 @@ export default abstract class NymphDriver {
    */
   abstract disconnect(): Promise<boolean>;
 
-  abstract needsMigration(): Promise<'json' | 'tokens' | false>;
-  abstract liveMigration(migrationType: 'tokenTables'): Promise<void>;
+  abstract needsMigration(): Promise<
+    'json' | 'tokens' | 'tilmeldColumns' | false
+  >;
+  abstract liveMigration(
+    migrationType: 'tokenTables' | 'tilmeldColumns',
+  ): Promise<void>;
 
   abstract getEtypes(): Promise<string[]>;
   abstract getIndexes(etype: string): Promise<
@@ -152,6 +156,14 @@ export default abstract class NymphDriver {
     etype: string;
   }): Promise<void>;
   abstract importEntityTokens(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }): Promise<void>;
+  abstract importEntityTilmeldAC(entity: {
     guid: string;
     cdate: number;
     mdate: number;
@@ -697,6 +709,201 @@ export default abstract class NymphDriver {
       }
     }
     return false;
+  }
+
+  protected removeAndReturnACValues(
+    etype: string,
+    data: EntityData,
+    sdata: SerializedEntityData,
+  ) {
+    let user: string | null = null;
+    let group: string | null = null;
+    let acUser: number | null = null;
+    let acGroup: number | null = null;
+    let acOther: number | null = null;
+    let acRead: string[] | null = null;
+    let acWrite: string[] | null = null;
+    let acFull: string[] | null = null;
+
+    if (this.nymph.tilmeld != null) {
+      // Since Tilmeld is installed, we need to fill the AC vars.
+      const userValue =
+        'user' in sdata
+          ? JSON.parse(sdata.user)
+          : 'user' in data
+            ? data.user
+            : null;
+      if (
+        Array.isArray(userValue) &&
+        userValue[0] === 'nymph_entity_reference' &&
+        userValue[2] === 'User' &&
+        typeof userValue[1] === 'string' &&
+        userValue[1].match(/^[0-9a-f]{24}$/i)
+      ) {
+        user = userValue[1];
+      }
+
+      const groupValue =
+        'group' in sdata
+          ? JSON.parse(sdata.group)
+          : 'group' in data
+            ? data.group
+            : null;
+      if (
+        Array.isArray(groupValue) &&
+        groupValue[0] === 'nymph_entity_reference' &&
+        groupValue[2] === 'Group' &&
+        typeof groupValue[1] === 'string' &&
+        groupValue[1].match(/^[0-9a-f]{24}$/i)
+      ) {
+        group = groupValue[1];
+      }
+
+      if (etype !== 'tilmeld_user' && etype !== 'tilmeld_group') {
+        const acUserValue =
+          'acUser' in sdata
+            ? JSON.parse(sdata.acUser)
+            : 'acUser' in data
+              ? data.acUser
+              : null;
+        if (
+          typeof acUserValue === 'number' &&
+          !isNaN(acUserValue) &&
+          acUserValue >= 0
+        ) {
+          acUser = acUserValue;
+        }
+
+        const acGroupValue =
+          'acGroup' in sdata
+            ? JSON.parse(sdata.acGroup)
+            : 'acGroup' in data
+              ? data.acGroup
+              : null;
+        if (
+          typeof acGroupValue === 'number' &&
+          !isNaN(acGroupValue) &&
+          acGroupValue >= 0
+        ) {
+          acGroup = acGroupValue;
+        }
+
+        const acOtherValue =
+          'acOther' in sdata
+            ? JSON.parse(sdata.acOther)
+            : 'acOther' in data
+              ? data.acOther
+              : null;
+        if (
+          typeof acOtherValue === 'number' &&
+          !isNaN(acOtherValue) &&
+          acOtherValue >= 0
+        ) {
+          acOther = acOtherValue;
+        }
+
+        const acReadValue =
+          'acRead' in sdata
+            ? JSON.parse(sdata.acRead)
+            : 'acRead' in data
+              ? data.acRead
+              : null;
+        if (Array.isArray(acReadValue)) {
+          const acReadArray = [];
+          for (let acReadEntry of acReadValue) {
+            if (
+              Array.isArray(acReadEntry) &&
+              acReadEntry[0] === 'nymph_entity_reference' &&
+              (acReadEntry[2] === 'User' || acReadEntry[2] === 'Group') &&
+              typeof acReadEntry[1] === 'string' &&
+              acReadEntry[1].match(/^[0-9a-f]{24}$/i)
+            ) {
+              acReadArray.push(acReadEntry[1]);
+            }
+          }
+          if (acReadArray.length) {
+            acRead = acReadArray;
+          }
+        }
+
+        const acWriteValue =
+          'acWrite' in sdata
+            ? JSON.parse(sdata.acWrite)
+            : 'acWrite' in data
+              ? data.acWrite
+              : null;
+        if (Array.isArray(acWriteValue)) {
+          const acWriteArray = [];
+          for (let acWriteEntry of acWriteValue) {
+            if (
+              Array.isArray(acWriteEntry) &&
+              acWriteEntry[0] === 'nymph_entity_reference' &&
+              (acWriteEntry[2] === 'User' || acWriteEntry[2] === 'Group') &&
+              typeof acWriteEntry[1] === 'string' &&
+              acWriteEntry[1].match(/^[0-9a-f]{24}$/i)
+            ) {
+              acWriteArray.push(acWriteEntry[1]);
+            }
+          }
+          if (acWriteArray.length) {
+            acWrite = acWriteArray;
+          }
+        }
+
+        const acFullValue =
+          'acFull' in sdata
+            ? JSON.parse(sdata.acFull)
+            : 'acFull' in data
+              ? data.acFull
+              : null;
+        if (Array.isArray(acFullValue)) {
+          const acFullArray = [];
+          for (let acFullEntry of acFullValue) {
+            if (
+              Array.isArray(acFullEntry) &&
+              acFullEntry[0] === 'nymph_entity_reference' &&
+              (acFullEntry[2] === 'User' || acFullEntry[2] === 'Group') &&
+              typeof acFullEntry[1] === 'string' &&
+              acFullEntry[1].match(/^[0-9a-f]{24}$/i)
+            ) {
+              acFullArray.push(acFullEntry[1]);
+            }
+          }
+          if (acFullArray.length) {
+            acFull = acFullArray;
+          }
+        }
+      }
+
+      // TODO: uncomment this when AC migration is complete.
+      // delete sdata.user;
+      // delete data.user;
+      // delete sdata.group;
+      // delete data.group;
+      // delete sdata.acUser;
+      // delete data.acUser;
+      // delete sdata.acGroup;
+      // delete data.acGroup;
+      // delete sdata.acOther;
+      // delete data.acOther;
+      // delete sdata.acRead;
+      // delete data.acRead;
+      // delete sdata.acWrite;
+      // delete data.acWrite;
+      // delete sdata.acFull;
+      // delete data.acFull;
+    }
+
+    return {
+      user,
+      group,
+      acUser,
+      acGroup,
+      acOther,
+      acRead,
+      acWrite,
+      acFull,
+    };
   }
 
   public formatSelectors(

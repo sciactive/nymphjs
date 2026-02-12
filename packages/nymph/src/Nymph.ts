@@ -1188,11 +1188,37 @@ export default class Nymph {
   }
 
   /**
+   * Import a single entity's Tilmeld access control properties.
+   *
+   * This does not update any of the other data, only the access control
+   * columns.
+   *
+   * @param entity The entity data to import.
+   */
+  public async importEntityTilmeldAC(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    try {
+      return await this.driver.importEntityTilmeldAC(entity);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to import: ${e}`);
+      throw e;
+    }
+  }
+
+  /**
    * Detect whether the database needs to be migrated.
    *
    * If not false (so, one of the string values), the database should be
    * exported with an old version of Nymph, then imported into a fresh database
-   * with this version.
+   * with this version. Sometimes, a live migration can be done instead, which
+   * will require no downtime. You should still export the database beforehand,
+   * in case anything goes wrong.
    *
    * 'json' means the data tables are missing the JSON field, and the DB
    * **must** be exported and imported to fix it.
@@ -1200,6 +1226,13 @@ export default class Nymph {
    * 'tokens' means the FTS token tables are missing, and you can get away with
    * a live migration with `liveMigration('tokenTables')` and doing
    * `importEntityTokens(entity)` for each entity.
+   *
+   * 'tilmeldColumns' means the entity columns for "user", "group", and access
+   * controls are missing, and you can get away with a live migration with
+   * `liveMigration('tilmeldColumns')` and doing
+   * `importEntityTilmeldAC(entity)` for each entity. DO NOT update to any
+   * version later than 1.0.0-beta.107 before this is done, or access controls
+   * WILL NOT work, and everyone will have access to every entity!
    */
   public async needsMigration() {
     return await this.driver.needsMigration();
@@ -1212,8 +1245,14 @@ export default class Nymph {
    * **not** fill them. You must use `importEntityTokens` on each entity after
    * running this to fill the token tables and enable full text search matching
    * on existing entities.
+   *
+   * A 'tilmeldColumns' migration will simply add the missing Tilmeld columns
+   * and indexes to each entity table. It will **not** fill them, and you must
+   * fill them before updating to the latest version of Nymph, or everyone will
+   * be able to access every entity! You must use `importEntityTilmeldAC` on
+   * each entity after running this.
    */
-  public async liveMigration(migrationType: 'tokenTables') {
+  public async liveMigration(migrationType: 'tokenTables' | 'tilmeldColumns') {
     return await this.driver.liveMigration(migrationType);
   }
 

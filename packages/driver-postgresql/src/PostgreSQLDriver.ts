@@ -258,6 +258,14 @@ export default class PostgreSQLDriver extends NymphDriver {
           "tags" TEXT[],
           "cdate" DOUBLE PRECISION NOT NULL,
           "mdate" DOUBLE PRECISION NOT NULL,
+          "user" BYTEA,
+          "group" BYTEA,
+          "acUser" SMALLINT,
+          "acGroup" SMALLINT,
+          "acOther" SMALLINT,
+          "acRead" BYTEA[],
+          "acWrite" BYTEA[],
+          "acFull" BYTEA[],
           PRIMARY KEY ("guid")
         ) WITH ( OIDS=FALSE );`,
       { connection },
@@ -310,10 +318,148 @@ export default class PostgreSQLDriver extends NymphDriver {
       )} USING gin ("tags");`,
       { connection },
     );
+    await this.createEntitiesTilmeldIndexes(etype, connection);
     await this.queryRun(
       `ALTER TABLE ${PostgreSQLDriver.escape(
         `${this.prefix}entities_${etype}`,
       )} SET ( autovacuum_vacuum_scale_factor = 0.05, autovacuum_analyze_scale_factor = 0.05 );`,
+      { connection },
+    );
+  }
+
+  private async addTilmeldColumnsAndIndexes(
+    etype: string,
+    connection: PostgreSQLDriverConnection,
+  ) {
+    await this.queryRun(
+      `ALTER TABLE ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN IF NOT EXISTS "user" BYTEA,
+        ADD COLUMN IF NOT EXISTS "group" BYTEA,
+        ADD COLUMN IF NOT EXISTS "acUser" SMALLINT,
+        ADD COLUMN IF NOT EXISTS "acGroup" SMALLINT,
+        ADD COLUMN IF NOT EXISTS "acOther" SMALLINT,
+        ADD COLUMN IF NOT EXISTS "acRead" BYTEA[],
+        ADD COLUMN IF NOT EXISTS "acWrite" BYTEA[],
+        ADD COLUMN IF NOT EXISTS "acFull" BYTEA[];`,
+    );
+    await this.createEntitiesTilmeldIndexes(etype, connection);
+  }
+
+  private async createEntitiesTilmeldIndexes(
+    etype: string,
+    connection: PostgreSQLDriverConnection,
+  ) {
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_user_acUser`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_user_acUser`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING btree ("user", "acUser");`,
+      { connection },
+    );
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_group_acGroup`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_group_acGroup`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING btree ("group", "acGroup");`,
+      { connection },
+    );
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acUser`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acUser`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING btree ("acUser");`,
+      { connection },
+    );
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acGroup`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acGroup`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING btree ("acGroup");`,
+      { connection },
+    );
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acOther`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acOther`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING btree ("acOther");`,
+      { connection },
+    );
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acRead`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acRead`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING gin ("acRead");`,
+      { connection },
+    );
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acWrite`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acWrite`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING gin ("acWrite");`,
+      { connection },
+    );
+    await this.queryRun(
+      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acFull`,
+      )};`,
+      { connection },
+    );
+    await this.queryRun(
+      `CREATE INDEX ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}_id_acFull`,
+      )} ON ${PostgreSQLDriver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} USING gin ("acFull");`,
       { connection },
     );
   }
@@ -2814,7 +2960,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
-    return await this.importEntityInternal(entity, false);
+    return await this.importEntityInternal(entity);
   }
 
   public async importEntityTokens(entity: {
@@ -2825,7 +2971,18 @@ export default class PostgreSQLDriver extends NymphDriver {
     sdata: SerializedEntityData;
     etype: string;
   }) {
-    return await this.importEntityInternal(entity, true);
+    return await this.importEntityInternal(entity, { only: 'tokens' });
+  }
+
+  public async importEntityTilmeldAC(entity: {
+    guid: string;
+    cdate: number;
+    mdate: number;
+    tags: string[];
+    sdata: SerializedEntityData;
+    etype: string;
+  }) {
+    return await this.importEntityInternal(entity, { only: 'tilmeldAC' });
   }
 
   private async importEntityInternal(
@@ -2844,11 +3001,11 @@ export default class PostgreSQLDriver extends NymphDriver {
       sdata: SerializedEntityData;
       etype: string;
     },
-    onlyTokens: boolean,
+    { only = undefined }: { only?: 'tokens' | 'tilmeldAC' } = {},
   ) {
     try {
       let promises = [];
-      if (!onlyTokens) {
+      if (only == null) {
         promises.push(
           this.queryRun(
             `DELETE FROM ${PostgreSQLDriver.escape(
@@ -2889,20 +3046,22 @@ export default class PostgreSQLDriver extends NymphDriver {
           ),
         );
       }
-      promises.push(
-        this.queryRun(
-          `DELETE FROM ${PostgreSQLDriver.escape(
-            `${this.prefix}tokens_${etype}`,
-          )} WHERE "guid"=decode(@guid, 'hex');`,
-          {
-            etypes: [etype],
-            params: {
-              guid,
+      if (only == null || only === 'tokens') {
+        promises.push(
+          this.queryRun(
+            `DELETE FROM ${PostgreSQLDriver.escape(
+              `${this.prefix}tokens_${etype}`,
+            )} WHERE "guid"=decode(@guid, 'hex');`,
+            {
+              etypes: [etype],
+              params: {
+                guid,
+              },
             },
-          },
-        ),
-      );
-      if (!onlyTokens) {
+          ),
+        );
+      }
+      if (only == null) {
         promises.push(
           this.queryRun(
             `DELETE FROM ${PostgreSQLDriver.escape(
@@ -2921,11 +3080,14 @@ export default class PostgreSQLDriver extends NymphDriver {
       await Promise.all(promises);
       promises = [];
 
-      if (!onlyTokens) {
+      if (only == null) {
+        let { user, group, acUser, acGroup, acOther, acRead, acWrite, acFull } =
+          this.removeAndReturnACValues(etype, {}, sdata);
+
         await this.queryRun(
           `INSERT INTO ${PostgreSQLDriver.escape(
             `${this.prefix}entities_${etype}`,
-          )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @mdate);`,
+          )} ("guid", "tags", "cdate", "mdate", "user", "group", "acUser", "acGroup", "acOther", "acRead", "acWrite", "acFull") VALUES (decode(@guid, 'hex'), @tags, @cdate, @mdate, ${user == null ? '@user' : "decode(@user, 'hex')"}, ${group == null ? '@group' : "decode(@group, 'hex')"}, @acUser, @acGroup, @acOther, ${!acRead?.length ? '@acRead' : "array(SELECT decode(n, 'hex') FROM unnest(@acRead::text[]) AS n)"}, ${!acWrite?.length ? '@acWrite' : "array(SELECT decode(n, 'hex') FROM unnest(@acWrite::text[]) AS n)"}, ${!acFull?.length ? '@acFull' : "array(SELECT decode(n, 'hex') FROM unnest(@acFull::text[]) AS n)"});`,
           {
             etypes: [etype],
             params: {
@@ -2933,6 +3095,14 @@ export default class PostgreSQLDriver extends NymphDriver {
               tags,
               cdate: isNaN(cdate) ? null : cdate,
               mdate: isNaN(mdate) ? null : mdate,
+              user,
+              group,
+              acUser,
+              acGroup,
+              acOther,
+              acRead,
+              acWrite,
+              acFull,
             },
           },
         );
@@ -2998,58 +3168,87 @@ export default class PostgreSQLDriver extends NymphDriver {
         }
       }
 
+      if (only === 'tilmeldAC') {
+        let { user, group, acUser, acGroup, acOther, acRead, acWrite, acFull } =
+          this.removeAndReturnACValues(etype, {}, sdata);
+
+        promises.push(
+          this.queryRun(
+            `UPDATE ${PostgreSQLDriver.escape(
+              `${this.prefix}entities_${etype}`,
+            )} SET "user"=${user == null ? '@user' : "decode(@user, 'hex')"}, "group"=${group == null ? '@group' : "decode(@group, 'hex')"}, "acUser"=@acUser, "acGroup"=@acGroup, "acOther"=@acOther, "acRead"=${!acRead?.length ? '@acRead' : "array(SELECT decode(n, 'hex') FROM unnest(@acRead::text[]) AS n)"}, "acWrite"=${!acWrite?.length ? '@acWrite' : "array(SELECT decode(n, 'hex') FROM unnest(@acWrite::text[]) AS n)"}, "acFull"=${!acFull?.length ? '@acFull' : "array(SELECT decode(n, 'hex') FROM unnest(@acFull::text[]) AS n)"} WHERE "guid"=decode(@guid, 'hex');`,
+            {
+              etypes: [etype],
+              params: {
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead,
+                acWrite,
+                acFull,
+                guid,
+              },
+            },
+          ),
+        );
+      }
+
       const EntityClass = this.nymph.getEntityClassByEtype(etype);
 
-      for (let name in sdata) {
-        let tokenString: string | null = null;
-        try {
-          tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
-        } catch (e: any) {
-          // Ignore error.
-        }
+      if (only == null || only === 'tokens') {
+        for (let name in sdata) {
+          let tokenString: string | null = null;
+          try {
+            tokenString = EntityClass.getFTSText(name, JSON.parse(sdata[name]));
+          } catch (e: any) {
+            // Ignore error.
+          }
 
-        if (tokenString != null) {
-          const tokens = this.tokenizer.tokenize(tokenString);
-          while (tokens.length) {
-            const currentTokens = tokens.splice(0, 100);
-            const params: { [k: string]: any } = {
-              guid,
-              name,
-            };
-            const values: string[] = [];
+          if (tokenString != null) {
+            const tokens = this.tokenizer.tokenize(tokenString);
+            while (tokens.length) {
+              const currentTokens = tokens.splice(0, 100);
+              const params: { [k: string]: any } = {
+                guid,
+                name,
+              };
+              const values: string[] = [];
 
-            for (let i = 0; i < currentTokens.length; i++) {
-              const token = currentTokens[i];
-              params['token' + i] = token.token;
-              params['position' + i] = token.position;
-              params['stem' + i] = token.stem;
-              values.push(
-                "(decode(@guid, 'hex'), @name, @token" +
-                  i +
-                  ', @position' +
-                  i +
-                  ', @stem' +
-                  i +
-                  ')',
+              for (let i = 0; i < currentTokens.length; i++) {
+                const token = currentTokens[i];
+                params['token' + i] = token.token;
+                params['position' + i] = token.position;
+                params['stem' + i] = token.stem;
+                values.push(
+                  "(decode(@guid, 'hex'), @name, @token" +
+                    i +
+                    ', @position' +
+                    i +
+                    ', @stem' +
+                    i +
+                    ')',
+                );
+              }
+
+              promises.push(
+                this.queryRun(
+                  `INSERT INTO ${PostgreSQLDriver.escape(
+                    `${this.prefix}tokens_${etype}`,
+                  )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
+                  {
+                    etypes: [etype],
+                    params,
+                  },
+                ),
               );
             }
-
-            promises.push(
-              this.queryRun(
-                `INSERT INTO ${PostgreSQLDriver.escape(
-                  `${this.prefix}tokens_${etype}`,
-                )} ("guid", "name", "token", "position", "stem") VALUES ${values.join(', ')};`,
-                {
-                  etypes: [etype],
-                  params,
-                },
-              ),
-            );
           }
         }
       }
 
-      if (!onlyTokens) {
+      if (only == null) {
         const uniques = await EntityClass.getUniques({
           guid,
           cdate,
@@ -3384,16 +3583,34 @@ export default class PostgreSQLDriver extends NymphDriver {
           ) {
             return false;
           }
+          let {
+            user,
+            group,
+            acUser,
+            acGroup,
+            acOther,
+            acRead,
+            acWrite,
+            acFull,
+          } = this.removeAndReturnACValues(etype, data, sdata);
           await this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`,
-            )} ("guid", "tags", "cdate", "mdate") VALUES (decode(@guid, 'hex'), @tags, @cdate, @cdate);`,
+            )} ("guid", "tags", "cdate", "mdate", "user", "group", "acUser", "acGroup", "acOther", "acRead", "acWrite", "acFull") VALUES (decode(@guid, 'hex'), @tags, @cdate, @cdate, ${user == null ? '@user' : "decode(@user, 'hex')"}, ${group == null ? '@group' : "decode(@group, 'hex')"}, @acUser, @acGroup, @acOther, ${!acRead?.length ? '@acRead' : "array(SELECT decode(n, 'hex') FROM unnest(@acRead::text[]) AS n)"}, ${!acWrite?.length ? '@acWrite' : "array(SELECT decode(n, 'hex') FROM unnest(@acWrite::text[]) AS n)"}, ${!acFull?.length ? '@acFull' : "array(SELECT decode(n, 'hex') FROM unnest(@acFull::text[]) AS n)"});`,
             {
               etypes: [etype],
               params: {
                 guid,
                 tags,
                 cdate,
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead,
+                acWrite,
+                acFull,
               },
             },
           );
@@ -3407,6 +3624,16 @@ export default class PostgreSQLDriver extends NymphDriver {
           ) {
             return false;
           }
+          let {
+            user,
+            group,
+            acUser,
+            acGroup,
+            acOther,
+            acRead,
+            acWrite,
+            acFull,
+          } = this.removeAndReturnACValues(etype, data, sdata);
           const promises = [];
           promises.push(
             this.queryRun(
@@ -3477,12 +3704,20 @@ export default class PostgreSQLDriver extends NymphDriver {
           const info = await this.queryRun(
             `UPDATE ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`,
-            )} SET "tags"=@tags, "mdate"=@mdate WHERE "guid"=decode(@guid, 'hex') AND "mdate" <= @emdate;`,
+            )} SET "tags"=@tags, "mdate"=@mdate, "user"=${user == null ? '@user' : "decode(@user, 'hex')"}, "group"=${group == null ? '@group' : "decode(@group, 'hex')"}, "acUser"=@acUser, "acGroup"=@acGroup, "acOther"=@acOther, "acRead"=${!acRead?.length ? '@acRead' : "array(SELECT decode(n, 'hex') FROM unnest(@acRead::text[]) AS n)"}, "acWrite"=${!acWrite?.length ? '@acWrite' : "array(SELECT decode(n, 'hex') FROM unnest(@acWrite::text[]) AS n)"}, "acFull"=${!acFull?.length ? '@acFull' : "array(SELECT decode(n, 'hex') FROM unnest(@acFull::text[]) AS n)"} WHERE "guid"=decode(@guid, 'hex') AND "mdate" <= @emdate;`,
             {
               etypes: [etype],
               params: {
                 tags,
                 mdate,
+                user,
+                group,
+                acUser,
+                acGroup,
+                acOther,
+                acRead,
+                acWrite,
+                acFull,
                 guid,
                 emdate: isNaN(Number(entity.mdate)) ? 0 : Number(entity.mdate),
               },
@@ -3650,7 +3885,9 @@ export default class PostgreSQLDriver extends NymphDriver {
     return nymph;
   }
 
-  public async needsMigration(): Promise<'json' | 'tokens' | false> {
+  public async needsMigration(): Promise<
+    'json' | 'tokens' | 'tilmeldColumns' | false
+  > {
     const table = await this.queryGet(
       'SELECT "table_name" AS "table_name" FROM "information_schema"."tables" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name" LIKE @prefix LIMIT 1;',
       {
@@ -3686,16 +3923,49 @@ export default class PostgreSQLDriver extends NymphDriver {
     if (!table2 || !table2.table_name) {
       return 'tokens';
     }
+    const table3 = await this.queryGet(
+      'SELECT "table_name" AS "table_name" FROM "information_schema"."tables" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name" LIKE @prefix LIMIT 1;',
+      {
+        params: {
+          db: this.config.database,
+          prefix: this.prefix + 'entities_' + '%',
+        },
+      },
+    );
+    if (table3?.name) {
+      const result = await this.queryGet(
+        'SELECT 1 AS "exists" FROM "information_schema"."columns" WHERE "table_catalog"=@db AND "table_schema"=\'public\' AND "table_name"=@table AND "column_name"=\'user\';',
+        {
+          params: {
+            db: this.config.database,
+            table: table3.table_name,
+          },
+        },
+      );
+      if (!result?.exists) {
+        return 'tilmeldColumns';
+      }
+    }
     return false;
   }
 
-  public async liveMigration(_migrationType: 'tokenTables') {
-    const etypes = await this.getEtypes();
+  public async liveMigration(migrationType: 'tokenTables' | 'tilmeldColumns') {
+    if (migrationType === 'tokenTables') {
+      const etypes = await this.getEtypes();
 
-    const connection = await this.getConnection(true);
-    for (let etype of etypes) {
-      await this.createTokensTable(etype, connection);
+      const connection = await this.getConnection(true);
+      for (let etype of etypes) {
+        await this.createTokensTable(etype, connection);
+      }
+      connection.done();
+    } else if (migrationType === 'tilmeldColumns') {
+      const etypes = await this.getEtypes();
+
+      const connection = await this.getConnection(true);
+      for (let etype of etypes) {
+        await this.addTilmeldColumnsAndIndexes(etype, connection);
+      }
+      connection.done();
     }
-    connection.done();
   }
 }
