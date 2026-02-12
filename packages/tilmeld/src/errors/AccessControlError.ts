@@ -1,4 +1,4 @@
-import { HttpError } from '@nymphjs/server';
+import { HttpError } from '@nymphjs/nymph';
 
 export class AccessControlError extends HttpError {
   constructor(message: string) {

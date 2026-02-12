@@ -8,6 +8,8 @@ export * from './EntityIsSleepingReferenceError.js';
 
 export * from './EntityUniqueConstraintError.js';
 
+export * from './HttpError.js';
+
 export * from './InvalidParametersError.js';
 
 export * from './InvalidStateError.js';
