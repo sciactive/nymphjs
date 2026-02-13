@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.107](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.106...v1.0.0-beta.107) (2026-02-13)
+
+### Features
+
+- move tilmeld fields into columns in entities tables ([5f46048](https://github.com/sciactive/nymphjs/commit/5f46048c3e04839ca9a8b81f71a950b9086d0a41))
+- update packages and fix all new issues ([0e9d17c](https://github.com/sciactive/nymphjs/commit/0e9d17c6e2db12c11bdfb559031719c1b52b5fa1))
+
 # [1.0.0-beta.106](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.105...v1.0.0-beta.106) (2025-12-05)
 
 ### Bug Fixes

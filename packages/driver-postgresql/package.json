@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/driver-postgresql",
-  "version": "1.0.0-beta.106",
+  "version": "1.0.0-beta.107",
   "description": "Nymph.js - PostgreSQL DB Driver",
   "type": "module",
   "main": "dist/index.js",
@@ -33,15 +33,15 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.106",
-    "@nymphjs/nymph": "^1.0.0-beta.106",
+    "@nymphjs/guid": "^1.0.0-beta.107",
+    "@nymphjs/nymph": "^1.0.0-beta.107",
     "@sciactive/tokenizer": "^3.0.2",
     "pg": "^8.18.0",
     "pg-cursor": "^2.17.0",
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
-    "@nymphjs/tilmeld": "^1.0.0-beta.106",
+    "@nymphjs/tilmeld": "^1.0.0-beta.107",
     "@tsconfig/recommended": "^1.0.13",
     "@types/jest": "^30.0.0",
     "@types/pg": "^8.16.0",
