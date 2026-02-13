@@ -22,9 +22,9 @@ export type EntityDataType<T> =
 export type EntityInstanceType<T extends EntityConstructor> =
   T extends new () => infer E ? E & EntityDataType<E> : never;
 
-export default class Entity<T extends EntityData = EntityData>
-  implements EntityInterface
-{
+export default class Entity<
+  T extends EntityData = EntityData,
+> implements EntityInterface {
   /**
    * The instance of Nymph to use for queries.
    */

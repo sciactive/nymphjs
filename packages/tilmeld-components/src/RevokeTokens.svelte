@@ -219,8 +219,8 @@
 
 <style>
   :global(
-      .mdc-dialog .mdc-dialog__surface.tilmeld-revoke-tokens-dialog-surface
-    ) {
+    .mdc-dialog .mdc-dialog__surface.tilmeld-revoke-tokens-dialog-surface
+  ) {
     width: 360px;
     max-width: calc(100vw - 32px);
   }

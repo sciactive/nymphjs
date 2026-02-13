@@ -32,15 +32,15 @@
   "license": "Apache-2.0",
   "dependencies": {
     "fetch-event-source-hperrin": "^3.0.0",
-    "lodash-es": "^4.17.21"
+    "lodash-es": "^4.17.23"
   },
   "devDependencies": {
-    "@tsconfig/recommended": "^1.0.8",
-    "@types/jest": "^29.5.14",
+    "@tsconfig/recommended": "^1.0.13",
+    "@types/jest": "^30.0.0",
     "@types/lodash-es": "^4.17.12",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.5",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   }
 }

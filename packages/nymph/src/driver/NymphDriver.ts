@@ -364,7 +364,7 @@ export default abstract class NymphDriver {
 
     const lines = {
       *[Symbol.iterator]() {
-        let line: false | Buffer;
+        let line: null | Buffer;
         while ((line = rl.next())) {
           yield line.toString('utf8');
         }

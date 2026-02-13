@@ -104,9 +104,9 @@ export type EntityObjectType<T extends EntityConstructor> =
  * will fill its data from the DB. You can call clearCache() to turn all the
  * entities back into sleeping references.
  */
-export default class Entity<T extends EntityData = EntityData>
-  implements EntityInterface
-{
+export default class Entity<
+  T extends EntityData = EntityData,
+> implements EntityInterface {
   /**
    * The instance of Nymph to use for queries.
    */

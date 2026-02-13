@@ -33,18 +33,18 @@
   "dependencies": {
     "@nymphjs/nymph": "^1.0.0-beta.106",
     "cookie-parser": "^1.4.7",
-    "express": "^4.21.2"
+    "express": "^5.2.1"
   },
   "devDependencies": {
     "@nymphjs/client": "^1.0.0-beta.106",
     "@nymphjs/driver-sqlite3": "^1.0.0-beta.106",
-    "@tsconfig/recommended": "^1.0.8",
-    "@types/cookie-parser": "^1.4.8",
-    "@types/express": "^5.0.0",
-    "@types/jest": "^29.5.14",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.5",
+    "@tsconfig/recommended": "^1.0.13",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   }
 }

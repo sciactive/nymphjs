@@ -32,22 +32,22 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@nymphjs/nymph": "^1.0.0-beta.106",
-    "lodash-es": "^4.17.21",
+    "lodash-es": "^4.17.23",
     "websocket": "^1.0.35"
   },
   "devDependencies": {
     "@nymphjs/client": "^1.0.0-beta.106",
     "@nymphjs/driver-sqlite3": "^1.0.0-beta.106",
     "@nymphjs/server": "^1.0.0-beta.106",
-    "@tsconfig/recommended": "^1.0.8",
-    "@types/express": "^5.0.0",
-    "@types/jest": "^29.5.14",
+    "@tsconfig/recommended": "^1.0.13",
+    "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/lodash-es": "^4.17.12",
     "@types/websocket": "^1.0.10",
-    "express": "^4.21.2",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.5",
+    "express": "^5.2.1",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   }
 }

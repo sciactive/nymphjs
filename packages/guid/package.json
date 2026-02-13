@@ -32,21 +32,21 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "luxon": "^3.5.0",
-    "nanoid": "^5.0.9",
-    "nanoid-dictionary": "^4.3.0",
+    "luxon": "^3.7.2",
+    "nanoid": "^5.1.6",
+    "nanoid-dictionary": "^5.0.0",
     "sha1": "^1.1.1"
   },
   "devDependencies": {
-    "@tsconfig/recommended": "^1.0.8",
-    "@types/jest": "^29.5.14",
-    "@types/luxon": "^3.4.2",
+    "@tsconfig/recommended": "^1.0.13",
+    "@types/jest": "^30.0.0",
+    "@types/luxon": "^3.7.1",
     "@types/nanoid-dictionary": "^4.2.3",
     "@types/sha1": "^1.1.5",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.5",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
     "tslib": "^2.8.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   }
 }

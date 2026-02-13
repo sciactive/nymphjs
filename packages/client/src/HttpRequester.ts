@@ -26,8 +26,9 @@ export type HttpRequesterRequestOptions = {
   dataType: string;
 };
 
-export interface AbortableAsyncIterator<T extends any = any>
-  extends AsyncIterable<T> {
+export interface AbortableAsyncIterator<
+  T extends any = any,
+> extends AsyncIterable<T> {
   abortController: AbortController;
 }
 
