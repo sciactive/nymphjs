@@ -74,7 +74,7 @@ The GUID and unique code generators are used to generate new GUIDs for Nymph obj
 
 # Breaking Changes
 
-In version 1.0.0-beta.107, the access control system has been rewritten to store all of its data in the "entities" tables instead of the "data" and "references" tables. This involves a migration, as reported by `needsMigration()`. You should update to version 1.0.0-beta.107 specifically, do the migration, and only once that is completed, should you update beyond version 1.0.0-beta.107.
+In version 1.0.0-beta.108, the access control system has been rewritten to store all of its data in the "entities" tables instead of the "data" and "references" tables. This involves a migration, as reported by `needsMigration()`. You should update to version 1.0.0-beta.108 specifically, do the migration, and only once that is completed, should you update beyond version 1.0.0-beta.108.
 
 Here is the relavent portion of the docblock from `needsMigration()`:
 
@@ -83,7 +83,7 @@ Here is the relavent portion of the docblock from `needsMigration()`:
 controls are missing, and you can get away with a live migration with
 `liveMigration('tilmeldColumns')` and doing
 `importEntityTilmeldAC(entity)` for each entity. DO NOT update to any
-version later than 1.0.0-beta.107 before this is done, or access controls
+version later than 1.0.0-beta.108 before this is done, or access controls
 WILL NOT work, and everyone will have access to every entity!
 ```
 

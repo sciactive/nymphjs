@@ -1231,7 +1231,7 @@ export default class Nymph {
    * controls are missing, and you can get away with a live migration with
    * `liveMigration('tilmeldColumns')` and doing
    * `importEntityTilmeldAC(entity)` for each entity. DO NOT update to any
-   * version later than 1.0.0-beta.107 before this is done, or access controls
+   * version later than 1.0.0-beta.108 before this is done, or access controls
    * WILL NOT work, and everyone will have access to every entity!
    */
   public async needsMigration() {

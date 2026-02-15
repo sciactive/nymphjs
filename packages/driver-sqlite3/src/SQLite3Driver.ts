@@ -265,7 +265,42 @@ export default class SQLite3Driver extends NymphDriver {
     this.queryRun(
       `ALTER TABLE ${SQLite3Driver.escape(
         `${this.prefix}entities_${etype}`,
-      )} ADD COLUMN "user" CHARACTER(24), ADD COLUMN "group" CHARACTER(24), ADD COLUMN "acUser" INT(1), ADD COLUMN "acGroup" INT(1), ADD COLUMN "acOther" INT(1), ADD COLUMN "acRead" TEXT, ADD COLUMN "acWrite" TEXT, ADD COLUMN "acFull" TEXT;`,
+      )} ADD COLUMN "user" CHARACTER(24);`,
+    );
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "group" CHARACTER(24);`,
+    );
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "acUser" INT(1);`,
+    );
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "acGroup" INT(1);`,
+    );
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "acOther" INT(1);`,
+    );
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "acRead" TEXT;`,
+    );
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "acWrite" TEXT;`,
+    );
+    this.queryRun(
+      `ALTER TABLE ${SQLite3Driver.escape(
+        `${this.prefix}entities_${etype}`,
+      )} ADD COLUMN "acFull" TEXT;`,
     );
     this.createEntitiesTilmeldIndexes(etype);
   }
