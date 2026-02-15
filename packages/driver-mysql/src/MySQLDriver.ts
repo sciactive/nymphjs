@@ -3346,7 +3346,7 @@ export default class MySQLDriver extends NymphDriver {
         },
       },
     );
-    if (table3?.name) {
+    if (table3?.table_name) {
       const result = await this.queryGet(
         "SELECT 1 AS `exists` FROM `information_schema`.`columns` WHERE `table_schema`=@db AND `table_name`=@table AND `column_name`='user';",
         {
