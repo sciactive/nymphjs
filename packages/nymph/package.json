@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/nymph",
-  "version": "1.0.0-beta.107",
+  "version": "1.0.0-beta.108",
   "description": "Nymph.js - Nymph ORM",
   "type": "module",
   "main": "dist/index.js",
@@ -31,7 +31,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.107",
+    "@nymphjs/guid": "^1.0.0-beta.108",
     "@sciactive/tokenizer": "^3.0.2",
     "debug": "^4.4.3",
     "joi": "^18.0.2",

@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/driver-mysql",
-  "version": "1.0.0-beta.107",
+  "version": "1.0.0-beta.108",
   "description": "Nymph.js - MySQL DB Driver",
   "type": "module",
   "main": "dist/index.js",
@@ -33,14 +33,14 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.107",
-    "@nymphjs/nymph": "^1.0.0-beta.107",
+    "@nymphjs/guid": "^1.0.0-beta.108",
+    "@nymphjs/nymph": "^1.0.0-beta.108",
     "@sciactive/tokenizer": "^3.0.2",
     "mysql2": "^3.17.0",
     "sqlstring": "^2.3.3"
   },
   "devDependencies": {
-    "@nymphjs/tilmeld": "^1.0.0-beta.107",
+    "@nymphjs/tilmeld": "^1.0.0-beta.108",
     "@tsconfig/recommended": "^1.0.13",
     "@types/jest": "^30.0.0",
     "@types/sqlstring": "^2.3.2",
