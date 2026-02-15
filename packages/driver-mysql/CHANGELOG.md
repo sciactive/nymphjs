@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.109](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.108...v1.0.0-beta.109) (2026-02-15)
+
+### Bug Fixes
+
+- migration needed function for mysql and postgres ([1792cbf](https://github.com/sciactive/nymphjs/commit/1792cbfdb5498e3bace0a7b39695879254dcbccd))
+
 # [1.0.0-beta.108](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.107...v1.0.0-beta.108) (2026-02-15)
 
 **Note:** Version bump only for package @nymphjs/driver-mysql
