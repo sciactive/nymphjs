@@ -1620,7 +1620,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     for (const etype of etypes) {
       // Export entities.
       const dataIterator = await this.queryIter(
-        `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", d."name", d."value", d."json", d."string", d."number"
+        `SELECT encode(e."guid", 'hex') AS "guid", e."tags", e."cdate", e."mdate", encode(e."user", 'hex') AS "user", encode(e."group", 'hex') AS "group", e."acUser", e."acGroup", e."acOther", array(SELECT encode(n, 'hex') FROM unnest(e."acRead") AS n) as "acRead", array(SELECT encode(n, 'hex') FROM unnest(e."acWrite") AS n) as "acWrite", array(SELECT encode(n, 'hex') FROM unnest(e."acFull") AS n) as "acFull", d."name", d."value", d."json", d."string", d."number"
           FROM ${PostgreSQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}data_${etype}`,
@@ -1633,10 +1633,48 @@ export default class PostgreSQLDriver extends NymphDriver {
         const tags = datum.value.tags.filter((tag: string) => tag).join(',');
         const cdate = datum.value.cdate;
         const mdate = datum.value.mdate;
+        const user = datum.value.user;
+        const group = datum.value.group;
+        const acUser = datum.value.acUser;
+        const acGroup = datum.value.acGroup;
+        const acOther = datum.value.acOther;
+        const acRead = datum.value.acRead?.filter((guid: string) => guid);
+        const acWrite = datum.value.acWrite?.filter((guid: string) => guid);
+        const acFull = datum.value.acFull?.filter((guid: string) => guid);
         let currentEntityExport: string[] = [];
         currentEntityExport.push(`{${guid}}<${etype}>[${tags}]`);
         currentEntityExport.push(`\tcdate=${JSON.stringify(cdate)}`);
         currentEntityExport.push(`\tmdate=${JSON.stringify(mdate)}`);
+        if (this.nymph.tilmeld != null) {
+          if (user != null) {
+            currentEntityExport.push(
+              `\tuser=${JSON.stringify(['nymph_entity_reference', user, 'User'])}`,
+            );
+          }
+          if (group != null) {
+            currentEntityExport.push(
+              `\tgroup=${JSON.stringify(['nymph_entity_reference', group, 'Group'])}`,
+            );
+          }
+          if (acUser != null) {
+            currentEntityExport.push(`\tacUser=${JSON.stringify(acUser)}`);
+          }
+          if (acGroup != null) {
+            currentEntityExport.push(`\tacGroup=${JSON.stringify(acGroup)}`);
+          }
+          if (acOther != null) {
+            currentEntityExport.push(`\tacOther=${JSON.stringify(acOther)}`);
+          }
+          if (acRead != null) {
+            currentEntityExport.push(`\tacRead=${JSON.stringify(acRead)}`);
+          }
+          if (acWrite != null) {
+            currentEntityExport.push(`\tacWrite=${JSON.stringify(acWrite)}`);
+          }
+          if (acFull != null) {
+            currentEntityExport.push(`\tacFull=${JSON.stringify(acFull)}`);
+          }
+        }
         if (datum.value.name != null) {
           // This do will keep going and adding the data until the
           // next entity is reached. $row will end on the next entity.

@@ -1016,7 +1016,7 @@ export default class MySQLDriver extends NymphDriver {
       // Export entities.
       const dataIterator = (
         await this.queryArray(
-          `SELECT LOWER(HEX(e.\`guid\`)) AS \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, d.\`name\`, d.\`value\`, d.\`json\`, d.\`string\`, d.\`number\`
+          `SELECT LOWER(HEX(e.\`guid\`)) AS \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, LOWER(HEX(e.\`user\`)) AS \`user\`, LOWER(HEX(e.\`group\`)) AS \`group\`, e.\`acUser\`, e.\`acGroup\`, e.\`acOther\`, e.\`acRead\`, e.\`acWrite\`, e.\`acFull\`, d.\`name\`, d.\`value\`, d.\`json\`, d.\`string\`, d.\`number\`
           FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${MySQLDriver.escape(
             `${this.prefix}data_${etype}`,
@@ -1034,10 +1034,48 @@ export default class MySQLDriver extends NymphDriver {
           .join(',');
         const cdate = datum.value.cdate;
         const mdate = datum.value.mdate;
+        const user = datum.value.user;
+        const group = datum.value.group;
+        const acUser = datum.value.acUser;
+        const acGroup = datum.value.acGroup;
+        const acOther = datum.value.acOther;
+        const acRead = datum.value.acRead?.slice(1, -1).split(' ');
+        const acWrite = datum.value.acWrite?.slice(1, -1).split(' ');
+        const acFull = datum.value.acFull?.slice(1, -1).split(' ');
         let currentEntityExport: string[] = [];
         currentEntityExport.push(`{${guid}}<${etype}>[${tags}]`);
         currentEntityExport.push(`\tcdate=${JSON.stringify(cdate)}`);
         currentEntityExport.push(`\tmdate=${JSON.stringify(mdate)}`);
+        if (this.nymph.tilmeld != null) {
+          if (user != null) {
+            currentEntityExport.push(
+              `\tuser=${JSON.stringify(['nymph_entity_reference', user, 'User'])}`,
+            );
+          }
+          if (group != null) {
+            currentEntityExport.push(
+              `\tgroup=${JSON.stringify(['nymph_entity_reference', group, 'Group'])}`,
+            );
+          }
+          if (acUser != null) {
+            currentEntityExport.push(`\tacUser=${JSON.stringify(acUser)}`);
+          }
+          if (acGroup != null) {
+            currentEntityExport.push(`\tacGroup=${JSON.stringify(acGroup)}`);
+          }
+          if (acOther != null) {
+            currentEntityExport.push(`\tacOther=${JSON.stringify(acOther)}`);
+          }
+          if (acRead != null) {
+            currentEntityExport.push(`\tacRead=${JSON.stringify(acRead)}`);
+          }
+          if (acWrite != null) {
+            currentEntityExport.push(`\tacWrite=${JSON.stringify(acWrite)}`);
+          }
+          if (acFull != null) {
+            currentEntityExport.push(`\tacFull=${JSON.stringify(acFull)}`);
+          }
+        }
         if (datum.value.name != null) {
           // This do will keep going and adding the data until the
           // next entity is reached. $row will end on the next entity.
