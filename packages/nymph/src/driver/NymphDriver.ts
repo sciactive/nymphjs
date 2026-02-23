@@ -94,7 +94,7 @@ export default abstract class NymphDriver {
     'json' | 'tokens' | 'tilmeldColumns' | false
   >;
   abstract liveMigration(
-    migrationType: 'tokenTables' | 'tilmeldColumns',
+    migrationType: 'tokenTables' | 'tilmeldColumns' | 'tilmeldRemoveOldRows',
   ): Promise<void>;
 
   abstract getEtypes(): Promise<string[]>;

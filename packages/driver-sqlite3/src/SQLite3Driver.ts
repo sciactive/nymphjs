@@ -3374,6 +3374,66 @@ export default class SQLite3Driver extends NymphDriver {
     return this.nymph;
   }
 
+  private async removeTilmeldOldRows(etype: string) {
+    await this.startTransaction('nymph-remove-tilmeld-rows');
+    try {
+      for (let name of [
+        'user',
+        'group',
+        'acUser',
+        'acGroup',
+        'acOther',
+        'acRead',
+        'acWrite',
+        'acFull',
+      ]) {
+        this.queryRun(
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}data_${etype}`,
+          )} WHERE "name"=@name;`,
+          {
+            etypes: [etype],
+            params: {
+              name,
+            },
+          },
+        );
+        this.queryRun(
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}references_${etype}`,
+          )} WHERE "name"=@name;`,
+          {
+            etypes: [etype],
+            params: {
+              name,
+            },
+          },
+        );
+        this.queryRun(
+          `DELETE FROM ${SQLite3Driver.escape(
+            `${this.prefix}tokens_${etype}`,
+          )} WHERE "name"=@name;`,
+          {
+            etypes: [etype],
+            params: {
+              name,
+            },
+          },
+        );
+      }
+    } catch (e: any) {
+      this.nymph.config.debugError(
+        'sqlite3',
+        `Remove tilmeld rows error: "${e}"`,
+      );
+      await this.rollback('nymph-remove-tilmeld-rows');
+      throw e;
+    }
+
+    await this.commit('nymph-remove-tilmeld-rows');
+    return true;
+  }
+
   public async needsMigration(): Promise<
     'json' | 'tokens' | 'tilmeldColumns' | false
   > {
@@ -3433,7 +3493,9 @@ export default class SQLite3Driver extends NymphDriver {
     return false;
   }
 
-  public async liveMigration(migrationType: 'tokenTables' | 'tilmeldColumns') {
+  public async liveMigration(
+    migrationType: 'tokenTables' | 'tilmeldColumns' | 'tilmeldRemoveOldRows',
+  ) {
     if (migrationType === 'tokenTables') {
       const etypes = await this.getEtypes();
 
@@ -3445,6 +3507,12 @@ export default class SQLite3Driver extends NymphDriver {
 
       for (let etype of etypes) {
         this.addTilmeldColumnsAndIndexes(etype);
+      }
+    } else if (migrationType === 'tilmeldRemoveOldRows') {
+      const etypes = await this.getEtypes();
+
+      for (let etype of etypes) {
+        await this.removeTilmeldOldRows(etype);
       }
     }
   }

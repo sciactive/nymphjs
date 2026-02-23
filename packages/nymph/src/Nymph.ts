@@ -1251,8 +1251,15 @@ export default class Nymph {
    * fill them before updating to the latest version of Nymph, or everyone will
    * be able to access every entity! You must use `importEntityTilmeldAC` on
    * each entity after running this.
+   *
+   * A 'tilmeldRemoveOldRows' migration will remove all of the old access
+   * control rows in the data tables that are no longer used as of
+   * 1.0.0-beta.110. MAKE SURE YOU HAVE RUN `importEntityTilmeldAC` ON ALL
+   * ENTITIES BEFORE RUNNING THIS, OR THE DATA WILL BE IRRETRIEVABLY LOST!
    */
-  public async liveMigration(migrationType: 'tokenTables' | 'tilmeldColumns') {
+  public async liveMigration(
+    migrationType: 'tokenTables' | 'tilmeldColumns' | 'tilmeldRemoveOldRows',
+  ) {
     return await this.driver.liveMigration(migrationType);
   }
 

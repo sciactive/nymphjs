@@ -3536,6 +3536,66 @@ export default class MySQLDriver extends NymphDriver {
     return nymph;
   }
 
+  private async removeTilmeldOldRows(etype: string) {
+    await this.internalTransaction('nymph-remove-tilmeld-rows');
+    try {
+      for (let name of [
+        'user',
+        'group',
+        'acUser',
+        'acGroup',
+        'acOther',
+        'acRead',
+        'acWrite',
+        'acFull',
+      ]) {
+        await this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}data_${etype}`,
+          )} WHERE \`name\`=@name;`,
+          {
+            etypes: [etype],
+            params: {
+              name,
+            },
+          },
+        );
+        await this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}references_${etype}`,
+          )} WHERE \`name\`=@name;`,
+          {
+            etypes: [etype],
+            params: {
+              name,
+            },
+          },
+        );
+        await this.queryRun(
+          `DELETE FROM ${MySQLDriver.escape(
+            `${this.prefix}tokens_${etype}`,
+          )} WHERE \`name\`=@name;`,
+          {
+            etypes: [etype],
+            params: {
+              name,
+            },
+          },
+        );
+      }
+    } catch (e: any) {
+      this.nymph.config.debugError(
+        'mysql',
+        `Remove tilmeld rows error: "${e}"`,
+      );
+      await this.rollback('nymph-remove-tilmeld-rows');
+      throw e;
+    }
+
+    await this.commit('nymph-remove-tilmeld-rows');
+    return true;
+  }
+
   public async needsMigration(): Promise<
     'json' | 'tokens' | 'tilmeldColumns' | false
   > {
@@ -3600,7 +3660,9 @@ export default class MySQLDriver extends NymphDriver {
     return false;
   }
 
-  public async liveMigration(migrationType: 'tokenTables' | 'tilmeldColumns') {
+  public async liveMigration(
+    migrationType: 'tokenTables' | 'tilmeldColumns' | 'tilmeldRemoveOldRows',
+  ) {
     if (migrationType === 'tokenTables') {
       const etypes = await this.getEtypes();
 
@@ -3612,6 +3674,12 @@ export default class MySQLDriver extends NymphDriver {
 
       for (let etype of etypes) {
         await this.addTilmeldColumnsAndIndexes(etype);
+      }
+    } else if (migrationType === 'tilmeldRemoveOldRows') {
+      const etypes = await this.getEtypes();
+
+      for (let etype of etypes) {
+        await this.removeTilmeldOldRows(etype);
       }
     }
   }
