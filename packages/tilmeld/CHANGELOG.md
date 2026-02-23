@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.110](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.109...v1.0.0-beta.110) (2026-02-23)
+
+### Features
+
+- use the new access control columns in queries instead of data rows ([f3a2be2](https://github.com/sciactive/nymphjs/commit/f3a2be2c3ca37fa33499f3353a0862f64f2f32f2))
+
 # [1.0.0-beta.109](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.108...v1.0.0-beta.109) (2026-02-15)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
