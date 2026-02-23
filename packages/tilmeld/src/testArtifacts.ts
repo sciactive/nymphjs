@@ -227,7 +227,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [alice];
+    bobsEntity.acRead = [alice.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -275,7 +275,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [alice];
+    bobsEntity.acWrite = [alice.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -318,7 +318,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [alice];
+    bobsEntity.acWrite = [alice.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -365,7 +365,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acFull = [alice];
+    bobsEntity.acFull = [alice.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -409,7 +409,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [abgroup];
+    bobsEntity.acRead = [abgroup.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -442,7 +442,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [abgroup];
+    bobsEntity.acRead = [abgroup.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -490,7 +490,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [abgroup];
+    bobsEntity.acWrite = [abgroup.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -533,7 +533,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [abgroup];
+    bobsEntity.acWrite = [abgroup.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -580,7 +580,7 @@ export function TilmeldTest(
 
     const bobsEntity = await TestModel.factory();
     bobsEntity.name = "Bob's Entity";
-    bobsEntity.acFull = [abgroup];
+    bobsEntity.acFull = [abgroup.guid ?? ''];
     expect(await bobsEntity.$save()).toEqual(true);
 
     expect(bobsEntity.guid).not.toBeNull();
@@ -1102,5 +1102,384 @@ export function TilmeldTest(
     for (let entity of allEntities) {
       expect(await entity.$deleteSkipAC()).toEqual(true);
     }
+  });
+
+  it('entity can be retrieved by queries on ac properties', async () => {
+    const { bob, alice } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.acRead = [
+      alice.guid ?? '',
+      bob.guid ?? '',
+      ...(bob.group ? [bob.group.guid ?? ''] : []),
+    ];
+    bobsEntity.acWrite = [alice.guid ?? '', bob.guid ?? ''];
+    bobsEntity.acFull = [bob.guid ?? ''];
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    // Equals queries.
+
+    let testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        equal: ['user', bob.guid],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        equal: ['user', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        equal: ['group', bob.group?.guid],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        equal: ['group', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    // Contains queries.
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['user', bob.guid],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['user', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['group', bob.group?.guid],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['group', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['acRead', alice.guid],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['acRead', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['acWrite', bob.guid],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['acWrite', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['acFull', bob.guid],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        contain: ['acFull', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    // Ref queries.
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['user', bob],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['user', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['group', bob.group ?? ''],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['group', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['acRead', alice],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['acRead', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['acWrite', bob],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['acWrite', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['acFull', bob],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        ref: ['acFull', '000000000000000000000000'],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    // QRef queries.
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        qref: [
+          'user',
+          [
+            { class: User },
+            { type: '&', equal: ['username', bob.username ?? ''] },
+          ],
+        ],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        qref: [
+          'user',
+          [{ class: User }, { type: '&', equal: ['username', 'pickle'] }],
+        ],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        qref: [
+          'acRead',
+          [
+            { class: User },
+            { type: '&', equal: ['username', alice.username ?? ''] },
+          ],
+        ],
+      },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+    testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      {
+        type: '&',
+        guid: bobsEntity.guid || '',
+        qref: [
+          'acRead',
+          [{ class: User }, { type: '&', equal: ['username', 'pickle'] }],
+        ],
+      },
+    );
+
+    expect(testEntityAlice).toBeNull();
   });
 }

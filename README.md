@@ -74,6 +74,8 @@ The GUID and unique code generators are used to generate new GUIDs for Nymph obj
 
 # Breaking Changes
 
+In version 1.0.0-beta.110, the access control lists "acRead", "acWrite", and "acFull" became arrays of GUIDs (strings) instead of arrays of Users and Groups. The data migration from 1.0.0-beta.109 will handle this for you.
+
 In version 1.0.0-beta.109, the access control system has been rewritten to store all of its data in the "entities" tables instead of the "data" and "references" tables. This involves a migration, as reported by `needsMigration()`. You should update to version 1.0.0-beta.109 specifically, do the migration, and only once that is completed, should you update beyond version 1.0.0-beta.109.
 
 Here is the relavent portion of the docblock from `needsMigration()`:

@@ -812,6 +812,11 @@ export default abstract class NymphDriver {
           const acReadArray = [];
           for (let acReadEntry of acReadValue) {
             if (
+              typeof acReadEntry === 'string' &&
+              acReadEntry.match(/^[0-9a-f]{24}$/i)
+            ) {
+              acReadArray.push(acReadEntry);
+            } else if (
               Array.isArray(acReadEntry) &&
               acReadEntry[0] === 'nymph_entity_reference' &&
               (acReadEntry[2] === 'User' || acReadEntry[2] === 'Group') &&
@@ -836,6 +841,11 @@ export default abstract class NymphDriver {
           const acWriteArray = [];
           for (let acWriteEntry of acWriteValue) {
             if (
+              typeof acWriteEntry === 'string' &&
+              acWriteEntry.match(/^[0-9a-f]{24}$/i)
+            ) {
+              acWriteArray.push(acWriteEntry);
+            } else if (
               Array.isArray(acWriteEntry) &&
               acWriteEntry[0] === 'nymph_entity_reference' &&
               (acWriteEntry[2] === 'User' || acWriteEntry[2] === 'Group') &&
@@ -860,6 +870,11 @@ export default abstract class NymphDriver {
           const acFullArray = [];
           for (let acFullEntry of acFullValue) {
             if (
+              typeof acFullEntry === 'string' &&
+              acFullEntry.match(/^[0-9a-f]{24}$/i)
+            ) {
+              acFullArray.push(acFullEntry);
+            } else if (
               Array.isArray(acFullEntry) &&
               acFullEntry[0] === 'nymph_entity_reference' &&
               (acFullEntry[2] === 'User' || acFullEntry[2] === 'Group') &&
@@ -875,23 +890,24 @@ export default abstract class NymphDriver {
         }
       }
 
-      // TODO: uncomment this when AC migration is complete.
-      // delete sdata.user;
-      // delete data.user;
-      // delete sdata.group;
-      // delete data.group;
-      // delete sdata.acUser;
-      // delete data.acUser;
-      // delete sdata.acGroup;
-      // delete data.acGroup;
-      // delete sdata.acOther;
-      // delete data.acOther;
-      // delete sdata.acRead;
-      // delete data.acRead;
-      // delete sdata.acWrite;
-      // delete data.acWrite;
-      // delete sdata.acFull;
-      // delete data.acFull;
+      // Delete all of the data, so it doesn't go into the database as rows in
+      // the data tables.
+      delete sdata.user;
+      delete data.user;
+      delete sdata.group;
+      delete data.group;
+      delete sdata.acUser;
+      delete data.acUser;
+      delete sdata.acGroup;
+      delete data.acGroup;
+      delete sdata.acOther;
+      delete data.acOther;
+      delete sdata.acRead;
+      delete data.acRead;
+      delete sdata.acWrite;
+      delete data.acWrite;
+      delete sdata.acFull;
+      delete data.acFull;
     }
 
     return {
@@ -1153,6 +1169,14 @@ export default abstract class NymphDriver {
       tags: string[];
       cdate: number;
       mdate: number;
+      user?: string;
+      group?: string;
+      acUser?: number;
+      acGroup?: number;
+      acOther?: number;
+      acRead?: string[];
+      acWrite?: string[];
+      acFull?: string[];
     },
     getDataNameAndSValueCallback: (row: any) => {
       name: string;
@@ -1336,6 +1360,49 @@ export default abstract class NymphDriver {
               } else {
                 // Make sure that $row is incremented :)
                 row = rowFetchCallback();
+              }
+
+              if (this.nymph.tilmeld) {
+                if ('user' in tagsAndDates && tagsAndDates.user != null) {
+                  data.user = [
+                    'nymph_entity_reference',
+                    tagsAndDates.user,
+                    'User',
+                  ];
+                  delete sdata.user;
+                }
+                if ('group' in tagsAndDates && tagsAndDates.group != null) {
+                  data.group = [
+                    'nymph_entity_reference',
+                    tagsAndDates.group,
+                    'Group',
+                  ];
+                  delete sdata.group;
+                }
+                if ('acUser' in tagsAndDates && tagsAndDates.acUser != null) {
+                  data.acUser = tagsAndDates.acUser;
+                  delete sdata.acUser;
+                }
+                if ('acGroup' in tagsAndDates && tagsAndDates.acGroup != null) {
+                  data.acGroup = tagsAndDates.acGroup;
+                  delete sdata.acGroup;
+                }
+                if ('acOther' in tagsAndDates && tagsAndDates.acOther != null) {
+                  data.acOther = tagsAndDates.acOther;
+                  delete sdata.acOther;
+                }
+                if ('acRead' in tagsAndDates && tagsAndDates.acRead != null) {
+                  data.acRead = tagsAndDates.acRead;
+                  delete sdata.acRead;
+                }
+                if ('acWrite' in tagsAndDates && tagsAndDates.acWrite != null) {
+                  data.acWrite = tagsAndDates.acWrite;
+                  delete sdata.acWrite;
+                }
+                if ('acFull' in tagsAndDates && tagsAndDates.acFull != null) {
+                  data.acFull = tagsAndDates.acFull;
+                  delete sdata.acFull;
+                }
               }
 
               if (options.return === 'object') {

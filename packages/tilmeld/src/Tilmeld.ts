@@ -494,7 +494,7 @@ export default class Tilmeld implements TilmeldInterface {
             );
           }
           prop.forEach((value) => {
-            if (!(value instanceof User || value instanceof Group)) {
+            if (typeof value !== 'string' || !value.match(/^[0-9a-f]{24}$/i)) {
               throw new AccessControlError(
                 'Invalid access control property: ' + prop,
               );
@@ -590,6 +590,7 @@ export default class Tilmeld implements TilmeldInterface {
       const subSelectors: FormattedSelector[] = [
         {
           type: '&',
+          // The user and group are not set.
           '!defined': [['user', 'group']],
         },
         // It is owned by the user.
@@ -600,24 +601,24 @@ export default class Tilmeld implements TilmeldInterface {
         },
       ];
       const groupRefs: FormattedSelector['ref'] = [];
-      const acRefs: FormattedSelector['ref'] = [];
+      const acContains: FormattedSelector['contain'] = [];
       const gid = user.$getGid();
       if (gid != null) {
         // It belongs to the user's primary group.
         groupRefs.push(['group', gid]);
-        // User's primary group is listed in acRead, acWrite, or acFull.
-        acRefs.push(['acRead', gid]);
-        acRefs.push(['acWrite', gid]);
-        acRefs.push(['acFull', gid]);
+        // User's primary group guid is listed in acRead, acWrite, or acFull.
+        acContains.push(['acRead', gid]);
+        acContains.push(['acWrite', gid]);
+        acContains.push(['acFull', gid]);
       }
       const gids = user.$getGids();
       for (let curGid of gids ?? []) {
         // It belongs to the user's secondary group.
         groupRefs.push(['group', curGid]);
-        // User's secondary group is listed in acRead, acWrite, or acFull.
-        acRefs.push(['acRead', curGid]);
-        acRefs.push(['acWrite', curGid]);
-        acRefs.push(['acFull', curGid]);
+        // User's secondary group guid is listed in acRead, acWrite, or acFull.
+        acContains.push(['acRead', curGid]);
+        acContains.push(['acWrite', curGid]);
+        acContains.push(['acFull', curGid]);
       }
       // All the group refs.
       if (groupRefs.length) {
@@ -632,21 +633,21 @@ export default class Tilmeld implements TilmeldInterface {
           ],
         });
       }
-      // All the acRead, acWrite, and acFull refs.
-      if (acRefs.length) {
+      // All the acRead, acWrite, and acFull contains.
+      if (acContains.length) {
         subSelectors.push({
           type: '|',
-          ref: acRefs,
+          contain: acContains,
         });
       }
       const selector: FormattedSelector = {
         type: '|',
         // Other access control is sufficient.
         gte: [['acOther', TilmeldAccessLevels.READ_ACCESS]],
-        // The user and group are not set.
+        // One of the sub selectors.
         selector: subSelectors,
         // The user is listed in acRead, acWrite, or acFull.
-        ref: [
+        contain: [
           ['acRead', user.guid],
           ['acWrite', user.guid],
           ['acFull', user.guid],

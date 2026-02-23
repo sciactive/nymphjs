@@ -1086,6 +1086,7 @@ export default class MySQLDriver extends NymphDriver {
     tableSuffix = '',
     etypes: string[] = [],
     guidSelector: string | undefined = undefined,
+    guidExplicitSelector: ((guid: string) => string) | undefined = undefined,
   ) {
     if (typeof options.class?.alterOptions === 'function') {
       options = options.class.alterOptions(options);
@@ -1161,17 +1162,39 @@ export default class MySQLDriver extends NymphDriver {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const name = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  'EXISTS (SELECT `guid` FROM ' +
-                  MySQLDriver.escape(this.prefix + 'data_' + etype) +
-                  ' WHERE `guid`=' +
-                  ieTable +
-                  '.`guid` AND `name`=@' +
-                  name +
-                  ')';
-                params[name] = curVar;
+                if (
+                  curVar === 'cdate' ||
+                  curVar === 'mdate' ||
+                  (this.nymph.tilmeld != null &&
+                    (curVar === 'user' ||
+                      curVar === 'group' ||
+                      curVar === 'acUser' ||
+                      curVar === 'acGroup' ||
+                      curVar === 'acOther' ||
+                      curVar === 'acRead' ||
+                      curVar === 'acWrite' ||
+                      curVar === 'acFull'))
+                ) {
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                    '(' +
+                    ieTable +
+                    '.' +
+                    MySQLDriver.escape(curVar) +
+                    ' IS NOT NULL)';
+                } else {
+                  const name = `param${++count.i}`;
+                  curQuery +=
+                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                    'EXISTS (SELECT `guid` FROM ' +
+                    MySQLDriver.escape(this.prefix + 'data_' + etype) +
+                    ' WHERE `guid`=' +
+                    ieTable +
+                    '.`guid` AND `name`=@' +
+                    name +
+                    ')';
+                  params[name] = curVar;
+                }
               }
               break;
             case 'truthy':
@@ -1180,20 +1203,26 @@ export default class MySQLDriver extends NymphDriver {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                if (curVar === 'cdate') {
+                if (
+                  curVar === 'cdate' ||
+                  curVar === 'mdate' ||
+                  (this.nymph.tilmeld != null &&
+                    (curVar === 'user' ||
+                      curVar === 'group' ||
+                      curVar === 'acUser' ||
+                      curVar === 'acGroup' ||
+                      curVar === 'acOther' ||
+                      curVar === 'acRead' ||
+                      curVar === 'acWrite' ||
+                      curVar === 'acFull'))
+                ) {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     '(' +
                     ieTable +
-                    '.`cdate` NOT NULL)';
-                  break;
-                } else if (curVar === 'mdate') {
-                  curQuery +=
-                    (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                    '(' +
-                    ieTable +
-                    '.`mdate` NOT NULL)';
-                  break;
+                    '.' +
+                    MySQLDriver.escape(curVar) +
+                    ' IS NOT NULL)';
                 } else {
                   const name = `param${++count.i}`;
                   curQuery +=
@@ -1211,34 +1240,65 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'equal':
             case '!equal':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`=@' +
-                  cdate;
-                params[cdate] = isNaN(Number(curValue[1]))
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '=@' +
+                  value;
+                params[value] = isNaN(Number(curValue[1]))
                   ? null
                   : Number(curValue[1]);
-                break;
-              } else if (curValue[0] === 'mdate') {
+              } else if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'user' || curValue[0] === 'group')
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const mdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`=@' +
-                  mdate;
-                params[mdate] = isNaN(Number(curValue[1]))
-                  ? null
-                  : Number(curValue[1]);
-                break;
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '=UNHEX(@' +
+                  value +
+                  ')';
+                params[value] = `${curValue[1]}`;
+              } else if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'acRead' ||
+                  curValue[0] === 'acWrite' ||
+                  curValue[0] === 'acFull')
+              ) {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+                const value = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  ieTable +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '=@' +
+                  value;
+                params[value] = Array.isArray(curValue[1])
+                  ? ' ' + curValue[1].join(' ') + ' '
+                  : '';
               } else if (typeof curValue[1] === 'number') {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1323,34 +1383,65 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'contain':
             case '!contain':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`=@' +
-                  cdate;
-                params[cdate] = isNaN(Number(curValue[1]))
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '=@' +
+                  value;
+                params[value] = isNaN(Number(curValue[1]))
                   ? null
                   : Number(curValue[1]);
-                break;
-              } else if (curValue[0] === 'mdate') {
+              } else if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'user' || curValue[0] === 'group')
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const mdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`mdate`=@' +
-                  mdate;
-                params[mdate] = isNaN(Number(curValue[1]))
-                  ? null
-                  : Number(curValue[1]);
-                break;
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '=UNHEX(@' +
+                  value +
+                  ')';
+                params[value] = `${curValue[1]}`;
+              } else if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'acRead' ||
+                  curValue[0] === 'acWrite' ||
+                  curValue[0] === 'acFull')
+              ) {
+                if (curQuery) {
+                  curQuery += typeIsOr ? ' OR ' : ' AND ';
+                }
+                const queryParam = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'MATCH (' +
+                  ieTable +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  ') AGAINST (@' +
+                  queryParam +
+                  ' IN BOOLEAN MODE)';
+                params[queryParam] = '+' + curValue[1];
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1383,13 +1474,24 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'search':
             case '!search':
-              if (curValue[0] === 'cdate' || curValue[0] === 'mdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') + '(FALSE)';
-                break;
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1530,34 +1632,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'match':
             case '!match':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` REGEXP @' +
-                  cdate +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  ' REGEXP @' +
+                  value +
                   ')';
-                params[cdate] = curValue[1];
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(' +
-                  ieTable +
-                  '.`mdate` REGEXP @' +
-                  mdate +
-                  ')';
-                params[mdate] = curValue[1];
-                break;
+                params[value] = curValue[1];
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1581,34 +1682,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'imatch':
             case '!imatch':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` REGEXP @' +
-                  cdate +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  ' REGEXP @' +
+                  value +
                   ')';
-                params[cdate] = curValue[1];
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(' +
-                  ieTable +
-                  '.`mdate` REGEXP @' +
-                  mdate +
-                  ')';
-                params[mdate] = curValue[1];
-                break;
+                params[value] = curValue[1];
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1632,34 +1732,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'like':
             case '!like':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` LIKE @' +
-                  cdate +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  ' LIKE @' +
+                  value +
                   ')';
-                params[cdate] = curValue[1];
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(' +
-                  ieTable +
-                  '.`mdate` LIKE @' +
-                  mdate +
-                  ')';
-                params[mdate] = curValue[1];
-                break;
+                params[value] = curValue[1];
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1683,34 +1782,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'ilike':
             case '!ilike':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   '(' +
                   ieTable +
-                  '.`cdate` LIKE @' +
-                  cdate +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  ' LIKE @' +
+                  value +
                   ')';
-                params[cdate] = curValue[1];
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  '(' +
-                  ieTable +
-                  '.`mdate` LIKE @' +
-                  mdate +
-                  ')';
-                params[mdate] = curValue[1];
-                break;
+                params[value] = curValue[1];
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1734,34 +1832,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'gt':
             case '!gt':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`>@' +
-                  cdate;
-                params[cdate] = isNaN(Number(curValue[1]))
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '>@' +
+                  value;
+                params[value] = isNaN(Number(curValue[1]))
                   ? null
                   : Number(curValue[1]);
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`mdate`>@' +
-                  mdate;
-                params[mdate] = isNaN(Number(curValue[1]))
-                  ? null
-                  : Number(curValue[1]);
-                break;
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1787,34 +1884,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'gte':
             case '!gte':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`>=@' +
-                  cdate;
-                params[cdate] = isNaN(Number(curValue[1]))
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '>=@' +
+                  value;
+                params[value] = isNaN(Number(curValue[1]))
                   ? null
                   : Number(curValue[1]);
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`mdate`>=@' +
-                  mdate;
-                params[mdate] = isNaN(Number(curValue[1]))
-                  ? null
-                  : Number(curValue[1]);
-                break;
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1840,34 +1936,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'lt':
             case '!lt':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`<@' +
-                  cdate;
-                params[cdate] = isNaN(Number(curValue[1]))
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '<@' +
+                  value;
+                params[value] = isNaN(Number(curValue[1]))
                   ? null
                   : Number(curValue[1]);
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`mdate`<@' +
-                  mdate;
-                params[mdate] = isNaN(Number(curValue[1]))
-                  ? null
-                  : Number(curValue[1]);
-                break;
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1893,34 +1988,33 @@ export default class MySQLDriver extends NymphDriver {
               break;
             case 'lte':
             case '!lte':
-              if (curValue[0] === 'cdate') {
+              if (
+                curValue[0] === 'cdate' ||
+                curValue[0] === 'mdate' ||
+                (this.nymph.tilmeld != null &&
+                  (curValue[0] === 'user' ||
+                    curValue[0] === 'group' ||
+                    curValue[0] === 'acUser' ||
+                    curValue[0] === 'acGroup' ||
+                    curValue[0] === 'acOther' ||
+                    curValue[0] === 'acRead' ||
+                    curValue[0] === 'acWrite' ||
+                    curValue[0] === 'acFull'))
+              ) {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
                 }
-                const cdate = `param${++count.i}`;
+                const value = `param${++count.i}`;
                 curQuery +=
                   (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                   ieTable +
-                  '.`cdate`<=@' +
-                  cdate;
-                params[cdate] = isNaN(Number(curValue[1]))
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '<=@' +
+                  value;
+                params[value] = isNaN(Number(curValue[1]))
                   ? null
                   : Number(curValue[1]);
-                break;
-              } else if (curValue[0] === 'mdate') {
-                if (curQuery) {
-                  curQuery += typeIsOr ? ' OR ' : ' AND ';
-                }
-                const mdate = `param${++count.i}`;
-                curQuery +=
-                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                  ieTable +
-                  '.`mdate`<=@' +
-                  mdate;
-                params[mdate] = isNaN(Number(curValue[1]))
-                  ? null
-                  : Number(curValue[1]);
-                break;
               } else {
                 if (curQuery) {
                   curQuery += typeIsOr ? ' OR ' : ' AND ';
@@ -1957,21 +2051,54 @@ export default class MySQLDriver extends NymphDriver {
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
               }
-              const name = `param${++count.i}`;
-              const guid = `param${++count.i}`;
-              curQuery +=
-                (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                'EXISTS (SELECT `guid` FROM ' +
-                MySQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' WHERE `guid`=' +
-                ieTable +
-                '.`guid` AND `name`=@' +
-                name +
-                ' AND `reference`=UNHEX(@' +
-                guid +
-                '))';
-              params[name] = curValue[0];
-              params[guid] = curQguid;
+              if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'user' || curValue[0] === 'group')
+              ) {
+                const guid = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  ieTable +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  '=UNHEX(@' +
+                  guid +
+                  ')';
+                params[guid] = curQguid;
+              } else if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'acRead' ||
+                  curValue[0] === 'acWrite' ||
+                  curValue[0] === 'acFull')
+              ) {
+                const queryParam = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'MATCH (' +
+                  ieTable +
+                  '.' +
+                  MySQLDriver.escape(curValue[0]) +
+                  ') AGAINST (@' +
+                  queryParam +
+                  ' IN BOOLEAN MODE)';
+                params[queryParam] = '+' + curQguid;
+              } else {
+                const name = `param${++count.i}`;
+                const guid = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'EXISTS (SELECT `guid` FROM ' +
+                  MySQLDriver.escape(this.prefix + 'references_' + etype) +
+                  ' WHERE `guid`=' +
+                  ieTable +
+                  '.`guid` AND `name`=@' +
+                  name +
+                  ' AND `reference`=UNHEX(@' +
+                  guid +
+                  '))';
+                params[name] = curValue[0];
+                params[guid] = curQguid;
+              }
               break;
             case 'selector':
             case '!selector':
@@ -2003,44 +2130,118 @@ export default class MySQLDriver extends NymphDriver {
               ];
               const QrefEntityClass = qrefOptions.class as EntityConstructor;
               etypes.push(QrefEntityClass.ETYPE);
-              const qrefQuery = this.makeEntityQuery(
-                {
-                  ...qrefOptions,
-                  sort: qrefOptions.sort ?? null,
-                  return: 'guid',
-                  class: QrefEntityClass,
-                },
-                qrefSelectors,
-                QrefEntityClass.ETYPE,
-                count,
-                params,
-                false,
-                makeTableSuffix(),
-                etypes,
-                'r' + referenceTableSuffix + '.`reference`',
-              );
               if (curQuery) {
                 curQuery += typeIsOr ? ' OR ' : ' AND ';
               }
-              const qrefName = `param${++count.i}`;
-              curQuery +=
-                (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
-                'EXISTS (SELECT `guid` FROM ' +
-                MySQLDriver.escape(this.prefix + 'references_' + etype) +
-                ' r' +
-                referenceTableSuffix +
-                ' WHERE r' +
-                referenceTableSuffix +
-                '.`guid`=' +
-                ieTable +
-                '.`guid` AND r' +
-                referenceTableSuffix +
-                '.`name`=@' +
-                qrefName +
-                ' AND EXISTS (' +
-                qrefQuery.query +
-                '))';
-              params[qrefName] = curValue[0];
+              if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'user' || curValue[0] === 'group')
+              ) {
+                const qrefQuery = this.makeEntityQuery(
+                  {
+                    ...qrefOptions,
+                    sort: qrefOptions.sort ?? null,
+                    return: 'guid',
+                    class: QrefEntityClass,
+                  },
+                  qrefSelectors,
+                  QrefEntityClass.ETYPE,
+                  count,
+                  params,
+                  false,
+                  makeTableSuffix(),
+                  etypes,
+                  'r' +
+                    referenceTableSuffix +
+                    '.' +
+                    MySQLDriver.escape(curValue[0]),
+                );
+
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'EXISTS (SELECT `guid` FROM ' +
+                  MySQLDriver.escape(this.prefix + 'entities_' + etype) +
+                  ' r' +
+                  referenceTableSuffix +
+                  ' WHERE r' +
+                  referenceTableSuffix +
+                  '.`guid`=' +
+                  ieTable +
+                  '.`guid` AND EXISTS (' +
+                  qrefQuery.query +
+                  '))';
+              } else if (
+                this.nymph.tilmeld != null &&
+                (curValue[0] === 'acRead' ||
+                  curValue[0] === 'acWrite' ||
+                  curValue[0] === 'acFull')
+              ) {
+                const qrefQuery = this.makeEntityQuery(
+                  {
+                    ...qrefOptions,
+                    sort: qrefOptions.sort ?? null,
+                    return: 'guid',
+                    class: QrefEntityClass,
+                  },
+                  qrefSelectors,
+                  QrefEntityClass.ETYPE,
+                  count,
+                  params,
+                  false,
+                  makeTableSuffix(),
+                  etypes,
+                  undefined,
+                  (guid) =>
+                    ieTable +
+                    '.' +
+                    MySQLDriver.escape(curValue[0]) +
+                    " LIKE CONCAT('% ', LOWER(HEX(" +
+                    guid +
+                    ")), ' %')",
+                );
+
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'EXISTS (' +
+                  qrefQuery.query +
+                  ')';
+              } else {
+                const qrefQuery = this.makeEntityQuery(
+                  {
+                    ...qrefOptions,
+                    sort: qrefOptions.sort ?? null,
+                    return: 'guid',
+                    class: QrefEntityClass,
+                  },
+                  qrefSelectors,
+                  QrefEntityClass.ETYPE,
+                  count,
+                  params,
+                  false,
+                  makeTableSuffix(),
+                  etypes,
+                  'r' + referenceTableSuffix + '.`reference`',
+                );
+                const qrefName = `param${++count.i}`;
+                curQuery +=
+                  (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
+                  'EXISTS (SELECT `guid` FROM ' +
+                  MySQLDriver.escape(this.prefix + 'references_' + etype) +
+                  ' r' +
+                  referenceTableSuffix +
+                  ' WHERE r' +
+                  referenceTableSuffix +
+                  '.`guid`=' +
+                  ieTable +
+                  '.`guid` AND r' +
+                  referenceTableSuffix +
+                  '.`name`=@' +
+                  qrefName +
+                  ' AND EXISTS (' +
+                  qrefQuery.query +
+                  '))';
+                params[qrefName] = curValue[0];
+              }
               break;
           }
         }
@@ -2105,9 +2306,11 @@ export default class MySQLDriver extends NymphDriver {
           )}`;
         }
         const whereClause = queryParts.join(') AND (');
-        const guidClause = guidSelector
-          ? `${ieTable}.\`guid\`=${guidSelector} AND `
-          : '';
+        const guidClause = guidExplicitSelector
+          ? `${guidExplicitSelector(`${ieTable}.\`guid\``)} AND `
+          : guidSelector
+            ? `${ieTable}.\`guid\`=${guidSelector} AND `
+            : '';
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT(${countTable}.\`guid\`) AS \`count\` FROM (
@@ -2142,6 +2345,14 @@ export default class MySQLDriver extends NymphDriver {
               ${eTable}.\`tags\`,
               ${eTable}.\`cdate\`,
               ${eTable}.\`mdate\`,
+              LOWER(HEX(${eTable}.\`user\`)) AS \`user\`,
+              LOWER(HEX(${eTable}.\`group\`)) AS \`group\`,
+              ${eTable}.\`acUser\`,
+              ${eTable}.\`acGroup\`,
+              ${eTable}.\`acOther\`,
+              ${eTable}.\`acRead\`,
+              ${eTable}.\`acWrite\`,
+              ${eTable}.\`acFull\`,
               ${dTable}.\`name\`,
               ${dTable}.\`value\`,
               ${dTable}.\`json\`,
@@ -2182,9 +2393,11 @@ export default class MySQLDriver extends NymphDriver {
             isNaN(Number(options.offset)) ? 0 : Number(options.offset),
           )}`;
         }
-        const guidClause = guidSelector
-          ? ` WHERE ${ieTable}.\`guid\`=${guidSelector}`
-          : '';
+        const guidClause = guidExplicitSelector
+          ? ` WHERE ${guidExplicitSelector(`${ieTable}.\`guid\``)}`
+          : guidSelector
+            ? ` WHERE ${ieTable}.\`guid\`=${guidSelector}`
+            : '';
         if (options.return === 'count') {
           if (limit || offset) {
             query = `SELECT COUNT(${countTable}.\`guid\`) AS \`count\` FROM (
@@ -2218,6 +2431,14 @@ export default class MySQLDriver extends NymphDriver {
                 ${eTable}.\`tags\`,
                 ${eTable}.\`cdate\`,
                 ${eTable}.\`mdate\`,
+                LOWER(HEX(${eTable}.\`user\`)) AS \`user\`,
+                LOWER(HEX(${eTable}.\`group\`)) AS \`group\`,
+                ${eTable}.\`acUser\`,
+                ${eTable}.\`acGroup\`,
+                ${eTable}.\`acOther\`,
+                ${eTable}.\`acRead\`,
+                ${eTable}.\`acWrite\`,
+                ${eTable}.\`acFull\`,
                 ${dTable}.\`name\`,
                 ${dTable}.\`value\`,
                 ${dTable}.\`json\`,
@@ -2246,6 +2467,14 @@ export default class MySQLDriver extends NymphDriver {
                 ${eTable}.\`tags\`,
                 ${eTable}.\`cdate\`,
                 ${eTable}.\`mdate\`,
+                LOWER(HEX(${eTable}.\`user\`)) AS \`user\`,
+                LOWER(HEX(${eTable}.\`group\`)) AS \`group\`,
+                ${eTable}.\`acUser\`,
+                ${eTable}.\`acGroup\`,
+                ${eTable}.\`acOther\`,
+                ${eTable}.\`acRead\`,
+                ${eTable}.\`acWrite\`,
+                ${eTable}.\`acFull\`,
                 ${dTable}.\`name\`,
                 ${dTable}.\`value\`,
                 ${dTable}.\`json\`,
@@ -2258,7 +2487,7 @@ export default class MySQLDriver extends NymphDriver {
                 `${this.prefix}data_${etype}`,
               )} ${dTable} ON ${eTable}.\`guid\`=${dTable}.\`guid\`
               ${sortJoin}
-              ${guidSelector ? `WHERE ${eTable}.\`guid\`=${guidSelector}` : ''}
+              ${guidExplicitSelector ? `WHERE ${guidExplicitSelector(`${eTable}.\`guid\``)}` : guidSelector ? `WHERE ${eTable}.\`guid\`=${guidSelector}` : ''}
               ${sortBy ? sortBy + ', ' : 'ORDER BY '}${eTable}.\`guid\``;
           }
         }
@@ -2341,6 +2570,14 @@ export default class MySQLDriver extends NymphDriver {
             : [],
         cdate: isNaN(Number(row.cdate)) ? Date.now() : Number(row.cdate),
         mdate: isNaN(Number(row.mdate)) ? Date.now() : Number(row.mdate),
+        user: row.user,
+        group: row.group,
+        acUser: row.acUser,
+        acGroup: row.acGroup,
+        acOther: row.acOther,
+        acRead: row.acRead?.slice(1, -1).split(' ') ?? [],
+        acWrite: row.acWrite?.slice(1, -1).split(' ') ?? [],
+        acFull: row.acFull?.slice(1, -1).split(' ') ?? [],
       }),
       (row) => ({
         name: row.name,

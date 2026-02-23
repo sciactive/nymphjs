@@ -749,16 +749,19 @@ export default class Entity<
     return (this.$data.group?.guid ?? null) as string | null;
   }
   public $getAcReadIds() {
-    return (this.$data.acRead?.map((entity: EntityInterface) => entity.guid) ??
-      null) as (string | null)[] | null;
+    return (this.$data.acRead?.map((entity: EntityInterface | string) =>
+      typeof entity === 'string' ? entity : entity.guid,
+    ) ?? null) as (string | null)[] | null;
   }
   public $getAcWriteIds() {
-    return (this.$data.acWrite?.map((entity: EntityInterface) => entity.guid) ??
-      null) as (string | null)[] | null;
+    return (this.$data.acWrite?.map((entity: EntityInterface | string) =>
+      typeof entity === 'string' ? entity : entity.guid,
+    ) ?? null) as (string | null)[] | null;
   }
   public $getAcFullIds() {
-    return (this.$data.acFull?.map((entity: EntityInterface) => entity.guid) ??
-      null) as (string | null)[] | null;
+    return (this.$data.acFull?.map((entity: EntityInterface | string) =>
+      typeof entity === 'string' ? entity : entity.guid,
+    ) ?? null) as (string | null)[] | null;
   }
 
   public $getValidatable() {

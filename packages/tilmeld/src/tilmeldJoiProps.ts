@@ -25,22 +25,7 @@ export default {
     TilmeldAccessLevels.WRITE_ACCESS,
     TilmeldAccessLevels.FULL_ACCESS,
   ),
-  acRead: Joi.array().items(
-    Joi.alternatives().try(
-      Joi.object().instance(User),
-      Joi.object().instance(Group),
-    ),
-  ),
-  acWrite: Joi.array().items(
-    Joi.alternatives().try(
-      Joi.object().instance(User),
-      Joi.object().instance(Group),
-    ),
-  ),
-  acFull: Joi.array().items(
-    Joi.alternatives().try(
-      Joi.object().instance(User),
-      Joi.object().instance(Group),
-    ),
-  ),
+  acRead: Joi.array().items(Joi.string().pattern(/^[0-9a-f]{24}$/i, 'GUID')),
+  acWrite: Joi.array().items(Joi.string().pattern(/^[0-9a-f]{24}$/i, 'GUID')),
+  acFull: Joi.array().items(Joi.string().pattern(/^[0-9a-f]{24}$/i, 'GUID')),
 };

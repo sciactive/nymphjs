@@ -7,7 +7,7 @@ export type AccessControlData = {
   acUser?: number;
   acGroup?: number;
   acOther?: number;
-  acFull?: ((User & UserData) | (Group & GroupData))[];
-  acWrite?: ((User & UserData) | (Group & GroupData))[];
-  acRead?: ((User & UserData) | (Group & GroupData))[];
+  acFull?: string[];
+  acWrite?: string[];
+  acRead?: string[];
 };
