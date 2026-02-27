@@ -524,34 +524,6 @@ export default class PostgreSQLDriver extends NymphDriver {
     );
     await this.queryRun(
       `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_guid_name__user`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_guid_name__user`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}`,
-      )} USING btree ("guid") WHERE "name" = 'user'::text;`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_guid_name__group`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_guid_name__group`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}`,
-      )} USING btree ("guid") WHERE "name" = 'group'::text;`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
         `${this.prefix}data_${etype}_id_name`,
       )};`,
       { connection },
@@ -660,76 +632,6 @@ export default class PostgreSQLDriver extends NymphDriver {
       )} ON ${PostgreSQLDriver.escape(
         `${this.prefix}data_${etype}`,
       )} USING gin ("json");`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acuserread`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acuserread`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}`,
-      )} USING btree ("guid") WHERE "name"='acUser' AND "number" >= 1;`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acgroupread`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acgroupread`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}`,
-      )} USING btree ("guid") WHERE "name"='acGroup' AND "number" >= 1;`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acotherread`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acotherread`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}`,
-      )} USING btree ("guid") WHERE "name"='acOther' AND "number" >= 1;`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acuser`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acuser`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}`,
-      )} USING btree ("guid") WHERE "name"='user';`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acgroup`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}_id_acgroup`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}data_${etype}`,
-      )} USING btree ("guid") WHERE "name"='group';`,
       { connection },
     );
     await this.queryRun(
@@ -862,34 +764,6 @@ export default class PostgreSQLDriver extends NymphDriver {
       )} ON ${PostgreSQLDriver.escape(
         `${this.prefix}references_${etype}`,
       )} USING btree ("reference", "guid", "name");`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_reference_guid_nameuser`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_reference_guid_nameuser`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}`,
-      )} USING btree ("reference", "guid") WHERE "name"='user';`,
-      { connection },
-    );
-    await this.queryRun(
-      `DROP INDEX IF EXISTS ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_reference_guid_namegroup`,
-      )};`,
-      { connection },
-    );
-    await this.queryRun(
-      `CREATE INDEX ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}_id_reference_guid_namegroup`,
-      )} ON ${PostgreSQLDriver.escape(
-        `${this.prefix}references_${etype}`,
-      )} USING btree ("reference", "guid") WHERE "name"='group';`,
       { connection },
     );
     await this.queryRun(

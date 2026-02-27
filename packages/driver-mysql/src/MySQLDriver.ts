@@ -335,12 +335,7 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_name_number\` USING BTREE (\`name\`(255), \`number\`),
           INDEX \`id_guid_name_number\` USING BTREE (\`guid\`, \`name\`(255), \`number\`),
           INDEX \`id_name_truthy\` USING HASH (\`name\`(255), \`truthy\`),
-          INDEX \`id_guid_name_truthy\` USING HASH (\`guid\`, \`name\`(255), \`truthy\`),
-          INDEX \`id_acuserread\` USING BTREE (((\`name\` = 'acUser') AND (\`number\` >= 1)), \`guid\`),
-          INDEX \`id_acgroupread\` USING BTREE (((\`name\` = 'acGroup') AND (\`number\` >= 1)), \`guid\`),
-          INDEX \`id_acotherread\` USING BTREE (((\`name\` = 'acOther') AND (\`number\` >= 1)), \`guid\`),
-          INDEX \`id_acuser\` USING BTREE (((\`name\` = 'user')), \`guid\`),
-          INDEX \`id_acgroup\` USING BTREE (((\`name\` = 'group')), \`guid\`)
+          INDEX \`id_guid_name_truthy\` USING HASH (\`guid\`, \`name\`(255), \`truthy\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
     );
@@ -369,9 +364,7 @@ export default class MySQLDriver extends NymphDriver {
           INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
           INDEX \`id_guid_name_reference\` USING HASH (\`guid\`, \`name\`(255), \`reference\`),
           INDEX \`id_reference_name_guid\` USING BTREE (\`reference\`, \`name\`(255), \`guid\`),
-          INDEX \`id_reference_guid_name\` USING BTREE (\`reference\`, \`guid\`, \`name\`(255)),
-          INDEX \`id_reference_guid_nameuser\` USING HASH (((\`name\` = 'user')), \`reference\`, \`guid\`),
-          INDEX \`id_reference_guid_namegroup\` USING HASH (((\`name\` = 'group')), \`reference\`, \`guid\`)
+          INDEX \`id_reference_guid_name\` USING BTREE (\`reference\`, \`guid\`, \`name\`(255))
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
     );
