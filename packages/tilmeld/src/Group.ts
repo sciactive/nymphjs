@@ -441,6 +441,13 @@ export default class Group extends AbleObject<GroupData> {
     source?: 'server',
   ) {
     super.$putData(data, sdata, source);
+    // TODO: Fix these being added by the drivers.
+    // @ts-ignore
+    delete this.$data.acRead;
+    // @ts-ignore
+    delete this.$data.acWrite;
+    // @ts-ignore
+    delete this.$data.acFull;
     if (source === 'server') {
       this.$originalGroupname = this.$data.groupname;
     }

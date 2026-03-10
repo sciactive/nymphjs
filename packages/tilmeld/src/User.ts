@@ -1071,6 +1071,13 @@ export default class User extends AbleObject<UserData> {
     source?: 'server',
   ) {
     super.$putData(data, sdata, source);
+    // TODO: Fix these being added by the drivers.
+    // @ts-ignore
+    delete this.$data.acRead;
+    // @ts-ignore
+    delete this.$data.acWrite;
+    // @ts-ignore
+    delete this.$data.acFull;
     if (source === 'server') {
       this.$originalEmail = this.$data.email;
       this.$originalUsername = this.$data.username;
