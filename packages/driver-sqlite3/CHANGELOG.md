@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.111](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.110...v1.0.0-beta.111) (2026-03-10)
+
+### Bug Fixes
+
+- remove unused index definitions ([d750f92](https://github.com/sciactive/nymphjs/commit/d750f92a62daa06b7bac8bb8792f0b417ed683d7))
+
 # [1.0.0-beta.110](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.109...v1.0.0-beta.110) (2026-02-23)
 
 ### Features

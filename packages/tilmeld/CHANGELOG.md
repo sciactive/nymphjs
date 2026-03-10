@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.111](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.110...v1.0.0-beta.111) (2026-03-10)
+
+### Bug Fixes
+
+- ac arrays being added to users and groups ([1f00ce2](https://github.com/sciactive/nymphjs/commit/1f00ce2ef104c8b80ccdcc25f4f1ea0f7f8d476e))
+
 # [1.0.0-beta.110](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.109...v1.0.0-beta.110) (2026-02-23)
 
 ### Features
