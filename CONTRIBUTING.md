@@ -1,6 +1,10 @@
 # Contributing
 
-Thank you for contributing! There are some guidelines you should know. First, let's get you started.
+Thank you for contributing! There are some guidelines you should know.
+
+This project adheres to the [SciActive Human Contribution Policy](HUMAN-CONTRIBUTION-POLICY.md).
+
+First, let's get you started.
 
 ## Setting up Your Dev Environment
 

@@ -143,6 +143,10 @@ Once you're all done, in your main terminal, you can bring down the test DBs (do
 npm run test:db:stop
 ```
 
+# Human Authorship
+
+[![Seal of Human Authorship](https://sciactive.com/wp-content/uploads/2026/03/Seal-of-Human-Authorship-300.png)](https://sciactive.com/human-contribution-policy/)
+
 # License
 
 Copyright 2021-2025 SciActive Inc
