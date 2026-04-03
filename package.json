@@ -24,7 +24,7 @@
     "ORM",
     "object relational mapper"
   ],
-  "author": "Hunter Perrin <hperrin@gmail.com>",
+  "author": "Hunter Perrin <hperrin@port87.com>",
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://forge.sciactive.com/sciactive/nymphjs/issues"

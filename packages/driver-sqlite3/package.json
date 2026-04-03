@@ -27,7 +27,7 @@
     "url": "https://forge.sciactive.com/sciactive/nymphjs.git",
     "directory": "packages/driver-sqlite3"
   },
-  "author": "Hunter Perrin <hperrin@gmail.com>",
+  "author": "Hunter Perrin <hperrin@port87.com>",
   "bugs": {
     "url": "https://forge.sciactive.com/sciactive/nymphjs/issues"
   },

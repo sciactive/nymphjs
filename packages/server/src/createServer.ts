@@ -37,7 +37,7 @@ export class ForbiddenClassError extends Error {
  *
  * Written by Hunter Perrin for SciActive.
  *
- * @author Hunter Perrin <hperrin@gmail.com>
+ * @author Hunter Perrin <hperrin@port87.com>
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
