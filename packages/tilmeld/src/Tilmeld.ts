@@ -6,6 +6,7 @@ import {
   Options,
   TilmeldInterface,
   TilmeldAccessLevels,
+  TilmeldAccessRequest,
   ACProperties,
 } from '@nymphjs/nymph';
 import { Request, Response } from 'express';
@@ -574,51 +575,155 @@ export default class Tilmeld implements TilmeldInterface {
     }
 
     if (user == null || user.guid == null) {
-      selectors.push({
-        type: '|',
+      // Access requests for only public entities.
+
+      const allAccessRequests =
+        TilmeldAccessRequest.OTHER_ACCESSIBLE | TilmeldAccessRequest.UNOWNED;
+
+      const requestedAccess = (options.acRequest ?? 0) & allAccessRequests;
+
+      let defaultAccess = false;
+
+      if (
+        // TODO: Remove these. They are the old way before allAccessRequests.
+        // !(
+        //   requestedAccess & TilmeldAccessRequest.OTHER_ACCESSIBLE ||
+        //   requestedAccess & TilmeldAccessRequest.UNOWNED
+        // )
+        requestedAccess === TilmeldAccessRequest.ALL_LEVELS
+      ) {
+        defaultAccess = true;
+      }
+
+      const selector: FormattedSelector = { type: '|' };
+
+      if (
+        defaultAccess ||
+        requestedAccess & TilmeldAccessRequest.OTHER_ACCESSIBLE
+      ) {
         // Other access control is sufficient.
-        gte: [['acOther', TilmeldAccessLevels.READ_ACCESS]],
+        selector.gte = [['acOther', TilmeldAccessLevels.READ_ACCESS]];
+      }
+
+      if (defaultAccess || requestedAccess & TilmeldAccessRequest.UNOWNED) {
         // The user and group are not set.
-        selector: [
+        selector.selector = [
           {
             type: '&',
             '!defined': [['user', 'group']],
           },
-        ],
-      });
+        ];
+      }
+
+      if (Object.keys(selector).length <= 1) {
+        this.nymph.config.debugError(
+          'tilmeld',
+          'No access controls were added to the query. This should not be possible.',
+        );
+        throw new Error('Access control error.');
+      }
+
+      selectors.push(selector);
     } else {
-      const subSelectors: FormattedSelector[] = [
-        {
+      // Access requests for public and private entities.
+
+      const allAccessRequests =
+        TilmeldAccessRequest.USER_OWNED |
+        TilmeldAccessRequest.PRIMARY_GROUP_OWNED |
+        TilmeldAccessRequest.SECONDARY_GROUP_OWNED |
+        TilmeldAccessRequest.USER_ACCESSIBLE |
+        TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE |
+        TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE |
+        TilmeldAccessRequest.OTHER_ACCESSIBLE |
+        TilmeldAccessRequest.UNOWNED;
+
+      const requestedAccess = (options.acRequest ?? 0) & allAccessRequests;
+
+      let defaultAccess = false;
+
+      const hasPrimaryGroup = !!(user.group != null && user.group.guid != null);
+      const hasSecondaryGroup = !!(
+        user.groups?.length && user.groups.find((group) => group.guid != null)
+      );
+
+      if (
+        // TODO: Remove these. They are the old way before allAccessRequests.
+        // !(
+        //   requestedAccess & TilmeldAccessRequest.USER_OWNED ||
+        //   (hasPrimaryGroup &&
+        //     requestedAccess & TilmeldAccessRequest.PRIMARY_GROUP_OWNED) ||
+        //   (hasSecondaryGroup &&
+        //     requestedAccess & TilmeldAccessRequest.SECONDARY_GROUP_OWNED) ||
+        //   requestedAccess & TilmeldAccessRequest.USER_ACCESSIBLE ||
+        //   (hasPrimaryGroup &&
+        //     requestedAccess & TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE) ||
+        //   (hasSecondaryGroup &&
+        //     requestedAccess &
+        //       TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE) ||
+        //   requestedAccess & TilmeldAccessRequest.OTHER_ACCESSIBLE ||
+        //   requestedAccess & TilmeldAccessRequest.UNOWNED
+        // )
+        requestedAccess === TilmeldAccessRequest.ALL_LEVELS
+      ) {
+        defaultAccess = true;
+      }
+
+      const subSelectors: FormattedSelector[] = [];
+      if (defaultAccess || requestedAccess & TilmeldAccessRequest.UNOWNED) {
+        subSelectors.push({
           type: '&',
           // The user and group are not set.
           '!defined': [['user', 'group']],
-        },
+        });
+      }
+      // USER_OWNED is always enforced.
+      subSelectors.push(
         // It is owned by the user.
         {
           type: '&',
           ref: [['user', user.guid]],
           gte: [['acUser', TilmeldAccessLevels.READ_ACCESS]],
         },
-      ];
+      );
       const groupRefs: FormattedSelector['ref'] = [];
       const acContains: FormattedSelector['contain'] = [];
       const gid = user.$getGid();
       if (gid != null) {
-        // It belongs to the user's primary group.
-        groupRefs.push(['group', gid]);
-        // User's primary group guid is listed in acRead, acWrite, or acFull.
-        acContains.push(['acRead', gid]);
-        acContains.push(['acWrite', gid]);
-        acContains.push(['acFull', gid]);
+        if (
+          defaultAccess ||
+          requestedAccess & TilmeldAccessRequest.PRIMARY_GROUP_OWNED
+        ) {
+          // It belongs to the user's primary group.
+          groupRefs.push(['group', gid]);
+        }
+        if (
+          defaultAccess ||
+          requestedAccess & TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE
+        ) {
+          // User's primary group guid is listed in acRead, acWrite, or acFull.
+          acContains.push(['acRead', gid]);
+          acContains.push(['acWrite', gid]);
+          acContains.push(['acFull', gid]);
+        }
       }
       const gids = user.$getGids();
       for (let curGid of gids ?? []) {
-        // It belongs to the user's secondary group.
-        groupRefs.push(['group', curGid]);
-        // User's secondary group guid is listed in acRead, acWrite, or acFull.
-        acContains.push(['acRead', curGid]);
-        acContains.push(['acWrite', curGid]);
-        acContains.push(['acFull', curGid]);
+        if (
+          defaultAccess ||
+          requestedAccess & TilmeldAccessRequest.SECONDARY_GROUP_OWNED
+        ) {
+          // It belongs to the user's secondary group.
+          groupRefs.push(['group', curGid]);
+        }
+        if (
+          defaultAccess ||
+          requestedAccess & TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE
+        ) {
+          // User's secondary group guid is listed in acRead, acWrite, or acFull.
+          acContains.push(['acRead', curGid]);
+          acContains.push(['acWrite', curGid]);
+          acContains.push(['acFull', curGid]);
+        }
       }
       // All the group refs.
       if (groupRefs.length) {
@@ -640,19 +745,36 @@ export default class Tilmeld implements TilmeldInterface {
           contain: acContains,
         });
       }
-      const selector: FormattedSelector = {
-        type: '|',
+      const selector: FormattedSelector = { type: '|' };
+      if (
+        defaultAccess ||
+        requestedAccess & TilmeldAccessRequest.OTHER_ACCESSIBLE
+      ) {
         // Other access control is sufficient.
-        gte: [['acOther', TilmeldAccessLevels.READ_ACCESS]],
+        selector.gte = [['acOther', TilmeldAccessLevels.READ_ACCESS]];
+      }
+      if (subSelectors.length) {
         // One of the sub selectors.
-        selector: subSelectors,
+        selector.selector = subSelectors;
+      }
+      if (
+        defaultAccess ||
+        requestedAccess & TilmeldAccessRequest.USER_ACCESSIBLE
+      ) {
         // The user is listed in acRead, acWrite, or acFull.
-        contain: [
+        selector.contain = [
           ['acRead', user.guid],
           ['acWrite', user.guid],
           ['acFull', user.guid],
-        ],
-      };
+        ];
+      }
+      if (Object.keys(selector).length <= 1) {
+        this.nymph.config.debugError(
+          'tilmeld',
+          'No access controls were added to the query. This should not be possible.',
+        );
+        throw new Error('Access control error.');
+      }
       selectors.push(selector);
     }
   }

@@ -99,6 +99,13 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
    * If true, Nymph will skip the cache and retrieve the entity from the DB.
    */
   skipCache?: boolean;
+  /**
+   * The level(s) of access control requested.
+   *
+   * Limiting the access control can significantly improve the performance of
+   * the query.
+   */
+  acRequest?: TilmeldAccessRequest;
 };
 
 export type Clause<C> = C | Exclude<C, undefined>[];
@@ -218,3 +225,47 @@ export type Selector = {
   selector?: Clause<Selector>;
   '!selector'?: Selector['selector'];
 };
+
+export enum TilmeldAccessRequest {
+  /**
+   * The default level, any possible entity readable by the user.
+   *
+   * This is the same as or-ing together all of the levels listed below.
+   */
+  ALL_LEVELS = 0,
+  /**
+   * Owned by and accessible to the user.
+   *
+   * This is always enabled, so not including it has no effect. It's here to
+   * allow the selection of _only_ user owned entities.
+   */
+  USER_OWNED = 1,
+  /**
+   * Owned by and accessible to the user's primary group.
+   */
+  PRIMARY_GROUP_OWNED = 2,
+  /**
+   * Owned by and accessible to one of the user's secondary groups.
+   */
+  SECONDARY_GROUP_OWNED = 4,
+  /**
+   * The user is listed in an access control list.
+   */
+  USER_ACCESSIBLE = 8,
+  /**
+   * The user's primary group is listed in an access control list.
+   */
+  PRIMARY_GROUP_ACCESSIBLE = 16,
+  /**
+   * One of the user's secondary groups is listed in an access control list.
+   */
+  SECONDARY_GROUP_ACCESSIBLE = 32,
+  /**
+   * The entity is accessible to any user.
+   */
+  OTHER_ACCESSIBLE = 64,
+  /**
+   * The entity is not owned by anyone.
+   */
+  UNOWNED = 128,
+}

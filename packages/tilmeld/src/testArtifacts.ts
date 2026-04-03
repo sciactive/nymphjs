@@ -1,4 +1,9 @@
-import { Entity, Nymph, TilmeldAccessLevels } from '@nymphjs/nymph';
+import {
+  Entity,
+  Nymph,
+  TilmeldAccessLevels,
+  TilmeldAccessRequest,
+} from '@nymphjs/nymph';
 
 import Tilmeld from './Tilmeld.js';
 import { AccessControlError } from './errors/index.js';
@@ -1481,5 +1486,439 @@ export function TilmeldTest(
     );
 
     expect(testEntityAlice).toBeNull();
+  });
+
+  it('alice can access an entity with an access request', async () => {
+    const { bob, alice } = await makeUsers();
+
+    await tilmeld.fillSession(alice);
+
+    const alicesEntity = await TestModel.factory();
+    alicesEntity.name = "Alice's Entity";
+    expect(await alicesEntity.$save()).toEqual(true);
+
+    expect(alicesEntity.guid).not.toBeNull();
+    expect(alice.$is(alicesEntity.user)).toEqual(true);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '&', guid: alicesEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+    expect(testEntityAlice?.guid).toEqual(alicesEntity.guid);
+
+    tilmeld.clearSession();
+  });
+
+  it("access request for user owned doesn't return group owned entity", async () => {
+    const { bob, alice } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.group = alice.group;
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+
+    const testFailureEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testFailureEntityAlice).toBeNull();
+
+    const testSuccessEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.PRIMARY_GROUP_OWNED },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testSuccessEntityAlice).not.toBeNull();
+  });
+
+  it("access request for user owned doesn't return acOther accessible entity", async () => {
+    const { bob, alice } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+
+    const testFailureEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testFailureEntityAlice).toBeNull();
+
+    const testSuccessEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.OTHER_ACCESSIBLE },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testSuccessEntityAlice).not.toBeNull();
+  });
+
+  it("access request for user owned doesn't return user acRead accessible entity", async () => {
+    const { bob, alice } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.acRead = [alice.guid ?? ''];
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+
+    const testFailureEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testFailureEntityAlice).toBeNull();
+
+    const testSuccessEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_ACCESSIBLE },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testSuccessEntityAlice).not.toBeNull();
+  });
+
+  it("access request for user owned doesn't return group acRead accessible entity", async () => {
+    const { bob, alice } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.acWrite = [alice.group?.guid ?? ''];
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+
+    const testFailureEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testFailureEntityAlice).toBeNull();
+
+    const testSuccessEntityAlice = await nymph.getEntity(
+      {
+        class: TestModel,
+        acRequest: TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE,
+      },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testSuccessEntityAlice).not.toBeNull();
+  });
+
+  it("access request for user owned doesn't return secondary group owned entity", async () => {
+    const { bob, alice, abgroup } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.group = abgroup;
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+
+    const testFailureEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testFailureEntityAlice).toBeNull();
+
+    const testSuccessEntityAlice = await nymph.getEntity(
+      {
+        class: TestModel,
+        acRequest: TilmeldAccessRequest.SECONDARY_GROUP_OWNED,
+      },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testSuccessEntityAlice).not.toBeNull();
+  });
+
+  it("access request for user owned doesn't return secondary group accessible entity", async () => {
+    const { bob, alice, abgroup } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.acFull = [abgroup.guid ?? ''];
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+
+    const testFailureEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testFailureEntityAlice).toBeNull();
+
+    const testSuccessEntityAlice = await nymph.getEntity(
+      {
+        class: TestModel,
+        acRequest: TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE,
+      },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testSuccessEntityAlice).not.toBeNull();
+
+    // Test or-ing two levels together.
+    const testSuccessEntityAlice2 = await nymph.getEntity(
+      {
+        class: TestModel,
+        acRequest:
+          TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE |
+          TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE,
+      },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testSuccessEntityAlice2).not.toBeNull();
+  });
+
+  it('access request for entity still works when filtering user owned entities manually', async () => {
+    const { bob, alice } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    bobsEntity.acFull = [alice.guid ?? ''];
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const alicesEntity = await TestModel.factory();
+    alicesEntity.name = "Alice's Entity";
+    expect(await alicesEntity.$save()).toEqual(true);
+
+    expect(alicesEntity.guid).not.toBeNull();
+    expect(alice.$is(alicesEntity.user)).toEqual(true);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).not.toBeNull();
+
+    const testWithoutFiltering = await nymph.getEntities(
+      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+      { type: '|', guid: [alicesEntity.guid || '', bobsEntity.guid || ''] },
+    );
+
+    expect(testWithoutFiltering.length).toEqual(1);
+    expect(testWithoutFiltering[0].guid).toEqual(alicesEntity?.guid || '');
+
+    const testWithFiltering = await nymph.getEntities(
+      {
+        class: TestModel,
+        acRequest: TilmeldAccessRequest.USER_OWNED,
+      },
+      { type: '|', guid: [alicesEntity.guid || '', bobsEntity.guid || ''] },
+      { type: '!&', ref: ['user', alice] },
+    );
+
+    expect(testWithFiltering.length).toEqual(0);
+
+    const testInclusive = await nymph.getEntities({ class: TestModel });
+
+    const testInclusiveWithFiltering = await nymph.getEntities(
+      { class: TestModel },
+      { type: '!&', ref: ['user', alice] },
+    );
+
+    expect(testInclusiveWithFiltering.length).toBeGreaterThanOrEqual(1);
+    const guids = testInclusiveWithFiltering.map((entity) => entity.guid);
+    expect(guids).not.toContain(alicesEntity?.guid || '');
+    expect(guids).toContain(bobsEntity?.guid || '');
+
+    const allDefaultGuids = testInclusive.map((entity) => entity.guid);
+    for (let guid of guids) {
+      expect(allDefaultGuids).toContain(guid);
+    }
+  });
+
+  it("access request for invalid access control doesn't return any inaccessible entities", async () => {
+    const { bob, alice, abgroup } = await makeUsers();
+
+    await tilmeld.fillSession(bob);
+
+    const bobsEntity = await TestModel.factory();
+    bobsEntity.name = "Bob's Entity";
+    expect(await bobsEntity.$save()).toEqual(true);
+
+    expect(bobsEntity.guid).not.toBeNull();
+    expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+    const testEntityBob = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityBob).not.toBeNull();
+    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+    tilmeld.clearSession();
+    await tilmeld.fillSession(alice);
+
+    const testEntityAlice = await nymph.getEntity(
+      { class: TestModel },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testEntityAlice).toBeNull();
+
+    const testFailureEntityAlice = await nymph.getEntity(
+      { class: TestModel, acRequest: TilmeldAccessRequest.UNOWNED * 2 },
+      { type: '&', guid: bobsEntity.guid || '' },
+    );
+
+    expect(testFailureEntityAlice).toBeNull();
   });
 }
