@@ -14,9 +14,10 @@
     "test:db:start": "lerna run test:db:start --stream --parallel",
     "test:db:stop": "lerna run test:db:stop"
   },
+  "homepage": "https://nymph.io",
   "repository": {
     "type": "git",
-    "url": "git+https://forge.sciactive.com/sciactive/nymphjs.git"
+    "url": "https://forge.sciactive.com/sciactive/nymphjs.git"
   },
   "keywords": [
     "nymph",
@@ -28,7 +29,6 @@
   "bugs": {
     "url": "https://forge.sciactive.com/sciactive/nymphjs/issues"
   },
-  "homepage": "https://forge.sciactive.com/sciactive/nymphjs#readme",
   "workspaces": [
     "packages/*"
   ],

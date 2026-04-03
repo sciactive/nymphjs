@@ -34,9 +34,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "homepage": "https://nymph.io",
   "repository": {
     "type": "git",
-    "url": "git+https://forge.sciactive.com/sciactive/nymphjs.git"
+    "url": "https://forge.sciactive.com/sciactive/nymphjs.git",
+    "directory": "packages/tilmeld-components"
   },
   "author": "Hunter Perrin <hperrin@gmail.com>",
   "bugs": {
