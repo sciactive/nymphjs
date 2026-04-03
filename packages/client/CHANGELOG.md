@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.112](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.111...v1.0.0-beta.112) (2026-04-03)
+
+### Features
+
+- add acRequest query option ([600b617](https://forge.sciactive.com/sciactive/nymphjs/commits/600b617692b7ba0824e6ee91c0c9f9c29156fbe3))
+
 # [1.0.0-beta.111](https://github.com/sciactive/nymphjs/compare/v1.0.0-beta.110...v1.0.0-beta.111) (2026-03-10)
 
 **Note:** Version bump only for package @nymphjs/client
