@@ -579,21 +579,8 @@ export default class Tilmeld implements TilmeldInterface {
 
       const allAccessRequests =
         TilmeldAccessRequest.OTHER_ACCESSIBLE | TilmeldAccessRequest.UNOWNED;
-
       const requestedAccess = (options.acRequest ?? 0) & allAccessRequests;
-
-      let defaultAccess = false;
-
-      if (
-        // TODO: Remove these. They are the old way before allAccessRequests.
-        // !(
-        //   requestedAccess & TilmeldAccessRequest.OTHER_ACCESSIBLE ||
-        //   requestedAccess & TilmeldAccessRequest.UNOWNED
-        // )
-        requestedAccess === TilmeldAccessRequest.ALL_LEVELS
-      ) {
-        defaultAccess = true;
-      }
+      const defaultAccess = requestedAccess === TilmeldAccessRequest.ALL_LEVELS;
 
       const selector: FormattedSelector = { type: '|' };
 
@@ -636,37 +623,8 @@ export default class Tilmeld implements TilmeldInterface {
         TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE |
         TilmeldAccessRequest.OTHER_ACCESSIBLE |
         TilmeldAccessRequest.UNOWNED;
-
       const requestedAccess = (options.acRequest ?? 0) & allAccessRequests;
-
-      let defaultAccess = false;
-
-      const hasPrimaryGroup = !!(user.group != null && user.group.guid != null);
-      const hasSecondaryGroup = !!(
-        user.groups?.length && user.groups.find((group) => group.guid != null)
-      );
-
-      if (
-        // TODO: Remove these. They are the old way before allAccessRequests.
-        // !(
-        //   requestedAccess & TilmeldAccessRequest.USER_OWNED ||
-        //   (hasPrimaryGroup &&
-        //     requestedAccess & TilmeldAccessRequest.PRIMARY_GROUP_OWNED) ||
-        //   (hasSecondaryGroup &&
-        //     requestedAccess & TilmeldAccessRequest.SECONDARY_GROUP_OWNED) ||
-        //   requestedAccess & TilmeldAccessRequest.USER_ACCESSIBLE ||
-        //   (hasPrimaryGroup &&
-        //     requestedAccess & TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE) ||
-        //   (hasSecondaryGroup &&
-        //     requestedAccess &
-        //       TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE) ||
-        //   requestedAccess & TilmeldAccessRequest.OTHER_ACCESSIBLE ||
-        //   requestedAccess & TilmeldAccessRequest.UNOWNED
-        // )
-        requestedAccess === TilmeldAccessRequest.ALL_LEVELS
-      ) {
-        defaultAccess = true;
-      }
+      const defaultAccess = requestedAccess === TilmeldAccessRequest.ALL_LEVELS;
 
       const subSelectors: FormattedSelector[] = [];
       if (defaultAccess || requestedAccess & TilmeldAccessRequest.UNOWNED) {
