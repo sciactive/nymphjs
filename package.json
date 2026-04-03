@@ -16,7 +16,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/sciactive/nymphjs.git"
+    "url": "git+https://forge.sciactive.com/sciactive/nymphjs.git"
   },
   "keywords": [
     "nymph",
@@ -26,9 +26,9 @@
   "author": "Hunter Perrin <hperrin@gmail.com>",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/sciactive/nymphjs/issues"
+    "url": "https://forge.sciactive.com/sciactive/nymphjs/issues"
   },
-  "homepage": "https://github.com/sciactive/nymphjs#readme",
+  "homepage": "https://forge.sciactive.com/sciactive/nymphjs#readme",
   "workspaces": [
     "packages/*"
   ],

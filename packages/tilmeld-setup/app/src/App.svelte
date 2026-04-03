@@ -15,13 +15,13 @@
     </Section>
     <Section align="end" toolbar style="color: var(--mdc-on-surface, #000);">
       <IconButton
-        href="https://github.com/sciactive/nymphjs"
+        href="https://forge.sciactive.com/sciactive/nymphjs"
         target="_blank"
         rel="noreferrer"
-        title="Nymph/Tilmeld on GitHub"
+        title="Nymph/Tilmeld on SciActive Forge"
       >
         <Icon tag="svg" viewBox="0 0 24 24">
-          <path fill="currentColor" d={mdiGithub} />
+          <path fill="currentColor" d={mdiGit} />
         </Icon>
       </IconButton>
       <IconButton
@@ -143,7 +143,7 @@
     CurrentUserData,
   } from '@nymphjs/tilmeld-client';
   import { Login, Account } from '@nymphjs/tilmeld-components';
-  import { mdiGithub, mdiMastodon } from '@mdi/js';
+  import { mdiGit, mdiMastodon } from '@mdi/js';
   import TopAppBar, { Row, Section, Title } from '@smui/top-app-bar';
   import Drawer, { Content, Scrim, AppContent } from '@smui/drawer';
   import IconButton from '@smui/icon-button';

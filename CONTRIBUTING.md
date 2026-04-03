@@ -11,7 +11,7 @@ First, let's get you started.
 The first step is to fork the repo. Once you've got your own fork, check it out locally.
 
 ```
-git clone git@github.com:yourusername/nymphjs.git nymphjs
+git clone ssh://git@forge.sciactive.com:222/yourusername/nymphjs.git nymphjs
 ```
 
 Now let's get the repo set up for development.
