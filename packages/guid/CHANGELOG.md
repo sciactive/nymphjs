@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.114](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.113...v1.0.0-beta.114) (2026-04-06)
+
+### Bug Fixes
+
+- import from nanoid ([91f56f2](https://forge.sciactive.com/sciactive/nymphjs/commits/91f56f2825f5889033f2c7fef9953e070c950625))
+
 # [1.0.0-beta.113](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.112...v1.0.0-beta.113) (2026-04-03)
 
 **Note:** Version bump only for package @nymphjs/guid
