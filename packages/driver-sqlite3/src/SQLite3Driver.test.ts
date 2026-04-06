@@ -1,7 +1,12 @@
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import fs from 'node:fs';
-import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
+import {
+  EntitiesTest,
+  UIDTest,
+  ExportImportTest,
+} from '@nymphjs/nymph/dist/driver/testArtifacts.js';
 import { TilmeldTest } from '@nymphjs/tilmeld/dist/testArtifacts.js';
 
 import SQLite3Driver from './SQLite3Driver.js';

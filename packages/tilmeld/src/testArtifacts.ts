@@ -7,7 +7,6 @@ import {
 
 import Tilmeld from './Tilmeld.js';
 import { AccessControlError } from './errors/index.js';
-import { TestModel as TestModelClass } from './testArtifacts.js';
 import type { AccessControlData } from './Tilmeld.types';
 
 export type TestModelData = {
@@ -41,6 +40,8 @@ export class TestModel extends Entity<TestModelData> {
     return false;
   }
 }
+
+const TestModelClass = TestModel;
 
 export function TilmeldTest(
   nymphBase: Nymph,

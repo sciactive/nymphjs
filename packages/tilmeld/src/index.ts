@@ -4,8 +4,6 @@ export * from './enforceTilmeld.js';
 
 export * from './errors/index.js';
 
-export { TilmeldTest } from './testArtifacts.js';
-
 import AbleObject from './AbleObject.js';
 export { AbleObject };
 

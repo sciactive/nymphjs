@@ -1,6 +1,11 @@
 import { jest } from '@jest/globals';
 
-import { Nymph, EntitiesTest, UIDTest, ExportImportTest } from '@nymphjs/nymph';
+import { Nymph } from '@nymphjs/nymph';
+import {
+  EntitiesTest,
+  UIDTest,
+  ExportImportTest,
+} from '@nymphjs/nymph/dist/driver/testArtifacts.js';
 import { TilmeldTest } from '@nymphjs/tilmeld/dist/testArtifacts.js';
 
 import MySQLDriver from './MySQLDriver.js';
