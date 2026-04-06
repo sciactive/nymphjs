@@ -1,9 +1,7 @@
 import { nanoid, customAlphabet } from 'nanoid';
 import { DateTime } from 'luxon';
 import sha1 from 'sha1';
-import dictionary from 'nanoid-dictionary';
-
-const { nolookalikesSafe } = dictionary;
+import { nolookalikesSafe } from 'nanoid-dictionary';
 
 const guidSuffix = customAlphabet('0123456789abcdef', 20);
 export function guid() {
