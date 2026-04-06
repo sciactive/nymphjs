@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.115](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.114...v1.0.0-beta.115) (2026-04-06)
+
+### Bug Fixes
+
+- don't export test things in indexes ([ba04bf6](https://forge.sciactive.com/sciactive/nymphjs/commits/ba04bf60a71c7acd0cfc719c92be10396f488875))
+
 # [1.0.0-beta.114](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.113...v1.0.0-beta.114) (2026-04-06)
 
 ### Bug Fixes
