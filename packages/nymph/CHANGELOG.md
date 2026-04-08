@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.116](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.115...v1.0.0-beta.116) (2026-04-08)
+
+### Bug Fixes
+
+- increment mdate if saving too close in time ([59ef841](https://forge.sciactive.com/sciactive/nymphjs/commits/59ef84110b5df3918cf4015a289bb95f1eb4a239))
+
 # [1.0.0-beta.115](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.114...v1.0.0-beta.115) (2026-04-06)
 
 ### Bug Fixes
