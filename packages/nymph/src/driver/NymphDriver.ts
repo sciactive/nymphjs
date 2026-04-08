@@ -1496,6 +1496,10 @@ export default abstract class NymphDriver {
         mdate = entity.mdate;
       } else if (typeof this.nymph.config.updateMDate === 'number') {
         mdate = entity.mdate + this.nymph.config.updateMDate;
+      } else if (entity.mdate >= mdate) {
+        // If we're saving too fast (within 1 millisecond), increment mdate to
+        // make sure it doesn't conflict in the DB.
+        mdate = entity.mdate + 1;
       }
     }
     const tags = difference(entity.tags, ['']);
