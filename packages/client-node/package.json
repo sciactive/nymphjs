@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/client-node",
-  "version": "1.0.0-beta.116",
+  "version": "1.0.0-beta.117",
   "description": "Nymph.js - Node Client",
   "type": "module",
   "main": "dist/index.js",
@@ -33,7 +33,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/client": "^1.0.0-beta.116"
+    "@nymphjs/client": "^1.0.0-beta.117"
   },
   "devDependencies": {
     "@tsconfig/recommended": "^1.0.13",

@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/driver-sqlite3",
-  "version": "1.0.0-beta.116",
+  "version": "1.0.0-beta.117",
   "description": "Nymph.js - SQLite3 DB Driver",
   "type": "module",
   "main": "dist/index.js",
@@ -33,13 +33,13 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/guid": "^1.0.0-beta.116",
-    "@nymphjs/nymph": "^1.0.0-beta.116",
+    "@nymphjs/guid": "^1.0.0-beta.117",
+    "@nymphjs/nymph": "^1.0.0-beta.117",
     "@sciactive/tokenizer": "^3.0.2",
     "better-sqlite3": "^12.6.2"
   },
   "devDependencies": {
-    "@nymphjs/tilmeld": "^1.0.0-beta.116",
+    "@nymphjs/tilmeld": "^1.0.0-beta.117",
     "@tsconfig/recommended": "^1.0.13",
     "@types/better-sqlite3": "^7.6.13",
     "@types/jest": "^30.0.0",

@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.117](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.116...v1.0.0-beta.117) (2026-04-21)
+
+### Bug Fixes
+
+- referencesToEntities using guid instead of class name ([5970fd7](https://forge.sciactive.com/sciactive/nymphjs/commits/5970fd7e3cbb8286ea96f7812bb36f05a91ba65c))
+
 # [1.0.0-beta.116](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.115...v1.0.0-beta.116) (2026-04-08)
 
 **Note:** Version bump only for package @nymphjs/server

@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.117](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.116...v1.0.0-beta.117) (2026-04-21)
+
+**Note:** Version bump only for package @nymphjs/tilmeld-client
+
 # [1.0.0-beta.116](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.115...v1.0.0-beta.116) (2026-04-08)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-client
