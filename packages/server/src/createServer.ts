@@ -857,7 +857,7 @@ export function createServer(
     } else if (Array.isArray(item)) {
       if (item.length === 3 && item[0] === 'nymph_entity_reference') {
         try {
-          const EntityClass = nymph.getEntityClass(item[1]);
+          const EntityClass = nymph.getEntityClass(item[2]);
           if (!EntityClass.restEnabled) {
             throw new ForbiddenClassError('Not accessible.');
           }
