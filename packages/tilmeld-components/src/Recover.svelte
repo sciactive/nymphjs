@@ -298,51 +298,57 @@
     password2 = $bindable(''),
     ...restProps
   }: OwnProps & {
-    [k in keyof ComponentProps<
-      typeof Radio
-    > as `recoveryTypePassword\$${k}`]?: ComponentProps<typeof Radio>[k];
+    [
+      k in keyof ComponentProps<typeof Radio> as `recoveryTypePassword\$${k}`
+    ]?: ComponentProps<typeof Radio>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Radio
-    > as `recoveryTypeUsername\$${k}`]?: ComponentProps<typeof Radio>[k];
+    [
+      k in keyof ComponentProps<typeof Radio> as `recoveryTypeUsername\$${k}`
+    ]?: ComponentProps<typeof Radio>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `account\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `account\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof SmuiElementPropMap['a'] as `alreadyGotCodeLink\$${k}`]?: SmuiElementPropMap['a'][k];
+    [
+      k in keyof SmuiElementPropMap['a'] as `alreadyGotCodeLink\$${k}`
+    ]?: SmuiElementPropMap['a'][k];
   } & {
-    [k in keyof SmuiElementPropMap['p'] as `codeSentMessage\$${k}`]?: SmuiElementPropMap['p'][k];
+    [
+      k in keyof SmuiElementPropMap['p'] as `codeSentMessage\$${k}`
+    ]?: SmuiElementPropMap['p'][k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `recoveryCode\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `recoveryCode\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `password\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `password\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `password2\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `password2\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof SmuiElementPropMap['a'] as `needCodeLink\$${k}`]?: SmuiElementPropMap['a'][k];
+    [
+      k in keyof SmuiElementPropMap['a'] as `needCodeLink\$${k}`
+    ]?: SmuiElementPropMap['a'][k];
   } & {
-    [k in keyof ComponentProps<
-      typeof CircularProgress
-    > as `progress\$${k}`]?: ComponentProps<typeof CircularProgress>[k];
+    [
+      k in keyof ComponentProps<typeof CircularProgress> as `progress\$${k}`
+    ]?: ComponentProps<typeof CircularProgress>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `sendCodeButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `sendCodeButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `resetPasswordButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `resetPasswordButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } = $props();
 
   let loading = $state(false);

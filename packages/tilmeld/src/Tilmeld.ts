@@ -327,9 +327,7 @@ export default class Tilmeld implements TilmeldInterface {
             }
           }
           for (const name of ['acUser', 'acGroup', 'acOther'] as (
-            | 'acUser'
-            | 'acGroup'
-            | 'acOther'
+            'acUser' | 'acGroup' | 'acOther'
           )[]) {
             const aVal = a[name];
             const bVal = b[name];
@@ -343,9 +341,7 @@ export default class Tilmeld implements TilmeldInterface {
             }
           }
           for (const name of ['acRead', 'acWrite', 'acFull'] as (
-            | 'acRead'
-            | 'acWrite'
-            | 'acFull'
+            'acRead' | 'acWrite' | 'acFull'
           )[]) {
             const aVal = a[name];
             const bVal = b[name];

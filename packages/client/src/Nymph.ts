@@ -299,10 +299,7 @@ export default class Nymph {
     try {
       // @ts-ignore: Implementation signatures of overloads are not externally visible.
       data = (await this.getEntityData(options, ...selectors)) as
-        | EntityJson<T>
-        | string
-        | number
-        | null;
+        EntityJson<T> | string | number | null;
     } catch (e: any) {
       if (
         this.returnNullOnNotFound &&

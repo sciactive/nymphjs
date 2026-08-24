@@ -128,25 +128,25 @@
     additional,
     ...restProps
   }: OwnProps & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `password\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `password\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof CircularProgress
-    > as `progress\$${k}`]?: ComponentProps<typeof CircularProgress>[k];
+    [
+      k in keyof ComponentProps<typeof CircularProgress> as `progress\$${k}`
+    ]?: ComponentProps<typeof CircularProgress>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `closeButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `closeButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `saveButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `saveButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } = $props();
 
   let loading = $state(false);

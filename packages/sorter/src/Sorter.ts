@@ -150,7 +150,7 @@ export default class Sorter<Entity extends Object> {
 
     // There is no incrementor in this for loop on purpose. It is incremented
     // conditionally.
-    for (let i = 0; i < this.array.length; ) {
+    for (let i = 0; i < this.array.length;) {
       const entity = this.array[i];
       const parent = entity[parentProperty];
       if (parent == null) {

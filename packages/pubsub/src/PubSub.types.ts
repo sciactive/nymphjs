@@ -34,8 +34,7 @@ export type UidSubscribeMessageData = {
 };
 
 export type SubscribeMessageData =
-  | QuerySubscribeMessageData
-  | UidSubscribeMessageData;
+  QuerySubscribeMessageData | UidSubscribeMessageData;
 
 export type PublishEntityMessageData = {
   action: 'publish';
@@ -55,13 +54,10 @@ export type PublishUidMessageData = {
 };
 
 export type PublishMessageData =
-  | PublishEntityMessageData
-  | PublishUidMessageData;
+  PublishEntityMessageData | PublishUidMessageData;
 
 export type MessageData =
-  | AuthenticateMessageData
-  | SubscribeMessageData
-  | PublishMessageData;
+  AuthenticateMessageData | SubscribeMessageData | PublishMessageData;
 
 export type MessageOptions = Options & {
   class: string;
