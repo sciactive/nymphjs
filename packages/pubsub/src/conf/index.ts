@@ -1,4 +1,33 @@
-export { Config } from './d.js';
+/**
+ * Nymph PubSub Config
+ */
+export interface Config {
+  /**
+   * Determine whether a client's origin is allowed to connect.
+   */
+  originIsAllowed: (origin: string) => boolean;
+  /**
+   * The URLs of the Nymph-PubSub servers to directly publish to. These servers
+   * are how this host will enter the PubSub network. If you only have one
+   * PubSub server, it needs to be listed here.
+   */
+  entries: string[];
+  /**
+   * The URLs of additional Nymph-PubSub servers to relay publishes to. If this
+   * host is a PubSub server, these servers are how it will continue into your
+   * PubSub network.
+   */
+  relays: string[];
+  /**
+   * Allow clients to request to be notified when other clients subscribe to the
+   * same queries.
+   */
+  broadcastCounts: boolean;
+  /**
+   * Function to log PubSub info/error messages.
+   */
+  logger: (...args: any[]) => void;
+}
 
 import defaults from './defaults.js';
 export { defaults as ConfigDefaults };

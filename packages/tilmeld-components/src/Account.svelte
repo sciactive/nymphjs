@@ -291,71 +291,75 @@
     additional,
     ...restProps
   }: OwnProps & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `username\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `username\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `email\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `email\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `nameFirst\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `nameFirst\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `nameMiddle\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `nameMiddle\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `nameLast\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `nameLast\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `phone\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `phone\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof SmuiElementPropMap['a'] as `changePasswordLink\$${k}`]?: SmuiElementPropMap['a'][k];
+    [
+      k in keyof SmuiElementPropMap['a'] as `changePasswordLink\$${k}`
+    ]?: SmuiElementPropMap['a'][k];
   } & {
-    [k in keyof SmuiElementPropMap['a'] as `revokeTokensLink\$${k}`]?: SmuiElementPropMap['a'][k];
+    [
+      k in keyof SmuiElementPropMap['a'] as `revokeTokensLink\$${k}`
+    ]?: SmuiElementPropMap['a'][k];
   } & {
-    [k in keyof ComponentProps<
-      typeof CircularProgress
-    > as `progress\$${k}`]?: ComponentProps<typeof CircularProgress>[k];
+    [
+      k in keyof ComponentProps<typeof CircularProgress> as `progress\$${k}`
+    ]?: ComponentProps<typeof CircularProgress>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `closeButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `closeButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `saveButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `saveButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof ChangePassword
-    > as `changePassword\$${k}`]?: ComponentProps<typeof ChangePassword>[k];
+    [
+      k in keyof ComponentProps<typeof ChangePassword> as `changePassword\$${k}`
+    ]?: ComponentProps<typeof ChangePassword>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof RevokeTokens
-    > as `revokeTokens\$${k}`]?: ComponentProps<typeof RevokeTokens>[k];
+    [
+      k in keyof ComponentProps<typeof RevokeTokens> as `revokeTokens\$${k}`
+    ]?: ComponentProps<typeof RevokeTokens>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof TwoFactor
-    > as `twoFactor\$${k}`]?: ComponentProps<typeof TwoFactor>[k];
+    [
+      k in keyof ComponentProps<typeof TwoFactor> as `twoFactor\$${k}`
+    ]?: ComponentProps<typeof TwoFactor>[k];
   } = $props();
 
   let loading = $state(false);
   let originalUsername: string | undefined = $user?.username;
   let originalEmail: string | undefined = $user?.email;
   let failureMessage: string | undefined = $state();
-  let usernameTimer: NodeJS.Timeout | undefined = undefined;
+  let usernameTimer: number | undefined = undefined;
   let usernameVerified: boolean | undefined = $state();
   let usernameVerifiedMessage: string | undefined = $state();
-  let emailTimer: NodeJS.Timeout | undefined = undefined;
+  let emailTimer: number | undefined = undefined;
   let emailVerified: boolean | undefined = $state();
   let emailVerifiedMessage: string | undefined = $state();
   let hasTOTPSecret: boolean | null = $state(null);

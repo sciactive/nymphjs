@@ -412,10 +412,10 @@
   let ability = $state('');
   let avatar = $state('https://secure.gravatar.com/avatar/?d=mm&s=40');
   let failureMessage: string | undefined = $state();
-  let groupnameTimer: NodeJS.Timeout | undefined = undefined;
+  let groupnameTimer: number | undefined = undefined;
   let groupnameVerified: boolean | undefined = $state();
   let groupnameVerifiedMessage: string | undefined = $state();
-  let emailTimer: NodeJS.Timeout | undefined = undefined;
+  let emailTimer: number | undefined = undefined;
   let emailVerified: boolean | undefined = $state();
   let emailVerifiedMessage: string | undefined = $state();
   let saving = $state(false);

@@ -15,8 +15,9 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "prepublish": "npm run clean && npm run build",
-    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest",
-    "test:watch": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest --watch",
+    "typecheck": "npx tsc --noEmit",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests --watch",
     "test:db:start": "docker run --rm --name nymph-postgresql -e POSTGRES_USER=nymph -e POSTGRES_PASSWORD=nymph -p 5432:5432 postgres",
     "test:db:stop": "docker kill -s TERM nymph-postgresql"
   },
@@ -37,21 +38,24 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.117",
     "@nymphjs/nymph": "^1.0.0-beta.117",
-    "@sciactive/tokenizer": "^3.0.2",
-    "pg": "^8.18.0",
-    "pg-cursor": "^2.17.0",
+    "@sciactive/tokenizer": "^3.4.0",
+    "pg": "^8.23.0",
+    "pg-cursor": "^2.22.0",
     "pg-format": "^1.0.4"
   },
   "devDependencies": {
     "@nymphjs/tilmeld": "^1.0.0-beta.117",
+    "@swc/core": "^1.16.1",
+    "@swc/jest": "^0.2.39",
     "@tsconfig/recommended": "^1.0.13",
     "@types/jest": "^30.0.0",
-    "@types/pg": "^8.16.0",
+    "@types/node": "^26.2.0",
+    "@types/pg": "^8.23.1",
     "@types/pg-cursor": "^2.7.2",
     "@types/pg-format": "^1.0.5",
-    "jest": "^30.2.0",
-    "ts-jest": "^29.4.6",
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

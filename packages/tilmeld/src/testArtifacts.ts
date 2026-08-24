@@ -7,7 +7,7 @@ import {
 
 import Tilmeld from './Tilmeld.js';
 import { AccessControlError } from './errors/index.js';
-import type { AccessControlData } from './Tilmeld.types';
+import type { AccessControlData } from './Tilmeld.types.js';
 
 export type TestModelData = {
   name?: string;

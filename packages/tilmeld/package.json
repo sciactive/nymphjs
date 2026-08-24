@@ -15,8 +15,9 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "prepublish": "npm run clean && npm run build",
-    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest",
-    "test:watch": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest --watch"
+    "typecheck": "npx tsc --noEmit",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -38,16 +39,18 @@
     "@sciactive/splitn": "^3.1.0",
     "email-templates": "^13.0.1",
     "express": "^5.2.1",
-    "joi": "^18.0.2",
+    "joi": "^18.2.5",
     "jsonwebtoken": "^9.0.3",
-    "locutus": "^2.0.39",
-    "lodash-es": "^4.17.23",
-    "otpauth": "^9.5.0",
-    "pug": "^3.0.3",
+    "locutus": "^3.0.36",
+    "lodash-es": "^4.18.1",
+    "otpauth": "^9.5.1",
+    "pug": "^3.0.4",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "@nymphjs/client": "^1.0.0-beta.117",
+    "@swc/core": "^1.16.1",
+    "@swc/jest": "^0.2.39",
     "@tsconfig/recommended": "^1.0.13",
     "@types/email-templates": "^10.0.4",
     "@types/express": "^5.0.6",
@@ -55,10 +58,11 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/locutus": "^0.0.8",
     "@types/lodash-es": "^4.17.12",
+    "@types/node": "^26.2.0",
     "@types/qrcode": "^1.5.6",
-    "jest": "^30.2.0",
-    "ts-jest": "^29.4.6",
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

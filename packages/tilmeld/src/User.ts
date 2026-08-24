@@ -9,7 +9,7 @@ import type {
 } from '@nymphjs/nymph';
 import { humanSecret, nanoid } from '@nymphjs/guid';
 import type { EmailOptions } from 'email-templates';
-import strtotime from 'locutus/php/datetime/strtotime.js';
+import { strtotime } from 'locutus/php/datetime/index';
 import { difference, xor } from 'lodash-es';
 import { TOTP, Secret } from 'otpauth';
 import { toDataURL } from 'qrcode';
@@ -529,10 +529,10 @@ export default class User extends AbleObject<UserData> {
       user.guid == null ||
       user.recoverSecret == null ||
       data.secret !== user.recoverSecret ||
-      strtotime(
+      (strtotime(
         '+' + tilmeld.config.pwRecoveryTimeLimit,
         Math.floor((user.recoverSecretDate ?? 0) / 1000),
-      ) *
+      ) || 0) *
         1000 <
         Date.now()
     ) {
@@ -2526,15 +2526,15 @@ export default class User extends AbleObject<UserData> {
             tilmeld.config.emailRateLimit !== '' &&
             this.$data.emailChangeDate != null &&
             this.$data.emailChangeDate >=
-              strtotime('-' + tilmeld.config.emailRateLimit) * 1000
+              (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000
           ) {
             throw new EmailChangeRateLimitExceededError(
               'You already changed your email address recently. Please wait until ' +
                 new Date(
-                  strtotime(
+                  (strtotime(
                     '+' + tilmeld.config.emailRateLimit,
                     Math.floor(this.$data.emailChangeDate / 1000),
-                  ) * 1000,
+                  ) || 0) * 1000,
                 ).toString() +
                 ' to change your email address again.',
             );
@@ -2546,7 +2546,7 @@ export default class User extends AbleObject<UserData> {
               // an email change.
               (this.$data.emailChangeDate == null ||
                 this.$data.emailChangeDate <
-                  strtotime('-' + tilmeld.config.emailRateLimit) * 1000)
+                  (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000)
             ) {
               // Save the old email in case the cancel change link is clicked.
               this.$data.cancelEmailAddress = this.$originalEmail;
@@ -2572,7 +2572,7 @@ export default class User extends AbleObject<UserData> {
         // email change.
         (this.$data.emailChangeDate == null ||
           this.$data.emailChangeDate <
-            strtotime('-' + tilmeld.config.emailRateLimit) * 1000)
+            (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000)
       ) {
         // The user doesn't need to verify their new email address, but should
         // be able to cancel the email change from their old address.

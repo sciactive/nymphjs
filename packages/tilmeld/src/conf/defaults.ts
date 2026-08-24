@@ -6,7 +6,7 @@ import Joi from 'joi';
 import { nanoid } from '@nymphjs/guid';
 import { nymphJoiProps } from '@nymphjs/nymph';
 
-import type { Config } from './d.js';
+import type { Config } from './index.js';
 import User from '../User.js';
 import Group from '../Group.js';
 

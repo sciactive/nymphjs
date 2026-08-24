@@ -15,8 +15,9 @@
     "build": "tsc",
     "watch": "tsc --watch",
     "prepublish": "npm run clean && npm run build",
-    "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest",
-    "test:watch": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest --watch"
+    "typecheck": "npx tsc --noEmit",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -35,17 +36,20 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.117",
     "@nymphjs/nymph": "^1.0.0-beta.117",
-    "@sciactive/tokenizer": "^3.0.2",
-    "better-sqlite3": "^12.6.2"
+    "@sciactive/tokenizer": "^3.4.0",
+    "better-sqlite3": "^13.0.3"
   },
   "devDependencies": {
     "@nymphjs/tilmeld": "^1.0.0-beta.117",
+    "@swc/core": "^1.16.1",
+    "@swc/jest": "^0.2.39",
     "@tsconfig/recommended": "^1.0.13",
-    "@types/better-sqlite3": "^7.6.13",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/jest": "^30.0.0",
-    "jest": "^30.2.0",
-    "ts-jest": "^29.4.6",
+    "@types/node": "^26.2.0",
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   }
 }

@@ -2,10 +2,11 @@
   "extends": "@tsconfig/svelte/tsconfig.json",
 
   "compilerOptions": {
-    "module": "ES2022",
-    "moduleResolution": "node",
-    "lib": ["DOM", "ES2022"],
-    "target": "ES2022",
+    "types": ["jest"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "lib": ["DOM", "es2023"],
+    "target": "es2023",
     "noImplicitAny": true,
     "strict": true,
 

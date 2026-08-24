@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
-import strtotime from 'locutus/php/datetime/strtotime.js';
+import { strtotime } from 'locutus/php/datetime/index';
 import { guid } from '@nymphjs/guid';
 
 import type Nymph from '../Nymph.js';
@@ -60,7 +60,7 @@ export function EntitiesTest(
 
     const entityReferenceTest: TestModelClass & TestModelData = new TestModel();
     entityReferenceTest.string = 'wrong';
-    entityReferenceTest.timestamp = strtotime('-2 days') * 1000;
+    entityReferenceTest.timestamp = (strtotime('-2 days') || 0) * 1000;
     expect(await entityReferenceTest.$save()).toEqual(true);
     refGuid = entityReferenceTest.guid as string;
     testEntity.reference = entityReferenceTest;
@@ -2477,7 +2477,9 @@ export function ExportImportTest(
       expect(model.match).toEqual(matchValue);
       expect(model.number).toEqual(30);
       expect(model.numberString).toEqual('30');
-      expect(model.timestamp).toBeGreaterThanOrEqual(strtotime('-2 minutes'));
+      expect(model.timestamp).toBeGreaterThanOrEqual(
+        strtotime('-2 minutes') || 0,
+      );
       expect(model.index).toMatch(/^\d+a$/);
 
       await model.reference?.$wake();

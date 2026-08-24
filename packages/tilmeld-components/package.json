@@ -28,8 +28,9 @@
     "build:js": "tsc -p . --outDir dist/ --rootDir src/",
     "build:svelte": "cp src/*.svelte dist/",
     "prepublish": "npm run clean && npm run build",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "typecheck": "npx tsc --noEmit",
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests",
+    "test:watch": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --passWithNoTests --watch"
   },
   "publishConfig": {
     "access": "public"
@@ -47,25 +48,25 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "@nymphjs/tilmeld-client": "^1.0.0-beta.117",
-    "@smui/button": "^8.0.3",
-    "@smui/checkbox": "^8.0.3",
-    "@smui/circular-progress": "^8.0.3",
-    "@smui/dialog": "^8.0.3",
-    "@smui/form-field": "^8.0.3",
-    "@smui/radio": "^8.0.3",
-    "@smui/textfield": "^8.0.3",
+    "@smui/button": "^9.0.2",
+    "@smui/checkbox": "^9.0.2",
+    "@smui/circular-progress": "^9.0.2",
+    "@smui/dialog": "^9.0.2",
+    "@smui/form-field": "^9.0.2",
+    "@smui/radio": "^9.0.2",
+    "@smui/textfield": "^9.0.2",
+    "@swc/core": "^1.16.1",
+    "@swc/jest": "^0.2.39",
     "@tsconfig/recommended": "^1.0.13",
-    "@tsconfig/svelte": "^5.0.7",
+    "@tsconfig/svelte": "^5.0.8",
     "@types/jest": "^30.0.0",
-    "jest": "^30.2.0",
-    "svelte": "^5.50.3",
-    "svelte-check": "^4.3.6",
+    "cross-env": "^10.1.0",
+    "jest": "^30.4.2",
+    "svelte": "^5.56.10",
     "svelte-loader": "^3.2.4",
-    "svelte-preprocess": "^6.0.3",
-    "ts-jest": "^29.4.6",
-    "ts-loader": "^9.5.4",
-    "typescript": "^5.9.3",
-    "webpack": "^5.105.2",
-    "webpack-cli": "^6.0.1"
+    "ts-loader": "^9.6.2",
+    "typescript": "^7.0.2",
+    "webpack": "^5.109.2",
+    "webpack-cli": "^7.2.2"
   }
 }

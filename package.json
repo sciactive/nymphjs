@@ -32,18 +32,32 @@
   "workspaces": [
     "packages/*"
   ],
+  "doesntWorkWithTypeScript7Yet": {
+    "typedoc": "^0.28.20"
+  },
   "devDependencies": {
-    "@commitlint/cli": "^20.4.1",
-    "@commitlint/config-conventional": "^20.4.1",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
     "husky": "^9.1.7",
-    "lerna": "^9.0.4",
-    "lint-staged": "^16.2.7",
-    "prettier": "3.8.1",
-    "prettier-plugin-svelte": "^3.4.1",
-    "typedoc": "^0.28.16",
-    "typescript": "^5.9.3"
+    "lerna": "^10.0.1",
+    "lint-staged": "^17.3.0",
+    "prettier": "3.9.6",
+    "prettier-plugin-svelte": "^4.1.1",
+    "typescript": "^7.0.2"
   },
   "lint-staged": {
     "**/*": "prettier --write --ignore-unknown"
+  },
+  "allowScripts": {
+    "fsevents": true,
+    "unrs-resolver": true,
+    "@parcel/watcher": true,
+    "better-sqlite3": true,
+    "bufferutil": true,
+    "es5-ext": true,
+    "nx": true,
+    "utf-8-validate": true,
+    "@swc/core": true,
+    "svelte-preprocess": true
   }
 }

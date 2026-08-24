@@ -26,7 +26,7 @@ export default class PubSub {
   private authToken: string | null = null;
   private switchToken: string | null = null;
   private connection: WebSocket | undefined;
-  private waitForConnectionTimeout: NodeJS.Timeout | undefined;
+  private waitForConnectionTimeout: number | undefined;
   private pubsubUrl: string | undefined;
   private WebSocket: typeof WebSocket;
   private subscriptions: {

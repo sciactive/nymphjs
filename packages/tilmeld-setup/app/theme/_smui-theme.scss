@@ -1,8 +1,8 @@
 @use 'sass:color';
 
-@use '@material/theme/color-palette';
+@use '@smui/common/theme/color-palette';
 
-@use '@material/theme/index' as theme with (
+@use '@smui/common/theme/index' as theme with (
   $primary: #4260a6,
   $secondary: #f8d153,
   $surface: #fff,
@@ -12,7 +12,7 @@
 
 // Typography mixins.
 @use './helpers';
-@use '@material/typography/index' as typography with (
+@use '@smui/common/typography/index' as typography with (
   $styles-headline1: (
     font-size: helpers.px-to-rem(60px),
     line-height: helpers.px-to-rem(60px),
@@ -40,10 +40,10 @@
 );
 
 // Import all the typography styles for the classes.
-@use '@material/typography/mdc-typography';
+@use '@smui/common/typography/mdc-typography';
 
 // Main Top App Bar styling.
-@use '@material/top-app-bar/index' as top-app-bar;
+@use '@smui/top-app-bar/styles' as top-app-bar;
 .mdc-top-app-bar.tilmeld-top-app-bar {
   // Position it above the drawer.
   z-index: 7;

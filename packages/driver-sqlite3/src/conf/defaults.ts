@@ -1,4 +1,4 @@
-import { SQLite3DriverConfig } from './d.js';
+import type { SQLite3DriverConfig } from './index.js';
 
 export default {
   filename: ':memory:',

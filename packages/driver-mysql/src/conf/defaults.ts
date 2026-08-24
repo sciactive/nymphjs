@@ -1,4 +1,4 @@
-import { MySQLDriverConfig } from './d.js';
+import type { MySQLDriverConfig } from './index.js';
 
 export default {
   host: 'localhost',

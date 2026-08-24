@@ -1,7 +1,7 @@
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
-import strtotime from 'locutus/php/datetime/strtotime.js';
+import { strtotime } from 'locutus/php/datetime/index';
 import type { NymphOptions } from '@nymphjs/client';
 import type { Nymph } from '@nymphjs/nymph';
 import { enforceTilmeld } from '@nymphjs/tilmeld';

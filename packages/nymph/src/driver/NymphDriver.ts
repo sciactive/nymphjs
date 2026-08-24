@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { difference } from 'lodash-es';
 import ReadLines from 'n-readlines';
-import strtotime from 'locutus/php/datetime/strtotime.js';
+import { strtotime } from 'locutus/php/datetime/index';
 import { Tokenizer } from '@sciactive/tokenizer';
 
 import type Nymph from '../Nymph.js';
@@ -1003,7 +1003,7 @@ export default abstract class NymphDriver {
               curValue[1] == null &&
               typeof curValue[2] === 'string'
             ) {
-              return [curValue[0], strtotime(curValue[2]) * 1000];
+              return [curValue[0], (strtotime(curValue[2]) || 0) * 1000];
             }
             return curValue;
           });
@@ -1483,8 +1483,7 @@ export default abstract class NymphDriver {
     }) => Promise<boolean>,
     startTransactionCallback: (() => Promise<void>) | null = null,
     commitTransactionCallback:
-      | ((success: boolean) => Promise<boolean>)
-      | null = null,
+      ((success: boolean) => Promise<boolean>) | null = null,
   ) {
     const originalGuid = entity.guid;
     const originalCdate = entity.cdate;

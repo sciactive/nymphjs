@@ -828,10 +828,10 @@
   let failureMessage: string | undefined = $state();
   let passwordVerify = $state('');
   let passwordVerified: boolean | undefined = $state();
-  let usernameTimer: NodeJS.Timeout | undefined = undefined;
+  let usernameTimer: number | undefined = undefined;
   let usernameVerified: boolean | undefined = $state();
   let usernameVerifiedMessage: string | undefined = $state();
-  let emailTimer: NodeJS.Timeout | undefined = undefined;
+  let emailTimer: number | undefined = undefined;
   let emailVerified: boolean | undefined = $state();
   let emailVerifiedMessage: string | undefined = $state();
   let saving = $state(false);

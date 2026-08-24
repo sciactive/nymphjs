@@ -390,72 +390,84 @@
     onlogin,
     ...restProps
   }: OwnProps & {
-    [k in keyof SmuiElementPropMap['div'] as `successRegisteredMessage\$${k}`]?: SmuiElementPropMap['div'][k];
+    [
+      k in keyof SmuiElementPropMap['div'] as `successRegisteredMessage\$${k}`
+    ]?: SmuiElementPropMap['div'][k];
   } & {
-    [k in keyof SmuiElementPropMap['div'] as `successLoginMessage\$${k}`]?: SmuiElementPropMap['div'][k];
+    [
+      k in keyof SmuiElementPropMap['div'] as `successLoginMessage\$${k}`
+    ]?: SmuiElementPropMap['div'][k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `username\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `username\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `password\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `password\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `password2\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `password2\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `name\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `name\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `email\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `email\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `phone\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `phone\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Textfield
-    > as `code\$${k}`]?: ComponentProps<typeof Textfield>[k];
+    [
+      k in keyof ComponentProps<typeof Textfield> as `code\$${k}`
+    ]?: ComponentProps<typeof Textfield>[k];
   } & {
-    [k in keyof SmuiElementPropMap['div'] as `codeMessage\$${k}`]?: SmuiElementPropMap['div'][k];
+    [
+      k in keyof SmuiElementPropMap['div'] as `codeMessage\$${k}`
+    ]?: SmuiElementPropMap['div'][k];
   } & {
-    [k in keyof ComponentProps<
-      typeof CircularProgress
-    > as `progress\$${k}`]?: ComponentProps<typeof CircularProgress>[k];
+    [
+      k in keyof ComponentProps<typeof CircularProgress> as `progress\$${k}`
+    ]?: ComponentProps<typeof CircularProgress>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `loginButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `loginButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Button<undefined, 'button'>
-    > as `registerButton\$${k}`]?: ComponentProps<
-      typeof Button<undefined, 'button'>
-    >[k];
+    [
+      k in keyof ComponentProps<
+        typeof Button<undefined, 'button'>
+      > as `registerButton\$${k}`
+    ]?: ComponentProps<typeof Button<undefined, 'button'>>[k];
   } & {
-    [k in keyof SmuiElementPropMap['a'] as `registerLink\$${k}`]?: SmuiElementPropMap['a'][k];
+    [
+      k in keyof SmuiElementPropMap['a'] as `registerLink\$${k}`
+    ]?: SmuiElementPropMap['a'][k];
   } & {
-    [k in keyof SmuiElementPropMap['a'] as `loginLink\$${k}`]?: SmuiElementPropMap['a'][k];
+    [
+      k in keyof SmuiElementPropMap['a'] as `loginLink\$${k}`
+    ]?: SmuiElementPropMap['a'][k];
   } & {
-    [k in keyof SmuiElementPropMap['a'] as `recoverLink\$${k}`]?: SmuiElementPropMap['a'][k];
+    [
+      k in keyof SmuiElementPropMap['a'] as `recoverLink\$${k}`
+    ]?: SmuiElementPropMap['a'][k];
   } & {
-    [k in keyof ComponentProps<
-      typeof Recover
-    > as `recover\$${k}`]?: ComponentProps<typeof Recover>[k];
+    [
+      k in keyof ComponentProps<typeof Recover> as `recover\$${k}`
+    ]?: ComponentProps<typeof Recover>[k];
   } = $props();
 
   let usernameElem: Textfield | undefined = $state();
   let successLoginMessage: string | undefined = $state();
   let successRegisteredMessage: string | undefined = $state();
   let failureMessage: string | undefined = $state();
-  let usernameTimer: NodeJS.Timeout | undefined = undefined;
+  let usernameTimer: number | undefined = undefined;
   let usernameVerified: boolean | undefined = $state();
   let usernameVerifiedMessage: string | undefined = $state();
   let totp = $state(false);
