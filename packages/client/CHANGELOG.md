@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.118](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.117...v1.0.0-beta.118) (2026-08-24)
+
+### Features
+
+- update packages and migrate to ts7 ([c1b8eb5](https://forge.sciactive.com/sciactive/nymphjs/commits/c1b8eb5f7dd68436759f8d7b94bc9622511e71fd))
+
 # [1.0.0-beta.117](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.116...v1.0.0-beta.117) (2026-04-21)
 
 **Note:** Version bump only for package @nymphjs/client
