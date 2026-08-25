@@ -15,6 +15,7 @@ import type {
   SerializedEntityData,
 } from '../Entity.types.js';
 import {
+  ClassNotAvailableError,
   InvalidParametersError,
   UnableToConnectError,
 } from '../errors/index.js';
@@ -275,6 +276,7 @@ export default abstract class NymphDriver {
 
   public async importDataIterator(
     lines: Iterable<string>,
+    options?: { ignoreUnknownETypes?: boolean },
     transaction?: boolean,
   ) {
     const first = lines[Symbol.iterator]().next();
@@ -313,7 +315,23 @@ export default abstract class NymphDriver {
             delete sdata.cdate;
             const mdate = Number(JSON.parse(sdata.mdate));
             delete sdata.mdate;
-            await this.importEntity({ guid, cdate, mdate, tags, sdata, etype });
+            try {
+              await this.importEntity({
+                guid,
+                cdate,
+                mdate,
+                tags,
+                sdata,
+                etype,
+              });
+            } catch (e: any) {
+              if (
+                !(e instanceof ClassNotAvailableError) ||
+                !options?.ignoreUnknownETypes
+              ) {
+                throw e;
+              }
+            }
             guid = null;
             tags = [];
             sdata = {};
@@ -338,7 +356,16 @@ export default abstract class NymphDriver {
         delete sdata.cdate;
         const mdate = Number(JSON.parse(sdata.mdate));
         delete sdata.mdate;
-        await this.importEntity({ guid, cdate, mdate, tags, sdata, etype });
+        try {
+          await this.importEntity({ guid, cdate, mdate, tags, sdata, etype });
+        } catch (e: any) {
+          if (
+            !(e instanceof ClassNotAvailableError) ||
+            !options?.ignoreUnknownETypes
+          ) {
+            throw e;
+          }
+        }
       }
       if (transaction) {
         await this.commit('nymph-import');
@@ -351,10 +378,18 @@ export default abstract class NymphDriver {
   }
 
   public async importData(text: string, transaction?: boolean) {
-    return await this.importDataIterator(text.split('\n'), transaction);
+    return await this.importDataIterator(
+      text.split('\n'),
+      undefined,
+      transaction,
+    );
   }
 
-  public async import(filename: string, transaction?: boolean) {
+  public async import(
+    filename: string,
+    options?: { ignoreUnknownETypes?: boolean },
+    transaction?: boolean,
+  ) {
     let rl: ReadLines;
     try {
       rl = new ReadLines(filename);
@@ -371,7 +406,7 @@ export default abstract class NymphDriver {
       },
     };
 
-    return await this.importDataIterator(lines, transaction);
+    return await this.importDataIterator(lines, options, transaction);
   }
 
   public checkData(

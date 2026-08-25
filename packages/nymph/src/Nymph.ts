@@ -1126,11 +1126,15 @@ export default class Nymph {
    * Import entities from a file.
    *
    * @param filename The file to import from.
+   * @param options The options for the import.
    * @returns True on success, false on failure.
    */
-  public async import(filename: string): Promise<boolean> {
+  public async import(
+    filename: string,
+    options?: { ignoreUnknownETypes?: boolean },
+  ): Promise<boolean> {
     try {
-      return await this.driver.import(filename);
+      return await this.driver.import(filename, options);
     } catch (e: any) {
       this.config.debugError('nymph', `Failed to import: ${e}`);
       throw e;

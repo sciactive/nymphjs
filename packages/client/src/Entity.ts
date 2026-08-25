@@ -630,7 +630,7 @@ export default class Entity<
     return new Promise((resolve, reject) => {
       // Run this once this entity is awake.
       const wakeProps = () => {
-        let newLevel;
+        let newLevel: number | undefined;
         // If level is undefined, keep going forever, otherwise, stop once we've
         // gone deep enough.
         if (level !== undefined) {

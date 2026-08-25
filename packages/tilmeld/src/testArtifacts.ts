@@ -8,6 +8,8 @@ import {
 import Tilmeld from './Tilmeld.js';
 import { AccessControlError } from './errors/index.js';
 import type { AccessControlData } from './Tilmeld.types.js';
+import type UserClass from './User.js';
+import type GroupClass from './Group.js';
 
 export type TestModelData = {
   name?: string;
@@ -69,6 +71,37 @@ export function TilmeldTest(
   const Group = tilmeld.Group;
   const TestModel = nymph.addEntityClass(TestModelClass);
 
+  async function deleteTestData() {
+    let all: (TestModel | UserClass | GroupClass)[] = await nymph.getEntities({
+      class: TestModel,
+    });
+    expect(Array.isArray(all)).toEqual(true);
+    for (const cur of all) {
+      expect(await cur.$deleteSkipAC()).toEqual(true);
+    }
+
+    all = await nymph.getEntities({ class: TestModel });
+    expect(all.length).toEqual(0);
+
+    all = await nymph.getEntities({ class: User });
+    expect(Array.isArray(all)).toEqual(true);
+    for (const cur of all) {
+      expect(await cur.$deleteSkipAC()).toEqual(true);
+    }
+
+    all = await nymph.getEntities({ class: User });
+    expect(all.length).toEqual(0);
+
+    all = await nymph.getEntities({ class: Group });
+    expect(Array.isArray(all)).toEqual(true);
+    for (const cur of all) {
+      expect(await cur.$deleteSkipAC()).toEqual(true);
+    }
+
+    all = await nymph.getEntities({ class: Group });
+    expect(all.length).toEqual(0);
+  }
+
   async function makeUsers() {
     const admin = await User.factoryUsername('admin');
     const bob = await User.factoryUsername('bob');
@@ -117,6 +150,10 @@ export function TilmeldTest(
 
     return { admin, bob, alice, abgroup };
   }
+
+  it('delete old test data', async () => {
+    await deleteTestData();
+  });
 
   it('users can log in', async () => {
     const { admin, bob, alice } = await makeUsers();
@@ -1921,5 +1958,9 @@ export function TilmeldTest(
     );
 
     expect(testFailureEntityAlice).toBeNull();
+  });
+
+  it('delete test data again', async () => {
+    await deleteTestData();
   });
 }

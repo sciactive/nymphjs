@@ -41,6 +41,7 @@ type PostgreSQLDriverConnection = {
 type PostgreSQLDriverTransaction = {
   connection: PostgreSQLDriverConnection | null;
   count: number;
+  latestPromise: Promise<any>;
 };
 
 /**
@@ -967,17 +968,28 @@ export default class PostgreSQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: QueryResult<any> = await new Promise(
-          (resolve, reject) => {
+          async (resolve, reject) => {
+            // Only do one query at a time in transations. The Postgres
+            // package will only support one query at a time on a given
+            // connection in a future release.
+            let myResolve: (value: void | PromiseLike<void>) => void = () => {};
+            const myPromise = new Promise<void>((resolve) => {
+              myResolve = resolve;
+            });
+            if (this.transaction) {
+              const latestPromise = this.transaction.latestPromise;
+              this.transaction.latestPromise = myPromise;
+              await latestPromise;
+            }
             try {
-              (this.transaction?.connection?.client ?? this.link)
-                .query(newQuery, newParams)
-                .then(
-                  (results) => resolve(results),
-                  (error) => reject(error),
-                );
+              const results = await (
+                this.transaction?.connection?.client ?? this.link
+              ).query(newQuery, newParams);
+              resolve(results);
             } catch (e) {
               reject(e);
             }
+            myResolve();
           },
         );
         return results.rows;
@@ -1005,6 +1017,18 @@ export default class PostgreSQLDriver extends NymphDriver {
 
     return this.query(
       async function* (): AsyncGenerator<any, void, false | undefined> {
+        // Only do one query at a time in transations. The Postgres
+        // package will only support one query at a time on a given
+        // connection in a future release.
+        let myResolve: (value: void | PromiseLike<void>) => void = () => {};
+        const myPromise = new Promise<void>((resolve) => {
+          myResolve = resolve;
+        });
+        if (that.transaction) {
+          const latestPromise = that.transaction.latestPromise;
+          that.transaction.latestPromise = myPromise;
+          await latestPromise;
+        }
         const transaction = !!that.transaction?.connection;
         const connection = await that.getConnection();
         const cursor = new Cursor(newQuery, newParams);
@@ -1012,6 +1036,7 @@ export default class PostgreSQLDriver extends NymphDriver {
 
         while (true) {
           const rows = await iter.read(100);
+          myResolve();
 
           if (!rows.length) {
             await new Promise<void>((resolve) => {
@@ -1052,17 +1077,28 @@ export default class PostgreSQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: QueryResult<any> = await new Promise(
-          (resolve, reject) => {
+          async (resolve, reject) => {
+            // Only do one query at a time in transations. The Postgres
+            // package will only support one query at a time on a given
+            // connection in a future release.
+            let myResolve: (value: void | PromiseLike<void>) => void = () => {};
+            const myPromise = new Promise<void>((resolve) => {
+              myResolve = resolve;
+            });
+            if (this.transaction) {
+              const latestPromise = this.transaction.latestPromise;
+              this.transaction.latestPromise = myPromise;
+              await latestPromise;
+            }
             try {
-              (this.transaction?.connection?.client ?? this.link)
-                .query(newQuery, newParams)
-                .then(
-                  (results) => resolve(results),
-                  (error) => reject(error),
-                );
+              const results = await (
+                this.transaction?.connection?.client ?? this.link
+              ).query(newQuery, newParams);
+              resolve(results);
             } catch (e) {
               reject(e);
             }
+            myResolve();
           },
         );
         return results.rows[0];
@@ -1091,20 +1127,29 @@ export default class PostgreSQLDriver extends NymphDriver {
     return this.query(
       async () => {
         const results: QueryResult<any> = await new Promise(
-          (resolve, reject) => {
+          async (resolve, reject) => {
+            // Only do one query at a time in transations. The Postgres
+            // package will only support one query at a time on a given
+            // connection in a future release.
+            let myResolve: (value: void | PromiseLike<void>) => void = () => {};
+            const myPromise = new Promise<void>((resolve) => {
+              myResolve = resolve;
+            });
+            if (this.transaction) {
+              const latestPromise = this.transaction.latestPromise;
+              this.transaction.latestPromise = myPromise;
+              await latestPromise;
+            }
             try {
-              (
+              const results = await (
                 (connection ?? this.transaction?.connection)?.client ??
                 this.link
-              )
-                .query(newQuery, newParams)
-                .then(
-                  (results) => resolve(results),
-                  (error) => reject(error),
-                );
+              ).query(newQuery, newParams);
+              resolve(results);
             } catch (e) {
               reject(e);
             }
+            myResolve();
           },
         );
         return { rowCount: results.rowCount ?? 0 };
@@ -4011,6 +4056,7 @@ export default class PostgreSQLDriver extends NymphDriver {
       this.transaction = {
         count: 0,
         connection: await this.getConnection(),
+        latestPromise: Promise.resolve(),
       };
       // We're not in a transaction yet, so start one.
       await this.queryRun('BEGIN;');

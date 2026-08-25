@@ -2563,9 +2563,11 @@ export function ExportImportTest(
     expect(models.length).toEqual(0);
     expect(bmodels.length).toEqual(0);
 
-    expect(await nymph.import(__dirname + '/testentityexport.nex')).toEqual(
-      true,
-    );
+    expect(
+      await nymph.import(__dirname + '/testentityexport.nex', {
+        ignoreUnknownETypes: true,
+      }),
+    ).toEqual(true);
 
     await checkEntityDataAndCount();
 
