@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.120](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.119...v1.0.0-beta.120) (2026-09-01)
+
+### Features
+
+- support multiple publishes and multiple client messages at a time in pubsub ([dde6e88](https://forge.sciactive.com/sciactive/nymphjs/commits/dde6e88645513a798c5f9a7a1928177cf2d0d13c))
+
 # [1.0.0-beta.119](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.118...v1.0.0-beta.119) (2026-08-25)
 
 ### Features
