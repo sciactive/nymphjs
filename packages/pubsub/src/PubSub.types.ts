@@ -56,8 +56,16 @@ export type PublishUidMessageData = {
 export type PublishMessageData =
   PublishEntityMessageData | PublishUidMessageData;
 
+export type MultipleMessageData = {
+  action: 'multiple';
+  messages: MessageData[];
+};
+
 export type MessageData =
-  AuthenticateMessageData | SubscribeMessageData | PublishMessageData;
+  | AuthenticateMessageData
+  | SubscribeMessageData
+  | PublishMessageData
+  | MultipleMessageData;
 
 export type MessageOptions = Options & {
   class: string;

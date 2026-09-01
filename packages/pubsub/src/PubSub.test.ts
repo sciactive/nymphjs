@@ -647,15 +647,21 @@ describe('Nymph REST Server and Client', () => {
         pubsub.updateArray(entities, update);
 
         if (jane) {
-          if ('removed' in update) {
-            receivedRemove = true;
-          }
-          if ('added' in update) {
-            receivedAdd = true;
-          }
-          if (receivedAdd && receivedRemove) {
-            subscription.unsubscribe();
-            resolve();
+          const updates =
+            'multiple' in update && update.multiple
+              ? update.messages
+              : [update];
+          for (let curUpdate of updates) {
+            if ('removed' in curUpdate) {
+              receivedRemove = true;
+            }
+            if ('added' in curUpdate) {
+              receivedAdd = true;
+            }
+            if (receivedAdd && receivedRemove) {
+              subscription.unsubscribe();
+              resolve();
+            }
           }
         } else if (Array.isArray(update)) {
           expect(update.length).toEqual(1);

@@ -61,6 +61,11 @@ export default class PubSub {
   protected uidSubs: {
     [uidName: string]: Map<ws.connection, { count: boolean }>;
   } = {};
+  protected outgoingClientMessages = new Map<
+    ws.connection,
+    { subscription: QuerySubscriptionData; publish: PublishEntityMessageData }[]
+  >();
+  protected outgoingClientMessagesTimeout: NodeJS.Immediate | null = null;
   protected static transactionPublishes: {
     nymph: Nymph;
     payload: string;
@@ -373,26 +378,47 @@ export default class PubSub {
       return;
     }
 
-    this.transactionPublishes = (
-      await Promise.all(
-        this.transactionPublishes.map(async (publish) => {
-          // Check that this instance is a parent and the instance is not in a
-          // transaction.
-          if (
-            !this.isOrIsDescendant(nymph, publish.nymph) ||
-            (await publish.nymph.inTransaction())
-          ) {
-            return publish;
-          }
-          this.publish(publish.payload, publish.config);
-          return null;
-        }),
-      )
-    ).filter((value) => value != null) as {
-      nymph: Nymph;
-      payload: string;
-      config: Config;
-    }[];
+    let notReadyTransactionPublishes: typeof this.transactionPublishes = [];
+    let readyTransactionPublishes: typeof this.transactionPublishes = [];
+
+    for (let publish of this.transactionPublishes) {
+      if (
+        !this.isOrIsDescendant(nymph, publish.nymph) ||
+        (await publish.nymph.inTransaction())
+      ) {
+        notReadyTransactionPublishes.push(publish);
+      } else {
+        readyTransactionPublishes.push(publish);
+      }
+    }
+
+    if (!readyTransactionPublishes.length) {
+      return;
+    }
+
+    this.transactionPublishes = notReadyTransactionPublishes;
+
+    let configMap = new Map<Config, string[]>();
+
+    for (let publish of readyTransactionPublishes) {
+      const arr = configMap.get(publish.config) || [];
+      arr.push(publish.payload);
+      configMap.set(publish.config, arr);
+    }
+
+    for (let [config, payloads] of configMap.entries()) {
+      if (payloads.length === 1) {
+        this.publish(payloads[0], config);
+      } else {
+        this.publish(
+          JSON.stringify({
+            action: 'multiple',
+            messages: payloads.map((payload) => JSON.parse(payload)),
+          }),
+          config,
+        );
+      }
+    }
   }
 
   private static removeTransactionPublishes(nymph: Nymph) {
@@ -463,24 +489,48 @@ export default class PubSub {
     const data: MessageData = JSON.parse(msg.utf8Data);
     if (
       !data.action ||
-      ['authenticate', 'subscribe', 'unsubscribe', 'publish'].indexOf(
-        data.action,
-      ) === -1
+      [
+        'authenticate',
+        'subscribe',
+        'unsubscribe',
+        'publish',
+        'multiple',
+      ].indexOf(data.action) === -1
     ) {
       return;
     }
-    switch (data.action) {
-      case 'authenticate':
-        this.handleAuthentication(from, data);
-        break;
-      case 'subscribe':
-      case 'unsubscribe':
-        await this.handleSubscription(from, data);
-        break;
-      case 'publish':
-        await this.handlePublish(from, msg, data);
-        break;
-    }
+    const handleMessageData = async (data: MessageData, dontRelay = false) => {
+      switch (data.action) {
+        case 'authenticate':
+          this.handleAuthentication(from, data);
+          break;
+        case 'subscribe':
+        case 'unsubscribe':
+          await this.handleSubscription(from, data);
+          break;
+        case 'publish':
+          await this.handlePublish(from, data);
+          if (!dontRelay) {
+            // Relay the publish to other servers.
+            this.relay(msg);
+          }
+          break;
+        case 'multiple':
+          for (let individual of data.messages) {
+            await handleMessageData(
+              individual,
+              // These will be published with the multiple payload.
+              individual.action === 'publish',
+            );
+          }
+          if (data.messages.find((msg) => msg.action === 'publish') != null) {
+            // Relay the publish to other servers.
+            this.relay(msg);
+          }
+          break;
+      }
+    };
+    await handleMessageData(data);
   }
 
   /**
@@ -991,11 +1041,7 @@ export default class PubSub {
   /**
    * Handle a publish from a client.
    */
-  private async handlePublish(
-    from: ws.connection,
-    msg: ws.Message,
-    data: PublishMessageData,
-  ) {
+  private async handlePublish(from: ws.connection, data: PublishMessageData) {
     if (
       'guid' in data &&
       typeof data.guid === 'string' &&
@@ -1008,9 +1054,6 @@ export default class PubSub {
       // Publish is an entity.
 
       await this.handlePublishEntity(from, data);
-
-      // Relay the publish to other servers.
-      this.relay(msg);
     }
 
     if (
@@ -1024,9 +1067,6 @@ export default class PubSub {
       // Publish is a UID.
 
       await this.handlePublishUid(from, data);
-
-      // Relay the publish to other servers.
-      this.relay(msg);
     }
   }
 
@@ -1062,7 +1102,7 @@ export default class PubSub {
               continue;
             }
             if (curData.current.indexOf(data.guid) !== -1) {
-              await this.updateClient(curClient, curData, data);
+              this.addOutgoingClientMessage(curClient, curData, data);
               updatedClients.add(curClient);
             }
           }
@@ -1138,7 +1178,7 @@ export default class PubSub {
                 }
               }
 
-              await this.updateClient(curClient, curData, data);
+              this.addOutgoingClientMessage(curClient, curData, data);
             }
           }
         } catch (e: any) {
@@ -1152,139 +1192,187 @@ export default class PubSub {
     }
   }
 
-  private async updateClient(
+  private addOutgoingClientMessage(
     curClient: ws.connection,
     curData: QuerySubscriptionData,
     data: PublishEntityMessageData,
   ) {
-    // Update currents list.
-    let current: EntityInterface[];
-    let authToken: string | undefined;
-    let switchToken: string | undefined;
-    const nymph = this.nymph.clone();
-    try {
-      const [clientOptions, ...clientSelectors] = JSON.parse(curData.query);
-      const options: Options = {
-        ...clientOptions,
-        class: nymph.getEntityClass(clientOptions.class),
-        return: 'entity',
-        source: 'client',
-        skipAc: false,
-      };
-      const selectors = classNamesToEntityConstructors(
-        nymph,
-        clientSelectors,
-        true,
-      );
-      if (this.sessions.has(curClient)) {
-        const session = this.sessions.get(curClient);
-        authToken = session?.authToken;
-        switchToken = session?.switchToken;
+    const arr = this.outgoingClientMessages.get(curClient) || [];
+    arr.push({ subscription: curData, publish: data });
+    this.outgoingClientMessages.set(curClient, arr);
+
+    if (this.outgoingClientMessagesTimeout) {
+      clearImmediate(this.outgoingClientMessagesTimeout);
+    }
+
+    this.outgoingClientMessagesTimeout = setImmediate(async () => {
+      await this.updateClients();
+    });
+  }
+
+  private async updateClients() {
+    const outgoingClientMessages = [...this.outgoingClientMessages.entries()];
+    this.outgoingClientMessages.clear();
+
+    for (let [curClient, entries] of outgoingClientMessages) {
+      const queryMap: { [k: string]: typeof entries } = {};
+      for (let entry of entries) {
+        const arr = queryMap[entry.subscription.query] || [];
+        arr.push(entry);
+        queryMap[entry.subscription.query] = arr;
       }
-      if (nymph.tilmeld != null && authToken != null) {
-        const user = await nymph.tilmeld.extractToken(authToken);
-        if (user && user.enabled) {
-          if (switchToken != null) {
-            const switchUser = await nymph.tilmeld.extractToken(switchToken);
-            if (switchUser) {
-              // Log in the switchUser for access controls.
-              await nymph.tilmeld.fillSession(switchUser);
+
+      for (let [query, queryEntries] of Object.entries(queryMap)) {
+        // Update currents list.
+        let current: EntityInterface[];
+        let authToken: string | undefined;
+        let switchToken: string | undefined;
+        const nymph = this.nymph.clone();
+        try {
+          const [clientOptions, ...clientSelectors] = JSON.parse(query);
+          const options: Options = {
+            ...clientOptions,
+            class: nymph.getEntityClass(clientOptions.class),
+            return: 'entity',
+            source: 'client',
+            skipAc: false,
+          };
+          const selectors = classNamesToEntityConstructors(
+            nymph,
+            clientSelectors,
+            true,
+          );
+          if (this.sessions.has(curClient)) {
+            const session = this.sessions.get(curClient);
+            authToken = session?.authToken;
+            switchToken = session?.switchToken;
+          }
+          if (nymph.tilmeld != null && authToken != null) {
+            const user = await nymph.tilmeld.extractToken(authToken);
+            if (user && user.enabled) {
+              if (switchToken != null) {
+                const switchUser =
+                  await nymph.tilmeld.extractToken(switchToken);
+                if (switchUser) {
+                  // Log in the switchUser for access controls.
+                  await nymph.tilmeld.fillSession(switchUser);
+                }
+              } else {
+                // Log in the user for access controls.
+                await nymph.tilmeld.fillSession(user);
+              }
             }
-          } else {
-            // Log in the user for access controls.
-            await nymph.tilmeld.fillSession(user);
+          }
+          current = await nymph.getEntities(options, ...selectors);
+        } catch (e: any) {
+          this.config.logger(
+            'error',
+            new Date().toISOString(),
+            `Error updating client! (${e?.message}, ${curClient.remoteAddress})`,
+          );
+          return;
+        }
+
+        const entityMap = Object.fromEntries(
+          current.map((entity) => [entity.guid, entity]),
+        );
+        // These are the current GUIDs for this set of subscriptions/publishes.
+        const currentGuids = current.map((entity) => entity.guid ?? '');
+
+        const clientUpdates: {
+          query: string;
+          removed?: string;
+          added?: string;
+          updated?: string;
+          data?: any;
+        }[] = [];
+
+        for (let { subscription, publish } of queryEntries) {
+          const removed = difference(subscription.current, currentGuids);
+          const added = difference(currentGuids, subscription.current);
+
+          if (subscription.direct) {
+            for (let guid of removed) {
+              // Notify subscriber.
+              this.config.logger(
+                'log',
+                new Date().toISOString(),
+                `Notifying client of removal! (${curClient.remoteAddress})`,
+              );
+              clientUpdates.push({
+                query: subscription.query,
+                removed: guid,
+              });
+            }
+
+            for (let guid of added) {
+              const entity = entityMap[guid];
+              // Notify client.
+              this.config.logger(
+                'log',
+                new Date().toISOString(),
+                `Notifying client of new match! (${curClient.remoteAddress})`,
+              );
+              if (typeof entity.updateDataProtection === 'function') {
+                entity.updateDataProtection();
+              }
+              clientUpdates.push({
+                query: subscription.query,
+                added: guid,
+                data: entity.toJSON(),
+              });
+            }
+
+            if (publish.event === 'update' && publish.guid in entityMap) {
+              const entity = entityMap[publish.guid];
+              // Notify subscriber.
+              this.config.logger(
+                'log',
+                new Date().toISOString(),
+                `Notifying client of update! (${curClient.remoteAddress})`,
+              );
+              if (typeof entity.updateDataProtection === 'function') {
+                entity.updateDataProtection();
+              }
+              clientUpdates.push({
+                query: subscription.query,
+                updated: publish.guid,
+                data: entity.toJSON(),
+              });
+            }
+          }
+
+          // Update subscription.
+          subscription.current = currentGuids;
+
+          if (nymph.tilmeld != null && authToken != null) {
+            // Clear the user that was temporarily logged in.
+            nymph.tilmeld.clearSession();
+          }
+
+          if (
+            (removed.length || added.length) &&
+            subscription.qrefParents.length
+          ) {
+            // All qref parents need to be rerun.
+            for (const qrefParent of subscription.qrefParents) {
+              const subData =
+                this.querySubs[qrefParent.etype][qrefParent.query].get(
+                  curClient,
+                );
+              if (subData) {
+                this.addOutgoingClientMessage(curClient, subData, publish);
+              }
+            }
           }
         }
-      }
-      current = await nymph.getEntities(options, ...selectors);
-    } catch (e: any) {
-      this.config.logger(
-        'error',
-        new Date().toISOString(),
-        `Error updating client! (${e?.message}, ${curClient.remoteAddress})`,
-      );
-      return;
-    }
 
-    const entityMap = Object.fromEntries(
-      current.map((entity) => [entity.guid, entity]),
-    );
-    const currentGuids = current.map((entity) => entity.guid ?? '');
-    const removed = difference(curData.current, currentGuids);
-    const added = difference(currentGuids, curData.current);
-
-    if (curData.direct) {
-      for (let guid of removed) {
-        // Notify subscriber.
-        this.config.logger(
-          'log',
-          new Date().toISOString(),
-          `Notifying client of removal! (${curClient.remoteAddress})`,
-        );
-        curClient.sendUTF(
-          JSON.stringify({
-            query: curData.query,
-            removed: guid,
-          }),
-        );
-      }
-
-      for (let guid of added) {
-        const entity = entityMap[guid];
-        // Notify client.
-        this.config.logger(
-          'log',
-          new Date().toISOString(),
-          `Notifying client of new match! (${curClient.remoteAddress})`,
-        );
-        if (typeof entity.updateDataProtection === 'function') {
-          entity.updateDataProtection();
-        }
-        curClient.sendUTF(
-          JSON.stringify({
-            query: curData.query,
-            added: guid,
-            data: entity,
-          }),
-        );
-      }
-
-      if (data.event === 'update' && data.guid in entityMap) {
-        const entity = entityMap[data.guid];
-        // Notify subscriber.
-        this.config.logger(
-          'log',
-          new Date().toISOString(),
-          `Notifying client of update! (${curClient.remoteAddress})`,
-        );
-        if (typeof entity.updateDataProtection === 'function') {
-          entity.updateDataProtection();
-        }
-        curClient.sendUTF(
-          JSON.stringify({
-            query: curData.query,
-            updated: data.guid,
-            data: entity,
-          }),
-        );
-      }
-    }
-
-    // Update curData.
-    curData.current = currentGuids;
-
-    if (nymph.tilmeld != null && authToken != null) {
-      // Clear the user that was temporarily logged in.
-      nymph.tilmeld.clearSession();
-    }
-
-    if ((removed.length || added.length) && curData.qrefParents.length) {
-      // All qref parents need to be rerun.
-      for (const qrefParent of curData.qrefParents) {
-        const subData =
-          this.querySubs[qrefParent.etype][qrefParent.query].get(curClient);
-        if (subData) {
-          this.updateClient(curClient, subData, data);
+        if (clientUpdates.length === 1) {
+          curClient.sendUTF(JSON.stringify(clientUpdates[0]));
+        } else if (clientUpdates.length > 1) {
+          curClient.sendUTF(
+            JSON.stringify({ query, multiple: true, messages: clientUpdates }),
+          );
         }
       }
     }
@@ -1426,8 +1514,8 @@ export default class PubSub {
               ? value
               : [value]
           ) as [string, [MessageOptions, ...Selector[]]][];
-          for (let i = 0; i < tmpArr.length; i++) {
-            qrefQueries.push(tmpArr[i][1]);
+          for (let [_name, qRefQuery] of tmpArr) {
+            qrefQueries.push(qRefQuery);
           }
         } else if (key === 'selector' || key === '!selector') {
           const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];

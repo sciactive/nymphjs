@@ -220,10 +220,16 @@ export default class PubSub {
         } else {
           entity.guid = null;
         }
-      } else if ('removed' in args) {
-        entity.guid = null;
       } else {
-        entity.$init(args.data);
+        let update = args;
+        if ('multiple' in args && args.multiple) {
+          update = args.messages.pop();
+        }
+        if ('removed' in update) {
+          entity.guid = null;
+        } else {
+          entity.$init(update.data);
+        }
       }
 
       if (resolve) {
@@ -669,64 +675,68 @@ export default class PubSub {
 
       current.splice(current.length, 0, ...newEntities);
     } else if (update != null && update.hasOwnProperty('query')) {
-      if ('removed' in update) {
-        for (let i = 0; i < current.length; i++) {
-          if (current[i] != null && current[i].guid === update.removed) {
-            current.splice(i, 1);
-            return;
+      const updates =
+        'multiple' in update && update.multiple ? update.messages : [update];
+      for (let curUpdate of updates) {
+        if ('removed' in curUpdate) {
+          for (let i = 0; i < current.length; i++) {
+            if (current[i] != null && current[i].guid === curUpdate.removed) {
+              current.splice(i, 1);
+              continue;
+            }
           }
         }
-      }
 
-      // Get the entity.
-      let entity: EntityInterface | null = null;
-      if ('added' in update) {
-        // Check for it in the array already.
-        for (let i = 0; i < current.length; i++) {
-          if (current[i] != null && current[i].guid === update.added) {
-            entity = current.splice(i, 1)[0].$init(update.data);
+        // Get the entity.
+        let entity: EntityInterface | null = null;
+        if ('added' in curUpdate) {
+          // Check for it in the array already.
+          for (let i = 0; i < current.length; i++) {
+            if (current[i] != null && current[i].guid === curUpdate.added) {
+              entity = current.splice(i, 1)[0].$init(curUpdate.data);
+            }
+          }
+          if (entity == null) {
+            // A new entity.
+            entity = this.nymph.initEntity(curUpdate.data);
           }
         }
-        if (entity == null) {
-          // A new entity.
-          entity = this.nymph.initEntity(update.data);
-        }
-      }
-      if ('updated' in update) {
-        // Extract it from the array.
-        for (let i = 0; i < current.length; i++) {
-          if (current[i] != null && current[i].guid === update.updated) {
-            entity = current.splice(i, 1)[0].$init(update.data);
+        if ('updated' in curUpdate) {
+          // Extract it from the array.
+          for (let i = 0; i < current.length; i++) {
+            if (current[i] != null && current[i].guid === curUpdate.updated) {
+              entity = current.splice(i, 1)[0].$init(curUpdate.data);
+            }
           }
         }
-      }
 
-      const query = JSON.parse(update.query);
-      if (entity != null) {
-        // Insert the entity in order.
-        const sort = 'sort' in query[0] ? (query[0].sort as string) : 'cdate';
-        const reverse = query[0].hasOwnProperty('reverse')
-          ? query[0].reverse
-          : false;
-        let i;
+        if (entity != null) {
+          const query = JSON.parse(curUpdate.query);
+          // Insert the entity in order.
+          const sort = 'sort' in query[0] ? (query[0].sort as string) : 'cdate';
+          const reverse = query[0].hasOwnProperty('reverse')
+            ? query[0].reverse
+            : false;
+          let i;
 
-        if (reverse) {
-          for (
-            i = 0;
-            ((current[i] ?? {})[sort] ?? 0) >= (entity[sort] ?? 0) &&
-            i < current.length;
-            i++
-          );
-        } else {
-          for (
-            i = 0;
-            ((current[i] ?? {})[sort] ?? 0) < (entity[sort] ?? 0) &&
-            i < current.length;
-            i++
-          );
+          if (reverse) {
+            for (
+              i = 0;
+              ((current[i] ?? {})[sort] ?? 0) >= (entity[sort] ?? 0) &&
+              i < current.length;
+              i++
+            );
+          } else {
+            for (
+              i = 0;
+              ((current[i] ?? {})[sort] ?? 0) < (entity[sort] ?? 0) &&
+              i < current.length;
+              i++
+            );
+          }
+
+          current.splice(i, 0, entity);
         }
-
-        current.splice(i, 0, entity);
       }
     }
   }

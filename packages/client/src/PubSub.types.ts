@@ -17,22 +17,31 @@ export type PubSubDisconnectCallback = () => void;
  * callbacks.
  */
 export type PubSubErrorCallback = (err: any) => void;
+export type PubSubUpdateRemoved = {
+  query: string;
+  removed: string;
+};
+export type PubSubUpdateAdded = {
+  query: string;
+  added: string;
+  data: EntityJson;
+};
+export type PubSubUpdateUpdated = {
+  query: string;
+  updated: string;
+  data: EntityJson;
+};
+export type PubSubUpdateMultiple = {
+  query: string;
+  multiple: true;
+  messages: (PubSubUpdateRemoved | PubSubUpdateAdded | PubSubUpdateUpdated)[];
+};
 export type PubSubUpdate<T> =
   | T
-  | {
-      query: string;
-      removed: string;
-    }
-  | {
-      query: string;
-      added: string;
-      data: EntityJson;
-    }
-  | {
-      query: string;
-      updated: string;
-      data: EntityJson;
-    };
+  | PubSubUpdateRemoved
+  | PubSubUpdateAdded
+  | PubSubUpdateUpdated
+  | PubSubUpdateMultiple;
 export type PubSubSubscribable<T> = (
   resolve?: PubSubResolveCallback<T> | undefined,
   reject?: PubSubRejectCallback | undefined,
