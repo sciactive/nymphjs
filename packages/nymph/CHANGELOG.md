@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.121](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.120...v1.0.0-beta.121) (2026-09-17)
+
+### Bug Fixes
+
+- improve transaction creation on root instance, move tilmeld entity tests to exported artifacts ([9f48d27](https://forge.sciactive.com/sciactive/nymphjs/commits/9f48d279c2fba9ae188e52fe996f50e58a39d4a7))
+
 # [1.0.0-beta.120](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.119...v1.0.0-beta.120) (2026-09-01)
 
 **Note:** Version bump only for package @nymphjs/nymph
