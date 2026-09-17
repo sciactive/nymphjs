@@ -9,7 +9,9 @@ import Tilmeld from './Tilmeld.js';
 import { AccessControlError } from './errors/index.js';
 import type { AccessControlData } from './Tilmeld.types.js';
 import type UserClass from './User.js';
+import { UserTest } from './User.testArtifacts.js';
 import type GroupClass from './Group.js';
+import { GroupTest } from './Group.testArtifacts.js';
 
 export type TestModelData = {
   name?: string;
@@ -47,6 +49,7 @@ const TestModelClass = TestModel;
 
 export function TilmeldTest(
   nymphBase: Nymph,
+  describe: (name: string, fn: () => void) => void,
   it: (name: string, fn: () => void) => void,
 ) {
   const tilmeld = new Tilmeld({
@@ -67,1900 +70,1910 @@ export function TilmeldTest(
   });
   const nymph = new Nymph(nymphBase.config, nymphBase.driver, tilmeld);
 
-  const User = tilmeld.User;
-  const Group = tilmeld.Group;
-  const TestModel = nymph.addEntityClass(TestModelClass);
+  describe('Tilmeld', () => {
+    UserTest(nymph, tilmeld, describe, it);
+    GroupTest(nymph, tilmeld, describe, it);
 
-  async function deleteTestData() {
-    let all: (TestModel | UserClass | GroupClass)[] = await nymph.getEntities({
-      class: TestModel,
-    });
-    expect(Array.isArray(all)).toEqual(true);
-    for (const cur of all) {
-      expect(await cur.$deleteSkipAC()).toEqual(true);
+    const User = tilmeld.User;
+    const Group = tilmeld.Group;
+    const TestModel = nymph.addEntityClass(TestModelClass);
+
+    async function deleteTestData() {
+      let all: (TestModel | UserClass | GroupClass)[] = await nymph.getEntities(
+        {
+          class: TestModel,
+        },
+      );
+      expect(Array.isArray(all)).toEqual(true);
+      for (const cur of all) {
+        expect(await cur.$deleteSkipAC()).toEqual(true);
+      }
+
+      all = await nymph.getEntities({ class: TestModel });
+      expect(all.length).toEqual(0);
+
+      all = await nymph.getEntities({ class: User });
+      expect(Array.isArray(all)).toEqual(true);
+      for (const cur of all) {
+        expect(await cur.$deleteSkipAC()).toEqual(true);
+      }
+
+      all = await nymph.getEntities({ class: User });
+      expect(all.length).toEqual(0);
+
+      all = await nymph.getEntities({ class: Group });
+      expect(Array.isArray(all)).toEqual(true);
+      for (const cur of all) {
+        expect(await cur.$deleteSkipAC()).toEqual(true);
+      }
+
+      all = await nymph.getEntities({ class: Group });
+      expect(all.length).toEqual(0);
     }
 
-    all = await nymph.getEntities({ class: TestModel });
-    expect(all.length).toEqual(0);
+    async function makeUsers() {
+      const admin = await User.factoryUsername('admin');
+      const bob = await User.factoryUsername('bob');
+      const alice = await User.factoryUsername('alice');
+      const abgroup = await Group.factoryGroupname('abgroup');
 
-    all = await nymph.getEntities({ class: User });
-    expect(Array.isArray(all)).toEqual(true);
-    for (const cur of all) {
-      expect(await cur.$deleteSkipAC()).toEqual(true);
+      if (admin.guid == null) {
+        admin.username = 'admin';
+        admin.email = 'admin@localhost';
+        admin.nameFirst = 'Admin';
+        admin.nameLast = 'User';
+        admin.name = 'Admin User';
+        admin.$password('password');
+        admin.$grant('system/admin');
+        await admin.$saveSkipAC();
+      }
+
+      if (abgroup.guid == null) {
+        abgroup.groupname = 'abgroup';
+        abgroup.email = 'abgroup@localhost';
+        abgroup.name = 'AB Group';
+        await abgroup.$saveSkipAC();
+      }
+
+      if (bob.guid == null) {
+        bob.username = 'bob';
+        bob.email = 'bob@localhost';
+        bob.nameFirst = 'Bob';
+        bob.nameLast = 'User';
+        bob.name = 'Bob User';
+        bob.$password('password');
+        bob.$addGroup(abgroup);
+        await bob.$saveSkipAC();
+      }
+
+      if (alice.guid == null) {
+        alice.username = 'alice';
+        alice.email = 'alice@localhost';
+        alice.nameFirst = 'Alice';
+        alice.nameLast = 'User';
+        alice.name = 'Alice User';
+        alice.$password('password');
+        alice.$addGroup(abgroup);
+        await alice.$saveSkipAC();
+      }
+
+      return { admin, bob, alice, abgroup };
     }
 
-    all = await nymph.getEntities({ class: User });
-    expect(all.length).toEqual(0);
-
-    all = await nymph.getEntities({ class: Group });
-    expect(Array.isArray(all)).toEqual(true);
-    for (const cur of all) {
-      expect(await cur.$deleteSkipAC()).toEqual(true);
-    }
-
-    all = await nymph.getEntities({ class: Group });
-    expect(all.length).toEqual(0);
-  }
-
-  async function makeUsers() {
-    const admin = await User.factoryUsername('admin');
-    const bob = await User.factoryUsername('bob');
-    const alice = await User.factoryUsername('alice');
-    const abgroup = await Group.factoryGroupname('abgroup');
-
-    if (admin.guid == null) {
-      admin.username = 'admin';
-      admin.email = 'admin@localhost';
-      admin.nameFirst = 'Admin';
-      admin.nameLast = 'User';
-      admin.name = 'Admin User';
-      admin.$password('password');
-      admin.$grant('system/admin');
-      await admin.$saveSkipAC();
-    }
-
-    if (abgroup.guid == null) {
-      abgroup.groupname = 'abgroup';
-      abgroup.email = 'abgroup@localhost';
-      abgroup.name = 'AB Group';
-      await abgroup.$saveSkipAC();
-    }
-
-    if (bob.guid == null) {
-      bob.username = 'bob';
-      bob.email = 'bob@localhost';
-      bob.nameFirst = 'Bob';
-      bob.nameLast = 'User';
-      bob.name = 'Bob User';
-      bob.$password('password');
-      bob.$addGroup(abgroup);
-      await bob.$saveSkipAC();
-    }
-
-    if (alice.guid == null) {
-      alice.username = 'alice';
-      alice.email = 'alice@localhost';
-      alice.nameFirst = 'Alice';
-      alice.nameLast = 'User';
-      alice.name = 'Alice User';
-      alice.$password('password');
-      alice.$addGroup(abgroup);
-      await alice.$saveSkipAC();
-    }
-
-    return { admin, bob, alice, abgroup };
-  }
-
-  it('delete old test data', async () => {
-    await deleteTestData();
-  });
-
-  it('users can log in', async () => {
-    const { admin, bob, alice } = await makeUsers();
-
-    let result = await admin.$login({
-      username: 'admin',
-      password: 'password',
+    it('delete old test data', async () => {
+      await deleteTestData();
     });
 
-    expect(result.result).toEqual(true);
-    expect(admin.$is(User.current())).toEqual(true);
+    it('users can log in', async () => {
+      const { admin, bob, alice } = await makeUsers();
 
-    result = await admin.$logout();
+      let result = await admin.$login({
+        username: 'admin',
+        password: 'password',
+      });
 
-    expect(result.result).toEqual(true);
-    expect(User.current()).toBeNull();
+      expect(result.result).toEqual(true);
+      expect(admin.$is(User.current())).toEqual(true);
 
-    result = await bob.$login({
-      username: 'bob',
-      password: 'password',
+      result = await admin.$logout();
+
+      expect(result.result).toEqual(true);
+      expect(User.current()).toBeNull();
+
+      result = await bob.$login({
+        username: 'bob',
+        password: 'password',
+      });
+
+      expect(result.result).toEqual(true);
+      expect(bob.$is(User.current())).toEqual(true);
+
+      result = await bob.$logout();
+
+      expect(result.result).toEqual(true);
+      expect(User.current()).toBeNull();
+
+      result = await alice.$login({
+        username: 'alice',
+        password: 'password',
+      });
+
+      expect(result.result).toEqual(true);
+      expect(alice.$is(User.current())).toEqual(true);
+
+      result = await alice.$logout();
+
+      expect(result.result).toEqual(true);
+      expect(User.current()).toBeNull();
     });
 
-    expect(result.result).toEqual(true);
-    expect(bob.$is(User.current())).toEqual(true);
-
-    result = await bob.$logout();
-
-    expect(result.result).toEqual(true);
-    expect(User.current()).toBeNull();
-
-    result = await alice.$login({
-      username: 'alice',
-      password: 'password',
+    it('creates tables for test model', async () => {
+      const testEntity = await nymph.getEntity({ class: TestModel });
+      expect(testEntity).toBeNull();
     });
 
-    expect(result.result).toEqual(true);
-    expect(alice.$is(User.current())).toEqual(true);
+    it('user ownership, group ownership, and access controls are added on entities', async () => {
+      const { bob } = await makeUsers();
+
+      await tilmeld.fillSession(bob);
 
-    result = await alice.$logout();
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    expect(result.result).toEqual(true);
-    expect(User.current()).toBeNull();
-  });
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-  it('creates tables for test model', async () => {
-    const testEntity = await nymph.getEntity({ class: TestModel });
-    expect(testEntity).toBeNull();
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('user ownership, group ownership, and access controls are added on entities', async () => {
-    const { bob } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      expect(testEntityBob?.user?.$is(bob)).toEqual(true);
+      expect(testEntityBob?.group?.$is(bob.group)).toEqual(true);
+      expect(testEntityBob?.acUser).toEqual(TilmeldAccessLevels.FULL_ACCESS);
+      expect(testEntityBob?.acGroup).toEqual(TilmeldAccessLevels.READ_ACCESS);
+      expect(testEntityBob?.acOther).toEqual(TilmeldAccessLevels.NO_ACCESS);
+      expect(testEntityBob?.acRead).toEqual([]);
+      expect(testEntityBob?.acWrite).toEqual([]);
+      expect(testEntityBob?.acFull).toEqual([]);
+    });
 
-    await tilmeld.fillSession(bob);
+    it("alice can't access an entity owned by bob", async () => {
+      const { bob, alice } = await makeUsers();
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    expect(await bobsEntity.$save()).toEqual(true);
+      await tilmeld.fillSession(bob);
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
-    expect(testEntityBob?.user?.$is(bob)).toEqual(true);
-    expect(testEntityBob?.group?.$is(bob.group)).toEqual(true);
-    expect(testEntityBob?.acUser).toEqual(TilmeldAccessLevels.FULL_ACCESS);
-    expect(testEntityBob?.acGroup).toEqual(TilmeldAccessLevels.READ_ACCESS);
-    expect(testEntityBob?.acOther).toEqual(TilmeldAccessLevels.NO_ACCESS);
-    expect(testEntityBob?.acRead).toEqual([]);
-    expect(testEntityBob?.acWrite).toEqual([]);
-    expect(testEntityBob?.acFull).toEqual([]);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't access an entity owned by bob", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).toBeNull();
+    });
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't write to an entity she doesn't have write permission for", async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acRead = [alice.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityAlice).toBeNull();
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't write to an entity she doesn't have write permission for", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [alice.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      try {
+        await testEntityAlice.$save();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Bob's Entity");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can write to an entity she has write permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acWrite = [alice.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    try {
-      await testEntityAlice.$save();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Bob's Entity");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can write to an entity she has write permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [alice.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      expect(await testEntityAlice.$save()).toEqual(true);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't delete an entity she doesn't have full permission for", async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acWrite = [alice.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    expect(await testEntityAlice.$save()).toEqual(true);
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't delete an entity she doesn't have full permission for", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [alice.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      try {
+        await testEntityAlice.$delete();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can delete an entity she has full permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acFull = [alice.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    try {
-      await testEntityAlice.$delete();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can delete an entity she has full permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acFull = [alice.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      expect(await testEntityAlice.$delete()).toEqual(true);
+      const verifyEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
+      expect(verifyEntityAlice).toBeNull();
+    });
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+    it('alice can access an entity her group has permission for', async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      await tilmeld.fillSession(bob);
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acRead = [abgroup.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$delete()).toEqual(true);
-    const verifyEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-    expect(verifyEntityAlice).toBeNull();
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can access an entity her group has permission for', async () => {
-    const { bob, alice, abgroup } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [abgroup.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+    });
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't write to an entity her group doesn't have write permission for", async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acRead = [abgroup.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't write to an entity her group doesn't have write permission for", async () => {
-    const { bob, alice, abgroup } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [abgroup.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      try {
+        await testEntityAlice.$save();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Bob's Entity");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can write to an entity her group has write permission for', async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acWrite = [abgroup.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    try {
-      await testEntityAlice.$save();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Bob's Entity");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can write to an entity her group has write permission for', async () => {
-    const { bob, alice, abgroup } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [abgroup.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      expect(await testEntityAlice.$save()).toEqual(true);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't delete an entity her group doesn't have full permission for", async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acWrite = [abgroup.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    expect(await testEntityAlice.$save()).toEqual(true);
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't delete an entity her group doesn't have full permission for", async () => {
-    const { bob, alice, abgroup } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [abgroup.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      try {
+        await testEntityAlice.$delete();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can delete an entity her group has full permission for', async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acFull = [abgroup.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    try {
-      await testEntityAlice.$delete();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can delete an entity her group has full permission for', async () => {
-    const { bob, alice, abgroup } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acFull = [abgroup.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      expect(await testEntityAlice.$delete()).toEqual(true);
+      const verifyEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
+      expect(verifyEntityAlice).toBeNull();
+    });
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+    it('alice can access an entity her primary group has permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      await tilmeld.fillSession(bob);
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.group = alice.group;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$delete()).toEqual(true);
-    const verifyEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-    expect(verifyEntityAlice).toBeNull();
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can access an entity her primary group has permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.group = alice.group;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+    });
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't write to an entity her primary group doesn't have write permission for", async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.group = alice.group;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't write to an entity her primary group doesn't have write permission for", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.group = alice.group;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      try {
+        await testEntityAlice.$save();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Bob's Entity");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can write to an entity her primary group has write permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.group = alice.group;
+      bobsEntity.acGroup = TilmeldAccessLevels.WRITE_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    try {
-      await testEntityAlice.$save();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Bob's Entity");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can write to an entity her primary group has write permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.group = alice.group;
-    bobsEntity.acGroup = TilmeldAccessLevels.WRITE_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      expect(await testEntityAlice.$save()).toEqual(true);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't delete an entity her primary group doesn't have full permission for", async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.group = alice.group;
+      bobsEntity.acGroup = TilmeldAccessLevels.WRITE_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    expect(await testEntityAlice.$save()).toEqual(true);
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't delete an entity her primary group doesn't have full permission for", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.group = alice.group;
-    bobsEntity.acGroup = TilmeldAccessLevels.WRITE_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      try {
+        await testEntityAlice.$delete();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can delete an entity her primary group has full permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.group = alice.group;
+      bobsEntity.acGroup = TilmeldAccessLevels.FULL_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    try {
-      await testEntityAlice.$delete();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can delete an entity her primary group has full permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.group = alice.group;
-    bobsEntity.acGroup = TilmeldAccessLevels.FULL_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      expect(await testEntityAlice.$delete()).toEqual(true);
+      const verifyEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
+      expect(verifyEntityAlice).toBeNull();
+    });
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+    it('alice can access an entity everyone has permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      await tilmeld.fillSession(bob);
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$delete()).toEqual(true);
-    const verifyEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-    expect(verifyEntityAlice).toBeNull();
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can access an entity everyone has permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+    });
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't write to an entity everyone doesn't have write permission for", async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't write to an entity everyone doesn't have write permission for", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      try {
+        await testEntityAlice.$save();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Bob's Entity");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can write to an entity everyone has write permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acOther = TilmeldAccessLevels.WRITE_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    try {
-      await testEntityAlice.$save();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Bob's Entity");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can write to an entity everyone has write permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acOther = TilmeldAccessLevels.WRITE_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      testEntityAlice.name = "Haha! It's mine now!";
+      expect(await testEntityAlice.$save()).toEqual(true);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it("alice can't delete an entity everyone doesn't have full permission for", async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acOther = TilmeldAccessLevels.WRITE_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    testEntityAlice.name = "Haha! It's mine now!";
-    expect(await testEntityAlice.$save()).toEqual(true);
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("alice can't delete an entity everyone doesn't have full permission for", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acOther = TilmeldAccessLevels.WRITE_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      try {
+        await testEntityAlice.$delete();
+        throw new Error('It should have thrown AccessControlError.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(AccessControlError);
+      }
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(await testEntityAlice.$refresh()).toEqual(true);
+      expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
+    });
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('alice can delete an entity everyone has full permission for', async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acOther = TilmeldAccessLevels.FULL_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    try {
-      await testEntityAlice.$delete();
-      throw new Error('It should have thrown AccessControlError.');
-    } catch (e: any) {
-      expect(e).toBeInstanceOf(AccessControlError);
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$refresh()).toEqual(true);
-    expect(testEntityAlice.guid).toEqual(bobsEntity.guid);
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can delete an entity everyone has full permission for', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acOther = TilmeldAccessLevels.FULL_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityAlice == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      expect(await testEntityAlice.$delete()).toEqual(true);
+      const verifyEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
+      expect(verifyEntityAlice).toBeNull();
+    });
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+    it('a clear session can delete an entity everyone has full permission for', async () => {
+      const { bob } = await makeUsers();
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      await tilmeld.fillSession(bob);
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acOther = TilmeldAccessLevels.FULL_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    if (testEntityAlice == null) {
-      throw new Error();
-    }
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(await testEntityAlice.$delete()).toEqual(true);
-    const verifyEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-    expect(verifyEntityAlice).toBeNull();
-  });
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('a clear session can delete an entity everyone has full permission for', async () => {
-    const { bob } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(bob);
+      tilmeld.clearSession();
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acOther = TilmeldAccessLevels.FULL_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      const testEntityNobody = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      expect(testEntityNobody).not.toBeNull();
+      expect(testEntityNobody?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      if (testEntityNobody == null) {
+        throw new Error();
+      }
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      expect(await testEntityNobody.$delete()).toEqual(true);
+      const verifyEntityNobody = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
+      expect(verifyEntityNobody).toBeNull();
+    });
 
-    tilmeld.clearSession();
+    it('allows skip ac deletions', async () => {
+      const allEntities = [
+        ...(await nymph.getEntities({ class: TestModel, skipAc: true })),
+        ...(await nymph.getEntities({ class: User, skipAc: true })),
+        ...(await nymph.getEntities({ class: Group, skipAc: true })),
+      ];
+      for (let entity of allEntities) {
+        expect(await entity.$deleteSkipAC()).toEqual(true);
+      }
+    });
 
-    const testEntityNobody = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+    it('entity can be retrieved by queries on ac properties', async () => {
+      const { bob, alice } = await makeUsers();
 
-    expect(testEntityNobody).not.toBeNull();
-    expect(testEntityNobody?.guid).toEqual(bobsEntity.guid);
+      await tilmeld.fillSession(bob);
 
-    if (testEntityNobody == null) {
-      throw new Error();
-    }
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acRead = [
+        alice.guid ?? '',
+        bob.guid ?? '',
+        ...(bob.group ? [bob.group.guid ?? ''] : []),
+      ];
+      bobsEntity.acWrite = [alice.guid ?? '', bob.guid ?? ''];
+      bobsEntity.acFull = [bob.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    expect(await testEntityNobody.$delete()).toEqual(true);
-    const verifyEntityNobody = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-    expect(verifyEntityNobody).toBeNull();
-  });
-
-  it('allows skip ac deletions', async () => {
-    const allEntities = [
-      ...(await nymph.getEntities({ class: TestModel, skipAc: true })),
-      ...(await nymph.getEntities({ class: User, skipAc: true })),
-      ...(await nymph.getEntities({ class: Group, skipAc: true })),
-    ];
-    for (let entity of allEntities) {
-      expect(await entity.$deleteSkipAC()).toEqual(true);
-    }
-  });
-
-  it('entity can be retrieved by queries on ac properties', async () => {
-    const { bob, alice } = await makeUsers();
-
-    await tilmeld.fillSession(bob);
-
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [
-      alice.guid ?? '',
-      bob.guid ?? '',
-      ...(bob.group ? [bob.group.guid ?? ''] : []),
-    ];
-    bobsEntity.acWrite = [alice.guid ?? '', bob.guid ?? ''];
-    bobsEntity.acFull = [bob.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
-
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
-
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
-
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
-
-    // Equals queries.
-
-    let testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        equal: ['user', bob.guid],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        equal: ['user', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        equal: ['group', bob.group?.guid],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        equal: ['group', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    // Contains queries.
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['user', bob.guid],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['user', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['group', bob.group?.guid],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['group', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['acRead', alice.guid],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['acRead', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['acWrite', bob.guid],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['acWrite', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['acFull', bob.guid],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        contain: ['acFull', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    // Ref queries.
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['user', bob],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['user', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['group', bob.group ?? ''],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['group', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['acRead', alice],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['acRead', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['acWrite', bob],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['acWrite', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['acFull', bob],
-      },
-    );
-
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        ref: ['acFull', '000000000000000000000000'],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    // QRef queries.
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        qref: [
-          'user',
-          [
-            { class: User },
-            { type: '&', equal: ['username', bob.username ?? ''] },
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
+
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
+
+      // Equals queries.
+
+      let testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          equal: ['user', bob.guid],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          equal: ['user', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          equal: ['group', bob.group?.guid],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          equal: ['group', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      // Contains queries.
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['user', bob.guid],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['user', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['group', bob.group?.guid],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['group', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['acRead', alice.guid],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['acRead', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['acWrite', bob.guid],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['acWrite', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['acFull', bob.guid],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          contain: ['acFull', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      // Ref queries.
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['user', bob],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['user', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['group', bob.group ?? ''],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['group', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['acRead', alice],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['acRead', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['acWrite', bob],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['acWrite', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['acFull', bob],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          ref: ['acFull', '000000000000000000000000'],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      // QRef queries.
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          qref: [
+            'user',
+            [
+              { class: User },
+              { type: '&', equal: ['username', bob.username ?? ''] },
+            ],
           ],
-        ],
-      },
-    );
+        },
+      );
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
 
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        qref: [
-          'user',
-          [{ class: User }, { type: '&', equal: ['username', 'pickle'] }],
-        ],
-      },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        qref: [
-          'acRead',
-          [
-            { class: User },
-            { type: '&', equal: ['username', alice.username ?? ''] },
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          qref: [
+            'user',
+            [{ class: User }, { type: '&', equal: ['username', 'pickle'] }],
           ],
-        ],
-      },
-    );
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          qref: [
+            'acRead',
+            [
+              { class: User },
+              { type: '&', equal: ['username', alice.username ?? ''] },
+            ],
+          ],
+        },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+
+      testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          guid: bobsEntity.guid || '',
+          qref: [
+            'acRead',
+            [{ class: User }, { type: '&', equal: ['username', 'pickle'] }],
+          ],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
+    });
+
+    it('alice can access an entity with an access request', async () => {
+      const { bob, alice } = await makeUsers();
+
+      await tilmeld.fillSession(alice);
+
+      const alicesEntity = await TestModel.factory();
+      alicesEntity.name = "Alice's Entity";
+      expect(await alicesEntity.$save()).toEqual(true);
+
+      expect(alicesEntity.guid).not.toBeNull();
+      expect(alice.$is(alicesEntity.user)).toEqual(true);
+
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '&', guid: alicesEntity.guid || '' },
+      );
+
+      expect(testEntityAlice).not.toBeNull();
+      expect(testEntityAlice?.guid).toEqual(alicesEntity.guid);
+
+      tilmeld.clearSession();
+    });
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(bobsEntity.guid);
+    it("access request for user owned doesn't return group owned entity", async () => {
+      const { bob, alice } = await makeUsers();
 
-    testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      {
-        type: '&',
-        guid: bobsEntity.guid || '',
-        qref: [
-          'acRead',
-          [{ class: User }, { type: '&', equal: ['username', 'pickle'] }],
-        ],
-      },
-    );
+      await tilmeld.fillSession(bob);
+
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.group = alice.group;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    expect(testEntityAlice).toBeNull();
-  });
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it('alice can access an entity with an access request', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    await tilmeld.fillSession(alice);
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    const alicesEntity = await TestModel.factory();
-    alicesEntity.name = "Alice's Entity";
-    expect(await alicesEntity.$save()).toEqual(true);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(alicesEntity.guid).not.toBeNull();
-    expect(alice.$is(alicesEntity.user)).toEqual(true);
+      expect(testEntityAlice).not.toBeNull();
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '&', guid: alicesEntity.guid || '' },
-    );
+      const testFailureEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(testEntityAlice).not.toBeNull();
-    expect(testEntityAlice?.guid).toEqual(alicesEntity.guid);
+      expect(testFailureEntityAlice).toBeNull();
 
-    tilmeld.clearSession();
-  });
+      const testSuccessEntityAlice = await nymph.getEntity(
+        {
+          class: TestModel,
+          acRequest: TilmeldAccessRequest.PRIMARY_GROUP_OWNED,
+        },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("access request for user owned doesn't return group owned entity", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testSuccessEntityAlice).not.toBeNull();
+    });
 
-    await tilmeld.fillSession(bob);
+    it("access request for user owned doesn't return acOther accessible entity", async () => {
+      const { bob, alice } = await makeUsers();
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.group = alice.group;
-    expect(await bobsEntity.$save()).toEqual(true);
+      await tilmeld.fillSession(bob);
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    expect(testEntityAlice).not.toBeNull();
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testFailureEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testEntityAlice).not.toBeNull();
 
-    expect(testFailureEntityAlice).toBeNull();
+      const testFailureEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testSuccessEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.PRIMARY_GROUP_OWNED },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testFailureEntityAlice).toBeNull();
 
-    expect(testSuccessEntityAlice).not.toBeNull();
-  });
+      const testSuccessEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.OTHER_ACCESSIBLE },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("access request for user owned doesn't return acOther accessible entity", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testSuccessEntityAlice).not.toBeNull();
+    });
 
-    await tilmeld.fillSession(bob);
+    it("access request for user owned doesn't return user acRead accessible entity", async () => {
+      const { bob, alice } = await makeUsers();
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
-    expect(await bobsEntity.$save()).toEqual(true);
+      await tilmeld.fillSession(bob);
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acRead = [alice.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    expect(testEntityAlice).not.toBeNull();
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testFailureEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testEntityAlice).not.toBeNull();
 
-    expect(testFailureEntityAlice).toBeNull();
+      const testFailureEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testSuccessEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.OTHER_ACCESSIBLE },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testFailureEntityAlice).toBeNull();
 
-    expect(testSuccessEntityAlice).not.toBeNull();
-  });
+      const testSuccessEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_ACCESSIBLE },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("access request for user owned doesn't return user acRead accessible entity", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testSuccessEntityAlice).not.toBeNull();
+    });
 
-    await tilmeld.fillSession(bob);
+    it("access request for user owned doesn't return group acRead accessible entity", async () => {
+      const { bob, alice } = await makeUsers();
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acRead = [alice.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      await tilmeld.fillSession(bob);
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acWrite = [alice.group?.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    expect(testEntityAlice).not.toBeNull();
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testFailureEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testEntityAlice).not.toBeNull();
 
-    expect(testFailureEntityAlice).toBeNull();
+      const testFailureEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testSuccessEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_ACCESSIBLE },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testFailureEntityAlice).toBeNull();
 
-    expect(testSuccessEntityAlice).not.toBeNull();
-  });
+      const testSuccessEntityAlice = await nymph.getEntity(
+        {
+          class: TestModel,
+          acRequest: TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE,
+        },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("access request for user owned doesn't return group acRead accessible entity", async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testSuccessEntityAlice).not.toBeNull();
+    });
 
-    await tilmeld.fillSession(bob);
+    it("access request for user owned doesn't return secondary group owned entity", async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acWrite = [alice.group?.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      await tilmeld.fillSession(bob);
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.group = abgroup;
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    expect(testEntityAlice).not.toBeNull();
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testFailureEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testEntityAlice).not.toBeNull();
 
-    expect(testFailureEntityAlice).toBeNull();
+      const testFailureEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testSuccessEntityAlice = await nymph.getEntity(
-      {
-        class: TestModel,
-        acRequest: TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE,
-      },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testFailureEntityAlice).toBeNull();
 
-    expect(testSuccessEntityAlice).not.toBeNull();
-  });
+      const testSuccessEntityAlice = await nymph.getEntity(
+        {
+          class: TestModel,
+          acRequest: TilmeldAccessRequest.SECONDARY_GROUP_OWNED,
+        },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("access request for user owned doesn't return secondary group owned entity", async () => {
-    const { bob, alice, abgroup } = await makeUsers();
+      expect(testSuccessEntityAlice).not.toBeNull();
+    });
 
-    await tilmeld.fillSession(bob);
+    it("access request for user owned doesn't return secondary group accessible entity", async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.group = abgroup;
-    expect(await bobsEntity.$save()).toEqual(true);
+      await tilmeld.fillSession(bob);
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acFull = [abgroup.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    expect(testEntityAlice).not.toBeNull();
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testFailureEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testEntityAlice).not.toBeNull();
 
-    expect(testFailureEntityAlice).toBeNull();
+      const testFailureEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testSuccessEntityAlice = await nymph.getEntity(
-      {
-        class: TestModel,
-        acRequest: TilmeldAccessRequest.SECONDARY_GROUP_OWNED,
-      },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testFailureEntityAlice).toBeNull();
 
-    expect(testSuccessEntityAlice).not.toBeNull();
-  });
+      const testSuccessEntityAlice = await nymph.getEntity(
+        {
+          class: TestModel,
+          acRequest: TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE,
+        },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-  it("access request for user owned doesn't return secondary group accessible entity", async () => {
-    const { bob, alice, abgroup } = await makeUsers();
+      expect(testSuccessEntityAlice).not.toBeNull();
 
-    await tilmeld.fillSession(bob);
+      // Test or-ing two levels together.
+      const testSuccessEntityAlice2 = await nymph.getEntity(
+        {
+          class: TestModel,
+          acRequest:
+            TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE |
+            TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE,
+        },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acFull = [abgroup.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      expect(testSuccessEntityAlice2).not.toBeNull();
+    });
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+    it('access request for entity still works when filtering user owned entities manually', async () => {
+      const { bob, alice } = await makeUsers();
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      await tilmeld.fillSession(bob);
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      bobsEntity.acFull = [alice.guid ?? ''];
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(testEntityAlice).not.toBeNull();
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    const testFailureEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    expect(testFailureEntityAlice).toBeNull();
+      const alicesEntity = await TestModel.factory();
+      alicesEntity.name = "Alice's Entity";
+      expect(await alicesEntity.$save()).toEqual(true);
 
-    const testSuccessEntityAlice = await nymph.getEntity(
-      {
-        class: TestModel,
-        acRequest: TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE,
-      },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(alicesEntity.guid).not.toBeNull();
+      expect(alice.$is(alicesEntity.user)).toEqual(true);
 
-    expect(testSuccessEntityAlice).not.toBeNull();
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    // Test or-ing two levels together.
-    const testSuccessEntityAlice2 = await nymph.getEntity(
-      {
-        class: TestModel,
-        acRequest:
-          TilmeldAccessRequest.SECONDARY_GROUP_ACCESSIBLE |
-          TilmeldAccessRequest.PRIMARY_GROUP_ACCESSIBLE,
-      },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      expect(testEntityAlice).not.toBeNull();
 
-    expect(testSuccessEntityAlice2).not.toBeNull();
-  });
+      const testWithoutFiltering = await nymph.getEntities(
+        { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
+        { type: '|', guid: [alicesEntity.guid || '', bobsEntity.guid || ''] },
+      );
 
-  it('access request for entity still works when filtering user owned entities manually', async () => {
-    const { bob, alice } = await makeUsers();
+      expect(testWithoutFiltering.length).toEqual(1);
+      expect(testWithoutFiltering[0].guid).toEqual(alicesEntity?.guid || '');
 
-    await tilmeld.fillSession(bob);
+      const testWithFiltering = await nymph.getEntities(
+        {
+          class: TestModel,
+          acRequest: TilmeldAccessRequest.USER_OWNED,
+        },
+        { type: '|', guid: [alicesEntity.guid || '', bobsEntity.guid || ''] },
+        { type: '!&', ref: ['user', alice] },
+      );
 
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    bobsEntity.acFull = [alice.guid ?? ''];
-    expect(await bobsEntity.$save()).toEqual(true);
+      expect(testWithFiltering.length).toEqual(0);
 
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
+      const testInclusive = await nymph.getEntities({ class: TestModel });
 
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      const testInclusiveWithFiltering = await nymph.getEntities(
+        { class: TestModel },
+        { type: '!&', ref: ['user', alice] },
+      );
 
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+      expect(testInclusiveWithFiltering.length).toBeGreaterThanOrEqual(1);
+      const guids = testInclusiveWithFiltering.map((entity) => entity.guid);
+      expect(guids).not.toContain(alicesEntity?.guid || '');
+      expect(guids).toContain(bobsEntity?.guid || '');
 
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
+      const allDefaultGuids = testInclusive.map((entity) => entity.guid);
+      for (let guid of guids) {
+        expect(allDefaultGuids).toContain(guid);
+      }
+    });
 
-    const alicesEntity = await TestModel.factory();
-    alicesEntity.name = "Alice's Entity";
-    expect(await alicesEntity.$save()).toEqual(true);
+    it("access request for invalid access control doesn't return any inaccessible entities", async () => {
+      const { bob, alice, abgroup } = await makeUsers();
 
-    expect(alicesEntity.guid).not.toBeNull();
-    expect(alice.$is(alicesEntity.user)).toEqual(true);
+      await tilmeld.fillSession(bob);
 
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      expect(await bobsEntity.$save()).toEqual(true);
 
-    expect(testEntityAlice).not.toBeNull();
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
 
-    const testWithoutFiltering = await nymph.getEntities(
-      { class: TestModel, acRequest: TilmeldAccessRequest.USER_OWNED },
-      { type: '|', guid: [alicesEntity.guid || '', bobsEntity.guid || ''] },
-    );
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(testWithoutFiltering.length).toEqual(1);
-    expect(testWithoutFiltering[0].guid).toEqual(alicesEntity?.guid || '');
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
 
-    const testWithFiltering = await nymph.getEntities(
-      {
-        class: TestModel,
-        acRequest: TilmeldAccessRequest.USER_OWNED,
-      },
-      { type: '|', guid: [alicesEntity.guid || '', bobsEntity.guid || ''] },
-      { type: '!&', ref: ['user', alice] },
-    );
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
 
-    expect(testWithFiltering.length).toEqual(0);
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    const testInclusive = await nymph.getEntities({ class: TestModel });
+      expect(testEntityAlice).toBeNull();
 
-    const testInclusiveWithFiltering = await nymph.getEntities(
-      { class: TestModel },
-      { type: '!&', ref: ['user', alice] },
-    );
+      const testFailureEntityAlice = await nymph.getEntity(
+        { class: TestModel, acRequest: TilmeldAccessRequest.UNOWNED * 2 },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
 
-    expect(testInclusiveWithFiltering.length).toBeGreaterThanOrEqual(1);
-    const guids = testInclusiveWithFiltering.map((entity) => entity.guid);
-    expect(guids).not.toContain(alicesEntity?.guid || '');
-    expect(guids).toContain(bobsEntity?.guid || '');
+      expect(testFailureEntityAlice).toBeNull();
+    });
 
-    const allDefaultGuids = testInclusive.map((entity) => entity.guid);
-    for (let guid of guids) {
-      expect(allDefaultGuids).toContain(guid);
-    }
-  });
-
-  it("access request for invalid access control doesn't return any inaccessible entities", async () => {
-    const { bob, alice, abgroup } = await makeUsers();
-
-    await tilmeld.fillSession(bob);
-
-    const bobsEntity = await TestModel.factory();
-    bobsEntity.name = "Bob's Entity";
-    expect(await bobsEntity.$save()).toEqual(true);
-
-    expect(bobsEntity.guid).not.toBeNull();
-    expect(bob.$is(bobsEntity.user)).toEqual(true);
-
-    const testEntityBob = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-
-    expect(testEntityBob).not.toBeNull();
-    expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
-
-    tilmeld.clearSession();
-    await tilmeld.fillSession(alice);
-
-    const testEntityAlice = await nymph.getEntity(
-      { class: TestModel },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-
-    expect(testEntityAlice).toBeNull();
-
-    const testFailureEntityAlice = await nymph.getEntity(
-      { class: TestModel, acRequest: TilmeldAccessRequest.UNOWNED * 2 },
-      { type: '&', guid: bobsEntity.guid || '' },
-    );
-
-    expect(testFailureEntityAlice).toBeNull();
-  });
-
-  it('delete test data again', async () => {
-    await deleteTestData();
+    it('delete test data again', async () => {
+      await deleteTestData();
+    });
   });
 }

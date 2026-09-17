@@ -35,6 +35,7 @@ import {
 type MySQLDriverTransaction = {
   connection: PoolConnection | null;
   count: number;
+  latestPromise: Promise<any>;
 };
 
 /**
@@ -505,7 +506,7 @@ export default class MySQLDriver extends NymphDriver {
         throw new EntityUniqueConstraintError(`Unique constraint violation.`);
       } else if (errorCode === 2006) {
         // If the MySQL server disconnected, reconnect to it.
-        if (!this.connect()) {
+        if (!(await this.connect())) {
           throw new QueryFailedError(
             'Query failed: ' + e?.errno + ' - ' + e?.message,
             query,
@@ -547,21 +548,29 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) => {
-          try {
-            (this.transaction?.connection ?? this.link).query(
-              newQuery,
-              newParams,
-              (error, results) => {
-                if (error) {
-                  reject(error);
-                }
-                resolve(results);
-              },
-            );
-          } catch (e) {
-            reject(e);
+        const results: any = await new Promise(async (resolve, reject) => {
+          // Only do one query at a time in transations.
+          let myResolve: (value: void | PromiseLike<void>) => void = () => {};
+          const myPromise = new Promise<void>((resolve) => {
+            myResolve = resolve;
+          });
+          if (this.transaction) {
+            const latestPromise = this.transaction.latestPromise;
+            this.transaction.latestPromise = myPromise;
+            await latestPromise;
           }
+          (this.transaction?.connection ?? this.link).query(
+            newQuery,
+            newParams,
+            (error, results) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(results);
+              }
+              myResolve();
+            },
+          );
         });
         return results;
       },
@@ -586,21 +595,29 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) => {
-          try {
-            (this.transaction?.connection ?? this.link).query(
-              newQuery,
-              newParams,
-              (error, results) => {
-                if (error) {
-                  reject(error);
-                }
-                resolve(results);
-              },
-            );
-          } catch (e) {
-            reject(e);
+        const results: any = await new Promise(async (resolve, reject) => {
+          // Only do one query at a time in transations.
+          let myResolve: (value: void | PromiseLike<void>) => void = () => {};
+          const myPromise = new Promise<void>((resolve) => {
+            myResolve = resolve;
+          });
+          if (this.transaction) {
+            const latestPromise = this.transaction.latestPromise;
+            this.transaction.latestPromise = myPromise;
+            await latestPromise;
           }
+          (this.transaction?.connection ?? this.link).query(
+            newQuery,
+            newParams,
+            (error, results) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(results);
+              }
+              myResolve();
+            },
+          );
         });
         return results[0];
       },
@@ -614,9 +631,11 @@ export default class MySQLDriver extends NymphDriver {
     {
       etypes = [],
       params = {},
+      transaction,
     }: {
       etypes?: string[];
       params?: { [k: string]: any };
+      transaction?: MySQLDriverTransaction;
     } = {},
   ) {
     const { query: newQuery, params: newParams } = this.translateQuery(
@@ -625,21 +644,30 @@ export default class MySQLDriver extends NymphDriver {
     );
     return this.query(
       async () => {
-        const results: any = await new Promise((resolve, reject) => {
-          try {
-            (this.transaction?.connection ?? this.link).query(
-              newQuery,
-              newParams,
-              (error, results) => {
-                if (error) {
-                  reject(error);
-                }
-                resolve(results);
-              },
-            );
-          } catch (e) {
-            reject(e);
+        const results: any = await new Promise(async (resolve, reject) => {
+          // Only do one query at a time in transations.
+          let myResolve: (value: void | PromiseLike<void>) => void = () => {};
+          const myPromise = new Promise<void>((resolve) => {
+            myResolve = resolve;
+          });
+          const trans = transaction ?? this.transaction;
+          if (trans) {
+            const latestPromise = trans.latestPromise;
+            trans.latestPromise = myPromise;
+            await latestPromise;
           }
+          (trans?.connection ?? this.link).query(
+            newQuery,
+            newParams,
+            (error, results) => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(results);
+              }
+              myResolve();
+            },
+          );
         });
         return { changes: results.changedRows ?? 0 };
       },
@@ -3526,40 +3554,45 @@ export default class MySQLDriver extends NymphDriver {
     return true;
   }
 
-  protected async internalTransaction(name: string) {
+  protected async internalTransaction(name: string, setOnSelf = true) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
         'Transaction start attempted without a name.',
       );
     }
 
-    if (!this.transaction || this.transaction.count === 0) {
+    let transaction = this.transaction;
+
+    if (!transaction) {
       // Lock to one connection.
-      this.transaction = {
+      transaction = {
         count: 0,
         connection: await this.getConnection(),
+        latestPromise: Promise.resolve(),
       };
-      if (this.config.transactions) {
-        // We're not in a transaction yet, so start one.
-        await this.queryRun('START TRANSACTION;');
+      if (setOnSelf) {
+        this.transaction = transaction;
       }
     }
 
-    if (this.config.transactions) {
-      await this.queryRun(`SAVEPOINT ${MySQLDriver.escape(name)};`);
+    if (this.config.transactions && transaction.count === 0) {
+      // We're not in a transaction yet, so start one.
+      await this.queryRun('START TRANSACTION;', { transaction });
     }
 
-    this.transaction.count++;
+    transaction.count++;
 
-    return this.transaction;
+    if (this.config.transactions) {
+      await this.queryRun(`SAVEPOINT ${MySQLDriver.escape(name)};`, {
+        transaction,
+      });
+    }
+
+    return transaction;
   }
 
   public async startTransaction(name: string) {
-    const inTransaction = await this.inTransaction();
-    const transaction = await this.internalTransaction(name);
-    if (!inTransaction) {
-      this.transaction = null;
-    }
+    const transaction = await this.internalTransaction(name, false);
 
     const nymph = this.nymph.clone();
     (nymph.driver as MySQLDriver).transaction = transaction;

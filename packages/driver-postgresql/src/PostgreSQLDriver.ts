@@ -1113,10 +1113,12 @@ export default class PostgreSQLDriver extends NymphDriver {
     {
       etypes = [],
       params = {},
+      transaction,
       connection,
     }: {
       etypes?: string[];
       params?: { [k: string]: any };
+      transaction?: PostgreSQLDriverTransaction;
       connection?: PostgreSQLDriverConnection;
     } = {},
   ) {
@@ -1135,15 +1137,15 @@ export default class PostgreSQLDriver extends NymphDriver {
             const myPromise = new Promise<void>((resolve) => {
               myResolve = resolve;
             });
-            if (this.transaction) {
-              const latestPromise = this.transaction.latestPromise;
-              this.transaction.latestPromise = myPromise;
+            const trans = transaction ?? this.transaction;
+            if (trans) {
+              const latestPromise = trans.latestPromise;
+              trans.latestPromise = myPromise;
               await latestPromise;
             }
             try {
               const results = await (
-                (connection ?? this.transaction?.connection)?.client ??
-                this.link
+                (connection ?? trans?.connection)?.client ?? this.link
               ).query(newQuery, newParams);
               resolve(results);
             } catch (e) {
@@ -4044,37 +4046,43 @@ export default class PostgreSQLDriver extends NymphDriver {
     return true;
   }
 
-  protected async internalTransaction(name: string) {
+  protected async internalTransaction(name: string, setOnSelf = true) {
     if (name == null || typeof name !== 'string' || name.length === 0) {
       throw new InvalidParametersError(
         'Transaction start attempted without a name.',
       );
     }
 
-    if (!this.transaction || this.transaction.count === 0) {
+    let transaction = this.transaction;
+
+    if (!transaction) {
       // Lock to one connection.
-      this.transaction = {
+      transaction = {
         count: 0,
         connection: await this.getConnection(),
         latestPromise: Promise.resolve(),
       };
-      // We're not in a transaction yet, so start one.
-      await this.queryRun('BEGIN;');
+      if (setOnSelf) {
+        this.transaction = transaction;
+      }
     }
 
-    await this.queryRun(`SAVEPOINT ${PostgreSQLDriver.escape(name)};`);
+    if (transaction.count === 0) {
+      // We're not in a transaction yet, so start one.
+      await this.queryRun('BEGIN;', { transaction });
+    }
 
-    this.transaction.count++;
+    transaction.count++;
 
-    return this.transaction;
+    await this.queryRun(`SAVEPOINT ${PostgreSQLDriver.escape(name)};`, {
+      transaction,
+    });
+
+    return transaction;
   }
 
   public async startTransaction(name: string) {
-    const inTransaction = await this.inTransaction();
-    const transaction = await this.internalTransaction(name);
-    if (!inTransaction) {
-      this.transaction = null;
-    }
+    const transaction = await this.internalTransaction(name, false);
 
     const nymph = this.nymph.clone();
     (nymph.driver as PostgreSQLDriver).transaction = transaction;

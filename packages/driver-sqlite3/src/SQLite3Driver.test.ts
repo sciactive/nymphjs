@@ -22,12 +22,12 @@ describe('SQLite3Driver In-Memory', () => {
     nymph.driver.disconnect();
     nymph.driver.connect();
   }
-  EntitiesTest(nymph, it);
-  UIDTest(nymph, it);
-  ExportImportTest(nymph, it);
+  EntitiesTest(nymph, describe, it);
+  UIDTest(nymph, describe, it);
+  ExportImportTest(nymph, describe, it);
 
   const tilmeldNymph = nymph.clone();
-  TilmeldTest(tilmeldNymph, it);
+  TilmeldTest(tilmeldNymph, describe, it);
 });
 
 describe('SQLite3Driver DB File', () => {
@@ -42,12 +42,12 @@ describe('SQLite3Driver DB File', () => {
     nymph.driver.disconnect();
     nymph.driver.connect();
   }
-  EntitiesTest(nymph, it);
-  UIDTest(nymph, it);
-  ExportImportTest(nymph, it);
+  EntitiesTest(nymph, describe, it);
+  UIDTest(nymph, describe, it);
+  ExportImportTest(nymph, describe, it);
 
   const tilmeldNymph = nymph.clone();
-  TilmeldTest(tilmeldNymph, it);
+  TilmeldTest(tilmeldNymph, describe, it);
 
   it('cleans up the db', () => {
     try {

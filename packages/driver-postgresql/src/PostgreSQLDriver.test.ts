@@ -23,12 +23,12 @@ const postgresqlConfig = {
 const nymph = new Nymph({}, new PostgreSQLDriver(postgresqlConfig));
 
 describe('PostgreSQLDriver', () => {
-  EntitiesTest(nymph, it);
-  UIDTest(nymph, it);
-  ExportImportTest(nymph, it);
+  EntitiesTest(nymph, describe, it);
+  UIDTest(nymph, describe, it);
+  ExportImportTest(nymph, describe, it);
 
   const tilmeldNymph = nymph.clone();
-  TilmeldTest(tilmeldNymph, it);
+  TilmeldTest(tilmeldNymph, describe, it);
 
   afterAll(async () => {
     await nymph.driver.disconnect(); // avoid jest open handle error
