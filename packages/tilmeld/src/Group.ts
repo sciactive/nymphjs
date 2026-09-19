@@ -310,18 +310,6 @@ export default class Group extends AbleObject<GroupData> {
     this.$updateDataProtection();
   }
 
-  $setNymph(nymph: Nymph) {
-    this.$nymph = nymph;
-    if (!this.$asleep()) {
-      if (this.$data.user && this.$data.user.$nymph !== nymph) {
-        this.$data.user.$setNymph(nymph);
-      }
-      if (this.$data.parent && this.$data.parent.$nymph !== nymph) {
-        this.$data.parent.$setNymph(nymph);
-      }
-    }
-  }
-
   async $getUniques(): Promise<string[]> {
     const tilmeld = enforceTilmeld(this);
     const uniques = [`u:${this.$data.groupname}`];

@@ -604,6 +604,28 @@ export default class Entity<
     return obj;
   }
 
+  public $setNymph(nymph: Nymph) {
+    this.$nymph = nymph;
+    if (!this.$asleep()) {
+      const recurseData = (data: any) => {
+        if (Array.isArray(data)) {
+          for (let name in data) {
+            recurseData(data[name]);
+          }
+        } else if (data instanceof Entity) {
+          if (data.$nymph !== nymph) {
+            data.$setNymph(nymph);
+          }
+        } else if (typeof data === 'object') {
+          for (let name in data) {
+            recurseData(data[name]);
+          }
+        }
+      };
+      recurseData(this.$data);
+    }
+  }
+
   public $getGuaranteedGUID() {
     if (this.guid !== null) {
       return this.guid;

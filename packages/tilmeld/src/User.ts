@@ -675,20 +675,6 @@ export default class User extends AbleObject<UserData> {
     this.$updateDataProtection();
   }
 
-  $setNymph(nymph: Nymph) {
-    this.$nymph = nymph;
-    if (!this.$asleep()) {
-      if (this.$data.group && this.$data.group.$nymph !== nymph) {
-        this.$data.group.$setNymph(nymph);
-      }
-      for (const group of this.$data.groups ?? []) {
-        if (group && group.$nymph !== nymph) {
-          group.$setNymph(nymph);
-        }
-      }
-    }
-  }
-
   async $getUniques(): Promise<string[]> {
     const tilmeld = enforceTilmeld(this);
     const uniques = [`u:${this.$data.username}`];
