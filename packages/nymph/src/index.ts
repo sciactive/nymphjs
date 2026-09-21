@@ -1,6 +1,8 @@
 export * from './conf/index.js';
 export * from './driver/index.js';
 export * from './errors/index.js';
+export * from './decorators/index.js';
+export * from './helpers/index.js';
 
 export * from './Entity.types.js';
 

@@ -1,4 +1,6 @@
 import Entity from './Entity.js';
+import { requireAuthentication, transactional } from './decorators/index.js';
+import { transaction } from './helpers/index.js';
 
 export type TestModelData = {
   name?: string;
@@ -67,6 +69,14 @@ export class TestModel extends Entity<TestModelData> {
       this.$protectedTags = $protectedTags;
     };
   }
+
+  @requireAuthentication
+  public async $testRequireAuthenticationDecorator() {}
+
+  @transactional
+  public async $testTransactionalDecorator() {}
+
+  public async $testTransactionHelper() {}
 }
 
 /**
