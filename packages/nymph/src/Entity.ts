@@ -1225,9 +1225,7 @@ export default class Entity<
     }
     const refresh = await this.$nymph.getEntity(
       {
-        class: this.$nymph.getEntityClass(
-          this.constructor as EntityConstructor,
-        ),
+        class: this.constructor as EntityConstructor,
         skipCache: true,
         skipAc: this.$skipAc,
       },

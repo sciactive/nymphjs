@@ -62,7 +62,7 @@ export function EntitiesTest(
 
       const entityReferenceTest: TestModelClass & TestModelData =
         new TestModel();
-      entityReferenceTest.string = 'wrong';
+      entityReferenceTest.string = 'ref string';
       entityReferenceTest.timestamp = (strtotime('-2 days') || 0) * 1000;
       expect(await entityReferenceTest.$save()).toEqual(true);
       refGuid = entityReferenceTest.guid as string;
@@ -394,6 +394,98 @@ export function EntitiesTest(
       // TODO: nested transactions
     });
 
+    it('transactional decorator', async () => {
+      await createTestEntities();
+
+      if (testEntity.reference == null) {
+        throw new Error('Reference is null.');
+      }
+      await testEntity.reference.$wake();
+
+      expect(testEntity.string).toEqual('test');
+      expect(testEntity.reference.string).toEqual('ref string');
+
+      try {
+        await testEntity.$testTransactionalDecorator(true);
+
+        throw Error('Should have thrown an error.');
+      } catch (e: any) {
+        expect(e.message).toEqual('An error.');
+      }
+
+      if (!(await testEntity.$refresh())) {
+        throw new Error("Entity couldn't be refreshed.");
+      }
+      await testEntity.reference.$wake();
+
+      expect(testEntity.string).toEqual('test');
+      expect(testEntity.reference.string).toEqual('ref string');
+
+      expect(await testEntity.$testTransactionalDecorator(false)).toEqual(
+        'Success.',
+      );
+
+      if (!(await testEntity.$refresh())) {
+        throw new Error("Entity couldn't be refreshed.");
+      }
+      await testEntity.reference.$wake();
+
+      expect(testEntity.string).toEqual('this has been changed');
+      expect(testEntity.reference.string).toEqual('this has been changed too');
+
+      // Reset back to original values.
+      testEntity.reference.string = 'ref string';
+      expect(await testEntity.reference.$save()).toEqual(true);
+      testEntity.string = 'test';
+      expect(await testEntity.$save()).toEqual(true);
+    });
+
+    it('transaction helper', async () => {
+      await createTestEntities();
+
+      if (testEntity.reference == null) {
+        throw new Error('Reference is null.');
+      }
+      await testEntity.reference.$wake();
+
+      expect(testEntity.string).toEqual('test');
+      expect(testEntity.reference.string).toEqual('ref string');
+
+      try {
+        await testEntity.$testTransactionHelper(true);
+
+        throw Error('Should have thrown an error.');
+      } catch (e: any) {
+        expect(e.message).toEqual('An error.');
+      }
+
+      if (!(await testEntity.$refresh())) {
+        throw new Error("Entity couldn't be refreshed.");
+      }
+      await testEntity.reference.$wake();
+
+      expect(testEntity.string).toEqual('test');
+      expect(testEntity.reference.string).toEqual('ref string');
+
+      expect(await testEntity.$testTransactionHelper(false)).toEqual(
+        'Success.',
+      );
+
+      if (!(await testEntity.$refresh())) {
+        throw new Error("Entity couldn't be refreshed.");
+      }
+      await testEntity.reference.$wake();
+
+      expect(testEntity.string).toEqual('this has been changed');
+      expect(testEntity.reference.string).toEqual('this has been changed too');
+
+      // Reset back to original values.
+      testEntity.reference.string = 'ref string';
+      expect(await testEntity.reference.$save()).toEqual(true);
+      testEntity.string = 'test';
+      expect(await testEntity.$save()).toEqual(true);
+    });
+
     it('options', async () => {
       await createTestEntities();
 
@@ -674,7 +766,7 @@ export function EntitiesTest(
       // Retrieving entity by !equal...
       const resultEntity = await nymph.getEntities(
         { class: TestModel },
-        { type: '&', tag: 'test', '!equal': ['string', 'wrong'] },
+        { type: '&', tag: 'test', '!equal': ['string', 'ref string'] },
       );
       expect(testEntity.$inArray(resultEntity)).toEqual(true);
       expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -700,7 +792,7 @@ export function EntitiesTest(
       // Retrieving entity by !like...
       const resultEntity = await nymph.getEntities(
         { class: TestModel },
-        { type: '&', tag: 'test', '!like': ['string', 'wr_n%'] },
+        { type: '&', tag: 'test', '!like': ['string', 'r_f%'] },
       );
       expect(testEntity.$inArray(resultEntity)).toEqual(true);
       expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -726,7 +818,7 @@ export function EntitiesTest(
       // Retrieving entity by !ilike...
       const resultEntity = await nymph.getEntities(
         { class: TestModel },
-        { type: '&', tag: 'test', '!ilike': ['string', 'wr_n%'] },
+        { type: '&', tag: 'test', '!ilike': ['string', 'r_f%'] },
       );
       expect(testEntity.$inArray(resultEntity)).toEqual(true);
       expect(referenceEntity.$inArray(resultEntity)).toEqual(false);
@@ -2130,14 +2222,19 @@ export function EntitiesTest(
       await createMultipleTestEntities();
 
       for (const sort of ['cdate', 'mdate'] as ('cdate' | 'mdate')[]) {
+        // These ones might have the same dates (saved at exactly the same time)
+        // so we use >= and <= instead of > and <.
         // Retrieving entities sorted...
         let resultEntities = await nymph.getEntities({
           class: TestModel,
           sort,
         });
         expect(resultEntities.length).toBeGreaterThan(100);
+        expect(resultEntities[resultEntities.length - 1][sort]).toBeGreaterThan(
+          resultEntities[0][sort] ?? 0,
+        );
         for (let i = 0; i < resultEntities.length - 1; i++) {
-          expect(resultEntities[i + 1][sort]).toBeGreaterThan(
+          expect(resultEntities[i + 1][sort]).toBeGreaterThanOrEqual(
             resultEntities[i][sort] ?? 0,
           );
         }
@@ -2160,13 +2257,17 @@ export function EntitiesTest(
           reverse: true,
         });
         expect(resultEntities.length).toBeGreaterThan(100);
+        expect(resultEntities[resultEntities.length - 1][sort]).toBeLessThan(
+          resultEntities[0][sort] ?? 0,
+        );
         for (let i = 0; i < resultEntities.length - 1; i++) {
-          expect(resultEntities[i + 1][sort]).toBeLessThan(
+          expect(resultEntities[i + 1][sort]).toBeLessThanOrEqual(
             resultEntities[i][sort] ?? 0,
           );
         }
 
         // And again with other selectors.
+        // These ones should have different dates every time.
         // Retrieving entities sorted...
         resultEntities = await nymph.getEntities(
           { class: TestModel, sort },

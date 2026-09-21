@@ -1,5 +1,5 @@
 import Entity from './Entity.js';
-import { requireAuthentication, transactional } from './decorators/index.js';
+import { transactional } from './decorators/index.js';
 import { transaction } from './helpers/index.js';
 
 export type TestModelData = {
@@ -70,13 +70,52 @@ export class TestModel extends Entity<TestModelData> {
     };
   }
 
-  @requireAuthentication
-  public async $testRequireAuthenticationDecorator() {}
-
   @transactional
-  public async $testTransactionalDecorator() {}
+  public async $testTransactionalDecorator(throwError: boolean) {
+    this.$data.string = 'this has been changed';
 
-  public async $testTransactionHelper() {}
+    if (this.$data.reference) {
+      await this.$data.reference.$wake();
+      this.$data.reference.string = 'this has been changed too';
+      await this.$data.reference.$save();
+    }
+
+    await this.$save();
+
+    if (throwError) {
+      throw Error('An error.');
+    }
+
+    return 'Success.';
+  }
+
+  public async $testTransactionHelper(throwError: boolean) {
+    return await transaction(
+      this.$nymph,
+      'test-transaction',
+      async (nymph) => {
+        this.$setNymph(nymph);
+        this.$data.string = 'this has been changed';
+
+        if (this.$data.reference) {
+          await this.$data.reference.$wake();
+          this.$data.reference.string = 'this has been changed too';
+          await this.$data.reference.$save();
+        }
+
+        await this.$save();
+
+        if (throwError) {
+          throw Error('An error.');
+        }
+
+        return 'Success.';
+      },
+      async (nymph) => {
+        this.$setNymph(nymph);
+      },
+    );
+  }
 }
 
 /**

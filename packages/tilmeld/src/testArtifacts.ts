@@ -1,11 +1,13 @@
 import {
   Entity,
   Nymph,
+  HttpError,
   TilmeldAccessLevels,
   TilmeldAccessRequest,
 } from '@nymphjs/nymph';
 
 import Tilmeld from './Tilmeld.js';
+import { requireAbility, requireAuthentication } from './decorators/index.js';
 import { AccessControlError } from './errors/index.js';
 import type { AccessControlData } from './Tilmeld.types.js';
 import type UserClass from './User.js';
@@ -27,6 +29,26 @@ export class TestModel extends Entity<TestModelData> {
    * This should only be used by the backend.
    */
   private $skipAcWhenDeleting = false;
+
+  @requireAuthentication
+  public $testRequireAuthenticationDecorator() {
+    return true;
+  }
+
+  @requireAuthentication
+  public async $testRequireAuthenticationDecoratorAsync() {
+    return true;
+  }
+
+  @requireAbility('test-ability')
+  public $testRequireAbilityDecorator() {
+    return true;
+  }
+
+  @requireAbility('test-ability')
+  public async $testRequireAbilityDecoratorAsync() {
+    return true;
+  }
 
   /*
    * This should *never* be accessible on the client.
@@ -239,6 +261,103 @@ export function TilmeldTest(
       expect(testEntityBob?.acRead).toEqual([]);
       expect(testEntityBob?.acWrite).toEqual([]);
       expect(testEntityBob?.acFull).toEqual([]);
+    });
+
+    it('require authentication decorator', async () => {
+      const { bob } = await makeUsers();
+
+      await tilmeld.fillSession(bob);
+
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      expect(await bobsEntity.$save()).toEqual(true);
+
+      expect(bobsEntity.$testRequireAuthenticationDecorator()).toEqual(true);
+      expect(
+        await bobsEntity.$testRequireAuthenticationDecoratorAsync(),
+      ).toEqual(true);
+
+      tilmeld.clearSession();
+
+      try {
+        bobsEntity.$testRequireAuthenticationDecorator();
+
+        throw new Error('Should have thrown.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(HttpError);
+        expect(e.status).toEqual(403);
+        expect(e.message).toEqual('Forbidden');
+      }
+
+      try {
+        await bobsEntity.$testRequireAuthenticationDecoratorAsync();
+
+        throw new Error('Should have thrown.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(HttpError);
+        expect(e.status).toEqual(403);
+        expect(e.message).toEqual('Forbidden');
+      }
+    });
+
+    it('require ability decorator', async () => {
+      const { bob } = await makeUsers();
+
+      await tilmeld.fillSession(bob);
+
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      expect(await bobsEntity.$save()).toEqual(true);
+
+      try {
+        bobsEntity.$testRequireAbilityDecorator();
+
+        throw new Error('Should have thrown.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(HttpError);
+        expect(e.status).toEqual(403);
+        expect(e.message).toEqual('Forbidden');
+      }
+
+      try {
+        await bobsEntity.$testRequireAbilityDecoratorAsync();
+
+        throw new Error('Should have thrown.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(HttpError);
+        expect(e.status).toEqual(403);
+        expect(e.message).toEqual('Forbidden');
+      }
+
+      tilmeld.clearSession();
+
+      try {
+        bobsEntity.$testRequireAbilityDecorator();
+
+        throw new Error('Should have thrown.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(HttpError);
+        expect(e.status).toEqual(403);
+        expect(e.message).toEqual('Forbidden');
+      }
+
+      try {
+        await bobsEntity.$testRequireAbilityDecoratorAsync();
+
+        throw new Error('Should have thrown.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(HttpError);
+        expect(e.status).toEqual(403);
+        expect(e.message).toEqual('Forbidden');
+      }
+
+      bob.$grant('test-ability');
+      await tilmeld.fillSession(bob);
+
+      expect(bobsEntity.$testRequireAbilityDecorator()).toEqual(true);
+      expect(await bobsEntity.$testRequireAbilityDecoratorAsync()).toEqual(
+        true,
+      );
     });
 
     it("alice can't access an entity owned by bob", async () => {

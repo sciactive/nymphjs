@@ -2,6 +2,7 @@ export * from './conf/index.js';
 
 export * from './enforceTilmeld.js';
 
+export * from './decorators/index.js';
 export * from './errors/index.js';
 
 import AbleObject from './AbleObject.js';
