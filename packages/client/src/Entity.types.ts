@@ -57,9 +57,9 @@ export interface DataObjectInterface {
   /**
    * Delete the object from storage.
    *
-   * @returns True on success, false on failure.
+   * An error is thrown on failure.
    */
-  $delete(): Promise<boolean>;
+  $delete(): Promise<void>;
   /**
    * Perform a more strict comparison of this object to another.
    *
@@ -88,24 +88,22 @@ export interface DataObjectInterface {
   /**
    * Save the object's dirty data to storage.
    *
-   * @returns True on success, false on failure.
+   * An error is thrown on failure.
    */
-  $patch(): Promise<boolean>;
+  $patch(): Promise<void>;
   /**
    * Refresh the object from storage. (Bypasses Nymph's cache.)
    *
-   * If the object has been deleted from storage, the database cannot be
-   * reached, or a database error occurs, `refresh()` will return 0.
-   *
-   * @returns False if the data has not been saved, 0 if it can't be refreshed, true on success.
+   * @returns False if the data has not been saved, true on success. An error is
+   *          thrown on failure.
    */
   $refresh(): Promise<boolean | 0>;
   /**
    * Save the object to storage.
    *
-   * @returns True on success, false on failure.
+   * An error is thrown on failure.
    */
-  $save(): Promise<boolean>;
+  $save(): Promise<void>;
   /**
    * The object's data.
    */

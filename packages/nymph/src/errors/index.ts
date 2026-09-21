@@ -14,6 +14,8 @@ export * from './InvalidParametersError.js';
 
 export * from './InvalidStateError.js';
 
+export * from './MethodFailedError.js';
+
 export * from './NotConfiguredError.js';
 
 export * from './QueryFailedError.js';

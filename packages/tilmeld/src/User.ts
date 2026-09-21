@@ -1,11 +1,12 @@
 import crypto from 'node:crypto';
-import type {
-  Nymph,
-  EntityData,
-  EntityJson,
-  EntityPatch,
-  Selector,
-  SerializedEntityData,
+import {
+  type Nymph,
+  type EntityData,
+  type EntityJson,
+  type EntityPatch,
+  type Selector,
+  type SerializedEntityData,
+  MethodFailedError,
 } from '@nymphjs/nymph';
 import { humanSecret, nanoid } from '@nymphjs/guid';
 import type { EmailOptions } from 'email-templates';
@@ -465,7 +466,9 @@ export default class User extends AbleObject<UserData> {
       // Create a unique secret.
       getUser.recoverSecret = humanSecret();
       getUser.recoverSecretDate = Date.now();
-      if (!(await getUser.$saveSkipAC())) {
+      try {
+        await getUser.$saveSkipAC();
+      } catch (e: any) {
         return { result: false, message: "Couldn't save recovery secret." };
       }
 
@@ -554,13 +557,14 @@ export default class User extends AbleObject<UserData> {
     user.$password(data.password);
     delete user.recoverSecret;
     delete user.recoverSecretDate;
-    if (await user.$saveSkipAC()) {
+    try {
+      await user.$saveSkipAC();
       return {
         result: true,
         message:
           'Your password has been reset. You can now log in using your new password.',
       };
-    } else {
+    } catch (e: any) {
       return { result: false, message: 'Error saving new password.' };
     }
   }
@@ -1567,13 +1571,14 @@ export default class User extends AbleObject<UserData> {
     if (data.revokeCurrentTokens) {
       this.$data.revokeTokenDate = Date.now();
     }
-    if (await this.$save()) {
+    try {
+      await this.$save();
       if (data.revokeCurrentTokens) {
         const tilmeld = enforceTilmeld(this);
         await tilmeld.login(this, true);
       }
       return { result: true, message: 'Your password has been changed.' };
-    } else {
+    } catch (e: any) {
       return { result: false, message: "Couldn't save new password." };
     }
   }
@@ -1625,14 +1630,15 @@ export default class User extends AbleObject<UserData> {
 
     this.$data.revokeTokenDate = Date.now();
 
-    if (await this.$save()) {
+    try {
+      await this.$save();
       const tilmeld = enforceTilmeld(this);
       await tilmeld.login(this, true);
       return {
         result: true,
         message: 'You have logged out of all other sessions.',
       };
-    } else {
+    } catch (e: any) {
       return { result: false, message: "Couldn't save revocation date." };
     }
   }
@@ -1752,9 +1758,10 @@ export default class User extends AbleObject<UserData> {
 
     this.$data.totpSecret = data.secret;
 
-    if (await this.$save()) {
+    try {
+      await this.$save();
       return { result: true, message: 'Your two factor secret is now set.' };
-    } else {
+    } catch (e: any) {
       return { result: false, message: "Couldn't save two factor secret." };
     }
   }
@@ -1810,12 +1817,13 @@ export default class User extends AbleObject<UserData> {
 
     delete this.$data.totpSecret;
 
-    if (await this.$save()) {
+    try {
+      await this.$save();
       return {
         result: true,
         message: 'Two factor secret has been removed.',
       };
-    } else {
+    } catch (e: any) {
       return { result: false, message: "Couldn't remove two factor secret." };
     }
   }
@@ -2184,7 +2192,8 @@ export default class User extends AbleObject<UserData> {
         'tilmeld',
         `Registering new user "${this.$data.username}".`,
       );
-      if (await this.$saveSkipAC()) {
+      try {
+        await this.$saveSkipAC();
         this.$nymph.config.debugLog(
           'tilmeld',
           `New user registered "${this.$data.username}".`,
@@ -2252,7 +2261,7 @@ export default class User extends AbleObject<UserData> {
             });
           }
         }
-      } else {
+      } catch (e: any) {
         this.$nymph.config.debugError(
           'tilmeld',
           `Error registering new user "${this.$data.username}".`,
@@ -2293,7 +2302,7 @@ export default class User extends AbleObject<UserData> {
   public async $save() {
     let tilmeld = enforceTilmeld(this);
     if (this.$data.username == null || !this.$data.username.trim().length) {
-      return false;
+      throw new BadUsernameError('Username must not be empty.');
     }
 
     if (
@@ -2659,9 +2668,7 @@ export default class User extends AbleObject<UserData> {
           changed = true;
         }
         if (changed || group.guid == null) {
-          if (!(await group.$saveSkipAC())) {
-            throw Error('Error updating primary group for user.');
-          }
+          await group.$saveSkipAC();
         }
         this.$data.group = group;
       }
@@ -2705,7 +2712,6 @@ export default class User extends AbleObject<UserData> {
       throw e;
     }
 
-    let ret = false;
     let preGuid = this.guid;
     let preCdate = this.cdate;
     let preMdate = this.mdate;
@@ -2718,7 +2724,7 @@ export default class User extends AbleObject<UserData> {
         }
       }
 
-      ret = await super.$save();
+      await super.$save();
     } catch (e: any) {
       await tnymph.rollback(transaction);
       this.guid = preGuid;
@@ -2728,45 +2734,41 @@ export default class User extends AbleObject<UserData> {
       throw e;
     }
 
-    if (ret) {
-      if (sendVerification) {
-        // The email has changed, so send a new verification email.
-        if (!(await this.$sendEmailVerification())) {
-          await tnymph.rollback(transaction);
-          this.guid = preGuid;
-          this.cdate = preCdate;
-          this.mdate = preMdate;
-          this.$setNymph(nymph);
-          throw new Error("Couldn't send verification email.");
-        }
-      }
-
-      this.$descendantGroups = undefined;
-      this.$gatekeeperCache = undefined;
-
-      try {
-        for (let callback of (this.constructor as typeof User)
-          .afterSaveCallbacks) {
-          if (callback) {
-            await callback(this);
-          }
-        }
-      } catch (e: any) {
+    if (sendVerification) {
+      // The email has changed, so send a new verification email.
+      if (!(await this.$sendEmailVerification())) {
         await tnymph.rollback(transaction);
         this.guid = preGuid;
         this.cdate = preCdate;
         this.mdate = preMdate;
         this.$setNymph(nymph);
-        throw e;
+        throw new Error("Couldn't send verification email.");
       }
-
-      ret = await tnymph.commit(transaction);
-    } else {
-      await tnymph.rollback(transaction);
     }
+
+    this.$descendantGroups = undefined;
+    this.$gatekeeperCache = undefined;
+
+    try {
+      for (let callback of (this.constructor as typeof User)
+        .afterSaveCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
+      }
+    } catch (e: any) {
+      await tnymph.rollback(transaction);
+      this.guid = preGuid;
+      this.cdate = preCdate;
+      this.mdate = preMdate;
+      this.$setNymph(nymph);
+      throw e;
+    }
+
+    const committed = await tnymph.commit(transaction);
     this.$setNymph(nymph);
 
-    if (ret) {
+    if (committed) {
       this.$originalEmail = this.$data.email;
       this.$originalUsername = this.$data.username;
 
@@ -2776,9 +2778,9 @@ export default class User extends AbleObject<UserData> {
         // Update the user in the session cache.
         await tilmeld.fillSession(this);
       }
+    } else {
+      throw new MethodFailedError('Transaction could not be committed.');
     }
-
-    return ret;
   }
 
   /**
@@ -2786,7 +2788,7 @@ export default class User extends AbleObject<UserData> {
    */
   public async $saveSkipAC() {
     this.$skipAcWhenSaving = true;
-    return await this.$save();
+    await this.$save();
   }
 
   public $tilmeldSaveSkipAC() {
@@ -2824,8 +2826,6 @@ export default class User extends AbleObject<UserData> {
     const tnymph = await nymph.startTransaction(transaction);
     this.$setNymph(tnymph);
 
-    let success = false;
-
     try {
       if (!(await this.$refresh())) {
         throw new BadDataError('User could not be refreshed.');
@@ -2857,15 +2857,15 @@ export default class User extends AbleObject<UserData> {
         const $skipAcWhenDeleting = this.$skipAcWhenDeleting;
 
         // Delete the user.
-        success = await super.$delete();
-        if (success) {
-          // Delete the generated group.
-          success = $skipAcWhenDeleting
-            ? await this.$data.group.$deleteSkipAC()
-            : await this.$data.group.$delete();
+        await super.$delete();
+        // Delete the generated group.
+        if ($skipAcWhenDeleting) {
+          await this.$data.group.$deleteSkipAC();
+        } else {
+          await this.$data.group.$delete();
         }
       } else {
-        success = await super.$delete();
+        await super.$delete();
       }
     } catch (e: any) {
       await tnymph.rollback(transaction);
@@ -2873,25 +2873,24 @@ export default class User extends AbleObject<UserData> {
       throw e;
     }
 
-    if (success) {
-      try {
-        for (let callback of (this.constructor as typeof User)
-          .afterDeleteCallbacks) {
-          if (callback) {
-            await callback(this);
-          }
+    try {
+      for (let callback of (this.constructor as typeof User)
+        .afterDeleteCallbacks) {
+        if (callback) {
+          await callback(this);
         }
-      } catch (e: any) {
-        await tnymph.rollback(transaction);
-        this.$setNymph(nymph);
-        throw e;
       }
-      success = await tnymph.commit(transaction);
-    } else {
+    } catch (e: any) {
       await tnymph.rollback(transaction);
+      this.$setNymph(nymph);
+      throw e;
     }
+    const committed = await tnymph.commit(transaction);
     this.$setNymph(nymph);
-    return success;
+
+    if (!committed) {
+      throw new MethodFailedError('Transaction could not be committed.');
+    }
   }
 
   /*
@@ -2899,7 +2898,7 @@ export default class User extends AbleObject<UserData> {
    */
   async $deleteSkipAC() {
     this.$skipAcWhenDeleting = true;
-    return await this.$delete();
+    await this.$delete();
   }
 
   $tilmeldDeleteSkipAC() {

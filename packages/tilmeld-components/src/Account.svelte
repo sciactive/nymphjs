@@ -445,14 +445,11 @@
     }
 
     try {
-      if (await $user.$save()) {
-        originalEmail = $user.email;
-        open = false;
-        usernameVerifiedMessage = undefined;
-        emailVerifiedMessage = undefined;
-      } else {
-        failureMessage = 'Error saving account changes.';
-      }
+      await $user.$save();
+      originalEmail = $user.email;
+      open = false;
+      usernameVerifiedMessage = undefined;
+      emailVerifiedMessage = undefined;
     } catch (e: any) {
       failureMessage = e?.message;
     }

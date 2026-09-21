@@ -303,10 +303,11 @@ export function createServer(
             continue;
           }
           try {
-            if (await entity.$save()) {
+            try {
+              await entity.$save();
               created.push(entity);
               hadSuccess = true;
-            } else {
+            } catch (e: any) {
               created.push(false);
             }
           } catch (e: any) {
@@ -647,10 +648,11 @@ export function createServer(
           continue;
         }
         try {
-          if (await entity.$save()) {
+          try {
+            await entity.$save();
             saved.push(entity);
             hadSuccess = true;
-          } else {
+          } catch (e: any) {
             saved.push(false);
           }
         } catch (e: any) {
@@ -737,9 +739,10 @@ export function createServer(
             continue;
           }
           try {
-            if (await entity.$delete()) {
+            try {
+              await entity.$delete();
               deleted.push(entData.guid);
-            } else {
+            } catch (e: any) {
               failures = true;
             }
           } catch (e: any) {

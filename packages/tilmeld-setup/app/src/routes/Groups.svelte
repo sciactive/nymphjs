@@ -138,7 +138,7 @@
   import Fab from '@smui/fab';
   import { Icon } from '@smui/common';
 
-  import { nymph, Group, User } from '../nymph';
+  import { nymph, Group, User } from '../nymph.js';
 
   let {
     router,
@@ -152,7 +152,7 @@
     user: Writable<(UserClass & CurrentUserData) | null | undefined>;
   } = $props();
 
-  let entitySearch = $state(params.query ?? '');
+  let entitySearch = $derived(params.query ?? '');
   let failureMessage: string | undefined = $state();
 
   $effect(() => {

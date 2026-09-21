@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 
 import { cloneDeep } from 'lodash-es';
 
+import { EntityConflictError } from './errors/index.js';
 import { MockNymph } from './testMocks.js';
 import {
   TestBModel as TestBModelClass,
@@ -44,22 +45,22 @@ describe('Entity', () => {
     expect(testEntity.array).toEqual(['full', 'of', 'values', 500]);
     expect(testEntity.number).toEqual(30);
 
-    expect(await testEntity.$save()).toEqual(true);
+    await testEntity.$save();
     expect(typeof testEntity.guid).toEqual('string');
 
     entityReferenceTest = await TestModel.factory();
     entityReferenceTest.string = 'wrong';
-    expect(await entityReferenceTest.$save()).toEqual(true);
+    await entityReferenceTest.$save();
     entityReferenceGuid = entityReferenceTest.guid as string;
     testEntity.reference = entityReferenceTest;
     testEntity.refArray = [entityReferenceTest];
     testEntity.refObject = {
       entity: entityReferenceTest,
     };
-    expect(await testEntity.$save()).toEqual(true);
+    await testEntity.$save();
 
     entityReferenceTest.test = 'good';
-    expect(await entityReferenceTest.$save()).toEqual(true);
+    await entityReferenceTest.$save();
   });
 
   it('comparisons work', async () => {
@@ -118,14 +119,14 @@ describe('Entity', () => {
   it('refresh updates', async () => {
     expect(testEntity.string).toEqual('test');
     testEntity.string = 'updated';
-    expect(await testEntity.$save()).toEqual(true);
+    await testEntity.$save();
     await testEntity.$refresh();
-    expect(await testEntity.$save()).toEqual(true);
+    await testEntity.$save();
 
     const retrieve = await TestModel.factory(testEntity.guid as string);
     expect(retrieve.string).toEqual('updated');
     retrieve.string = 'test';
-    expect(await retrieve.$save()).toBe(true);
+    await retrieve.$save();
 
     await testEntity.$refresh();
     expect(testEntity.string).toEqual('test');
@@ -135,12 +136,18 @@ describe('Entity', () => {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const testEntityCopy = await TestModel.factory(testEntity.guid as string);
-    expect(await testEntityCopy.$save()).toEqual(true);
+    await testEntityCopy.$save();
     expect(testEntityCopy.mdate ?? 0).toBeGreaterThan(testEntity.mdate ?? 0);
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    expect(await testEntity.$save()).toEqual(false);
+    try {
+      await testEntity.$save();
+
+      throw new Error('Should have thrown.');
+    } catch (e: any) {
+      expect(e).toBeInstanceOf(EntityConflictError);
+    }
 
     await testEntity.$refresh();
 
@@ -189,12 +196,12 @@ describe('Entity', () => {
 
     // Remove all tags.
     testEntity.$removeTag('test');
-    expect(await testEntity.$save()).toEqual(true);
+    await testEntity.$save();
     expect(await testEntity.$refresh()).toEqual(true);
     expect(testEntity.$hasTag('test')).toEqual(false);
     expect(testEntity.$getTags()).toEqual([]);
     testEntity.$addTag('test');
-    expect(await testEntity.$save()).toEqual(true);
+    await testEntity.$save();
     expect(testEntity.$hasTag('test')).toEqual(true);
   });
 
@@ -396,7 +403,7 @@ describe('Entity', () => {
     // Test that an old JSON payload causes a conflict.
     const json = JSON.stringify(testEntity);
 
-    expect(await testEntity.$save()).toEqual(true);
+    await testEntity.$save();
 
     let thrown = false;
     let thrownName: string = '';

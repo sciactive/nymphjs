@@ -751,7 +751,9 @@ describe('Nymph REST Server and Client', () => {
             try {
               const entity = await PubSubDisabled.factory();
               entity.name = 'Someone';
-              if (!(await entity.$save())) {
+              try {
+                await entity.$save();
+              } catch (e: any) {
                 throw new Error("Couldn't save.");
               }
               resolve(subscription);

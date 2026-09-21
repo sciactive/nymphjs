@@ -108,7 +108,7 @@ export function TilmeldTest(
       );
       expect(Array.isArray(all)).toEqual(true);
       for (const cur of all) {
-        expect(await cur.$deleteSkipAC()).toEqual(true);
+        await cur.$deleteSkipAC();
       }
 
       all = await nymph.getEntities({ class: TestModel });
@@ -117,7 +117,7 @@ export function TilmeldTest(
       all = await nymph.getEntities({ class: User });
       expect(Array.isArray(all)).toEqual(true);
       for (const cur of all) {
-        expect(await cur.$deleteSkipAC()).toEqual(true);
+        await cur.$deleteSkipAC();
       }
 
       all = await nymph.getEntities({ class: User });
@@ -126,7 +126,7 @@ export function TilmeldTest(
       all = await nymph.getEntities({ class: Group });
       expect(Array.isArray(all)).toEqual(true);
       for (const cur of all) {
-        expect(await cur.$deleteSkipAC()).toEqual(true);
+        await cur.$deleteSkipAC();
       }
 
       all = await nymph.getEntities({ class: Group });
@@ -241,7 +241,7 @@ export function TilmeldTest(
 
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -270,7 +270,7 @@ export function TilmeldTest(
 
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.$testRequireAuthenticationDecorator()).toEqual(true);
       expect(
@@ -307,7 +307,7 @@ export function TilmeldTest(
 
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       try {
         bobsEntity.$testRequireAbilityDecorator();
@@ -367,7 +367,7 @@ export function TilmeldTest(
 
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -399,7 +399,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acRead = [alice.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -447,7 +447,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acWrite = [alice.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -476,7 +476,7 @@ export function TilmeldTest(
       }
 
       testEntityAlice.name = "Haha! It's mine now!";
-      expect(await testEntityAlice.$save()).toEqual(true);
+      await testEntityAlice.$save();
 
       expect(await testEntityAlice.$refresh()).toEqual(true);
       expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
@@ -490,7 +490,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acWrite = [alice.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -537,7 +537,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acFull = [alice.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -565,7 +565,7 @@ export function TilmeldTest(
         throw new Error();
       }
 
-      expect(await testEntityAlice.$delete()).toEqual(true);
+      await testEntityAlice.$delete();
       const verifyEntityAlice = await nymph.getEntity(
         { class: TestModel },
         { type: '&', guid: bobsEntity.guid || '' },
@@ -581,7 +581,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acRead = [abgroup.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -614,7 +614,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acRead = [abgroup.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -662,7 +662,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acWrite = [abgroup.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -691,7 +691,7 @@ export function TilmeldTest(
       }
 
       testEntityAlice.name = "Haha! It's mine now!";
-      expect(await testEntityAlice.$save()).toEqual(true);
+      await testEntityAlice.$save();
 
       expect(await testEntityAlice.$refresh()).toEqual(true);
       expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
@@ -705,7 +705,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acWrite = [abgroup.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -752,7 +752,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acFull = [abgroup.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -780,7 +780,7 @@ export function TilmeldTest(
         throw new Error();
       }
 
-      expect(await testEntityAlice.$delete()).toEqual(true);
+      await testEntityAlice.$delete();
       const verifyEntityAlice = await nymph.getEntity(
         { class: TestModel },
         { type: '&', guid: bobsEntity.guid || '' },
@@ -796,7 +796,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.group = alice.group;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -829,7 +829,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.group = alice.group;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -878,7 +878,7 @@ export function TilmeldTest(
       bobsEntity.name = "Bob's Entity";
       bobsEntity.group = alice.group;
       bobsEntity.acGroup = TilmeldAccessLevels.WRITE_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -907,7 +907,7 @@ export function TilmeldTest(
       }
 
       testEntityAlice.name = "Haha! It's mine now!";
-      expect(await testEntityAlice.$save()).toEqual(true);
+      await testEntityAlice.$save();
 
       expect(await testEntityAlice.$refresh()).toEqual(true);
       expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
@@ -922,7 +922,7 @@ export function TilmeldTest(
       bobsEntity.name = "Bob's Entity";
       bobsEntity.group = alice.group;
       bobsEntity.acGroup = TilmeldAccessLevels.WRITE_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -970,7 +970,7 @@ export function TilmeldTest(
       bobsEntity.name = "Bob's Entity";
       bobsEntity.group = alice.group;
       bobsEntity.acGroup = TilmeldAccessLevels.FULL_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -998,7 +998,7 @@ export function TilmeldTest(
         throw new Error();
       }
 
-      expect(await testEntityAlice.$delete()).toEqual(true);
+      await testEntityAlice.$delete();
       const verifyEntityAlice = await nymph.getEntity(
         { class: TestModel },
         { type: '&', guid: bobsEntity.guid || '' },
@@ -1014,7 +1014,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1047,7 +1047,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1095,7 +1095,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acOther = TilmeldAccessLevels.WRITE_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1124,7 +1124,7 @@ export function TilmeldTest(
       }
 
       testEntityAlice.name = "Haha! It's mine now!";
-      expect(await testEntityAlice.$save()).toEqual(true);
+      await testEntityAlice.$save();
 
       expect(await testEntityAlice.$refresh()).toEqual(true);
       expect(testEntityAlice.name).toEqual("Haha! It's mine now!");
@@ -1138,7 +1138,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acOther = TilmeldAccessLevels.WRITE_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1185,7 +1185,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acOther = TilmeldAccessLevels.FULL_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1213,7 +1213,7 @@ export function TilmeldTest(
         throw new Error();
       }
 
-      expect(await testEntityAlice.$delete()).toEqual(true);
+      await testEntityAlice.$delete();
       const verifyEntityAlice = await nymph.getEntity(
         { class: TestModel },
         { type: '&', guid: bobsEntity.guid || '' },
@@ -1229,7 +1229,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acOther = TilmeldAccessLevels.FULL_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1256,7 +1256,7 @@ export function TilmeldTest(
         throw new Error();
       }
 
-      expect(await testEntityNobody.$delete()).toEqual(true);
+      await testEntityNobody.$delete();
       const verifyEntityNobody = await nymph.getEntity(
         { class: TestModel },
         { type: '&', guid: bobsEntity.guid || '' },
@@ -1271,7 +1271,7 @@ export function TilmeldTest(
         ...(await nymph.getEntities({ class: Group, skipAc: true })),
       ];
       for (let entity of allEntities) {
-        expect(await entity.$deleteSkipAC()).toEqual(true);
+        await entity.$deleteSkipAC();
       }
     });
 
@@ -1289,7 +1289,7 @@ export function TilmeldTest(
       ];
       bobsEntity.acWrite = [alice.guid ?? '', bob.guid ?? ''];
       bobsEntity.acFull = [bob.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1661,7 +1661,7 @@ export function TilmeldTest(
 
       const alicesEntity = await TestModel.factory();
       alicesEntity.name = "Alice's Entity";
-      expect(await alicesEntity.$save()).toEqual(true);
+      await alicesEntity.$save();
 
       expect(alicesEntity.guid).not.toBeNull();
       expect(alice.$is(alicesEntity.user)).toEqual(true);
@@ -1685,7 +1685,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.group = alice.group;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1734,7 +1734,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acOther = TilmeldAccessLevels.READ_ACCESS;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1780,7 +1780,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acRead = [alice.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1826,7 +1826,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acWrite = [alice.group?.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1875,7 +1875,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.group = abgroup;
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1924,7 +1924,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acFull = [abgroup.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -1986,7 +1986,7 @@ export function TilmeldTest(
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
       bobsEntity.acFull = [alice.guid ?? ''];
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);
@@ -2004,7 +2004,7 @@ export function TilmeldTest(
 
       const alicesEntity = await TestModel.factory();
       alicesEntity.name = "Alice's Entity";
-      expect(await alicesEntity.$save()).toEqual(true);
+      await alicesEntity.$save();
 
       expect(alicesEntity.guid).not.toBeNull();
       expect(alice.$is(alicesEntity.user)).toEqual(true);
@@ -2060,7 +2060,7 @@ export function TilmeldTest(
 
       const bobsEntity = await TestModel.factory();
       bobsEntity.name = "Bob's Entity";
-      expect(await bobsEntity.$save()).toEqual(true);
+      await bobsEntity.$save();
 
       expect(bobsEntity.guid).not.toBeNull();
       expect(bob.$is(bobsEntity.user)).toEqual(true);

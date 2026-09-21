@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
-import type {
-  Nymph,
-  EntityData,
-  EntityJson,
-  EntityPatch,
-  Options,
-  Selector,
-  SerializedEntityData,
+import {
+  type Nymph,
+  type EntityData,
+  type EntityJson,
+  type EntityPatch,
+  type Options,
+  type Selector,
+  type SerializedEntityData,
+  MethodFailedError,
 } from '@nymphjs/nymph';
 import { nanoid } from '@nymphjs/guid';
 import { difference, xor } from 'lodash-es';
@@ -833,7 +834,7 @@ export default class Group extends AbleObject<GroupData> {
   public async $save() {
     let tilmeld = enforceTilmeld(this);
     if (this.$data.groupname == null || !this.$data.groupname.trim().length) {
-      return false;
+      throw new BadUsernameError('Groupname must not be empty.');
     }
 
     // Lowercase the domain part.
@@ -995,11 +996,13 @@ export default class Group extends AbleObject<GroupData> {
       );
       if (currentPrimary != null && !this.$is(currentPrimary)) {
         currentPrimary.defaultPrimary = false;
-        if (
-          this.$skipAcWhenSaving
-            ? !(await currentPrimary.$saveSkipAC())
-            : !(await currentPrimary.$save())
-        ) {
+        try {
+          if (this.$skipAcWhenSaving) {
+            await currentPrimary.$saveSkipAC();
+          } else {
+            await currentPrimary.$save();
+          }
+        } catch (e: any) {
           throw new CouldNotChangeDefaultPrimaryGroupError(
             'Could not change new user primary group from ' +
               `${currentPrimary.groupname}.`,
@@ -1026,19 +1029,22 @@ export default class Group extends AbleObject<GroupData> {
         }
       }
 
-      let ret = await super.$save();
-      if (ret) {
-        this.$originalGroupname = this.$data.groupname;
-      }
+      await super.$save();
+
+      this.$originalGroupname = this.$data.groupname;
+
       for (let callback of (this.constructor as typeof Group)
         .afterSaveCallbacks) {
         if (callback) {
           await callback(this);
         }
       }
-      ret = await tnymph.commit(transaction);
+      const committed = await tnymph.commit(transaction);
       this.$setNymph(nymph);
-      return ret;
+
+      if (!committed) {
+        throw new MethodFailedError('Transaction could not be committed.');
+      }
     } catch (e: any) {
       await tnymph.rollback(transaction);
       this.guid = preGuid;
@@ -1054,7 +1060,7 @@ export default class Group extends AbleObject<GroupData> {
    */
   public async $saveSkipAC() {
     this.$skipAcWhenSaving = true;
-    return await this.$save();
+    await this.$save();
   }
 
   public $tilmeldSaveSkipAC() {
@@ -1097,14 +1103,16 @@ export default class Group extends AbleObject<GroupData> {
       const descendants = await this.$getDescendants();
       if (descendants.length) {
         for (let curGroup of descendants) {
-          if (
-            this.$skipAcWhenDeleting
-              ? !(await curGroup.$deleteSkipAC())
-              : !(await curGroup.$delete())
-          ) {
+          try {
+            if (this.$skipAcWhenDeleting) {
+              await curGroup.$deleteSkipAC();
+            } else {
+              await curGroup.$delete();
+            }
+          } catch (e: any) {
             await tnymph.rollback(transaction);
             this.$setNymph(nymph);
-            return false;
+            throw e;
           }
         }
       }
@@ -1122,14 +1130,16 @@ export default class Group extends AbleObject<GroupData> {
       );
       for (let user of primaryUsers) {
         delete user.group;
-        if (
-          this.$skipAcWhenDeleting
-            ? !(await user.$saveSkipAC())
-            : !(await user.$save())
-        ) {
+        try {
+          if (this.$skipAcWhenDeleting) {
+            await user.$saveSkipAC();
+          } else {
+            await user.$save();
+          }
+        } catch (e: any) {
           await tnymph.rollback(transaction);
           this.$setNymph(nymph);
-          return false;
+          throw e;
         }
       }
 
@@ -1146,33 +1156,35 @@ export default class Group extends AbleObject<GroupData> {
       );
       for (let user of secondaryUsers) {
         user.$delGroup(this);
-        if (
-          this.$skipAcWhenDeleting
-            ? !(await user.$saveSkipAC())
-            : !(await user.$save())
-        ) {
+        try {
+          if (this.$skipAcWhenDeleting) {
+            await user.$saveSkipAC();
+          } else {
+            await user.$save();
+          }
+        } catch (e: any) {
           await tnymph.rollback(transaction);
           this.$setNymph(nymph);
-          return false;
+          throw e;
         }
       }
 
       // Delete the group.
-      let success = await super.$delete();
-      if (success) {
-        for (let callback of (this.constructor as typeof Group)
-          .afterDeleteCallbacks) {
-          if (callback) {
-            await callback(this);
-          }
-        }
+      await super.$delete();
 
-        success = await tnymph.commit(transaction);
-      } else {
-        await tnymph.rollback(transaction);
+      for (let callback of (this.constructor as typeof Group)
+        .afterDeleteCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
       }
+
+      const committed = await tnymph.commit(transaction);
       this.$setNymph(nymph);
-      return success;
+
+      if (!committed) {
+        throw new MethodFailedError('Transaction could not be committed.');
+      }
     } catch (e: any) {
       await tnymph.rollback(transaction);
       this.$setNymph(nymph);
@@ -1185,7 +1197,7 @@ export default class Group extends AbleObject<GroupData> {
    */
   async $deleteSkipAC() {
     this.$skipAcWhenDeleting = true;
-    return await this.$delete();
+    await this.$delete();
   }
 
   $tilmeldDeleteSkipAC() {

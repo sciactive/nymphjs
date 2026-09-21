@@ -19,6 +19,7 @@ import {
   EntityIsSleepingReferenceError,
   InvalidParametersError,
   InvalidStateError,
+  MethodFailedError,
 } from './errors/index.js';
 import {
   entitiesToReferences,
@@ -670,10 +671,12 @@ export default class Entity<
     return this.$clientEnabledMethods;
   }
 
-  public async $delete(): Promise<boolean> {
-    this.$check();
+  public async $delete(): Promise<void> {
+    await this.$wake();
 
-    return await this.$nymph.deleteEntity(this);
+    if (!(await this.$nymph.deleteEntity(this))) {
+      throw new MethodFailedError('Failed to delete entity.');
+    }
   }
 
   public $equals(object: any) {
@@ -1232,7 +1235,7 @@ export default class Entity<
       { type: '&', guid: this.guid },
     );
     if (refresh == null) {
-      return 0;
+      throw new MethodFailedError("The entity's data could not be refreshed.");
     }
     this.tags = refresh.tags;
     this.cdate = refresh.cdate;
@@ -1247,10 +1250,12 @@ export default class Entity<
     this.tags = difference(this.tags, tags);
   }
 
-  public async $save(): Promise<boolean> {
+  public async $save(): Promise<void> {
     await this.$wake();
 
-    return await this.$nymph.saveEntity(this);
+    if (!(await this.$nymph.saveEntity(this))) {
+      throw new MethodFailedError('Failed to save entity.');
+    }
   }
 
   public $toReference(existingOnly?: boolean) {

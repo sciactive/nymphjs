@@ -95,7 +95,7 @@ export function UserTest(
         expect(e).toBeInstanceOf(EntityUniqueConstraintError);
       }
 
-      expect(await newUserA.$deleteSkipAC()).toEqual(true);
+      await newUserA.$deleteSkipAC();
 
       tilmeld.config.generatePrimary = true;
     });
@@ -139,7 +139,7 @@ export function UserTest(
         expect(e).toBeInstanceOf(EntityUniqueConstraintError);
       }
 
-      expect(await newUserA.$deleteSkipAC()).toEqual(true);
+      await newUserA.$deleteSkipAC();
 
       tilmeld.config.generatePrimary = true;
     });
@@ -155,7 +155,7 @@ export function UserTest(
       domainAdmin.$password('password');
       domainAdmin.$grant('tilmeld/domain/example.com/admin');
 
-      expect(await domainAdmin.$saveSkipAC()).toEqual(true);
+      await domainAdmin.$saveSkipAC();
 
       // Log in the domain admin.
       await tilmeld.fillSession(domainAdmin);
@@ -169,13 +169,13 @@ export function UserTest(
       domainUser.name = 'New User';
       domainUser.$password('password');
 
-      expect(await domainUser.$save()).toEqual(true);
+      await domainUser.$save();
 
       tilmeld.clearSession();
 
       for (const user of [domainAdmin, domainUser]) {
         if (user.guid != null) {
-          expect(await user.$deleteSkipAC()).toEqual(true);
+          await user.$deleteSkipAC();
         }
       }
     });
@@ -191,7 +191,7 @@ export function UserTest(
       domainAdmin.$password('password');
       domainAdmin.$grant('tilmeld/domain/example.com/admin');
 
-      expect(await domainAdmin.$saveSkipAC()).toEqual(true);
+      await domainAdmin.$saveSkipAC();
 
       // Log in the domain admin.
       await tilmeld.fillSession(domainAdmin);
@@ -218,7 +218,7 @@ export function UserTest(
 
       for (const user of [domainAdmin, domainUser]) {
         if (user.guid != null) {
-          expect(await user.$deleteSkipAC()).toEqual(true);
+          await user.$deleteSkipAC();
         }
       }
     });

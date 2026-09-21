@@ -390,7 +390,7 @@
   import Button from '@smui/button';
   import { Icon, Label } from '@smui/common';
 
-  import { nymph, Group, User } from '../nymph';
+  import { nymph, Group, User } from '../nymph.js';
 
   let {
     router,
@@ -597,21 +597,18 @@
     failureMessage = undefined;
     const newEntity = $entity.guid == null;
     try {
-      if (await $entity.$save()) {
-        await readyEntity();
-        success = true;
-        if (newEntity) {
-          router.navigate(
-            `/groups/edit/${encodeURIComponent($entity.guid || '')}`,
-            { historyAPIMethod: 'replaceState' },
-          );
-        }
-        setTimeout(() => {
-          success = undefined;
-        }, 1000);
-      } else {
-        failureMessage = 'Error saving group.';
+      await $entity.$save();
+      await readyEntity();
+      success = true;
+      if (newEntity) {
+        router.navigate(
+          `/groups/edit/${encodeURIComponent($entity.guid || '')}`,
+          { historyAPIMethod: 'replaceState' },
+        );
       }
+      setTimeout(() => {
+        success = undefined;
+      }, 1000);
     } catch (e: any) {
       console.log('error:', e);
       failureMessage = e?.message;
@@ -624,11 +621,8 @@
     if (confirm('Are you sure you want to delete this?')) {
       saving = true;
       try {
-        if (await $entity.$delete()) {
-          router.navigate('', { historyAPIMethod: 'back' });
-        } else {
-          failureMessage = 'An error occurred.';
-        }
+        await $entity.$delete();
+        router.navigate('', { historyAPIMethod: 'back' });
       } catch (e: any) {
         failureMessage = e?.message;
       }

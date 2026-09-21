@@ -5,7 +5,10 @@ import { strtotime } from 'locutus/php/datetime/index';
 import { guid } from '@nymphjs/guid';
 
 import type Nymph from '../Nymph.js';
-import { EntityUniqueConstraintError } from '../errors/index.js';
+import {
+  EntityUniqueConstraintError,
+  MethodFailedError,
+} from '../errors/index.js';
 import {
   TestBModel as TestBModelClass,
   TestModel as TestModelClass,
@@ -56,7 +59,7 @@ export function EntitiesTest(
       testEntity.number = 30;
       testEntity.numberString = '30';
       testEntity.timestamp = Date.now();
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
       expect(testEntity.guid).not.toBeNull();
       testGuid = testEntity.guid as string;
 
@@ -64,14 +67,14 @@ export function EntitiesTest(
         new TestModel();
       entityReferenceTest.string = 'ref string';
       entityReferenceTest.timestamp = (strtotime('-2 days') || 0) * 1000;
-      expect(await entityReferenceTest.$save()).toEqual(true);
+      await entityReferenceTest.$save();
       refGuid = entityReferenceTest.guid as string;
       testEntity.reference = entityReferenceTest;
       testEntity.refArray = [entityReferenceTest];
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
 
       entityReferenceTest.test = 'good';
-      expect(await entityReferenceTest.$save()).toEqual(true);
+      await entityReferenceTest.$save();
 
       // Test asynchronous getEntity.
       testEntity = (await nymph.getEntity(
@@ -94,7 +97,7 @@ export function EntitiesTest(
           testEntity.number = 100 - i;
           testEntity.$removeTag('test');
           testEntity.$addTag('multiTest');
-          expect(await testEntity.$save()).toEqual(true);
+          await testEntity.$save();
           // Pause for a few milliseconds so the cdate and mdate can be sorted.
           await new Promise((res) => setTimeout(() => res(1), 5));
         }
@@ -105,7 +108,7 @@ export function EntitiesTest(
       let amodels = await nymph.getEntities({ class: TestModel });
       expect(Array.isArray(amodels)).toEqual(true);
       for (const cur of amodels) {
-        expect(await cur.$delete()).toEqual(true);
+        await cur.$delete();
       }
 
       amodels = await nymph.getEntities({ class: TestModel });
@@ -114,7 +117,7 @@ export function EntitiesTest(
       let bmodels = await nymph.getEntities({ class: TestBModel });
       expect(Array.isArray(bmodels)).toEqual(true);
       for (const cur of bmodels) {
-        expect(await cur.$delete()).toEqual(true);
+        await cur.$delete();
       }
 
       bmodels = await nymph.getEntities({ class: TestBModel });
@@ -128,7 +131,13 @@ export function EntitiesTest(
     it("doesn't create empty entity", async () => {
       const testEntity = await TestEmptyModel.factory();
 
-      expect(await testEntity.$save()).toBeFalsy();
+      try {
+        await testEntity.$save();
+
+        throw new Error('Should have thrown.');
+      } catch (e: any) {
+        expect(e).toBeInstanceOf(MethodFailedError);
+      }
       expect(testEntity.guid).toBeNull();
     });
 
@@ -180,7 +189,7 @@ export function EntitiesTest(
       // Get the guaranteed GUID.
       const testGuid = testEntity.$getGuaranteedGUID();
 
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
       expect(testEntity.guid).not.toBeNull();
       expect(testEntity.guid).toEqual(testGuid);
 
@@ -189,7 +198,7 @@ export function EntitiesTest(
       expect(testEntity.$is(resultEntity)).toEqual(true);
 
       // Delete the entity.
-      expect(await testEntity.$delete()).toEqual(true);
+      await testEntity.$delete();
     });
 
     it('create, list, and delete indexes', async () => {
@@ -324,7 +333,7 @@ export function EntitiesTest(
 
       // Change a value in the test entity.
       testEntity.string = 'bad value';
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
 
       // Rollback the transaction.
       await transaction.rollback('test');
@@ -344,7 +353,7 @@ export function EntitiesTest(
       expect(await transaction.inTransaction()).toEqual(true);
 
       // Delete the entity.
-      expect(await testEntity.$delete()).toEqual(true);
+      await testEntity.$delete();
       const resultEntity = await transaction.getEntity(
         { class: TestModel },
         testGuid,
@@ -374,7 +383,7 @@ export function EntitiesTest(
 
       // Make a change.
       testEntity.string = 'fish';
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
 
       // Commit the transaction.
       await transaction.commit('test.1');
@@ -389,7 +398,7 @@ export function EntitiesTest(
 
       // Finally, change it back.
       testEntity.string = 'test';
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
 
       // TODO: nested transactions
     });
@@ -435,9 +444,9 @@ export function EntitiesTest(
 
       // Reset back to original values.
       testEntity.reference.string = 'ref string';
-      expect(await testEntity.reference.$save()).toEqual(true);
+      await testEntity.reference.$save();
       testEntity.string = 'test';
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
     });
 
     it('transaction helper', async () => {
@@ -481,9 +490,9 @@ export function EntitiesTest(
 
       // Reset back to original values.
       testEntity.reference.string = 'ref string';
-      expect(await testEntity.reference.$save()).toEqual(true);
+      await testEntity.reference.$save();
       testEntity.string = 'test';
-      expect(await testEntity.$save()).toEqual(true);
+      await testEntity.$save();
     });
 
     it('options', async () => {
@@ -2370,7 +2379,7 @@ export function EntitiesTest(
 
       // Deleting referenced entities...
       await testEntity.reference?.$wake();
-      expect(await testEntity.reference?.$delete()).toEqual(true);
+      await testEntity.reference?.$delete();
       await Promise.all(testEntity.refArray?.map((e) => e.$wake()) || []);
       expect(testEntity.reference?.guid).toBeNull();
     });
@@ -2379,7 +2388,7 @@ export function EntitiesTest(
       await createTestEntities();
 
       // Deleting entity...
-      expect(await testEntity.$delete()).toEqual(true);
+      await testEntity.$delete();
       expect(testEntity.guid).toBeNull();
 
       const entity = await nymph.getEntity(
@@ -2397,7 +2406,7 @@ export function EntitiesTest(
       uniqueEntityA.uniques = ['test a'];
 
       // Saving entity...
-      expect(await uniqueEntityA.$save()).toEqual(true);
+      await uniqueEntityA.$save();
       expect(uniqueEntityA.guid).not.toBeNull();
 
       // Creating entity...
@@ -2406,13 +2415,13 @@ export function EntitiesTest(
       uniqueEntityB.uniques = ['test b'];
 
       // Saving entity...
-      expect(await uniqueEntityB.$save()).toEqual(true);
+      await uniqueEntityB.$save();
       expect(uniqueEntityB.guid).not.toBeNull();
 
       expect(uniqueEntityA.guid).not.toEqual(uniqueEntityB.guid);
 
-      expect(await uniqueEntityA.$delete()).toEqual(true);
-      expect(await uniqueEntityB.$delete()).toEqual(true);
+      await uniqueEntityA.$delete();
+      await uniqueEntityB.$delete();
     });
 
     it('throws on duplicate unique strings', async () => {
@@ -2422,7 +2431,7 @@ export function EntitiesTest(
       uniqueEntityA.uniques = ['test a'];
 
       // Saving entity...
-      expect(await uniqueEntityA.$save()).toEqual(true);
+      await uniqueEntityA.$save();
       expect(uniqueEntityA.guid).not.toBeNull();
 
       // Creating entity...
@@ -2440,7 +2449,7 @@ export function EntitiesTest(
       }
       expect(uniqueEntityB.guid).toBeNull();
 
-      expect(await uniqueEntityA.$delete()).toEqual(true);
+      await uniqueEntityA.$delete();
     });
 
     it('allows duplicate unique string if first transaction is rolled back', async () => {
@@ -2452,7 +2461,7 @@ export function EntitiesTest(
       uniqueEntityA.uniques = ['test a'];
 
       // Saving entity...
-      expect(await uniqueEntityA.$save()).toEqual(true);
+      await uniqueEntityA.$save();
       expect(uniqueEntityA.guid).not.toBeNull();
 
       // Rolling back transaction...
@@ -2466,7 +2475,7 @@ export function EntitiesTest(
       uniqueEntityB.uniques = ['test a'];
 
       // Saving entity...
-      expect(await uniqueEntityB.$save()).toEqual(true);
+      await uniqueEntityB.$save();
       expect(uniqueEntityB.guid).not.toBeNull();
 
       expect(uniqueEntityA.guid).not.toEqual(uniqueEntityB.guid);
@@ -2486,7 +2495,7 @@ export function EntitiesTest(
       expect(uniqueEntityBCheck).not.toBeNull();
 
       if (uniqueEntityBCheck != null) {
-        expect(await uniqueEntityBCheck.$delete()).toEqual(true);
+        await uniqueEntityBCheck.$delete();
       }
     });
   });
@@ -2549,7 +2558,7 @@ export function ExportImportTest(
       let all = await nymph.getEntities({ class: TestModel });
       expect(Array.isArray(all)).toEqual(true);
       for (const cur of all) {
-        expect(await cur.$delete()).toEqual(true);
+        await cur.$delete();
       }
 
       all = await nymph.getEntities({ class: TestModel });
@@ -2558,7 +2567,7 @@ export function ExportImportTest(
       all = await nymph.getEntities({ class: TestBModel });
       expect(Array.isArray(all)).toEqual(true);
       for (const cur of all) {
-        expect(await cur.$delete()).toEqual(true);
+        await cur.$delete();
       }
 
       all = await nymph.getEntities({ class: TestBModel });
@@ -2648,11 +2657,11 @@ export function ExportImportTest(
         entityReferenceTest.string = 'another';
         entityReferenceTest.index = i + 'b';
 
-        expect(await entityReferenceTest.$save()).toEqual(true);
+        await entityReferenceTest.$save();
         testEntity.reference = entityReferenceTest;
         testEntity.refArray = [entityReferenceTest];
 
-        expect(await testEntity.$save()).toEqual(true);
+        await testEntity.$save();
       }
 
       await checkEntityDataAndCount();

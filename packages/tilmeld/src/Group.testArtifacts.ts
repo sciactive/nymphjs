@@ -84,7 +84,7 @@ export function GroupTest(
         expect(e).toBeInstanceOf(EntityUniqueConstraintError);
       }
 
-      expect(await newGroupA.$deleteSkipAC()).toEqual(true);
+      await newGroupA.$deleteSkipAC();
     });
 
     it("doesn't allow duplicate emails", async () => {
@@ -119,7 +119,7 @@ export function GroupTest(
         expect(e).toBeInstanceOf(EntityUniqueConstraintError);
       }
 
-      expect(await newGroupA.$deleteSkipAC()).toEqual(true);
+      await newGroupA.$deleteSkipAC();
     });
 
     it("doesn't allow two default primary groups", async () => {
@@ -151,7 +151,7 @@ export function GroupTest(
 
       for (const group of [newGroupA, newGroupB]) {
         if (group.guid != null) {
-          expect(await group.$deleteSkipAC()).toEqual(true);
+          await group.$deleteSkipAC();
         }
       }
     });

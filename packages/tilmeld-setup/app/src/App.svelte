@@ -150,7 +150,7 @@
   import Menu from '@smui/menu';
   import { Icon } from '@smui/common';
 
-  import { User } from './nymph';
+  import { User } from './nymph.js';
   import Intro from './routes/Intro.svelte';
   import Users from './routes/Users.svelte';
   import UserEdit from './routes/UserEdit.svelte';

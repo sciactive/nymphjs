@@ -69,9 +69,9 @@ export interface DataObjectInterface {
   /**
    * Delete the object from storage.
    *
-   * @returns True on success, false on failure.
+   * An error is thrown on failure.
    */
-  $delete(): Promise<boolean>;
+  $delete(): Promise<void>;
   /**
    * Perform a more strict comparison of this object to another.
    *
@@ -100,18 +100,16 @@ export interface DataObjectInterface {
   /**
    * Refresh the object from storage. (Bypasses Nymph's cache.)
    *
-   * If the object has been deleted from storage, the database cannot be
-   * reached, or a database error occurs, `refresh()` will return 0.
-   *
-   * @returns False if the data has not been saved, 0 if it can't be refreshed, true on success.
+   * @returns False if the data has not been saved, true on success. An error is
+   *          thrown on failure.
    */
-  $refresh(): Promise<boolean | 0>;
+  $refresh(): Promise<boolean>;
   /**
    * Save the object to storage.
    *
-   * @returns True on success, false on failure.
+   * An error is thrown on failure.
    */
-  $save(): Promise<boolean>;
+  $save(): Promise<void>;
   /**
    * The object's data.
    */
@@ -172,7 +170,8 @@ export interface EntityInterface extends DataObjectInterface {
   /**
    * Get the client enabled methods.
    *
-   * @returns The names of methods allowed to be called by the frontend with serverCall.
+   * @returns The names of methods allowed to be called by the frontend with
+   *          serverCall.
    */
   $getClientEnabledMethods(): string[];
   /**
@@ -181,7 +180,8 @@ export interface EntityInterface extends DataObjectInterface {
    * This should only be used by Nymph to save the data into storage.
    *
    * @param includeSData Whether to include the serialized data as well.
-   * @param referenceOnlyExisting Whether to only turn existing entities into references.
+   * @param referenceOnlyExisting Whether to only turn existing entities into
+   *                              references.
    * @returns The entity's data object.
    */
   $getData(includeSData?: boolean, referenceOnlyExisting?: boolean): EntityData;
@@ -256,8 +256,10 @@ export interface EntityInterface extends DataObjectInterface {
    * - $allowlistTags
    * - $allowlistData
    *
-   * @param input The input data. Please note, this will be modified (destroyed).
-   * @param allowConflict Allow to accept data that is older than the current data.
+   * @param input The input data. Please note, this will be modified
+   *              (destroyed).
+   * @param allowConflict Allow to accept data that is older than the current
+   *                      data.
    */
   $jsonAcceptData(input: EntityJson, allowConflict?: boolean): void;
   /**
@@ -270,8 +272,10 @@ export interface EntityInterface extends DataObjectInterface {
    * - $allowlistTags
    * - $allowlistData
    *
-   * @param patch The patch data. Please note, this will be modified (destroyed).
-   * @param allowConflict Allow to accept data that is older than the current data.
+   * @param patch The patch data. Please note, this will be modified
+   *              (destroyed).
+   * @param allowConflict Allow to accept data that is older than the current
+   *                      data.
    */
   $jsonAcceptPatch(patch: EntityPatch, allowConflict?: boolean): void;
   /**

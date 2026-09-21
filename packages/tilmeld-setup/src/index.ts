@@ -170,7 +170,8 @@ export function setup(
         break;
     }
 
-    if (await user.$saveSkipAC()) {
+    try {
+      await user.$saveSkipAC();
       switch (request.query.action) {
         case 'verify':
         default:
@@ -192,7 +193,7 @@ export function setup(
           );
           break;
       }
-    } else {
+    } catch (e: any) {
       printError(500, 'An error occurred.');
     }
   });

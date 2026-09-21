@@ -455,12 +455,14 @@ export default class Entity<
     return -1;
   }
 
-  public async $delete(): Promise<boolean> {
+  public async $delete(): Promise<void> {
     this.$check();
 
     const guid = this.guid;
 
-    return (await this.$nymph.deleteEntity(this)) === guid;
+    if ((await this.$nymph.deleteEntity(this)) !== guid) {
+      throw new Error('Failed to delete entity.');
+    }
   }
 
   public $equals(object: any) {
@@ -572,7 +574,9 @@ export default class Entity<
     const mdate = this.mdate;
 
     await this.$nymph.patchEntity(this);
-    return mdate !== this.mdate;
+    if (mdate === this.mdate) {
+      throw new Error('Failed to patch entity.');
+    }
   }
 
   /**
@@ -698,8 +702,11 @@ export default class Entity<
         guid: this.guid,
       },
     );
+    if (data == null) {
+      throw new Error("The entity's data could not be refreshed.");
+    }
     this.$init(data);
-    return this.guid == null ? 0 : true;
+    return true;
   }
 
   public $removeTag(...tags: string[]) {
@@ -712,7 +719,9 @@ export default class Entity<
     this.$check();
 
     await this.$nymph.saveEntity(this);
-    return !!this.guid;
+    if (!!this.guid) {
+      throw new Error('Failed to save entity.');
+    }
   }
 
   public async $serverCall(

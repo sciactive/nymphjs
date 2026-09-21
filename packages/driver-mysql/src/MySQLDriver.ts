@@ -3517,7 +3517,7 @@ export default class MySQLDriver extends NymphDriver {
           if (inTransaction) {
             inTransaction = false;
             if (success) {
-              await this.commit('nymph-save');
+              success = await this.commit('nymph-save');
             } else {
               await this.rollback('nymph-save');
             }
