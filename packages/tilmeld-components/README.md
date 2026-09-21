@@ -1,6 +1,8 @@
 # Tilmeld Components - User/Group System for Nymph
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 The Tilmeld Components are front end registration/login, account recovery, account details, and password change components built with [Svelte](https://svelte.dev/) and [SMUI](https://sveltematerialui.com/).
 
@@ -12,11 +14,11 @@ npm install --save @nymphjs/tilmeld-components
 
 ## Usage
 
-You need to have an SMUI theme compiled and installed on your front end app. If you're using Svelte, you need to have TypeScript support and you should use the 'svelte' mainfield from package.json.
+You need to have an SMUI theme compiled and installed on your front end app.
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

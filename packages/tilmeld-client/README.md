@@ -1,6 +1,8 @@
 # Tilmeld Client - User/Group System for Nymph
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 The Tilmeld Client lets you register, login, and perform user account related functions remotely on a Nymph server.
 
@@ -30,14 +32,15 @@ const nymph = new Nymph({
 });
 const User = nymph.addEntityClass(UserClass);
 const Group = nymph.addEntityClass(GroupClass);
+// This initialization step is required for authentication to work!
 User.init(nymph);
 ```
 
-If you're running more than one instance of Nymph client, be sure to use the classes returned by `addEntityClass`, so as not to accidentally submit entities from one instances to another instance.
+If you're running more than one instance of Nymph client, be sure to use the classes returned by `addEntityClass`, so as not to accidentally submit entities from one instance to another instance.
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

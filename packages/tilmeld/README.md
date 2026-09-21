@@ -1,8 +1,10 @@
 # Tilmeld - User/Group System for Nymph
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
 
-Tilmeld (the d is silent) is a user and group management system for Nymph. It provides strict access controls to protect entities from unauthorized access/modification. It allows for granting and revoking ad hoc abilities to users and groups, then checking for those abilities. It provides authentication services and features protection against XSRF attacks.
+https://nymph.io/
+
+Tilmeld (the d is silent) is a user and group management, access control, and authentication system for Nymph. It allows creation and management of users and groups, including the ability to manage multiple domains. It provides strict access controls to protect entities from unauthorized access/modification. It allows for granting and revoking ad hoc abilities to users and groups, then checking for those abilities. It provides authentication services and features protection against XSRF attacks.
 
 ## Installation
 
@@ -56,6 +58,7 @@ There are a few abilities that Tilmeld uses internally:
 - `system/admin` - A user with this ability has **all** abilities.
 - `tilmeld/admin` - Allow the user to manage and edit other user's account and group information and grant/revoke abilities.
 - `tilmeld/switch` - Allow the user to switch to other users (log in as them without their password).
+- `tilmeld/domain/[domain]/admin` - Allow a user to create and edit users in a domain.
 - `uid/get/[name]` - Allow the user to read the named UID.
 - `uid/new/[name]` - Allow the user to read, create, and increment the named UID.
 - `uid/set/[name]` - Allow the user to read, create, increment, set, and delete the named UID.
@@ -64,7 +67,7 @@ The admin and switch abilities cannot be inherited from groups.
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

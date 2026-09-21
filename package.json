@@ -1,7 +1,7 @@
 {
   "name": "nymphjs",
   "version": "1.0.0",
-  "description": "An ORM for Node.js.",
+  "description": "Application Data and Access Framework for Node.js and the browser.",
   "scripts": {
     "format": "prettier --ignore-unknown --write \"**/*\"",
     "lint": "prettier --ignore-unknown --check \"**/*\"",
@@ -21,8 +21,17 @@
   },
   "keywords": [
     "nymph",
+    "nymph.js",
+    "application data framework",
+    "application data and access framework",
+    "object relational mapper",
     "ORM",
-    "object relational mapper"
+    "user management",
+    "group management",
+    "application framework",
+    "data framework",
+    "database abstraction",
+    "database abstraction layer"
   ],
   "author": "Hunter Perrin <hperrin@port87.com>",
   "license": "Apache-2.0",

@@ -1,8 +1,16 @@
 # Nymph
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
 
-The Nymph core provides the base level classes and utilities to query the database, save data to it, and define different data types.
+https://nymph.io/
+
+Nymph.js includes an object relational mapper with nested, atomic transactions, a powerful query language, a user and group manager with granular access controls, a REST server, a publish/subscribe server for real time collaboration, and a client for Node.js and the browser. It allows rapid prototyping and production ready speed and features.
+
+Nymph can use SQLite3, MySQL, or PostgreSQL as its database backend. You can use SQLite in development, and MySQL or Postgres in production. You can even use Nymph with SQLite in an Electron app.
+
+Nymph is the framework that powers the [Port87](https://port87.com) email service. It also powers [Nephele](https://forge.sciactive.com/sciactive/nephele)'s deduplication adapter. Nymph was started in 2009 as part of a framework called [Pines](https://sourceforge.net/projects/pines/). In 2012, it was spun off into its own project, and in 2021, it was migrated to Node.js. As part of Pines, it powered TECHsmart's entire ERP system for over a decade.
+
+The Nymph core package provides the base level classes and utilities to query the database, save data to it, and define different data types.
 
 ## Installation
 
@@ -12,7 +20,7 @@ npm install --save @nymphjs/nymph
 
 ## Drivers
 
-To use Nymph, you need a database driver. Nymph.js provides a [MySQL driver](../driver-mysql/README.md), a [PostgreSQL driver](../driver-postgresql/README.md), and a [SQLite3 driver](../driver-sqlite3/README.md). They all provide the exact same functionality (with the exception of how the database returns sorted data).
+To use Nymph, you need a database driver. Nymph.js provides a [MySQL driver](../driver-mysql/README.md), a [PostgreSQL driver](../driver-postgresql/README.md), and a [SQLite3 driver](../driver-sqlite3/README.md). They all provide the exact same functionality (with the exception of alphanumerical sort order, which is dependent on database collation).
 
 ## Usage
 
@@ -112,7 +120,7 @@ Note that you can always export the DB in the version you were previously using,
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

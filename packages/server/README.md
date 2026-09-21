@@ -1,6 +1,8 @@
 # Nymph REST Server
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 The REST server lets you configure an endpoint for the Nymph client to query and push data to. The server provides this endpoint as an Express middleware, which can be used in a new or existing Express (or compatible) server.
 
@@ -135,7 +137,7 @@ app.listen(80);
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

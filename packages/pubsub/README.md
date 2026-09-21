@@ -1,6 +1,8 @@
 # Nymph PubSub Server
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 The PubSub server provides a WebSocket server that allows Nymph to publish changes and the Nymph Client to subscribe to those changes. You can subscribe to individual entities, entity queries, or UIDs.
 
@@ -117,7 +119,7 @@ See the [config declaration file](src/conf/d.ts).
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

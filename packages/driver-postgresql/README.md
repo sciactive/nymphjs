@@ -1,6 +1,8 @@
 # Nymph PostgreSQL Driver
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 The PostgreSQL driver lets you configure Nymph to query and save data to a Postgres database.
 
@@ -36,7 +38,7 @@ See the [config declaration file](src/conf/d.ts).
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

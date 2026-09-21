@@ -1,6 +1,8 @@
 # Tilmeld Setup App - User/Group System for Nymph
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 The Tilmeld Setup App allows administrators to create, modify, and delete users and groups and configure how Tilmeld works. It also acts as the endpoint for email address verification.
 
@@ -73,7 +75,7 @@ app.listen(80);
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

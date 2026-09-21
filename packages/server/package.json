@@ -7,8 +7,12 @@
   "types": "dist/index.d.ts",
   "keywords": [
     "nymph",
-    "ORM",
-    "object relational mapper"
+    "nymph.js",
+    "application data framework",
+    "application data and access framework",
+    "REST",
+    "REST server",
+    "nymph server"
   ],
   "scripts": {
     "clean": "test -d dist && rm -r dist || true",

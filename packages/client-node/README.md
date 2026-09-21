@@ -1,12 +1,14 @@
 # Nymph Node Client
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 This package is no longer needed, because Node.js since version 22 provides both `fetch` and `WebSocket`. Instead, use the [regular Nymph.js client package](https://www.npmjs.com/package/@nymphjs/client).
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -1,6 +1,8 @@
 # Nymph GUID / Unique Code Generator
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
 
 The GUID and unique code generators are used to generate new GUIDs for Nymph objects and various random unique strings.
 
@@ -45,7 +47,7 @@ const customId = customAlphabet('abc', 20)();
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

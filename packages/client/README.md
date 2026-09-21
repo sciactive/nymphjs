@@ -1,8 +1,12 @@
 # Nymph Client
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
 
-The Nymph Client allows you to query and push data to a Nymph REST server from the browser or Node.js. You can also subscribe to entities and queries on a Nymph PubSub server and be notified of changes.
+https://nymph.io/
+
+The Nymph Client allows you to query and push data to a Nymph REST server, and subscribe to entities and queries on a Nymph PubSub server and be notified of changes, from the browser or Node.js.
+
+For Tilmeld user authentication, be sure to load the [Tilmeld Client](../tilmeld-client/README.md) entities as well.
 
 ## Installation
 
@@ -88,7 +92,7 @@ subscription.unsubscribe();
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

@@ -7,8 +7,11 @@
   "types": "dist/index.d.ts",
   "keywords": [
     "nymph",
-    "ORM",
-    "object relational mapper"
+    "nymph.js",
+    "application data framework",
+    "application data and access framework",
+    "nymph driver",
+    "mysql"
   ],
   "scripts": {
     "clean": "test -d dist && rm -r dist || true",

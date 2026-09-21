@@ -1,6 +1,14 @@
 # Nymph.js
 
-Powerful object data storage and querying.
+Application Data and Access Framework for Node.js and the browser.
+
+https://nymph.io/
+
+Nymph.js includes an object relational mapper with nested, atomic transactions, a powerful query language, a user and group manager with granular access controls, a REST server, a publish/subscribe server for real time collaboration, and a client for Node.js and the browser. It allows rapid prototyping and production ready speed and features.
+
+Nymph can use SQLite3, MySQL, or PostgreSQL as its database backend. You can use SQLite in development, and MySQL or Postgres in production. You can even use Nymph with SQLite in an Electron app.
+
+Nymph is the framework that powers the [Port87](https://port87.com) email service. It also powers [Nephele](https://forge.sciactive.com/sciactive/nephele)'s deduplication adapter. Nymph was started in 2009 as part of a framework called [Pines](https://sourceforge.net/projects/pines/). In 2012, it was spun off into its own project, and in 2021, it was migrated to Node.js. As part of Pines, it powered TECHsmart's entire ERP system for over a decade.
 
 # Getting Started
 
@@ -149,7 +157,7 @@ npm run test:db:stop
 
 # License
 
-Copyright 2021-2025 SciActive Inc
+Copyright 2021-2026 SciActive Inc
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
