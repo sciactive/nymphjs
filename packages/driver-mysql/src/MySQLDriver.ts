@@ -18,6 +18,8 @@ import {
   type FormattedSelector,
   type Options,
   type Selector,
+  EntityConflictError,
+  EntityInvalidDataError,
   EntityUniqueConstraintError,
   InvalidParametersError,
   NotConfiguredError,
@@ -3286,7 +3288,7 @@ export default class MySQLDriver extends NymphDriver {
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
           ) {
-            return false;
+            throw new EntityInvalidDataError('Entity contains no data.');
           }
           let {
             user,
@@ -3327,7 +3329,7 @@ export default class MySQLDriver extends NymphDriver {
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
           ) {
-            return false;
+            throw new EntityInvalidDataError('Entity contains no data.');
           }
           let {
             user,
@@ -3506,6 +3508,11 @@ export default class MySQLDriver extends NymphDriver {
           }
           if (this.config.tableLocking) {
             await this.queryRun('UNLOCK TABLES;');
+          }
+          if (!success && info.changes === 0) {
+            throw new EntityConflictError(
+              "Entity either doesn't exist or is newer in the DB.",
+            );
           }
           return success;
         },

@@ -8,7 +8,7 @@ import type {
   EntityJson,
 } from './Entity.types.js';
 import { Options, Selector } from './Nymph.types.js';
-import { ClassNotAvailableError } from './errors/index.js';
+import { ClassNotAvailableError, EntityConflictError } from './errors/index.js';
 import Entity from './Entity.js';
 
 const entities: { [k: string]: EntityJson } = {};
@@ -163,7 +163,9 @@ export class MockNymph {
       entity.guid in entities &&
       (entity.mdate ?? 0) < (entities[entity.guid].mdate ?? 0)
     ) {
-      return false;
+      throw new EntityConflictError(
+        "Entity either doesn't exist or is newer in the DB.",
+      );
     }
 
     entity.mdate = Date.now();

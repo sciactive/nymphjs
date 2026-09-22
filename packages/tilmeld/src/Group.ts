@@ -1039,19 +1039,32 @@ export default class Group extends AbleObject<GroupData> {
           await callback(this);
         }
       }
-      const committed = await tnymph.commit(transaction);
-      this.$setNymph(nymph);
-
-      if (!committed) {
-        throw new MethodFailedError('Transaction could not be committed.');
-      }
     } catch (e: any) {
-      await tnymph.rollback(transaction);
+      try {
+        await tnymph.rollback(transaction);
+      } catch (e: any) {
+        nymph.config.debugError(
+          'tilmeld',
+          `Rollback of transaction ${transaction} failed, reason: ${e.message}`,
+        );
+      }
       this.guid = preGuid;
       this.cdate = preCdate;
       this.mdate = preMdate;
       this.$setNymph(nymph);
       throw e;
+    }
+
+    let committed = false;
+    try {
+      committed = await tnymph.commit(transaction);
+    } catch (e: any) {
+      committed = false;
+    }
+    this.$setNymph(nymph);
+
+    if (!committed) {
+      throw new MethodFailedError('Transaction could not be committed.');
     }
   }
 
@@ -1178,17 +1191,29 @@ export default class Group extends AbleObject<GroupData> {
           await callback(this);
         }
       }
-
-      const committed = await tnymph.commit(transaction);
-      this.$setNymph(nymph);
-
-      if (!committed) {
-        throw new MethodFailedError('Transaction could not be committed.');
-      }
     } catch (e: any) {
-      await tnymph.rollback(transaction);
+      try {
+        await tnymph.rollback(transaction);
+      } catch (e: any) {
+        nymph.config.debugError(
+          'tilmeld',
+          `Rollback of transaction ${transaction} failed, reason: ${e.message}`,
+        );
+      }
       this.$setNymph(nymph);
       throw e;
+    }
+
+    let committed = false;
+    try {
+      committed = await tnymph.commit(transaction);
+    } catch (e: any) {
+      committed = false;
+    }
+    this.$setNymph(nymph);
+
+    if (!committed) {
+      throw new MethodFailedError('Transaction could not be committed.');
     }
   }
 

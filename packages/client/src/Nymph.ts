@@ -256,12 +256,12 @@ export default class Nymph {
     if (plural && Array.isArray(entity) && entity.length === response.length) {
       return entity.map((e, i) =>
         response[i] &&
-        typeof response[i].guid !== 'undefined' &&
+        response[i].guid != null &&
         (e.guid == null || e.guid === response[i].guid)
           ? e.$init(response[i])
           : e,
       ) as T[];
-    } else if (!Array.isArray(entity) && typeof response.guid !== 'undefined') {
+    } else if (!Array.isArray(entity) && response.guid != null) {
       return entity.$init(response) as T;
     }
     throw new Error('Server error');

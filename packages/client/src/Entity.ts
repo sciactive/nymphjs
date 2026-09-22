@@ -719,7 +719,7 @@ export default class Entity<
     this.$check();
 
     await this.$nymph.saveEntity(this);
-    if (!!this.guid) {
+    if (!this.guid) {
       throw new Error('Failed to save entity.');
     }
   }

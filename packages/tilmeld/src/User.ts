@@ -7,6 +7,7 @@ import {
   type Selector,
   type SerializedEntityData,
   MethodFailedError,
+  HttpError,
 } from '@nymphjs/nymph';
 import { humanSecret, nanoid } from '@nymphjs/guid';
 import type { EmailOptions } from 'email-templates';
@@ -2262,6 +2263,9 @@ export default class User extends AbleObject<UserData> {
           }
         }
       } catch (e: any) {
+        if (e instanceof HttpError) {
+          throw e;
+        }
         this.$nymph.config.debugError(
           'tilmeld',
           `Error registering new user "${this.$data.username}".`,
@@ -2881,11 +2885,24 @@ export default class User extends AbleObject<UserData> {
         }
       }
     } catch (e: any) {
-      await tnymph.rollback(transaction);
+      try {
+        await tnymph.rollback(transaction);
+      } catch (e: any) {
+        nymph.config.debugError(
+          'tilmeld',
+          `Rollback of transaction ${transaction} failed, reason: ${e.message}`,
+        );
+      }
       this.$setNymph(nymph);
       throw e;
     }
-    const committed = await tnymph.commit(transaction);
+
+    let committed = false;
+    try {
+      committed = await tnymph.commit(transaction);
+    } catch (e: any) {
+      committed = false;
+    }
     this.$setNymph(nymph);
 
     if (!committed) {

@@ -7,7 +7,7 @@ import { guid } from '@nymphjs/guid';
 import type Nymph from '../Nymph.js';
 import {
   EntityUniqueConstraintError,
-  MethodFailedError,
+  EntityInvalidDataError,
 } from '../errors/index.js';
 import {
   TestBModel as TestBModelClass,
@@ -136,7 +136,7 @@ export function EntitiesTest(
 
         throw new Error('Should have thrown.');
       } catch (e: any) {
-        expect(e).toBeInstanceOf(MethodFailedError);
+        expect(e).toBeInstanceOf(EntityInvalidDataError);
       }
       expect(testEntity.guid).toBeNull();
     });

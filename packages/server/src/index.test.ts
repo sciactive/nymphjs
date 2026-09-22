@@ -473,8 +473,7 @@ describe('Nymph REST Server and Client', () => {
       throw new Error('Entity is null.');
     }
 
-    const deleted = await jane.$delete();
-    expect(deleted).toEqual(true);
+    await jane.$delete();
 
     const check = await nymph.getEntities(
       { class: Employee },

@@ -303,13 +303,9 @@ export function createServer(
             continue;
           }
           try {
-            try {
-              await entity.$save();
-              created.push(entity);
-              hadSuccess = true;
-            } catch (e: any) {
-              created.push(false);
-            }
+            await entity.$save();
+            created.push(entity);
+            hadSuccess = true;
           } catch (e: any) {
             if (e instanceof EntityInvalidDataError) {
               invalidRequest = true;
@@ -648,13 +644,9 @@ export function createServer(
           continue;
         }
         try {
-          try {
-            await entity.$save();
-            saved.push(entity);
-            hadSuccess = true;
-          } catch (e: any) {
-            saved.push(false);
-          }
+          await entity.$save();
+          saved.push(entity);
+          hadSuccess = true;
         } catch (e: any) {
           if (e instanceof EntityInvalidDataError) {
             invalidRequest = true;

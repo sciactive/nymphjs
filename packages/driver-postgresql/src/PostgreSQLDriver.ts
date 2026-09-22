@@ -19,6 +19,8 @@ import {
   type FormattedSelector,
   type Options,
   type Selector,
+  EntityConflictError,
+  EntityInvalidDataError,
   EntityUniqueConstraintError,
   InvalidParametersError,
   NotConfiguredError,
@@ -3779,7 +3781,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
           ) {
-            return false;
+            throw new EntityInvalidDataError('Entity contains no data.');
           }
           let {
             user,
@@ -3820,7 +3822,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             Object.keys(data).length === 0 &&
             Object.keys(sdata).length === 0
           ) {
-            return false;
+            throw new EntityInvalidDataError('Entity contains no data.');
           }
           let {
             user,
@@ -3979,6 +3981,11 @@ export default class PostgreSQLDriver extends NymphDriver {
             await Promise.all(promises);
             await insertData(guid, data, sdata, uniques, etype);
             success = true;
+          }
+          if (!success && info.rowCount === 0) {
+            throw new EntityConflictError(
+              "Entity either doesn't exist or is newer in the DB.",
+            );
           }
           return success;
         },

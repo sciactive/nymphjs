@@ -47,7 +47,7 @@ export async function transaction<T>(
     } catch (e: any) {
       nymph.config.debugError(
         'nymph:transaction',
-        `Roll back of transaction ${name} failed, reason: ${e.message}`,
+        `Rollback of transaction ${name} failed, reason: ${e.message}`,
       );
     }
     if (finallyFn) {

@@ -1598,18 +1598,30 @@ export default abstract class NymphDriver {
           sdata,
         );
       }
+
+      if (!success) {
+        entity.guid = originalGuid;
+        entity.cdate = originalCdate;
+        entity.mdate = originalMdate;
+      }
+
+      return success;
     } catch (e: any) {
+      if (commitTransactionCallback) {
+        try {
+          await commitTransactionCallback(false);
+        } catch (e: any) {
+          this.nymph.config.debugError(
+            'nymph',
+            `Rollback of entity save transaction failed, reason: ${e.message}`,
+          );
+        }
+      }
       entity.guid = originalGuid;
       entity.cdate = originalCdate;
       entity.mdate = originalMdate;
       throw e;
     }
-    if (!success) {
-      entity.guid = originalGuid;
-      entity.cdate = originalCdate;
-      entity.mdate = originalMdate;
-    }
-    return success;
   }
 
   /**

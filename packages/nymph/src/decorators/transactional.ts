@@ -26,20 +26,15 @@ export function transactional(
     );
     const tnymph = await nymph.startTransaction(transactionName);
     this.$setNymph(tnymph);
+    let committed = false;
+    let result: any;
     try {
-      const result = await target.apply(this, args);
+      result = await target.apply(this, args);
       nymph.config.debugInfo(
         'nymph:transactional',
         `Committing transaction ${transactionName}`,
       );
-      const committed = await tnymph.commit(transactionName);
-
-      if (!committed) {
-        throw new Error('Transaction could not be committed.');
-      }
-
-      this.$setNymph(nymph);
-      return result;
+      committed = await tnymph.commit(transactionName);
     } catch (e: any) {
       try {
         nymph.config.debugInfo(
@@ -50,11 +45,19 @@ export function transactional(
       } catch (e: any) {
         nymph.config.debugError(
           'nymph:transactional',
-          `Roll back of transaction ${transactionName} failed, reason: ${e.message}`,
+          `Rollback of transaction ${transactionName} failed, reason: ${e.message}`,
         );
       }
       this.$setNymph(nymph);
       throw e;
     }
+
+    this.$setNymph(nymph);
+
+    if (!committed) {
+      throw new Error('Transaction could not be committed.');
+    }
+
+    return result;
   };
 }
