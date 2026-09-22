@@ -73,13 +73,12 @@
               <Item
                 bind:this={section.component}
                 tag="a"
+                use={[link]}
                 nonInteractive={!('href' in section)}
-                href={'href' in section ? `#${section.href}` : undefined}
+                href={'href' in section ? section.href : undefined}
                 activated={section.absolute
-                  ? `${currentMatch.route.path}/` === section.href
-                  : `${currentMatch.route.path}/`.startsWith(
-                      section.href ?? '!',
-                    )}
+                  ? `${currentRoute}` === section.href
+                  : `${currentRoute}/`.startsWith(section.href ?? '!')}
                 style={section.indent
                   ? 'margin-left: ' + section.indent * 25 + 'px;'
                   : ''}
@@ -108,7 +107,7 @@
     <main class="tilmeld-main-content" bind:this={mainContent}>
       {#if tilmeldAdmin}
         {#if $clientConfig}
-          <CurrentRoute {router} {params} {clientConfig} {user} />
+          <Router {routes} {onRouteLoaded} />
         {:else}
           Loading...
         {/if}
@@ -132,10 +131,10 @@
 
 <script lang="ts">
   import type { Component } from 'svelte';
-  import { onMount } from 'svelte';
+  import { onMount, setContext } from 'svelte';
   import type { Writable } from 'svelte/store';
   import { writable } from 'svelte/store';
-  import Navigo from 'navigo';
+  import Router, { link, type RouteDetailLoaded } from 'svelte-spa-router';
   import type {
     User as UserClass,
     ClientConfig,
@@ -172,6 +171,9 @@
   let tilmeldAdmin: boolean | undefined = $state();
   let accountOpen = $state(false);
 
+  setContext('clientConfigStore', clientConfig);
+  setContext('userStore', user);
+
   $effect(() => {
     if ($user) {
       $user
@@ -184,65 +186,25 @@
     }
   });
 
-  const router = new Navigo('/', { hash: true });
-  let CurrentRoute: Component<any> = $state(Intro);
-  let params: any = $state({});
+  let currentRoute = $state('/');
 
-  router.hooks({
-    before(done, match) {
-      if (mainContent) {
-        drawerOpen = false;
-        mainContent.scrollTop = 0;
-      }
+  const routes = {
+    '/': Intro,
+    '/users/edit/:guid': UserEdit,
+    '/users/:query?': Users,
+    '/groups/edit/:guid': GroupEdit,
+    '/groups/:query?': Groups,
+    '*': NotFound,
+  };
 
-      currentMatch = match;
-
-      done();
-    },
-  });
-
-  router.on({
-    '/': () => {
-      CurrentRoute = Intro;
-      params = {};
-    },
-    '/users/edit/:guid': ({ data }: any) => {
-      CurrentRoute = UserEdit;
-      params = data;
-    },
-    '/users/': () => {
-      CurrentRoute = Users;
-      params = {};
-    },
-    '/users/:query?': ({ data }: any) => {
-      CurrentRoute = Users;
-      params = data;
-    },
-    '/groups/edit/:guid': ({ data }: any) => {
-      CurrentRoute = GroupEdit;
-      params = data;
-    },
-    '/groups/': () => {
-      CurrentRoute = Groups;
-      params = {};
-    },
-    '/groups/:query?': ({ data }: any) => {
-      CurrentRoute = Groups;
-      params = data;
-    },
-  });
-
-  router.notFound(({ hashString }: any) => {
-    if (hashString === '') {
-      router.navigate('/', { historyAPIMethod: 'replaceState' });
-    } else {
-      CurrentRoute = NotFound;
-      params = {};
+  function onRouteLoaded(detail: RouteDetailLoaded) {
+    if (mainContent) {
+      drawerOpen = false;
+      mainContent.scrollTop = 0;
     }
-  });
 
-  let currentMatch = $state(router.getCurrentLocation());
-  router.resolve();
+    currentRoute = `${detail?.route ?? '/'}`;
+  }
 
   const sections: (
     | {
@@ -266,12 +228,12 @@
     },
     {
       name: 'Users',
-      href: 'users/',
+      href: '/users/',
       indent: 0,
     },
     {
       name: 'Groups',
-      href: 'groups/',
+      href: '/groups/',
       indent: 0,
     },
   ];

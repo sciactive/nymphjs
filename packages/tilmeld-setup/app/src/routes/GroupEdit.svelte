@@ -6,10 +6,7 @@
   </section>
 {:else}
   <div style="display: flex; align-items: center; padding: 12px;">
-    <IconButton
-      title="Back"
-      onclick={() => router.navigate('', { historyAPIMethod: 'back' })}
-    >
+    <IconButton title="Back" onclick={() => pop()}>
       <Icon tag="svg" viewBox="0 0 24 24">
         <path fill="currentColor" d={mdiArrowLeft} />
       </Icon>
@@ -23,7 +20,8 @@
     {#await $entity.user.$wake() then _user}
       <div style="padding: 12px;" class="mdc-typography--subtitle1">
         Generated primary group for <a
-          href="#/users/edit/{encodeURIComponent($entity.user.guid || '')}"
+          href="/users/edit/{encodeURIComponent($entity.user.guid || '')}"
+          use:link
           >{$clientConfig.userFields.includes('name')
             ? $entity.user.name + ' (' + $entity.user.username + ')'
             : $entity.user.username}</a
@@ -194,7 +192,8 @@
           No parent
         {:else}
           <a
-            href="#/groups/edit/{encodeURIComponent($entity.parent.guid || '')}"
+            href="/groups/edit/{encodeURIComponent($entity.parent.guid || '')}"
+            use:link
             >{$clientConfig.userFields.includes('name')
               ? $entity.parent.name + ' (' + $entity.parent.groupname + ')'
               : $entity.parent.groupname}</a
@@ -357,7 +356,8 @@
 <script lang="ts">
   import type { Writable } from 'svelte/store';
   import { writable } from 'svelte/store';
-  import type Navigo from 'navigo';
+  import { getContext } from 'svelte';
+  import { link, pop, replace } from 'svelte-spa-router';
   import type {
     AdminGroupData,
     ClientConfig,
@@ -392,17 +392,7 @@
 
   import { nymph, Group, User } from '../nymph.js';
 
-  let {
-    router,
-    params,
-    clientConfig,
-    user,
-  }: {
-    router: Navigo;
-    params: { guid: string };
-    clientConfig: Writable<ClientConfig | undefined>;
-    user: Writable<(UserClass & CurrentUserData) | null | undefined>;
-  } = $props();
+  let { params }: { params: { guid: string } } = $props();
 
   let entity: Writable<GroupClass & AdminGroupData> = writable(
     Group.factorySync(),
@@ -421,6 +411,13 @@
   let saving = $state(false);
   let success: boolean | undefined = $state();
   let loading = $state(true);
+
+  const clientConfig =
+    getContext<Writable<ClientConfig | undefined>>('clientConfigStore');
+  const user =
+    getContext<Writable<(UserClass & CurrentUserData) | null | undefined>>(
+      'userStore',
+    );
 
   $effect(() => {
     if (params) {
@@ -601,10 +598,7 @@
       await readyEntity();
       success = true;
       if (newEntity) {
-        router.navigate(
-          `/groups/edit/${encodeURIComponent($entity.guid || '')}`,
-          { historyAPIMethod: 'replaceState' },
-        );
+        replace(`/groups/edit/${encodeURIComponent($entity.guid || '')}`);
       }
       setTimeout(() => {
         success = undefined;
@@ -622,7 +616,7 @@
       saving = true;
       try {
         await $entity.$delete();
-        router.navigate('', { historyAPIMethod: 'back' });
+        pop();
       } catch (e: any) {
         failureMessage = e?.message;
       }

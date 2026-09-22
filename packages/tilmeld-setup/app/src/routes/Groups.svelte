@@ -7,7 +7,8 @@
 {:else}
   <div class="solo-search-container solo-container">
     <Fab
-      href="#/groups/edit/+"
+      href="/groups/edit/+"
+      use={[link]}
       color="primary"
       mini
       class="solo-fab"
@@ -74,27 +75,30 @@
               {#if !$clientConfig.emailUsernames}
                 <Cell
                   ><a
-                    href="#/groups/edit/{encodeURIComponent(
+                    href="/groups/edit/{encodeURIComponent(
                       curEntity.guid || '',
-                    )}">{curEntity.groupname}</a
+                    )}"
+                    use:link>{curEntity.groupname}</a
                   ></Cell
                 >
               {/if}
               {#if $clientConfig.userFields.includes('name')}
                 <Cell
                   ><a
-                    href="#/groups/edit/{encodeURIComponent(
+                    href="/groups/edit/{encodeURIComponent(
                       curEntity.guid || '',
-                    )}">{curEntity.name}</a
+                    )}"
+                    use:link>{curEntity.name}</a
                   ></Cell
                 >
               {/if}
               {#if $clientConfig.userFields.includes('email')}
                 <Cell
                   ><a
-                    href="#/groups/edit/{encodeURIComponent(
+                    href="/groups/edit/{encodeURIComponent(
                       curEntity.guid || '',
-                    )}">{curEntity.email}</a
+                    )}"
+                    use:link>{curEntity.email}</a
                   ></Cell
                 >
               {/if}
@@ -119,7 +123,8 @@
 
 <script lang="ts">
   import type { Writable } from 'svelte/store';
-  import type Navigo from 'navigo';
+  import { getContext } from 'svelte';
+  import { link, push } from 'svelte-spa-router';
   import queryParser from '@nymphjs/query-parser';
   import type {
     AdminGroupData,
@@ -140,20 +145,17 @@
 
   import { nymph, Group, User } from '../nymph.js';
 
-  let {
-    router,
-    params,
-    clientConfig,
-    user,
-  }: {
-    router: Navigo;
-    params: { query?: string };
-    clientConfig: Writable<ClientConfig | undefined>;
-    user: Writable<(UserClass & CurrentUserData) | null | undefined>;
-  } = $props();
+  let { params }: { params: { query?: string } } = $props();
 
   let entitySearch = $derived(params.query ?? '');
   let failureMessage: string | undefined = $state();
+
+  const clientConfig =
+    getContext<Writable<ClientConfig | undefined>>('clientConfigStore');
+  const user =
+    getContext<Writable<(UserClass & CurrentUserData) | null | undefined>>(
+      'userStore',
+    );
 
   $effect(() => {
     if (params) {
@@ -192,7 +194,7 @@
   let entitiesSearching = $state(false);
   let entities: (GroupClass & AdminGroupData)[] | undefined = $state();
   async function searchEntities() {
-    router.navigate(`/groups/${encodeURIComponent(entitySearch)}`);
+    push(`/groups/${encodeURIComponent(entitySearch)}`);
   }
   function entitySearchKeyDown(event: CustomEvent | KeyboardEvent) {
     event = event as KeyboardEvent;
