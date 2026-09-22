@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.122](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.121...v1.0.0-beta.122) (2026-09-22)
+
+### Bug Fixes
+
+- issues causing failing tests and update other tests ([f249bb9](https://forge.sciactive.com/sciactive/nymphjs/commits/f249bb97cfd9edb5559c11c2c1e6c1c8a07af7d8))
+
+### Features
+
+- add generic setNymph on Entity class ([eec2120](https://forge.sciactive.com/sciactive/nymphjs/commits/eec21203a636d18533a9e5e8a46a5765a73d2720))
+- auth and ability decorators, finish tests for decorators and helpers ([dc48712](https://forge.sciactive.com/sciactive/nymphjs/commits/dc48712d4470d3aeadbd59befbc170d7ccce9cdf))
+- save and delete now throw on errors instead of returning false, refresh throws on db errors ([536db88](https://forge.sciactive.com/sciactive/nymphjs/commits/536db8804ac515cd3e1e9c30b104f674e267916a))
+
 # [1.0.0-beta.121](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.120...v1.0.0-beta.121) (2026-09-17)
 
 ### Bug Fixes

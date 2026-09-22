@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/client-node",
-  "version": "1.0.0-beta.121",
+  "version": "1.0.0-beta.122",
   "description": "Nymph.js - Node Client (Deprecated)",
   "type": "module",
   "main": "dist/index.js",
@@ -35,7 +35,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/client": "^1.0.0-beta.121"
+    "@nymphjs/client": "^1.0.0-beta.122"
   },
   "devDependencies": {
     "@swc/core": "^1.16.1",

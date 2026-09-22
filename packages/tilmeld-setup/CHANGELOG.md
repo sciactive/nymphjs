@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.122](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.121...v1.0.0-beta.122) (2026-09-22)
+
+### Features
+
+- save and delete now throw on errors instead of returning false, refresh throws on db errors ([536db88](https://forge.sciactive.com/sciactive/nymphjs/commits/536db8804ac515cd3e1e9c30b104f674e267916a))
+
 # [1.0.0-beta.121](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.120...v1.0.0-beta.121) (2026-09-17)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-setup
