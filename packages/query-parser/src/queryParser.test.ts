@@ -3,6 +3,7 @@ import queryParser from './queryParser.js';
 
 const BlogPost = function () {} as unknown as typeof Entity;
 const Category = function () {} as unknown as typeof Entity;
+const List = function () {} as unknown as typeof Entity;
 
 describe('queryParser', () => {
   it('parses a basic query', () => {
@@ -55,13 +56,13 @@ describe('queryParser', () => {
   });
 
   it('gives the correct entity and default fields to bare queries', () => {
-    const query = 'category<{cat search}>';
+    const query = 'category<{Cat search}>';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
       defaultFields: ['text'],
       qrefMap: {
-        cat: {
+        Cat: {
           class: Category,
           defaultFields: ['name'],
         },
@@ -97,13 +98,13 @@ describe('queryParser', () => {
 
   it('parses the example query from the readme', () => {
     const query =
-      'limit:4 foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>';
+      'limit:4 foobar (| [archived] mdate<"2 weeks ago") category<{Cat Tech}>';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
       defaultFields: ['title', 'body'],
       qrefMap: {
-        cat: {
+        Cat: {
           class: Category,
           defaultFields: ['name'],
         },
@@ -289,6 +290,108 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses a query with not search', () => {
+    const query = 'limit:4 foobar -prop(a search string)';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!search': [['prop', 'a search string']],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with colon search', () => {
+    const query = 'limit:4 foobar prop:string';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        search: [['prop', 'string']],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with not colon search', () => {
+    const query = 'limit:4 foobar -prop:string';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!search': [['prop', 'string']],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
   it('parses a query with search in a selector', () => {
     const query =
       'limit:4 foobar (| prop(a search string) prop2("another search string"))';
@@ -318,6 +421,53 @@ describe('queryParser', () => {
             search: [
               ['prop', 'a search string'],
               ['prop2', '"another search string"'],
+            ],
+          },
+        ],
+      },
+      {
+        type: '|',
+        ilike: [
+          ['title', '%foobar%'],
+          ['body', '%foobar%'],
+        ],
+      },
+    ]);
+  });
+
+  it('parses a query with colon search in a selector', () => {
+    const query =
+      'limit:4 foobar (| prop:string prop2:"another search string" -prop3:pickle -prop4:\'another -pickle string\')';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+      defaultFields: ['title', 'body'],
+      qrefMap: {
+        cat: {
+          class: Category,
+          defaultFields: ['name'],
+        },
+      },
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+      limit: 4,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        selector: [
+          {
+            type: '|',
+            search: [
+              ['prop', 'string'],
+              ['prop2', '"another search string"'],
+            ],
+            '!search': [
+              ['prop3', 'pickle'],
+              ['prop4', "'another -pickle string'"],
             ],
           },
         ],
@@ -537,7 +687,7 @@ describe('queryParser', () => {
   });
 
   it('parses simple not equal clauses', () => {
-    const query = 'prop!=string';
+    const query = '-prop=string';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -575,7 +725,7 @@ describe('queryParser', () => {
   });
 
   it('parses quoted not equal clauses', () => {
-    const query = 'prop!="a string"';
+    const query = '-prop="a string"';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -613,7 +763,7 @@ describe('queryParser', () => {
   });
 
   it('parses json not equal clauses', () => {
-    const query = 'prop!=true';
+    const query = '-prop=true';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -651,7 +801,7 @@ describe('queryParser', () => {
   });
 
   it('parses not guid clauses', () => {
-    const query = '{!111111111111111111111111}';
+    const query = '-{111111111111111111111111}';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -689,7 +839,7 @@ describe('queryParser', () => {
   });
 
   it('parses not tag clauses', () => {
-    const query = '<!tagname>';
+    const query = '-<tagname>';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -727,7 +877,7 @@ describe('queryParser', () => {
   });
 
   it('parses not truthy clauses', () => {
-    const query = '[!truthyname]';
+    const query = '-[truthyname]';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -765,7 +915,7 @@ describe('queryParser', () => {
   });
 
   it('parses not ref clauses', () => {
-    const query = 'prop!<{111111111111111111111111}>';
+    const query = '-prop<{111111111111111111111111}>';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -803,7 +953,7 @@ describe('queryParser', () => {
   });
 
   it('parses simple not contain clauses', () => {
-    const query = 'prop!<string>';
+    const query = '-prop<string>';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -841,7 +991,7 @@ describe('queryParser', () => {
   });
 
   it('parses json not contain clauses', () => {
-    const query = 'prop!<true>';
+    const query = '-prop<true>';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -879,7 +1029,7 @@ describe('queryParser', () => {
   });
 
   it('parses not match clauses', () => {
-    const query = 'prop!~/regex/';
+    const query = '-prop~/regex/';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -917,7 +1067,7 @@ describe('queryParser', () => {
   });
 
   it('parses not imatch clauses', () => {
-    const query = 'prop!~/regex/i';
+    const query = '-prop~/regex/i';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -955,7 +1105,7 @@ describe('queryParser', () => {
   });
 
   it('parses simple not like clauses', () => {
-    const query = 'prop!~pattern';
+    const query = '-prop~pattern';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -993,7 +1143,7 @@ describe('queryParser', () => {
   });
 
   it('parses quoted not like clauses', () => {
-    const query = 'prop!~"a pattern"';
+    const query = '-prop~"a pattern"';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -1031,7 +1181,7 @@ describe('queryParser', () => {
   });
 
   it('parses not ilike clauses', () => {
-    const query = 'prop!~"a pattern"i';
+    const query = '-prop~"a pattern"i';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -1068,6 +1218,25 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses simple not gt clauses', () => {
+    const query = '-prop>30.5';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!gt': [['prop', 30.5]],
+      },
+    ]);
+  });
+
   it('parses simple relative gt clauses', () => {
     const query = 'prop>yesterday';
     const [options, ...selectors] = queryParser({
@@ -1083,6 +1252,25 @@ describe('queryParser', () => {
       {
         type: '&',
         gt: [['prop', null, 'yesterday']],
+      },
+    ]);
+  });
+
+  it('parses simple relative not gt clauses', () => {
+    const query = '-prop>yesterday';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!gt': [['prop', null, 'yesterday']],
       },
     ]);
   });
@@ -1106,6 +1294,25 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses quote relative not gt clauses', () => {
+    const query = '-prop>"3 weeks ago"';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!gt': [['prop', null, '3 weeks ago']],
+      },
+    ]);
+  });
+
   it('parses simple gte clauses', () => {
     const query = 'prop>=30.5';
     const [options, ...selectors] = queryParser({
@@ -1121,6 +1328,25 @@ describe('queryParser', () => {
       {
         type: '&',
         gte: [['prop', 30.5]],
+      },
+    ]);
+  });
+
+  it('parses simple not gte clauses', () => {
+    const query = '-prop>=30.5';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!gte': [['prop', 30.5]],
       },
     ]);
   });
@@ -1144,6 +1370,25 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses simple relative not gte clauses', () => {
+    const query = '-prop>=yesterday';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!gte': [['prop', null, 'yesterday']],
+      },
+    ]);
+  });
+
   it('parses quote relative gte clauses', () => {
     const query = 'prop>="3 weeks ago"';
     const [options, ...selectors] = queryParser({
@@ -1159,6 +1404,25 @@ describe('queryParser', () => {
       {
         type: '&',
         gte: [['prop', null, '3 weeks ago']],
+      },
+    ]);
+  });
+
+  it('parses quote relative not gte clauses', () => {
+    const query = '-prop>="3 weeks ago"';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!gte': [['prop', null, '3 weeks ago']],
       },
     ]);
   });
@@ -1182,6 +1446,25 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses simple not lt clauses', () => {
+    const query = '-prop<30.5';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!lt': [['prop', 30.5]],
+      },
+    ]);
+  });
+
   it('parses simple relative lt clauses', () => {
     const query = 'prop<yesterday';
     const [options, ...selectors] = queryParser({
@@ -1197,6 +1480,25 @@ describe('queryParser', () => {
       {
         type: '&',
         lt: [['prop', null, 'yesterday']],
+      },
+    ]);
+  });
+
+  it('parses simple relative not lt clauses', () => {
+    const query = '-prop<yesterday';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!lt': [['prop', null, 'yesterday']],
       },
     ]);
   });
@@ -1220,6 +1522,25 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses quote relative not lt clauses', () => {
+    const query = '-prop<"3 weeks ago"';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!lt': [['prop', null, '3 weeks ago']],
+      },
+    ]);
+  });
+
   it('parses simple lte clauses', () => {
     const query = 'prop<=30.5';
     const [options, ...selectors] = queryParser({
@@ -1235,6 +1556,25 @@ describe('queryParser', () => {
       {
         type: '&',
         lte: [['prop', 30.5]],
+      },
+    ]);
+  });
+
+  it('parses simple not lte clauses', () => {
+    const query = '-prop<=30.5';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!lte': [['prop', 30.5]],
       },
     ]);
   });
@@ -1258,6 +1598,25 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses simple relative not lte clauses', () => {
+    const query = '-prop<=yesterday';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!lte': [['prop', null, 'yesterday']],
+      },
+    ]);
+  });
+
   it('parses quote relative lte clauses', () => {
     const query = 'prop<="3 weeks ago"';
     const [options, ...selectors] = queryParser({
@@ -1277,9 +1636,28 @@ describe('queryParser', () => {
     ]);
   });
 
+  it('parses quote relative not lte clauses', () => {
+    const query = '-prop<="3 weeks ago"';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!lte': [['prop', null, '3 weeks ago']],
+      },
+    ]);
+  });
+
   it('parses complex selectors', () => {
     const query =
-      '(! [published] <draft>) (| cdate>"6 months ago" mdate>"1 month ago")';
+      '(! [published] <draft>) (| -cdate>"6 months ago" mdate>"1 month ago")';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -1295,10 +1673,8 @@ describe('queryParser', () => {
         selector: [
           {
             type: '|',
-            gt: [
-              ['cdate', null, '6 months ago'],
-              ['mdate', null, '1 month ago'],
-            ],
+            '!gt': [['cdate', null, '6 months ago']],
+            gt: [['mdate', null, '1 month ago']],
           },
           {
             type: '!&',
@@ -1312,7 +1688,7 @@ describe('queryParser', () => {
 
   it('parses nested selectors', () => {
     const query =
-      '(! [published] <draft> (| cdate>"6 months ago" mdate>"1 month ago"))';
+      '(! [published] <draft> (| -cdate>"6 months ago" mdate>"1 month ago"))';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -1330,10 +1706,8 @@ describe('queryParser', () => {
         selector: [
           {
             type: '|',
-            gt: [
-              ['cdate', null, '6 months ago'],
-              ['mdate', null, '1 month ago'],
-            ],
+            '!gt': [['cdate', null, '6 months ago']],
+            gt: [['mdate', null, '1 month ago']],
           },
         ],
       },
@@ -1342,7 +1716,7 @@ describe('queryParser', () => {
 
   it('parses nested qref clauses', () => {
     const query =
-      'categories<{Category parent<{Category id="sort+newsletters"}>}> ';
+      'categories<{Category parent<{Category list<{List frosting name(favorite)}>}> -parent<{Category id="sort+newsletters"}>}>';
     const [options, ...selectors] = queryParser({
       query,
       entityClass: BlogPost,
@@ -1350,6 +1724,10 @@ describe('queryParser', () => {
       qrefMap: {
         Category: {
           class: Category,
+          defaultFields: ['name'],
+        },
+        List: {
+          class: List,
           defaultFields: ['name'],
         },
       },
@@ -1376,6 +1754,33 @@ describe('queryParser', () => {
                       { class: Category },
                       {
                         type: '&',
+                        qref: [
+                          [
+                            'list',
+                            [
+                              { class: List },
+                              {
+                                type: '&',
+                                search: [['name', 'favorite']],
+                              },
+                              {
+                                type: '|',
+                                ilike: [['name', '%frosting%']],
+                              },
+                            ],
+                          ],
+                        ],
+                      },
+                    ],
+                  ],
+                ],
+                '!qref': [
+                  [
+                    'parent',
+                    [
+                      { class: Category },
+                      {
+                        type: '&',
                         equal: [['id', 'sort+newsletters']],
                       },
                     ],
@@ -1385,6 +1790,26 @@ describe('queryParser', () => {
             ],
           ],
         ],
+      },
+    ]);
+  });
+
+  it('handles badly nested qref', () => {
+    const query = 'categories<{Category parent<{Category id="top"}>';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: BlogPost,
+    });
+
+    expect(options).toEqual({
+      class: BlogPost,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        contain: [['categories', '{Category parent<{Category}']],
+        equal: [['id', 'top']],
       },
     ]);
   });

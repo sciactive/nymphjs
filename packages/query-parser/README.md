@@ -25,11 +25,11 @@ import Category from './Category';
 async function doQuery() {
   const [options, ...selectors] = queryParser({
     query:
-      'limit:4 sort:mdate foobar (| [archived] mdate<"2 weeks ago") category<{cat Tech}>',
+      'limit:4 sort:mdate foobar (| [archived] mdate<"2 weeks ago") category<{Cat Tech}>',
     entityClass: BlogPost,
     defaultFields: ['title', 'body'],
     qrefMap: {
-      cat: {
+      Cat: {
         class: Category,
         defaultFields: ['name'],
       },
@@ -99,127 +99,129 @@ Using a dash for sort means the results will not be sorted in any particular ord
 
 These are the available clauses, and their syntax.
 
-### equal and !equal
+### equal and not equal
 
 Check for string or JSON representation equality.
 
-- `name=string` or `name!=string`
-- `name="string value"` or `name!="string value"`
+- `name=string` or `-name=string`
+- `name="string value"` or `-name="string value"`
   - (Use this if you have a space in your string, or if your string could be interpreted as valid JSON. Escape double quotes with a leading backslash.)
-- `name=JSON` or `name!=JSON`
+- `name=JSON` or `-name=JSON`
   - (Match a JSON encoded value (like `true`, `1`, `[1,2,3]`, or `{"prop":"val"}`).)
 
-### guid and !guid
+### guid and not guid
 
 Check for entity GUID.
 
-- `{guid}` or `{!guid}`
+- `{guid}` or `-{guid}`
 
-### tag and !tag
+### tag and not tag
 
 Check for a tag.
 
-- `<name>` or `<!name>`
+- `<name>` or `-<name>`
 
-### truthy and !truthy
+### truthy and not truthy
 
 Check for truthiness.
 
-- `[name]` or `[!name]`
+- `[name]` or `-[name]`
 
-### ref and !ref
+### ref and not ref
 
 Check for a reference to another entity.
 
-- `name<{guid}>` or `name!<{guid}>`
+- `name<{guid}>` or `-name<{guid}>`
 
-### qref and !qref
+### qref and not qref
 
 Check for a reference to another entity using a query.
 
-- `name<{refclassname inner query}>` or `name!<{refclassname inner query}>`
+- `name<{refclassname inner query}>` or `-name<{refclassname inner query}>`
   - (Escape curly brackets with a leading backslash.)
   - (Requires a map of refclassname to their actual class and default fields.)
 
-### contain and !contain
+### contain and not contain
 
 Check if the array at the named property contains a value.
 
-- `name<value>` or `name!<value>`
+- `name<value>` or `-name<value>`
   - (Escape angle brackets with a leading backslash. If your value could be interpreted as valid JSON, encode it as a JSON string and use the JSON syntax instead.)
-- `name<JSON>` or `name!<JSON>`
+- `name<JSON>` or `-name<JSON>`
   - (Search for a JSON encoded value (like `true`, `1`, `[1,2,3]`, or `{"prop":"val"}`).)
 
-### search and !search
+### search and not search
 
 Check for full-text search query match. Use single quotes to find sequential terms and double quotes to find exact terms. Use "or" as the or operator. Use "-" before a term as the negation operator. Stop words and punctuation are stripped. Case insensitive.
 
-- `name(query)` or `name!(query)`
+- `name(query)` or `-name(query)`
+- `name:query` or `name:'sequence query'` or `name:"exact query"` or `-name:query` or `-name:'sequence query'` or `-name:"exact query"`
+  - (The "limit", "offset", "sort", and "reverse" properties cannot be used with the colon syntax.)
 
-### match and !match
+### match and not match
 
 Check for POSIX regex match.
 
-- `name~/pattern/` or `name!~/pattern/`
+- `name~/pattern/` or `-name~/pattern/`
 
-### imatch and !imatch
+### imatch and not imatch
 
 Check for case insensitive POSIX regex match.
 
-- `name~/pattern/i` or `name!~/pattern/i`
+- `name~/pattern/i` or `-name~/pattern/i`
 
-### like and !like
+### like and not like
 
 Check for pattern match where \_ is single char wildcard and % is any length wildcard.
 
-- `name~pattern` or `name!~pattern`
-- `name~"pattern"` or `name!~"pattern"`
+- `name~pattern` or `-name~pattern`
+- `name~"pattern"` or `-name~"pattern"`
   - (Use this if you have a space in your pattern.)
 
-### ilike and !ilike
+### ilike and not ilike
 
 Check for case insensitive pattern match where \_ is single char wildcard and % is any length wildcard.
 
-- `name~"pattern"i` or `name!~"pattern"i`
+- `name~"pattern"i` or `-name~"pattern"i`
 
-### gt
+### gt and not gt
 
 Check a prop's value is greater than a given value.
 
-- `name>number`
-- `name>relative`
+- `name>number` or `-name>number`
+- `name>relative` or `-name>relative`
   - (A single relative time value like `now` or `yesterday`.)
-- `name>"relative time value"`
+- `name>"relative time value"` or `-name>"relative time value"`
   - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
 
-### gte
+### gte and not gte
 
 Check a prop's value is greater than or equal to a given value.
 
-- `name>=number`
-- `name>=relative`
+- `name>=number` or `-name>=number`
+- `name>=relative` or `-name>=relative`
   - (A single relative time value like `now` or `yesterday`.)
-- `name>="relative time value"`
+- `name>="relative time value"` or `-name>="relative time value"`
   - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
 
-### lt
+### lt and not lt
 
 Check a prop's value is less than a given value.
 
-- `name<number`
-- `name<relative`
+- `name<number` or `-name<number`
+- `name<relative` or `-name<relative`
   - (A single relative time value like `now` or `yesterday`.)
-- `name<"relative time value"`
+- `name<"relative time value"` or `-name<"relative time value"`
   - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
 
-### lte
+### lte and not lte
 
 Check a prop's value is less than or equal to a given value.
 
-- `name<=number`
-- `name<=relative`
+- `name<=number` or `-name<=number`
+- `name<=relative` or `-name<=relative`
   - (A single relative time value like `now` or `yesterday`.)
-- `name<="relative time value"`
+- `name<="relative time value"` or `-name<="relative time value"`
   - (Use this for a time value with a space like `"two days from now"`, `"last thursday"`, `"+4 weeks"`, or `"5 minutes ago"`.)
 
 ## Selectors

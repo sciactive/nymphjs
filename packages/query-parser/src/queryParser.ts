@@ -158,14 +158,14 @@ function selectorsParser({
   });
 
   if (options) {
-    const limitRegex = /(?: |^)limit:(\d+)(?= |$)/;
+    const limitRegex = /(?:\s|^)limit:(\d+)(?=\s|$)/;
     const limitMatch = curQuery.match(limitRegex);
     if (limitMatch) {
       options.limit = Number(limitMatch[1]);
     }
     curQuery = curQuery.replace(limitRegex, '');
 
-    const offsetRegex = /(?: |^)offset:(\d+)(?= |$)/;
+    const offsetRegex = /(?:\s|^)offset:(\d+)(?=\s|$)/;
     const offsetMatch = curQuery.match(offsetRegex);
     if (offsetMatch) {
       options.offset = Number(offsetMatch[1]);
@@ -175,14 +175,14 @@ function selectorsParser({
     // JavaScript variable names are ridiculously infeasable to check
     // thoroughly, so this is a "best attempt".
     const sortRegex =
-      /(?: |^)sort:(-|[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)(?= |$)/;
+      /(?:\s|^)sort:(-|[_$a-zA-Z\xA0-\uFFFF][_$a-zA-Z0-9\xA0-\uFFFF]*)(?=\s|$)/;
     const sortMatch = curQuery.match(sortRegex);
     if (sortMatch) {
       options.sort = sortMatch[1] === '-' ? null : sortMatch[1];
     }
     curQuery = curQuery.replace(sortRegex, '');
 
-    const reverseRegex = /(?: |^)reverse:(true|false|1|0)(?= |$)/;
+    const reverseRegex = /(?:\s|^)reverse:(true|false|1|0)(?=\s|$)/;
     const reverseMatch = curQuery.match(reverseRegex);
     if (reverseMatch) {
       options.reverse = reverseMatch[1] === 'true' || reverseMatch[1] === '1';
@@ -233,8 +233,98 @@ function selectorParser({
 }): string {
   let curQuery = query;
 
-  // eg. prop(some search string) or prop!(some search string)
-  const searchRegex = /(?: |^)([^\s=\[\]<>{}]+?)!?\([^\)]+\)(?= |$)/g;
+  // This one needs to happen first, because it has entire queries in it.
+  // eg. user<{User name="Hunter"}> or -user<{User name="Hunter"}>
+  const qrefRegex =
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)<\{(\w+)(?=\s)/;
+  // This is used to bypass badly formatted things that match the above regex.
+  let offsetIndex = 0;
+  let qrefMatch = curQuery.match(qrefRegex);
+  while (qrefMatch) {
+    let endIndex = (qrefMatch.index ?? 0) + offsetIndex + qrefMatch[0].length;
+    let curOpen = 1;
+    while (curOpen) {
+      const indexOfNextOpen = curQuery.indexOf('<{', endIndex);
+      const indexOfNextClose = curQuery.slice(endIndex).search(/(?<!\\)\}>/);
+
+      if (indexOfNextClose < 0) {
+        endIndex = curQuery.length;
+        break;
+      }
+
+      if (
+        indexOfNextOpen > -1 &&
+        indexOfNextOpen < endIndex + indexOfNextClose
+      ) {
+        endIndex = indexOfNextOpen + 2;
+        curOpen++;
+      } else {
+        endIndex += indexOfNextClose + 2;
+        curOpen--;
+      }
+    }
+
+    if (!('qref' in selector)) {
+      selector.qref = [];
+    }
+    if (!('!qref' in selector)) {
+      selector['!qref'] = [];
+    }
+
+    const match = curQuery.slice(
+      (qrefMatch.index ?? 0) + offsetIndex,
+      endIndex,
+    );
+    try {
+      let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
+      value = unQuoteCurlies(value.slice(1, -1));
+      let [className, qrefQuery] = splitn(value, ' ', 2);
+      const EntityClass = qrefMap[className].class;
+      if (EntityClass == null) {
+        throw new Error();
+      }
+      const qref = queryParser({
+        query: qrefQuery,
+        entityClass: EntityClass,
+        defaultFields: qrefMap[className].defaultFields,
+        qrefMap,
+        bareHandler,
+      });
+      if (name.startsWith('-')) {
+        (selector['!qref'] as [string, any][]).push([name.slice(1), qref]);
+      } else {
+        (selector.qref as [string, any][]).push([name, qref]);
+      }
+    } catch (e: any) {
+      offsetIndex = endIndex;
+      qrefMatch = curQuery.slice(offsetIndex).match(qrefRegex);
+
+      if (!selector.qref?.length) {
+        delete selector.qref;
+      }
+      if (!selector['!qref']?.length) {
+        delete selector['!qref'];
+      }
+
+      continue;
+    }
+    if (!selector.qref?.length) {
+      delete selector.qref;
+    }
+    if (!selector['!qref']?.length) {
+      delete selector['!qref'];
+    }
+
+    curQuery =
+      curQuery.slice(0, (qrefMatch.index ?? 0) + offsetIndex) +
+      ' ' +
+      curQuery.slice(endIndex);
+    qrefMatch = curQuery.slice(offsetIndex).match(qrefRegex);
+  }
+
+  // eg. prop(some search string) or -prop(some search string)
+  const searchRegex =
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)\([^\)]+\)(?=\s|\)|\}>|$)/g;
   const searchMatch = curQuery.match(searchRegex);
   if (searchMatch) {
     selector.search = [];
@@ -242,8 +332,8 @@ function selectorParser({
     for (let match of searchMatch) {
       try {
         let [name, value] = splitn(match.trim().slice(0, -1), '(', 2);
-        if (name.endsWith('!')) {
-          selector['!search'].push([name.slice(0, -1), value]);
+        if (name.startsWith('-')) {
+          selector['!search'].push([name.slice(1), value]);
         } else {
           selector.search.push([name, value]);
         }
@@ -260,48 +350,44 @@ function selectorParser({
   }
   curQuery = curQuery.replace(searchRegex, '');
 
-  // eg. user<{User name="Hunter"}> or user!<{User name="Hunter"}>
-  const qrefRegex = /(?: |^)([^\s=\[\]<>{}]+?)!?<\{(\w+) (.*?[^\\])\}>(?= |$)/g;
-  const qrefMatch = curQuery.match(qrefRegex);
-  if (qrefMatch) {
-    selector.qref = [];
-    selector['!qref'] = [];
-    for (let match of qrefMatch) {
+  // eg. name:Marty or name:"Marty McFly" or -name:'Marty McFly'
+  const searchColonRegex =
+    /(?:\s|^)(?!(limit|offset|sort|reverse):)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?):("[^"]*?"|'[^']*?'|[^\s]+)(?=\s|\)|\}>|$)/g;
+  const searchColonMatch = curQuery.match(searchColonRegex);
+  if (searchColonMatch) {
+    if (!('search' in selector)) {
+      selector.search = [];
+    }
+    if (!('!search' in selector)) {
+      selector['!search'] = [];
+    }
+    for (let match of searchColonMatch) {
       try {
-        let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
-        value = unQuoteCurlies(value.slice(1, -1));
-        let [className, qrefQuery] = splitn(value, ' ', 2);
-        const EntityClass = qrefMap[className].class;
-        if (EntityClass == null) {
-          continue;
-        }
-        const qref = queryParser({
-          query: qrefQuery,
-          entityClass: EntityClass,
-          defaultFields: qrefMap[className].defaultFields,
-          qrefMap,
-          bareHandler,
-        });
-        if (name.endsWith('!')) {
-          selector['!qref'].push([name.slice(0, -1), qref]);
+        let [name, value] = splitn(match.trim(), ':', 2);
+        if (name.startsWith('-')) {
+          (selector['!search'] as [string, string][]).push([
+            name.slice(1),
+            value,
+          ]);
         } else {
-          selector.qref.push([name, qref]);
+          (selector.search as [string, string][]).push([name, value]);
         }
       } catch (e: any) {
         continue;
       }
     }
-    if (!selector.qref.length) {
-      delete selector.qref;
+    if (selector.search == null || !selector.search.length) {
+      delete selector.search;
     }
-    if (!selector['!qref'].length) {
-      delete selector['!qref'];
+    if (selector['!search'] == null || !selector['!search'].length) {
+      delete selector['!search'];
     }
   }
-  curQuery = curQuery.replace(qrefRegex, '');
+  curQuery = curQuery.replace(searchColonRegex, '');
 
   // eg. someArray=[1,2] or someObject={"prop":"some value"}
-  const equalJsonRegex = /(?: |^)([^\s=\[\]<>{}]+?)!?=(\{|\[)/g;
+  const equalJsonRegex =
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)=(\{|\[)/g;
   const equalJsonMatch = [...curQuery.matchAll(equalJsonRegex)];
   if (equalJsonMatch) {
     if (!('equal' in selector)) {
@@ -318,9 +404,9 @@ function selectorParser({
       let nextEndToken = curQuery.indexOf(opener === '{' ? '}' : ']', start);
       while (nextEndToken !== -1) {
         try {
-          if (name.endsWith('!')) {
+          if (name.startsWith('-')) {
             (selector['!equal'] as [string, any][]).unshift([
-              name.slice(0, -1),
+              name.slice(1),
               JSON.parse(curQuery.substring(start, nextEndToken + 1)),
             ]);
           } else {
@@ -352,7 +438,7 @@ function selectorParser({
 
   // eg. name=Marty or name="Marty McFly" or enabled=true
   const equalRegex =
-    /(?: |^)([^\s=\[\]<>{}]+?)!?=(""|".*?[^\\]"|[^ ]+)(?= |$)/g;
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)=(""|".*?[^\\]"|[^\s]+)(?=\s|\)|\}>|$)/g;
   const equalMatch = curQuery.match(equalRegex);
   if (equalMatch) {
     if (!('equal' in selector)) {
@@ -365,18 +451,18 @@ function selectorParser({
       try {
         let [name, value] = splitn(match.trim(), '=', 2);
         try {
-          if (name.endsWith('!')) {
+          if (name.startsWith('-')) {
             (selector['!equal'] as [string, any][]).push([
-              name.slice(0, -1),
+              name.slice(1),
               JSON.parse(value),
             ]);
           } else {
             (selector.equal as [string, any][]).push([name, JSON.parse(value)]);
           }
         } catch (e: any) {
-          if (name.endsWith('!')) {
+          if (name.startsWith('-')) {
             (selector['!equal'] as [string, any][]).push([
-              name.slice(0, -1),
+              name.slice(1),
               unQuoteString(value),
             ]);
           } else {
@@ -399,8 +485,9 @@ function selectorParser({
   }
   curQuery = curQuery.replace(equalRegex, '');
 
-  // eg. user<{790274347f9b3a018c2cedee}> or user!<{790274347f9b3a018c2cedee}>
-  const refRegex = /(?: |^)([^\s=\[\]<>{}]+?)!?<\{([0-9a-f]{24})\}>(?= |$)/g;
+  // eg. user<{790274347f9b3a018c2cedee}> or -user<{790274347f9b3a018c2cedee}>
+  const refRegex =
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)<\{([0-9a-f]{24})\}>(?=\s|\)|\}>|$)/g;
   const refMatch = curQuery.match(refRegex);
   if (refMatch) {
     selector.ref = [];
@@ -408,8 +495,8 @@ function selectorParser({
     for (let match of refMatch) {
       try {
         let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
-        if (name.endsWith('!')) {
-          selector['!ref'].push([name.slice(0, -1), value.slice(1, -1)]);
+        if (name.startsWith('-')) {
+          selector['!ref'].push([name.slice(1), value.slice(1, -1)]);
         } else {
           selector.ref.push([name, value.slice(1, -1)]);
         }
@@ -426,9 +513,9 @@ function selectorParser({
   }
   curQuery = curQuery.replace(refRegex, '');
 
-  // eg. someArrayOfNumbers<10> or someObject!<"some string">
+  // eg. someArrayOfNumbers<10> or -someObject<"some string">
   const containRegex =
-    /(?: |^)([^\s=\[\]<>{}]+?)!?(<(?:[^"][^>]*?|".*?[^\\]"))>(?= |$)/g;
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)(<(?:[^"][^>]*?|".*?[^\\]"))>(?=\s|\)|\}>|$)/g;
   const containMatch = curQuery.match(containRegex);
   if (containMatch) {
     selector.contain = [];
@@ -437,20 +524,17 @@ function selectorParser({
       try {
         let [name, value] = splitn(match.trim().slice(0, -1), '<', 2);
         try {
-          if (name.endsWith('!')) {
+          if (name.startsWith('-')) {
             selector['!contain'].push([
-              name.slice(0, -1),
+              name.slice(1),
               JSON.parse(unQuoteString(value)),
             ]);
           } else {
             selector.contain.push([name, JSON.parse(unQuoteString(value))]);
           }
         } catch (e: any) {
-          if (name.endsWith('!')) {
-            selector['!contain'].push([
-              name.slice(0, -1),
-              unQuoteString(value),
-            ]);
+          if (name.startsWith('-')) {
+            selector['!contain'].push([name.slice(1), unQuoteString(value)]);
           } else {
             selector.contain.push([name, unQuoteString(value)]);
           }
@@ -468,9 +552,9 @@ function selectorParser({
   }
   curQuery = curQuery.replace(containRegex, '');
 
-  // eg. name~/Hunter/ or name!~/hunter/i
+  // eg. name~/Hunter/ or -name~/hunter/i
   const posixRegex =
-    /(?: |^)([^\s=\[\]<>{}]+?)!?~(\/\/|\/.*?[^\\]\/)i?(?= |$)/g;
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)~(\/\/|\/.*?[^\\]\/)i?(?=\s|\)|\}>|$)/g;
   const posixMatch = curQuery.match(posixRegex);
   if (posixMatch) {
     selector.match = [];
@@ -480,15 +564,15 @@ function selectorParser({
     for (let match of posixMatch) {
       try {
         let [name, value] = splitn(match.trim(), '~', 2);
-        if (name.endsWith('!')) {
+        if (name.startsWith('-')) {
           if (value.endsWith('i')) {
             selector['!imatch'].push([
-              name.slice(0, -1),
+              name.slice(1),
               value.replace(/^\/|\/i$/g, ''),
             ]);
           } else {
             selector['!match'].push([
-              name.slice(0, -1),
+              name.slice(1),
               value.replace(/^\/|\/$/g, ''),
             ]);
           }
@@ -518,9 +602,9 @@ function selectorParser({
   }
   curQuery = curQuery.replace(posixRegex, '');
 
-  // eg. name~Hunter or name!~"hunter"i
+  // eg. name~Hunter or -name~"hunter"i
   const likeRegex =
-    /(?: |^)([^\s=\[\]<>{}]+?)!?~(""i?|".*?[^\\]"i?|[^ ]+)(?= |$)/g;
+    /(?:\s|^)-?([^-\s=\[\]<>{}()][^\s=\[\]<>{}()]*?)~(""i?|".*?[^\\]"i?|[^\s]+)(?=\s|\)|\}>|$)/g;
   const likeMatch = curQuery.match(likeRegex);
   if (likeMatch) {
     selector.like = [];
@@ -530,14 +614,14 @@ function selectorParser({
     for (let match of likeMatch) {
       try {
         let [name, value] = splitn(match.trim(), '~', 2);
-        if (name.endsWith('!')) {
+        if (name.startsWith('-')) {
           if (value.endsWith('"i')) {
             selector['!ilike'].push([
-              name.slice(0, -1),
+              name.slice(1),
               unQuoteString(value.slice(0, -1)),
             ]);
           } else {
-            selector['!like'].push([name.slice(0, -1), unQuoteString(value)]);
+            selector['!like'].push([name.slice(1), unQuoteString(value)]);
           }
         } else {
           if (value.endsWith('"i')) {
@@ -565,16 +649,16 @@ function selectorParser({
   }
   curQuery = curQuery.replace(likeRegex, '');
 
-  // eg. {790274347f9b3a018c2cedee} or {!790274347f9b3a018c2cedee}
-  const guidRegex = /(?: |^)\{!?([0-9a-f]{24})\}(?= |$)/g;
+  // eg. {790274347f9b3a018c2cedee} or -{790274347f9b3a018c2cedee}
+  const guidRegex = /(?:\s|^)-?\{([0-9a-f]{24})\}(?=\s|\)|\}>|$)/g;
   const guidMatch = curQuery.match(guidRegex);
   if (guidMatch) {
     selector.guid = [];
     selector['!guid'] = [];
     for (let match of guidMatch) {
       try {
-        let guid = match.trim().replace(/^\{|\}$/g, '');
-        if (guid.startsWith('!')) {
+        let guid = match.trim().replace(/^(-?)\{|\}$/g, '$1');
+        if (guid.startsWith('-')) {
           selector['!guid'].push(guid.slice(1));
         } else {
           selector.guid.push(guid);
@@ -592,16 +676,16 @@ function selectorParser({
   }
   curQuery = curQuery.replace(guidRegex, '');
 
-  // eg. [enabled] or [!defaultPrimaryGroup]
-  const truthyRegex = /(?: |^)\[(!?[^\s=\[\]<>{}]+?)\](?= |$)/g;
+  // eg. [enabled] or -[defaultPrimaryGroup]
+  const truthyRegex = /(?:\s|^)-?\[([^\s=\[\]<>{}]+?)\](?=\s|\)|\}>|$)/g;
   const truthyMatch = curQuery.match(truthyRegex);
   if (truthyMatch) {
     selector.truthy = [];
     selector['!truthy'] = [];
     for (let match of truthyMatch) {
       try {
-        let name = match.trim().replace(/^\[|\]$/g, '');
-        if (name.startsWith('!')) {
+        let name = match.trim().replace(/^(-?)\[|\]$/g, '$1');
+        if (name.startsWith('-')) {
           selector['!truthy'].push(name.slice(1));
         } else {
           selector.truthy.push(name);
@@ -619,16 +703,16 @@ function selectorParser({
   }
   curQuery = curQuery.replace(truthyRegex, '');
 
-  // eg. <archived> or <!archived>
-  const tagRegex = /(?: |^)<(!?\w+)>(?= |$)/g;
+  // eg. <archived> or -<archived>
+  const tagRegex = /(?:\s|^)-?<(\w+)>(?=\s|\)|\}>|$)/g;
   const tagMatch = curQuery.match(tagRegex);
   if (tagMatch) {
     selector.tag = [];
     selector['!tag'] = [];
     for (let match of tagMatch) {
       try {
-        let name = match.trim().replace(/^<|>$/g, '');
-        if (name.startsWith('!')) {
+        let name = match.trim().replace(/^(-?)<|>$/g, '$1');
+        if (name.startsWith('-')) {
           selector['!tag'].push(name.slice(1));
         } else {
           selector.tag.push(name);
@@ -646,15 +730,21 @@ function selectorParser({
   }
   curQuery = curQuery.replace(tagRegex, '');
 
-  // eg. cdate>15
-  const gtRegex = /(?: |^)([^\s=\[\]<>{}]+?)>(-?\d+(?:\.\d+)?)(?= |$)/g;
+  // eg. cdate>15 or -cdate>15
+  const gtRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)>(-?\d+(?:\.\d+)?)(?=\s|\)|\}>|$)/g;
   const gtMatch = curQuery.match(gtRegex);
   if (gtMatch) {
     selector.gt = [];
+    selector['!gt'] = [];
     for (let match of gtMatch) {
       try {
         let [name, value] = splitn(match.trim(), '>', 2);
-        selector.gt.push([name, Number(value)]);
+        if (name.startsWith('-')) {
+          selector['!gt'].push([name.slice(1), Number(value)]);
+        } else {
+          selector.gt.push([name, Number(value)]);
+        }
       } catch (e: any) {
         continue;
       }
@@ -662,24 +752,39 @@ function selectorParser({
     if (!selector.gt.length) {
       delete selector.gt;
     }
+    if (!selector['!gt'].length) {
+      delete selector['!gt'];
+    }
   }
   curQuery = curQuery.replace(gtRegex, '');
 
-  // eg. cdate>yesterday or cdate>"2 days ago"
-  const gtRelativeRegex = /(?: |^)([^\s=\[\]<>{}]+?)>(\w+|"[^"]+")(?= |$)/g;
+  // eg. cdate>yesterday or -cdate>"2 days ago"
+  const gtRelativeRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)>(\w+|"[^"]+")(?=\s|\)|\}>|$)/g;
   const gtRelativeMatch = curQuery.match(gtRelativeRegex);
   if (gtRelativeMatch) {
     if (selector.gt == null) {
       selector.gt = [];
     }
+    if (selector['!gt'] == null) {
+      selector['!gt'] = [];
+    }
     for (let match of gtRelativeMatch) {
       try {
         let [name, value] = splitn(match.trim(), '>', 2);
-        (selector.gt as [string, null, string][]).push([
-          name,
-          null,
-          value.replace(/"/g, ''),
-        ]);
+        if (name.startsWith('-')) {
+          (selector['!gt'] as [string, null, string][]).push([
+            name.slice(1),
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        } else {
+          (selector.gt as [string, null, string][]).push([
+            name,
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        }
       } catch (e: any) {
         continue;
       }
@@ -687,18 +792,27 @@ function selectorParser({
     if (!selector.gt.length) {
       delete selector.gt;
     }
+    if (!selector['!gt'].length) {
+      delete selector['!gt'];
+    }
   }
   curQuery = curQuery.replace(gtRelativeRegex, '');
 
-  // eg. cdate>=15
-  const gteRegex = /(?: |^)([^\s=\[\]<>{}]+?)>=(-?\d+(?:\.\d+)?)(?= |$)/g;
+  // eg. cdate>=15 or -cdate>=15
+  const gteRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)>=(-?\d+(?:\.\d+)?)(?=\s|\)|\}>|$)/g;
   const gteMatch = curQuery.match(gteRegex);
   if (gteMatch) {
     selector.gte = [];
+    selector['!gte'] = [];
     for (let match of gteMatch) {
       try {
         let [name, value] = splitn(match.trim(), '>=', 2);
-        selector.gte.push([name, Number(value)]);
+        if (name.startsWith('-')) {
+          selector['!gte'].push([name.slice(1), Number(value)]);
+        } else {
+          selector.gte.push([name, Number(value)]);
+        }
       } catch (e: any) {
         continue;
       }
@@ -706,24 +820,39 @@ function selectorParser({
     if (!selector.gte.length) {
       delete selector.gte;
     }
+    if (!selector['!gte'].length) {
+      delete selector['!gte'];
+    }
   }
   curQuery = curQuery.replace(gteRegex, '');
 
-  // eg. cdate>=yesterday or cdate>="2 days ago"
-  const gteRelativeRegex = /(?: |^)([^\s=\[\]<>{}]+?)>=(\w+|"[^"]+")(?= |$)/g;
+  // eg. cdate>=yesterday or -cdate>="2 days ago"
+  const gteRelativeRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)>=(\w+|"[^"]+")(?=\s|\)|\}>|$)/g;
   const gteRelativeMatch = curQuery.match(gteRelativeRegex);
   if (gteRelativeMatch) {
     if (selector.gte == null) {
       selector.gte = [];
     }
+    if (selector['!gte'] == null) {
+      selector['!gte'] = [];
+    }
     for (let match of gteRelativeMatch) {
       try {
         let [name, value] = splitn(match.trim(), '>=', 2);
-        (selector.gte as [string, null, string][]).push([
-          name,
-          null,
-          value.replace(/"/g, ''),
-        ]);
+        if (name.startsWith('-')) {
+          (selector['!gte'] as [string, null, string][]).push([
+            name.slice(1),
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        } else {
+          (selector.gte as [string, null, string][]).push([
+            name,
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        }
       } catch (e: any) {
         continue;
       }
@@ -731,18 +860,27 @@ function selectorParser({
     if (!selector.gte.length) {
       delete selector.gte;
     }
+    if (!selector['!gte'].length) {
+      delete selector['!gte'];
+    }
   }
   curQuery = curQuery.replace(gteRelativeRegex, '');
 
-  // eg. cdate<15
-  const ltRegex = /(?: |^)([^\s=\[\]<>{}]+?)<(-?\d+(?:\.\d+)?)(?= |$)/g;
+  // eg. cdate<15 or -cdate<15
+  const ltRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)<(-?\d+(?:\.\d+)?)(?=\s|\)|\}>|$)/g;
   const ltMatch = curQuery.match(ltRegex);
   if (ltMatch) {
     selector.lt = [];
+    selector['!lt'] = [];
     for (let match of ltMatch) {
       try {
         let [name, value] = splitn(match.trim(), '<', 2);
-        selector.lt.push([name, Number(value)]);
+        if (name.startsWith('-')) {
+          selector['!lt'].push([name.slice(1), Number(value)]);
+        } else {
+          selector.lt.push([name, Number(value)]);
+        }
       } catch (e: any) {
         continue;
       }
@@ -750,24 +888,39 @@ function selectorParser({
     if (!selector.lt.length) {
       delete selector.lt;
     }
+    if (!selector['!lt'].length) {
+      delete selector['!lt'];
+    }
   }
   curQuery = curQuery.replace(ltRegex, '');
 
-  // eg. cdate<yesterday or cdate<"2 days ago"
-  const ltRelativeRegex = /(?: |^)([^\s=\[\]<>{}]+?)<(\w+|"[^"]+")(?= |$)/g;
+  // eg. cdate<yesterday or -cdate<"2 days ago"
+  const ltRelativeRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)<(\w+|"[^"]+")(?=\s|\)|\}>|$)/g;
   const ltRelativeMatch = curQuery.match(ltRelativeRegex);
   if (ltRelativeMatch) {
     if (selector.lt == null) {
       selector.lt = [];
     }
+    if (selector['!lt'] == null) {
+      selector['!lt'] = [];
+    }
     for (let match of ltRelativeMatch) {
       try {
         let [name, value] = splitn(match.trim(), '<', 2);
-        (selector.lt as [string, null, string][]).push([
-          name,
-          null,
-          value.replace(/"/g, ''),
-        ]);
+        if (name.startsWith('-')) {
+          (selector['!lt'] as [string, null, string][]).push([
+            name.slice(1),
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        } else {
+          (selector.lt as [string, null, string][]).push([
+            name,
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        }
       } catch (e: any) {
         continue;
       }
@@ -775,18 +928,27 @@ function selectorParser({
     if (!selector.lt.length) {
       delete selector.lt;
     }
+    if (!selector['!lt'].length) {
+      delete selector['!lt'];
+    }
   }
   curQuery = curQuery.replace(ltRelativeRegex, '');
 
-  // eg. cdate<=15
-  const lteRegex = /(?: |^)([^\s=\[\]<>{}]+?)<=(-?\d+(?:\.\d+)?)(?= |$)/g;
+  // eg. cdate<=15 or -cdate<=15
+  const lteRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)<=(-?\d+(?:\.\d+)?)(?=\s|\)|\}>|$)/g;
   const lteMatch = curQuery.match(lteRegex);
   if (lteMatch) {
     selector.lte = [];
+    selector['!lte'] = [];
     for (let match of lteMatch) {
       try {
         let [name, value] = splitn(match.trim(), '<=', 2);
-        selector.lte.push([name, Number(value)]);
+        if (name.startsWith('-')) {
+          selector['!lte'].push([name.slice(1), Number(value)]);
+        } else {
+          selector.lte.push([name, Number(value)]);
+        }
       } catch (e: any) {
         continue;
       }
@@ -794,30 +956,48 @@ function selectorParser({
     if (!selector.lte.length) {
       delete selector.lte;
     }
+    if (!selector['!lte'].length) {
+      delete selector['!lte'];
+    }
   }
   curQuery = curQuery.replace(lteRegex, '');
 
-  // eg. cdate<=yesterday or cdate<="2 days ago"
-  const lteRelativeRegex = /(?: |^)([^\s=\[\]<>{}]+?)<=(\w+|"[^"]+")(?= |$)/g;
+  // eg. cdate<=yesterday or -cdate<="2 days ago"
+  const lteRelativeRegex =
+    /(?:\s|^)-?([^\s=\[\]<>{}]+?)<=(\w+|"[^"]+")(?=\s|\)|\}>|$)/g;
   const lteRelativeMatch = curQuery.match(lteRelativeRegex);
   if (lteRelativeMatch) {
     if (selector.lte == null) {
       selector.lte = [];
     }
+    if (selector['!lte'] == null) {
+      selector['!lte'] = [];
+    }
     for (let match of lteRelativeMatch) {
       try {
         let [name, value] = splitn(match.trim(), '<=', 2);
-        (selector.lte as [string, null, string][]).push([
-          name,
-          null,
-          value.replace(/"/g, ''),
-        ]);
+        if (name.startsWith('-')) {
+          (selector['!lte'] as [string, null, string][]).push([
+            name.slice(1),
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        } else {
+          (selector.lte as [string, null, string][]).push([
+            name,
+            null,
+            value.replace(/"/g, ''),
+          ]);
+        }
       } catch (e: any) {
         continue;
       }
     }
     if (!selector.lte.length) {
       delete selector.lte;
+    }
+    if (!selector['!lte'].length) {
+      delete selector['!lte'];
     }
   }
   curQuery = curQuery.replace(lteRelativeRegex, '');
