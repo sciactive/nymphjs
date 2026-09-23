@@ -373,9 +373,7 @@ export default class User extends AbleObject<UserData> {
     const entity = new this();
     if (username != null) {
       const entity = await this.nymph.getEntity(
-        {
-          class: this,
-        },
+        { class: this },
         {
           type: '&',
           ilike: ['username', username.replace(/([\\%_])/g, (s) => `\\${s}`)],
@@ -414,10 +412,7 @@ export default class User extends AbleObject<UserData> {
   }): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
     if (!tilmeld.config.pwRecovery) {
-      return {
-        result: false,
-        message: 'Account recovery is not allowed.',
-      };
+      return { result: false, message: 'Account recovery is not allowed.' };
     }
 
     let user: User & UserData;
@@ -445,10 +440,7 @@ export default class User extends AbleObject<UserData> {
       user = getUser;
       options.template = 'RecoverUsername';
       options.message = {
-        to: {
-          name: user.name ?? '',
-          address: user.email ?? '',
-        },
+        to: { name: user.name ?? '', address: user.email ?? '' },
       };
       options.locals = {};
     } else if (data.recoveryType === 'password') {
@@ -476,10 +468,7 @@ export default class User extends AbleObject<UserData> {
       user = getUser;
       options.template = 'RecoverPassword';
       options.message = {
-        to: {
-          name: user.name ?? '',
-          address: user.email ?? '',
-        },
+        to: { name: user.name ?? '', address: user.email ?? '' },
       };
       options.locals = {
         recoverCode: getUser.recoverSecret,
@@ -520,10 +509,7 @@ export default class User extends AbleObject<UserData> {
   }): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
     if (!tilmeld.config.pwRecovery) {
-      return {
-        result: false,
-        message: 'Account recovery is not allowed.',
-      };
+      return { result: false, message: 'Account recovery is not allowed.' };
     }
 
     const user = await tilmeld.User.factoryUsername(data.username);
@@ -539,10 +525,7 @@ export default class User extends AbleObject<UserData> {
         1000 <
         Date.now()
     ) {
-      return {
-        result: false,
-        message: 'The secret code does not match.',
-      };
+      return { result: false, message: 'The secret code does not match.' };
     }
 
     if (!('password' in data) || !data.password.length) {
@@ -640,26 +623,10 @@ export default class User extends AbleObject<UserData> {
     return await this.nymph.getEntities(
       {
         class: this.nymph.getEntityClass(User),
-        ...(options?.limit != null
-          ? {
-              limit: options.limit,
-            }
-          : {}),
-        ...(options?.offset != null
-          ? {
-              offset: options.offset,
-            }
-          : {}),
-        ...(options?.sort != null
-          ? {
-              sort: options.sort,
-            }
-          : {}),
-        ...(options?.reverse != null
-          ? {
-              reverse: options.reverse,
-            }
-          : {}),
+        ...(options?.limit != null ? { limit: options.limit } : {}),
+        ...(options?.offset != null ? { offset: options.offset } : {}),
+        ...(options?.sort != null ? { sort: options.sort } : {}),
+        ...(options?.reverse != null ? { reverse: options.reverse } : {}),
       },
       {
         type: '&',
@@ -744,10 +711,7 @@ export default class User extends AbleObject<UserData> {
         }
       }
     } catch (e: any) {
-      return {
-        result: false,
-        message: e.message,
-      };
+      return { result: false, message: e.message };
     }
 
     this.$nymph.config.debugLog(
@@ -823,10 +787,7 @@ export default class User extends AbleObject<UserData> {
         }
       }
     } catch (e: any) {
-      return {
-        result: false,
-        message: e.message,
-      };
+      return { result: false, message: e.message };
     }
 
     this.$nymph.config.debugLog(
@@ -865,10 +826,7 @@ export default class User extends AbleObject<UserData> {
         }
       }
     } catch (e: any) {
-      return {
-        result: false,
-        message: e.message,
-      };
+      return { result: false, message: e.message };
     }
 
     this.$nymph.config.debugLog(
@@ -1362,9 +1320,7 @@ export default class User extends AbleObject<UserData> {
                 address: this.$data.email ?? '',
               },
             },
-            locals: {
-              verifyLink: link,
-            },
+            locals: { verifyLink: link },
           },
           this,
         ));
@@ -1704,11 +1660,7 @@ export default class User extends AbleObject<UserData> {
 
     const qrcode = await toDataURL(uri);
 
-    return {
-      uri,
-      qrcode,
-      secret: secret.base32,
-    };
+    return { uri, qrcode, secret: secret.base32 };
   }
 
   /**
@@ -1824,10 +1776,7 @@ export default class User extends AbleObject<UserData> {
 
     try {
       await this.$save();
-      return {
-        result: true,
-        message: 'Two factor secret has been removed.',
-      };
+      return { result: true, message: 'Two factor secret has been removed.' };
     } catch (e: any) {
       return { result: false, message: "Couldn't remove two factor secret." };
     }
@@ -1888,16 +1837,10 @@ export default class User extends AbleObject<UserData> {
         difference(username.split(''), tilmeld.config.validChars.split(''))
           .length
       ) {
-        return {
-          result: false,
-          message: tilmeld.config.validCharsNotice,
-        };
+        return { result: false, message: tilmeld.config.validCharsNotice };
       }
       if (!tilmeld.config.validRegex.test(username)) {
-        return {
-          result: false,
-          message: tilmeld.config.validRegexNotice,
-        };
+        return { result: false, message: tilmeld.config.validRegexNotice };
       }
       if (domain != null) {
         if (!tilmeld.config.validDomainRegex.test(domain)) {
@@ -2003,10 +1946,7 @@ export default class User extends AbleObject<UserData> {
       }
     }
     if (!tilmeld.config.validEmailRegex.test(this.$data.email)) {
-      return {
-        result: false,
-        message: tilmeld.config.validEmailRegexNotice,
-      };
+      return { result: false, message: tilmeld.config.validEmailRegexNotice };
     }
     const selector: Selector = {
       type: '&',
@@ -2219,18 +2159,11 @@ export default class User extends AbleObject<UserData> {
           for (let callback of (this.constructor as typeof User)
             .afterRegisterCallbacks) {
             if (callback) {
-              await callback(this, {
-                loggedin,
-                message,
-              });
+              await callback(this, { loggedin, message });
             }
           }
 
-          return {
-            result: true,
-            loggedin,
-            message,
-          };
+          return { result: true, loggedin, message };
         },
         async (nymph) => {
           this.$setNymph(nymph);
@@ -2245,9 +2178,7 @@ export default class User extends AbleObject<UserData> {
               tilmeld,
               {
                 template: 'UserRegistered',
-                message: {
-                  to: tilmeld.config.userRegisteredRecipient,
-                },
+                message: { to: tilmeld.config.userRegisteredRecipient },
                 locals: {
                   userUsername: this.$data.username,
                   userName: this.$data.name,
@@ -2284,11 +2215,7 @@ export default class User extends AbleObject<UserData> {
 
       return result;
     } catch (e: any) {
-      return {
-        result: false,
-        loggedin: false,
-        message: e.message,
-      };
+      return { result: false, loggedin: false, message: e.message };
     }
   }
 
@@ -2608,10 +2535,7 @@ export default class User extends AbleObject<UserData> {
             group.user = this;
             const parent = await this.$nymph.getEntity(
               { class: Group },
-              {
-                type: '&',
-                equal: ['defaultPrimary', true],
-              },
+              { type: '&', equal: ['defaultPrimary', true] },
             );
             if (parent != null) {
               group.parent = parent;
@@ -2620,10 +2544,7 @@ export default class User extends AbleObject<UserData> {
             // Add the default primary.
             const group = await this.$nymph.getEntity(
               { class: Group },
-              {
-                type: '&',
-                equal: ['defaultPrimary', true],
-              },
+              { type: '&', equal: ['defaultPrimary', true] },
             );
             if (group != null) {
               this.$data.group = group;
@@ -2679,19 +2600,13 @@ export default class User extends AbleObject<UserData> {
             // Add the default secondaries for unverified users.
             this.$data.groups = await this.$nymph.getEntities(
               { class: Group },
-              {
-                type: '&',
-                equal: ['unverifiedSecondary', true],
-              },
+              { type: '&', equal: ['unverifiedSecondary', true] },
             );
           } else {
             // Add the default secondaries.
             this.$data.groups = await this.$nymph.getEntities(
               { class: Group },
-              {
-                type: '&',
-                equal: ['defaultSecondary', true],
-              },
+              { type: '&', equal: ['defaultSecondary', true] },
             );
           }
         }

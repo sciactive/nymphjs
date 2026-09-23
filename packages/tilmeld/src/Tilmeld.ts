@@ -230,8 +230,10 @@ export default class Tilmeld implements TilmeldInterface {
               options.class?.factorySync() instanceof User) || // The use is searching for a user and searching is disabled.
               (!tilmeld.config.enableGroupSearch &&
                 options.class?.factorySync() instanceof Group)) && // Or the same, but for a group.
-            (selectors[0] == null || // No selector specified.
+            (selectors.length > 1 || // There's more than one selector.
+              selectors[0] == null || // Or no selector specified.
               selectors[0].type !== '&' || // Or the type is not and.
+              Object.keys(selectors[0]).length > 2 || // Or there's more than one clause.
               (!('guid' in selectors[0]) && !('equal' in selectors[0])) || // Or they're searching for something other than guid or equal.
               ('guid' in selectors[0] &&
                 (!selectors[0].guid?.length ||
@@ -684,20 +686,12 @@ export default class Tilmeld implements TilmeldInterface {
         subSelectors.push({
           type: '&',
           gte: [['acGroup', TilmeldAccessLevels.READ_ACCESS]],
-          selector: [
-            {
-              type: '|',
-              ref: groupRefs,
-            },
-          ],
+          selector: [{ type: '|', ref: groupRefs }],
         });
       }
       // All the acRead, acWrite, and acFull contains.
       if (acContains.length) {
-        subSelectors.push({
-          type: '|',
-          contain: acContains,
-        });
+        subSelectors.push({ type: '|', contain: acContains });
       }
       const selector: FormattedSelector = { type: '|' };
       if (
@@ -1044,10 +1038,7 @@ export default class Tilmeld implements TilmeldInterface {
 
     const user = await this.nymph.getEntity(
       { class: this.User },
-      {
-        type: '&',
-        guid: guid,
-      },
+      { type: '&', guid },
     );
     if (!user || !user.guid) {
       return null;
@@ -1332,24 +1323,4 @@ export default class Tilmeld implements TilmeldInterface {
       await this.authenticate(false, true);
     }
   }
-
-  // /**
-  //  * Sort an array of groups hierarchically.
-  //  *
-  //  * An additional property of the groups can be used to sort them under their
-  //  * parents.
-  //  *
-  //  * @param array The array of groups.
-  //  * @param property The name of the property to sort groups by. Undefined for no additional sorting.
-  //  * @param caseSensitive Sort case sensitively.
-  //  * @param reverse Reverse the sort order.
-  //  */
-  // public static groupSort(
-  //   array: any[],
-  //   property?: string,
-  //   caseSensitive = false,
-  //   reverse = false
-  // ) {
-  //   hsort(array, property, 'parent', caseSensitive, reverse);
-  // }
 }

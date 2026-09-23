@@ -547,10 +547,12 @@ export default class Group extends AbleObject<GroupData> {
    * Gets an array of the group's descendant groups.
    *
    * @param andSelf Include this group in the returned array.
+   * @param andDisabled Include disabled groups.
    * @returns An array of groups.
    */
   public async $getDescendants(
     andSelf = false,
+    andDisabled = false,
   ): Promise<(Group & GroupData)[]> {
     const tilmeld = enforceTilmeld(this);
     let groups: (Group & GroupData)[] = [];
@@ -558,7 +560,7 @@ export default class Group extends AbleObject<GroupData> {
       { class: tilmeld.Group },
       {
         type: '&',
-        equal: ['enabled', true],
+        ...(andDisabled ? {} : { equal: ['enabled', true] }),
         ref: ['parent', this],
       },
     );
@@ -598,7 +600,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   /**
-   * Gets an array of users in the group.
+   * Gets an array of enabled users in the group.
    *
    * @param descendants Include users in all descendant groups too.
    * @param limit The limit for the query.
@@ -621,10 +623,7 @@ export default class Group extends AbleObject<GroupData> {
         limit,
         offset,
       },
-      {
-        type: '&',
-        equal: ['enabled', true],
-      },
+      { type: '&', equal: ['enabled', true] },
       {
         type: '|',
         ref: [
@@ -1089,10 +1088,13 @@ export default class Group extends AbleObject<GroupData> {
       }
     }
 
-    // Delete descendants.
-    const descendants = await this.$getDescendants();
-    if (descendants.length) {
-      for (let curGroup of descendants) {
+    // Delete children.
+    const children = await this.$nymph.getEntities(
+      { class: tilmeld.Group, skipAc: true },
+      { type: '&', ref: ['parent', this] },
+    );
+    if (children.length) {
+      for (let curGroup of children) {
         if (this.$skipAcWhenDeleting) {
           await curGroup.$deleteSkipAC();
         } else {
@@ -1103,14 +1105,8 @@ export default class Group extends AbleObject<GroupData> {
 
     // Remove users from this primary group.
     const primaryUsers = await this.$nymph.getEntities(
-      {
-        class: User,
-        skipAc: true,
-      },
-      {
-        type: '&',
-        ref: ['group', this],
-      },
+      { class: User, skipAc: true },
+      { type: '&', ref: ['group', this] },
     );
     for (let user of primaryUsers) {
       delete user.group;
@@ -1123,14 +1119,8 @@ export default class Group extends AbleObject<GroupData> {
 
     // Remove users from this secondary group.
     const secondaryUsers = await this.$nymph.getEntities(
-      {
-        class: User,
-        skipAc: true,
-      },
-      {
-        type: '&',
-        ref: ['groups', this],
-      },
+      { class: User, skipAc: true },
+      { type: '&', ref: ['groups', this] },
     );
     for (let user of secondaryUsers) {
       user.$delGroup(this);
