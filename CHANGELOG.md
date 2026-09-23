@@ -3,6 +3,20 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.123](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.122...v1.0.0-beta.123) (2026-09-23)
+
+### Bug Fixes
+
+- additional security check, delete disabled descendant groups on delete, clean up ([ee9a287](https://forge.sciactive.com/sciactive/nymphjs/commits/ee9a287a3b89f21ca0ab501df22243f07b1af167))
+- entities causing issues in selectors from client ([8992ccf](https://forge.sciactive.com/sciactive/nymphjs/commits/8992ccf8c3b386ddeecae9b83c9d798817923469))
+- reload router to reinitialize components after location change in tilmeld setup ([09c1206](https://forge.sciactive.com/sciactive/nymphjs/commits/09c12061418637c589a3db7e182a52c7ca33dca6))
+
+### Features
+
+- add children and users tables to group edit in tilmeld setup ([3ffa18e](https://forge.sciactive.com/sciactive/nymphjs/commits/3ffa18ec7027b424df472f1883d643eefbb3cfcb))
+- add new colon search syntax to, and fix issues with, query parser, change negation syntax ([510991a](https://forge.sciactive.com/sciactive/nymphjs/commits/510991a1466777d64a24062c82f81c7c83afa52b))
+- use transaction helper and transactional decorator in tilmeld entities ([3f1e6eb](https://forge.sciactive.com/sciactive/nymphjs/commits/3f1e6eb12e44b79db243fb68b6a9563d177e9b47))
+
 # [1.0.0-beta.122](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.121...v1.0.0-beta.122) (2026-09-22)
 
 ### Bug Fixes

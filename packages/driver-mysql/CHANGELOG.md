@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.123](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.122...v1.0.0-beta.123) (2026-09-23)
+
+**Note:** Version bump only for package @nymphjs/driver-mysql
+
 # [1.0.0-beta.122](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.121...v1.0.0-beta.122) (2026-09-22)
 
 ### Bug Fixes

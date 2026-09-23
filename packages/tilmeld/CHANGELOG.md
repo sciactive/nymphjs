@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.123](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.122...v1.0.0-beta.123) (2026-09-23)
+
+### Bug Fixes
+
+- additional security check, delete disabled descendant groups on delete, clean up ([ee9a287](https://forge.sciactive.com/sciactive/nymphjs/commits/ee9a287a3b89f21ca0ab501df22243f07b1af167))
+
+### Features
+
+- use transaction helper and transactional decorator in tilmeld entities ([3f1e6eb](https://forge.sciactive.com/sciactive/nymphjs/commits/3f1e6eb12e44b79db243fb68b6a9563d177e9b47))
+
 # [1.0.0-beta.122](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.121...v1.0.0-beta.122) (2026-09-22)
 
 ### Bug Fixes
