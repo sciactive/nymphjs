@@ -107,7 +107,9 @@
     <main class="tilmeld-main-content" bind:this={mainContent}>
       {#if tilmeldAdmin}
         {#if $clientConfig}
-          <Router {routes} {onRouteLoaded} />
+          {#key currentLocation}
+            <Router {routes} {onRouteLoaded} />
+          {/key}
         {:else}
           Loading...
         {/if}
@@ -187,6 +189,7 @@
   });
 
   let currentRoute = $state('/');
+  let currentLocation = $state('/');
 
   const routes = {
     '/': Intro,
@@ -204,6 +207,7 @@
     }
 
     currentRoute = `${detail?.route ?? '/'}`;
+    currentLocation = `${detail?.location ?? '/'}`;
   }
 
   const sections: (
