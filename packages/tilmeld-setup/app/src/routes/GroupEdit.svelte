@@ -30,7 +30,10 @@
     {/await}
   {/if}
 
-  <TabBar tabs={['General', 'Parent', 'Abilities']} bind:active={activeTab}>
+  <TabBar
+    tabs={['General', 'Parent', 'Children', 'Abilities', 'Users']}
+    bind:active={activeTab}
+  >
     {#snippet tab(tab)}
       <Tab {tab}>
         <Label>{tab}</Label>
@@ -284,6 +287,144 @@
       {/if}
     {/if}
 
+    {#if activeTab === 'Children'}
+      <h5 style="margin-top: 0;">Children</h5>
+
+      <DataTable
+        sortable
+        bind:sort={childrenSort}
+        bind:sortDirection={childrenSortDirection}
+        onSMUIDataTableSorted={handleChildrenSort}
+        table$aria-label="Children list"
+        style="width: 100%;"
+      >
+        <Head>
+          <Row>
+            {#if !$clientConfig.emailUsernames}
+              <Cell columnId="child-groupname">
+                <Label>Groupname</Label>
+                <IconButton>
+                  <Icon class="material-icons">arrow_upward</Icon>
+                </IconButton>
+              </Cell>
+            {/if}
+            {#if $clientConfig.userFields.includes('name')}
+              <Cell columnId="child-name">
+                <Label>Name</Label>
+                <IconButton>
+                  <Icon class="material-icons">arrow_upward</Icon>
+                </IconButton>
+              </Cell>
+            {/if}
+            {#if $clientConfig.userFields.includes('email')}
+              <Cell columnId="child-email">
+                <Label>Email</Label>
+                <IconButton>
+                  <Icon class="material-icons">arrow_upward</Icon>
+                </IconButton>
+              </Cell>
+            {/if}
+            <Cell columnId="child-enabled">
+              <Label>Enabled</Label>
+              <IconButton>
+                <Icon class="material-icons">arrow_upward</Icon>
+              </IconButton>
+            </Cell>
+          </Row>
+        </Head>
+        <Body>
+          {#each $children as group (group.guid)}
+            <Row>
+              {#if !$clientConfig.emailUsernames}
+                <Cell
+                  ><a
+                    href="/groups/edit/{encodeURIComponent(group.guid || '')}"
+                    use:link>{group.groupname}</a
+                  ></Cell
+                >
+              {/if}
+              {#if $clientConfig.userFields.includes('name')}
+                <Cell
+                  ><a
+                    href="/groups/edit/{encodeURIComponent(group.guid || '')}"
+                    use:link>{group.name}</a
+                  ></Cell
+                >
+              {/if}
+              {#if $clientConfig.userFields.includes('email')}
+                <Cell
+                  ><a
+                    href="/groups/edit/{encodeURIComponent(group.guid || '')}"
+                    use:link>{group.email}</a
+                  ></Cell
+                >
+              {/if}
+              <Cell>{group.enabled ? 'Yes' : 'No'}</Cell>
+            </Row>
+          {:else}
+            {null}
+          {/each}
+        </Body>
+
+        {#snippet progress()}
+          <LinearProgress
+            indeterminate
+            closed={childrenLoaded}
+            aria-label="Data is being loaded..."
+          />
+        {/snippet}
+
+        {#snippet paginate()}
+          <Pagination>
+            {#snippet rowsPerPage()}
+              <Label>Rows Per Page</Label>
+              <Select variant="outlined" bind:value={childrenPerPage} noLabel>
+                <Option value={10}>10</Option>
+                <Option value={25}>25</Option>
+                <Option value={100}>100</Option>
+              </Select>
+            {/snippet}
+            {#snippet total()}
+              {childrenStart + 1}-{childrenEnd} of {childrenLength}
+            {/snippet}
+
+            <IconButton
+              action="first-page"
+              title="First page"
+              onclick={() => (childrenCurrentPage = 0)}
+              disabled={childrenCurrentPage === 0}
+            >
+              <Icon class="material-icons">first_page</Icon>
+            </IconButton>
+            <IconButton
+              action="prev-page"
+              title="Prev page"
+              onclick={() => childrenCurrentPage--}
+              disabled={childrenCurrentPage === 0}
+            >
+              <Icon class="material-icons">chevron_left</Icon>
+            </IconButton>
+            <IconButton
+              action="next-page"
+              title="Next page"
+              onclick={() => childrenCurrentPage++}
+              disabled={childrenCurrentPage === childrenLastPage}
+            >
+              <Icon class="material-icons">chevron_right</Icon>
+            </IconButton>
+            <IconButton
+              action="last-page"
+              title="Last page"
+              onclick={() => (childrenCurrentPage = childrenLastPage)}
+              disabled={childrenCurrentPage === childrenLastPage}
+            >
+              <Icon class="material-icons">last_page</Icon>
+            </IconButton>
+          </Pagination>
+        {/snippet}
+      </DataTable>
+    {/if}
+
     {#if activeTab === 'Abilities'}
       <h5 style="margin-top: 0;">Abilities</h5>
 
@@ -331,6 +472,148 @@
       </div>
     {/if}
 
+    {#if activeTab === 'Users'}
+      <h5 style="margin-top: 0;">Users</h5>
+
+      <DataTable
+        sortable
+        bind:sort={usersSort}
+        bind:sortDirection={usersSortDirection}
+        onSMUIDataTableSorted={handleUsersSort}
+        table$aria-label="User list"
+        style="width: 100%;"
+      >
+        <Head>
+          <Row>
+            {#if !$clientConfig.emailUsernames}
+              <Cell columnId="user-username">
+                <Label>Username</Label>
+                <IconButton>
+                  <Icon class="material-icons">arrow_upward</Icon>
+                </IconButton>
+              </Cell>
+            {/if}
+            {#if $clientConfig.userFields.includes('name')}
+              <Cell columnId="user-name">
+                <Label>Name</Label>
+                <IconButton>
+                  <Icon class="material-icons">arrow_upward</Icon>
+                </IconButton>
+              </Cell>
+            {/if}
+            {#if $clientConfig.userFields.includes('email')}
+              <Cell columnId="user-email">
+                <Label>Email</Label>
+                <IconButton>
+                  <Icon class="material-icons">arrow_upward</Icon>
+                </IconButton>
+              </Cell>
+            {/if}
+            <Cell columnId="user-enabled">
+              <Label>Enabled</Label>
+              <IconButton>
+                <Icon class="material-icons">arrow_upward</Icon>
+              </IconButton>
+            </Cell>
+            <Cell columnId="user-primary" sortable={false}>
+              <Label>Primary</Label>
+            </Cell>
+          </Row>
+        </Head>
+        <Body>
+          {#each $users as user (user.guid)}
+            <Row>
+              {#if !$clientConfig.emailUsernames}
+                <Cell
+                  ><a
+                    href="/users/edit/{encodeURIComponent(user.guid || '')}"
+                    use:link>{user.username}</a
+                  ></Cell
+                >
+              {/if}
+              {#if $clientConfig.userFields.includes('name')}
+                <Cell
+                  ><a
+                    href="/users/edit/{encodeURIComponent(user.guid || '')}"
+                    use:link>{user.name}</a
+                  ></Cell
+                >
+              {/if}
+              {#if $clientConfig.userFields.includes('email')}
+                <Cell
+                  ><a
+                    href="/users/edit/{encodeURIComponent(user.guid || '')}"
+                    use:link>{user.email}</a
+                  ></Cell
+                >
+              {/if}
+              <Cell>{user.enabled ? 'Yes' : 'No'}</Cell>
+              <Cell>{$entity.$is(user.group) ? 'Yes' : 'No'}</Cell>
+            </Row>
+          {:else}
+            {null}
+          {/each}
+        </Body>
+
+        {#snippet progress()}
+          <LinearProgress
+            indeterminate
+            closed={usersLoaded}
+            aria-label="Data is being loaded..."
+          />
+        {/snippet}
+
+        {#snippet paginate()}
+          <Pagination>
+            {#snippet rowsPerPage()}
+              <Label>Rows Per Page</Label>
+              <Select variant="outlined" bind:value={usersPerPage} noLabel>
+                <Option value={10}>10</Option>
+                <Option value={25}>25</Option>
+                <Option value={100}>100</Option>
+              </Select>
+            {/snippet}
+            {#snippet total()}
+              {usersStart + 1}-{usersEnd} of {usersLength}
+            {/snippet}
+
+            <IconButton
+              action="first-page"
+              title="First page"
+              onclick={() => (usersCurrentPage = 0)}
+              disabled={usersCurrentPage === 0}
+            >
+              <Icon class="material-icons">first_page</Icon>
+            </IconButton>
+            <IconButton
+              action="prev-page"
+              title="Prev page"
+              onclick={() => usersCurrentPage--}
+              disabled={usersCurrentPage === 0}
+            >
+              <Icon class="material-icons">chevron_left</Icon>
+            </IconButton>
+            <IconButton
+              action="next-page"
+              title="Next page"
+              onclick={() => usersCurrentPage++}
+              disabled={usersCurrentPage === usersLastPage}
+            >
+              <Icon class="material-icons">chevron_right</Icon>
+            </IconButton>
+            <IconButton
+              action="last-page"
+              title="Last page"
+              onclick={() => (usersCurrentPage = usersLastPage)}
+              disabled={usersCurrentPage === usersLastPage}
+            >
+              <Icon class="material-icons">last_page</Icon>
+            </IconButton>
+          </Pagination>
+        {/snippet}
+      </DataTable>
+    {/if}
+
     {#if failureMessage}
       <div class="tilmeld-failure">
         {failureMessage}
@@ -366,6 +649,7 @@
   import type {
     Group as GroupClass,
     User as UserClass,
+    AdminUserData,
   } from '@nymphjs/tilmeld-client';
   import queryParser from '@nymphjs/query-parser';
   import {
@@ -383,11 +667,20 @@
   import Checkbox from '@smui/checkbox';
   import List, { Item, Text, Meta } from '@smui/list';
   import Paper from '@smui/paper';
-  import DataTable, { Head, Body, Row, Cell } from '@smui/data-table';
+  import DataTable, {
+    Head,
+    Body,
+    Row,
+    Cell,
+    Pagination,
+    SortValue,
+  } from '@smui/data-table';
+  import Select, { Option } from '@smui/select';
   import Textfield, { Input } from '@smui/textfield';
   import HelperText from '@smui/textfield/helper-text';
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
+  import LinearProgress from '@smui/linear-progress';
   import { Icon, Label } from '@smui/common';
 
   import { nymph, Group, User } from '../nymph.js';
@@ -397,7 +690,8 @@
   let entity: Writable<GroupClass & AdminGroupData> = writable(
     Group.factorySync(),
   );
-  let activeTab: 'General' | 'Parent' | 'Abilities' = $state('General');
+  let activeTab: 'General' | 'Parent' | 'Children' | 'Abilities' | 'Users' =
+    $state('General');
   let parentSearch = $state('');
   let ability = $state('');
   let avatar = $state('https://secure.gravatar.com/avatar/?d=mm&s=40');
@@ -408,6 +702,34 @@
   let emailTimer: number | undefined = undefined;
   let emailVerified: boolean | undefined = $state();
   let emailVerifiedMessage: string | undefined = $state();
+  let children: Writable<(GroupClass & AdminGroupData)[]> = $state(
+    writable([]),
+  );
+  let childrenSort: `child-${keyof AdminGroupData}` = $state('child-groupname');
+  let childrenSortDirection: Lowercase<SortValue> = $state('ascending');
+  let childrenPerPage = $state(10);
+  let childrenCurrentPage = $state(0);
+  let childrenLength = $state(0);
+  const childrenStart = $derived(childrenCurrentPage * childrenPerPage);
+  const childrenEnd = $derived(
+    Math.min(childrenStart + childrenPerPage, childrenLength),
+  );
+  const childrenLastPage = $derived(
+    Math.max(Math.ceil(childrenLength / childrenPerPage) - 1, 0),
+  );
+  let childrenLoaded = $state(false);
+  let users: Writable<(UserClass & AdminUserData)[]> = $state(writable([]));
+  let usersSort: `user-${keyof AdminUserData}` = $state('user-username');
+  let usersSortDirection: Lowercase<SortValue> = $state('ascending');
+  let usersPerPage = $state(10);
+  let usersCurrentPage = $state(0);
+  let usersLength = $state(0);
+  const usersStart = $derived(usersCurrentPage * usersPerPage);
+  const usersEnd = $derived(Math.min(usersStart + usersPerPage, usersLength));
+  const usersLastPage = $derived(
+    Math.max(Math.ceil(usersLength / usersPerPage) - 1, 0),
+  );
+  let usersLoaded = $state(false);
   let saving = $state(false);
   let success: boolean | undefined = $state();
   let loading = $state(true);
@@ -422,6 +744,18 @@
   $effect(() => {
     if (params) {
       handleGuidParam();
+    }
+  });
+
+  $effect(() => {
+    if (usersCurrentPage >= 0 && usersPerPage >= 0) {
+      fillUsers();
+    }
+  });
+
+  $effect(() => {
+    if (childrenCurrentPage >= 0 && childrenPerPage >= 0) {
+      fillChildren();
     }
   });
 
@@ -474,6 +808,9 @@
     avatar = await $entity.$getAvatar();
     await $entity.$wakeAll(1);
     $entity = $entity;
+
+    await fillUsers();
+    await fillChildren();
   }
 
   let parentsSearching = $state(false);
@@ -589,6 +926,100 @@
     if (event.key === 'Enter') addAbility();
   }
 
+  async function handleChildrenSort() {
+    await fillChildren();
+  }
+
+  async function fillChildren() {
+    childrenLoaded = false;
+    try {
+      if ($entity.guid == null) {
+        $children = [];
+        childrenLength = 0;
+      } else {
+        $children = await nymph.getEntities(
+          {
+            class: Group,
+            sort: childrenSort.slice('child-'.length),
+            reverse: childrenSortDirection === 'descending',
+            limit: childrenPerPage,
+            offset: childrenPerPage * childrenCurrentPage,
+          },
+          {
+            type: '&',
+            ref: ['parent', $entity],
+          },
+        );
+
+        if (childrenLength === 0) {
+          childrenLength = await nymph.getEntities(
+            {
+              class: Group,
+              return: 'count',
+            },
+            {
+              type: '&',
+              ref: ['parent', $entity],
+            },
+          );
+        }
+      }
+    } catch (e: any) {
+      failureMessage = e.message;
+    }
+    childrenLoaded = true;
+  }
+
+  async function handleUsersSort() {
+    await fillUsers();
+  }
+
+  async function fillUsers() {
+    usersLoaded = false;
+    try {
+      if ($entity.guid == null) {
+        $users = [];
+        usersLength = 0;
+      } else {
+        $users = await nymph.getEntities(
+          {
+            class: User,
+            sort: usersSort.slice('user-'.length),
+            reverse: usersSortDirection === 'descending',
+            limit: usersPerPage,
+            offset: usersPerPage * usersCurrentPage,
+          },
+          {
+            type: '|',
+            ref: [
+              ['group', $entity],
+              ['groups', $entity],
+            ],
+          },
+        );
+
+        if (usersLength === 0) {
+          usersLength = await nymph.getEntities(
+            {
+              class: User,
+              return: 'count',
+            },
+            {
+              type: '|',
+              ref: [
+                ['group', $entity],
+                ['groups', $entity],
+              ],
+            },
+          );
+        }
+      }
+    } catch (e: any) {
+      failureMessage = e.message;
+    }
+    usersLoaded = true;
+  }
+
   async function saveEntity() {
     saving = true;
     failureMessage = undefined;
@@ -612,7 +1043,11 @@
 
   async function deleteEntity() {
     failureMessage = undefined;
-    if (confirm('Are you sure you want to delete this?')) {
+    if (
+      confirm(
+        'Are you sure you want to delete this? All descendant groups will be deleted too, and users will be removed.',
+      )
+    ) {
       saving = true;
       try {
         await $entity.$delete();
