@@ -217,24 +217,15 @@ export default class User extends Entity<UserData> {
     (this.$data as CurrentUserData).inheritAbilities = true;
   }
 
-  public async $checkUsername(): Promise<{
-    result: boolean;
-    message: string;
-  }> {
+  public async $checkUsername(): Promise<{ result: boolean; message: string }> {
     return await this.$serverCall('$checkUsername', [], true);
   }
 
-  public async $checkEmail(): Promise<{
-    result: boolean;
-    message: string;
-  }> {
+  public async $checkEmail(): Promise<{ result: boolean; message: string }> {
     return await this.$serverCall('$checkEmail', [], true);
   }
 
-  public async $checkPhone(): Promise<{
-    result: boolean;
-    message: string;
-  }> {
+  public async $checkPhone(): Promise<{ result: boolean; message: string }> {
     return await this.$serverCall('$checkPhone', [], true);
   }
 
@@ -270,10 +261,7 @@ export default class User extends Entity<UserData> {
 
   public async $switchUser(data?: {
     additionalData?: { [k: string]: any };
-  }): Promise<{
-    result: boolean;
-    message: string;
-  }> {
+  }): Promise<{ result: boolean; message: string }> {
     const store = User.stores.get(this.$nymph);
     if (store == null) {
       throw new Error(

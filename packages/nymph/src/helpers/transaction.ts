@@ -17,7 +17,7 @@ export async function transaction<T>(
   nymph: Nymph,
   name: string,
   fn: (nymph: Nymph) => Promise<T>,
-  finallyFn?: (nymph: Nymph) => Promise<void>,
+  finallyFn?: (nymph: Nymph, committed?: boolean) => Promise<void>,
 ): Promise<T> {
   nymph.config.debugInfo('nymph:transaction', `Starting transaction ${name}`);
   const tnymph = await nymph.startTransaction(name);
@@ -33,7 +33,7 @@ export async function transaction<T>(
     }
 
     if (finallyFn) {
-      await finallyFn(nymph);
+      await finallyFn(nymph, true);
     }
 
     return result;
@@ -52,7 +52,7 @@ export async function transaction<T>(
     }
     if (finallyFn) {
       try {
-        await finallyFn(nymph);
+        await finallyFn(nymph, false);
       } catch (e: any) {
         nymph.config.debugError(
           'nymph:transaction',

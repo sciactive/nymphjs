@@ -1,13 +1,12 @@
 import crypto from 'node:crypto';
 import {
-  type Nymph,
   type EntityData,
   type EntityJson,
   type EntityPatch,
   type Selector,
   type SerializedEntityData,
-  MethodFailedError,
-  HttpError,
+  transaction,
+  transactional,
 } from '@nymphjs/nymph';
 import { humanSecret, nanoid } from '@nymphjs/guid';
 import type { EmailOptions } from 'email-templates';
@@ -772,7 +771,9 @@ export default class User extends AbleObject<UserData> {
     return { result: true, message: 'You are logged in.' };
   }
 
-  public async $switchUser(data?: { additionalData?: { [k: string]: any } }) {
+  public async $switchUser(data?: {
+    additionalData?: { [k: string]: any };
+  }): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
     if (this.guid == null) {
       return { result: false, message: 'Incorrect login/password.' };
@@ -853,7 +854,7 @@ export default class User extends AbleObject<UserData> {
    * Log a user out of the system.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
-  public async $logout() {
+  public async $logout(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
     try {
@@ -887,7 +888,7 @@ export default class User extends AbleObject<UserData> {
     return { result: true, message: 'You have been logged out.' };
   }
 
-  public $getAvatar() {
+  public $getAvatar(): string {
     if (this.$data.avatar != null && this.$data.avatar !== '') {
       return this.$data.avatar;
     }
@@ -1121,7 +1122,6 @@ export default class User extends AbleObject<UserData> {
       this.$clientEnabledMethods.push('$changePassword');
       this.$clientEnabledMethods.push('$revokeCurrentTokens');
       this.$clientEnabledMethods.push('$logout');
-      this.$clientEnabledMethods.push('$sendEmailVerification');
       this.$clientEnabledMethods.push('$hasTOTPSecret');
       this.$clientEnabledMethods.push('$getNewTOTPSecret');
       this.$clientEnabledMethods.push('$saveTOTPSecret');
@@ -1335,7 +1335,7 @@ export default class User extends AbleObject<UserData> {
    *
    * @returns True on success, false on failure.
    */
-  public async $sendEmailVerification() {
+  public async $sendEmailVerification(): Promise<boolean> {
     const tilmeld = enforceTilmeld(this);
     if (this.guid == null) {
       return false;
@@ -1644,7 +1644,7 @@ export default class User extends AbleObject<UserData> {
     }
   }
 
-  public async $hasTOTPSecret() {
+  public $hasTOTPSecret(): boolean {
     return this.$data.totpSecret != null;
   }
 
@@ -1678,7 +1678,11 @@ export default class User extends AbleObject<UserData> {
    *
    * @returns An object with 'uri', 'qrcode', and 'secret'.
    */
-  public async $getNewTOTPSecret() {
+  public async $getNewTOTPSecret(): Promise<{
+    uri: string;
+    qrcode: string;
+    secret: string;
+  }> {
     const tilmeld = enforceTilmeld(this);
 
     if (this.$data.totpSecret != null) {
@@ -2122,185 +2126,170 @@ export default class User extends AbleObject<UserData> {
       this.$data.email = this.$data.username;
     }
 
-    // Start transaction.
-    const transaction = 'tilmeld-register-' + nanoid();
-    const nymph = this.$nymph;
-    const tnymph = await this.$nymph.startTransaction(transaction);
-    this.$setNymph(tnymph);
-    tilmeld = enforceTilmeld(this);
-
-    let message = '';
-    let loggedin = false;
-
     try {
-      try {
-        for (let callback of (this.constructor as typeof User)
-          .beforeRegisterCallbacks) {
-          if (callback) {
-            await callback(this, data);
-          }
-        }
-      } catch (e: any) {
-        await tnymph.rollback(transaction);
-        this.$setNymph(nymph);
-        return {
-          result: false,
-          loggedin: false,
-          message: e.message,
-        };
-      }
-
-      if (
-        tilmeld.config.userFields.includes('email') &&
-        tilmeld.config.verifyEmail
-      ) {
-        // The user will be enabled after verifying their e-mail address.
-        if (!tilmeld.config.unverifiedAccess) {
-          this.$data.enabled = false;
-        }
-      } else {
-        this.$data.enabled = true;
-      }
-
-      // If createAdmin is true and there are no other users, grant
-      // "system/admin".
-      let madeAdmin = false;
-      if (tilmeld.config.createAdmin) {
-        const otherUsers = await tnymph.getEntities({
-          class: tilmeld.User,
-          skipAc: true,
-          limit: 1,
-          return: 'guid',
-        });
-        // Make sure it's not just null, cause that means an error.
-        if (otherUsers == null) {
-          await tnymph.rollback(transaction);
+      const result = await transaction(
+        this.$nymph,
+        'tilmeld-register-' + nanoid(),
+        async (nymph) => {
           this.$setNymph(nymph);
-          return {
-            result: false,
-            loggedin: false,
-            message: 'An error occurred.',
-          };
-        }
-        if (!otherUsers.length) {
-          this.$grant('system/admin');
-          this.$data.enabled = true;
-          madeAdmin = true;
-        }
-      }
+          const tilmeld = enforceTilmeld(this);
 
-      this.$nymph.config.debugLog(
-        'tilmeld',
-        `Registering new user "${this.$data.username}".`,
+          let message = '';
+          let loggedin = false;
+
+          for (let callback of (this.constructor as typeof User)
+            .beforeRegisterCallbacks) {
+            if (callback) {
+              await callback(this, data);
+            }
+          }
+
+          if (
+            tilmeld.config.userFields.includes('email') &&
+            tilmeld.config.verifyEmail
+          ) {
+            // The user will be enabled after verifying their e-mail address.
+            if (!tilmeld.config.unverifiedAccess) {
+              this.$data.enabled = false;
+            }
+          } else {
+            this.$data.enabled = true;
+          }
+
+          // If createAdmin is true and there are no other users, grant
+          // "system/admin".
+          let madeAdmin = false;
+          if (tilmeld.config.createAdmin) {
+            const otherUsers = await this.$nymph.getEntities({
+              class: tilmeld.User,
+              skipAc: true,
+              limit: 1,
+              return: 'guid',
+            });
+            // Make sure it's not just null, cause that means an error.
+            if (otherUsers == null) {
+              throw new Error('An error occurred.');
+            }
+            if (!otherUsers.length) {
+              this.$grant('system/admin');
+              this.$data.enabled = true;
+              madeAdmin = true;
+            }
+          }
+
+          this.$nymph.config.debugLog(
+            'tilmeld',
+            `Registering new user "${this.$data.username}".`,
+          );
+
+          await this.$saveSkipAC();
+
+          // Finish up.
+          if (
+            tilmeld.config.verifyEmail &&
+            !tilmeld.config.unverifiedAccess &&
+            !madeAdmin &&
+            tilmeld.config.userFields.includes('email')
+          ) {
+            message +=
+              `Almost there. An email has been sent to ${this.$data.email} ` +
+              'with a verification link for you to finish registration.';
+          } else if (
+            tilmeld.config.verifyEmail &&
+            tilmeld.config.unverifiedAccess &&
+            !madeAdmin &&
+            tilmeld.config.userFields.includes('email')
+          ) {
+            if (!(await tilmeld.login(this, true))) {
+              throw new Error('An error occurred trying to log you in.');
+            }
+            message +=
+              "You're now logged in! An email has been sent to " +
+              `${this.$data.email} with a verification link for you to finish ` +
+              'registration.';
+            loggedin = true;
+          } else {
+            if (!(await tilmeld.login(this, true))) {
+              throw new Error('An error occurred trying to log you in.');
+            }
+            message += "You're now registered and logged in!";
+            loggedin = true;
+          }
+
+          for (let callback of (this.constructor as typeof User)
+            .afterRegisterCallbacks) {
+            if (callback) {
+              await callback(this, {
+                loggedin,
+                message,
+              });
+            }
+          }
+
+          return {
+            result: true,
+            loggedin,
+            message,
+          };
+        },
+        async (nymph) => {
+          this.$setNymph(nymph);
+        },
       );
-      try {
-        await this.$saveSkipAC();
-        this.$nymph.config.debugLog(
-          'tilmeld',
-          `New user registered "${this.$data.username}".`,
-        );
-        // Send the new user registered email.
-        if (tilmeld.config.userRegisteredRecipient != null) {
-          await tilmeld.config.sendEmail(
-            tilmeld,
-            {
-              template: 'UserRegistered',
-              message: {
-                to: tilmeld.config.userRegisteredRecipient,
+
+      // Send the new user registered email.
+      if (tilmeld.config.userRegisteredRecipient != null) {
+        try {
+          if (
+            !(await tilmeld.config.sendEmail(
+              tilmeld,
+              {
+                template: 'UserRegistered',
+                message: {
+                  to: tilmeld.config.userRegisteredRecipient,
+                },
+                locals: {
+                  userUsername: this.$data.username,
+                  userName: this.$data.name,
+                  userFirstName: this.$data.nameFirst,
+                  userLastName: this.$data.nameLast,
+                  userEmail: this.$data.email,
+                  userPhone: this.$data.phone,
+                },
               },
-              locals: {
-                userUsername: this.$data.username,
-                userName: this.$data.name,
-                userFirstName: this.$data.nameFirst,
-                userLastName: this.$data.nameLast,
-                userEmail: this.$data.email,
-                userPhone: this.$data.phone,
-              },
-            },
-            this,
+              this,
+            ))
+          ) {
+            throw new Error('Failed to send.');
+          }
+        } catch (e: any) {
+          this.$nymph.config.debugError(
+            'tilmeld',
+            `Couldn't send new user registered email for "${this.$data.username}": ${e.message}`,
           );
         }
-
-        // Finish up.
-        if (
-          tilmeld.config.verifyEmail &&
-          !tilmeld.config.unverifiedAccess &&
-          !madeAdmin &&
-          tilmeld.config.userFields.includes('email')
-        ) {
-          message +=
-            `Almost there. An email has been sent to ${this.$data.email} ` +
-            'with a verification link for you to finish registration.';
-        } else if (
-          tilmeld.config.verifyEmail &&
-          tilmeld.config.unverifiedAccess &&
-          !madeAdmin &&
-          tilmeld.config.userFields.includes('email')
-        ) {
-          if (!(await tilmeld.login(this, true))) {
-            throw new Error('An error occurred trying to log you in.');
-          }
-          message +=
-            "You're now logged in! An email has been sent to " +
-            `${this.$data.email} with a verification link for you to finish ` +
-            'registration.';
-          loggedin = true;
-        } else {
-          if (!(await tilmeld.login(this, true))) {
-            throw new Error('An error occurred trying to log you in.');
-          }
-          message += "You're now registered and logged in!";
-          loggedin = true;
-        }
-
-        for (let callback of (this.constructor as typeof User)
-          .afterRegisterCallbacks) {
-          if (callback) {
-            await callback(this, {
-              loggedin,
-              message,
-            });
-          }
-        }
-      } catch (e: any) {
-        if (e instanceof HttpError) {
-          throw e;
-        }
-        this.$nymph.config.debugError(
-          'tilmeld',
-          `Error registering new user "${this.$data.username}".`,
-        );
-        await tnymph.rollback(transaction);
-        this.$setNymph(nymph);
-        return {
-          result: false,
-          loggedin: false,
-          message: 'Error registering user.',
-        };
       }
-    } catch (e: any) {
-      this.$nymph.config.debugError(
-        'tilmeld',
-        `Error registering new user "${this.$data.username}": ${e}`,
-      );
-      await tnymph.rollback(transaction);
-      this.$setNymph(nymph);
-      throw e;
-    }
 
-    try {
-      await tnymph.commit(transaction);
-      this.$setNymph(nymph);
-      await this.$nymph.tilmeld?.fillSession(this);
-    } catch (e: any) {
-      throw e;
-    }
+      if (result.loggedin) {
+        try {
+          await this.$nymph.tilmeld?.fillSession(this);
+        } catch (e: any) {
+          return {
+            result: true,
+            loggedin: false,
+            message: `You are registered, but an error occurred logging you in: ${e.message}`,
+          };
+        }
+      }
 
-    return {
-      result: true,
-      loggedin,
-      message,
-    };
+      return result;
+    } catch (e: any) {
+      return {
+        result: false,
+        loggedin: false,
+        message: e.message,
+      };
+    }
   }
 
   public async $save() {
@@ -2590,201 +2579,179 @@ export default class User extends AbleObject<UserData> {
       throw new BadDataError('A password is required.');
     }
 
-    // Start transaction.
-    const transaction = 'tilmeld-save-user-' + (this.guid || nanoid());
-    const nymph = this.$nymph;
-    const tnymph = await this.$nymph.startTransaction(transaction);
-    this.$setNymph(tnymph);
-    tilmeld = enforceTilmeld(this);
-    const Group = tnymph.getEntityClass(GroupClass);
-
-    try {
-      let group = this.$data.group;
-      if (group != null) {
-        // Make sure to get fresh group data.
-        if (group.$asleep()) {
-          await group.$wake();
-        } else {
-          if (!(await group.$refresh())) {
-            throw new Error("Couldn't retrieve primary group info.");
-          }
-        }
-      }
-      if (group == null && this.guid == null) {
-        if (tilmeld.config.generatePrimary) {
-          // Generate a new primary group for the user.
-          group = await Group.factory();
-          group.user = this;
-          const parent = await tnymph.getEntity(
-            { class: Group },
-            {
-              type: '&',
-              equal: ['defaultPrimary', true],
-            },
-          );
-          if (parent != null) {
-            group.parent = parent;
-          }
-        } else {
-          // Add the default primary.
-          const group = await tnymph.getEntity(
-            { class: Group },
-            {
-              type: '&',
-              equal: ['defaultPrimary', true],
-            },
-          );
-          if (group != null) {
-            this.$data.group = group;
-          }
-        }
-      }
-      if (group != null && group.user != null && this.$is(group.user)) {
-        // Update the user's generated primary group.
-        let changed = false;
-        if (group.groupname !== this.$data.username) {
-          group.groupname = this.$data.username;
-          changed = true;
-        }
-        if (group.avatar !== this.$data.avatar) {
-          group.avatar = this.$data.avatar;
-          changed = true;
-        }
-        if (
-          tilmeld.config.userFields.includes('email') &&
-          group.email !== this.$data.email
-        ) {
-          group.email = this.$data.email;
-          changed = true;
-        }
-        if (
-          tilmeld.config.userFields.includes('name') &&
-          group.name !== this.$data.name
-        ) {
-          group.name = this.$data.name;
-          changed = true;
-        }
-        if (
-          tilmeld.config.userFields.includes('phone') &&
-          group.phone !== this.$data.phone
-        ) {
-          group.phone = this.$data.phone;
-          changed = true;
-        }
-        if (changed || group.guid == null) {
-          await group.$saveSkipAC();
-        }
-        this.$data.group = group;
-      }
-
-      if (this.$data.groups == null || this.$data.groups.length === 0) {
-        // Add secondary groups.
-        if (
-          tilmeld.config.userFields.includes('email') &&
-          tilmeld.config.verifyEmail &&
-          tilmeld.config.unverifiedAccess &&
-          this.$data.secret != null
-        ) {
-          // Add the default secondaries for unverified users.
-          this.$data.groups = await tnymph.getEntities(
-            { class: Group },
-            {
-              type: '&',
-              equal: ['unverifiedSecondary', true],
-            },
-          );
-        } else {
-          // Add the default secondaries.
-          this.$data.groups = await tnymph.getEntities(
-            { class: Group },
-            {
-              type: '&',
-              equal: ['defaultSecondary', true],
-            },
-          );
-        }
-      }
-
-      try {
-        tilmeld.config.validatorUser(tilmeld, this);
-      } catch (e: any) {
-        throw new BadDataError(e?.message);
-      }
-    } catch (e: any) {
-      await tnymph.rollback(transaction);
-      this.$setNymph(nymph);
-      throw e;
-    }
-
     let preGuid = this.guid;
     let preCdate = this.cdate;
     let preMdate = this.mdate;
-
-    try {
-      for (let callback of (this.constructor as typeof User)
-        .beforeSaveCallbacks) {
-        if (callback) {
-          await callback(this);
-        }
-      }
-
-      await super.$save();
-    } catch (e: any) {
-      await tnymph.rollback(transaction);
-      this.guid = preGuid;
-      this.cdate = preCdate;
-      this.mdate = preMdate;
-      this.$setNymph(nymph);
-      throw e;
-    }
-
-    if (sendVerification) {
-      // The email has changed, so send a new verification email.
-      if (!(await this.$sendEmailVerification())) {
-        await tnymph.rollback(transaction);
-        this.guid = preGuid;
-        this.cdate = preCdate;
-        this.mdate = preMdate;
+    return await transaction(
+      this.$nymph,
+      'tilmeld-save-user-' + (this.guid || nanoid()),
+      async (nymph) => {
         this.$setNymph(nymph);
-        throw new Error("Couldn't send verification email.");
-      }
-    }
+        const tilmeld = enforceTilmeld(this);
+        const Group = this.$nymph.getEntityClass(GroupClass);
 
-    this.$descendantGroups = undefined;
-    this.$gatekeeperCache = undefined;
-
-    try {
-      for (let callback of (this.constructor as typeof User)
-        .afterSaveCallbacks) {
-        if (callback) {
-          await callback(this);
+        let group = this.$data.group;
+        if (group != null) {
+          // Make sure to get fresh group data.
+          if (group.$asleep()) {
+            await group.$wake();
+          } else {
+            if (!(await group.$refresh())) {
+              throw new Error("Couldn't retrieve primary group info.");
+            }
+          }
         }
-      }
-    } catch (e: any) {
-      await tnymph.rollback(transaction);
-      this.guid = preGuid;
-      this.cdate = preCdate;
-      this.mdate = preMdate;
-      this.$setNymph(nymph);
-      throw e;
-    }
+        if (group == null && this.guid == null) {
+          if (tilmeld.config.generatePrimary) {
+            // Generate a new primary group for the user.
+            group = await Group.factory();
+            group.user = this;
+            const parent = await this.$nymph.getEntity(
+              { class: Group },
+              {
+                type: '&',
+                equal: ['defaultPrimary', true],
+              },
+            );
+            if (parent != null) {
+              group.parent = parent;
+            }
+          } else {
+            // Add the default primary.
+            const group = await this.$nymph.getEntity(
+              { class: Group },
+              {
+                type: '&',
+                equal: ['defaultPrimary', true],
+              },
+            );
+            if (group != null) {
+              this.$data.group = group;
+            }
+          }
+        }
+        if (group != null && group.user != null && this.$is(group.user)) {
+          // Update the user's generated primary group.
+          let changed = false;
+          if (group.groupname !== this.$data.username) {
+            group.groupname = this.$data.username;
+            changed = true;
+          }
+          if (group.avatar !== this.$data.avatar) {
+            group.avatar = this.$data.avatar;
+            changed = true;
+          }
+          if (
+            tilmeld.config.userFields.includes('email') &&
+            group.email !== this.$data.email
+          ) {
+            group.email = this.$data.email;
+            changed = true;
+          }
+          if (
+            tilmeld.config.userFields.includes('name') &&
+            group.name !== this.$data.name
+          ) {
+            group.name = this.$data.name;
+            changed = true;
+          }
+          if (
+            tilmeld.config.userFields.includes('phone') &&
+            group.phone !== this.$data.phone
+          ) {
+            group.phone = this.$data.phone;
+            changed = true;
+          }
+          if (changed || group.guid == null) {
+            await group.$saveSkipAC();
+          }
+          this.$data.group = group;
+        }
 
-    const committed = await tnymph.commit(transaction);
-    this.$setNymph(nymph);
+        if (this.$data.groups == null || this.$data.groups.length === 0) {
+          // Add secondary groups.
+          if (
+            tilmeld.config.userFields.includes('email') &&
+            tilmeld.config.verifyEmail &&
+            tilmeld.config.unverifiedAccess &&
+            this.$data.secret != null
+          ) {
+            // Add the default secondaries for unverified users.
+            this.$data.groups = await this.$nymph.getEntities(
+              { class: Group },
+              {
+                type: '&',
+                equal: ['unverifiedSecondary', true],
+              },
+            );
+          } else {
+            // Add the default secondaries.
+            this.$data.groups = await this.$nymph.getEntities(
+              { class: Group },
+              {
+                type: '&',
+                equal: ['defaultSecondary', true],
+              },
+            );
+          }
+        }
 
-    if (committed) {
-      this.$originalEmail = this.$data.email;
-      this.$originalUsername = this.$data.username;
+        try {
+          tilmeld.config.validatorUser(tilmeld, this);
+        } catch (e: any) {
+          throw new BadDataError(e?.message);
+        }
 
-      const tilmeld = enforceTilmeld(nymph);
+        for (let callback of (this.constructor as typeof User)
+          .beforeSaveCallbacks) {
+          if (callback) {
+            await callback(this);
+          }
+        }
 
-      if (tilmeld.User.current(true).$is(this)) {
-        // Update the user in the session cache.
-        await tilmeld.fillSession(this);
-      }
-    } else {
-      throw new MethodFailedError('Transaction could not be committed.');
-    }
+        await super.$save();
+
+        if (sendVerification) {
+          // The email has changed, so send a new verification email.
+          if (!(await this.$sendEmailVerification())) {
+            throw new Error("Couldn't send verification email.");
+          }
+        }
+
+        this.$descendantGroups = undefined;
+        this.$gatekeeperCache = undefined;
+
+        for (let callback of (this.constructor as typeof User)
+          .afterSaveCallbacks) {
+          if (callback) {
+            await callback(this);
+          }
+        }
+      },
+      async (nymph, committed) => {
+        this.$setNymph(nymph);
+
+        if (committed) {
+          this.$originalEmail = this.$data.email;
+          this.$originalUsername = this.$data.username;
+
+          try {
+            const tilmeld = enforceTilmeld(nymph);
+
+            if (tilmeld.User.current(true).$is(this)) {
+              // Update the user in the session cache.
+              await tilmeld.fillSession(this);
+            }
+          } catch (e: any) {
+            // Ignore.
+          }
+        } else {
+          this.guid = preGuid;
+          this.cdate = preCdate;
+          this.mdate = preMdate;
+        }
+      },
+    );
   }
 
   /**
@@ -2803,6 +2770,7 @@ export default class User extends AbleObject<UserData> {
     return false;
   }
 
+  @transactional
   public async $delete() {
     const tilmeld = enforceTilmeld(this);
     if (!this.$skipAcWhenDeleting && !tilmeld.gatekeeper('tilmeld/admin')) {
@@ -2825,88 +2793,52 @@ export default class User extends AbleObject<UserData> {
       );
     }
 
-    const transaction = 'tilmeld-delete-user-' + this.guid;
-    const nymph = this.$nymph;
-    const tnymph = await nymph.startTransaction(transaction);
-    this.$setNymph(tnymph);
+    if (!(await this.$refresh())) {
+      throw new BadDataError('User could not be refreshed.');
+    }
 
-    try {
-      if (!(await this.$refresh())) {
-        throw new BadDataError('User could not be refreshed.');
-      }
-
-      if (this.$data.group != null) {
-        if (this.$data.group.$asleep()) {
-          await this.$data.group.$wake();
-        } else {
-          if (!(await this.$data.group.$refresh())) {
-            throw new BadDataError('Group could not be refreshed.');
-          }
-        }
-      }
-
-      for (let callback of (this.constructor as typeof User)
-        .beforeDeleteCallbacks) {
-        if (callback) {
-          await callback(this);
-        }
-      }
-
-      if (tilmeld.User.current(true).$is(this)) {
-        await this.$logout();
-      }
-
-      if (this.$data.group != null && this.$is(this.$data.group.user)) {
-        // Read the skip ac value here, because super.$delete changes it.
-        const $skipAcWhenDeleting = this.$skipAcWhenDeleting;
-
-        // Delete the user.
-        await super.$delete();
-        // Delete the generated group.
-        if ($skipAcWhenDeleting) {
-          await this.$data.group.$deleteSkipAC();
-        } else {
-          await this.$data.group.$delete();
-        }
+    if (this.$data.group != null) {
+      if (this.$data.group.$asleep()) {
+        await this.$data.group.$wake();
       } else {
-        await super.$delete();
-      }
-    } catch (e: any) {
-      await tnymph.rollback(transaction);
-      this.$setNymph(nymph);
-      throw e;
-    }
-
-    try {
-      for (let callback of (this.constructor as typeof User)
-        .afterDeleteCallbacks) {
-        if (callback) {
-          await callback(this);
+        if (!(await this.$data.group.$refresh())) {
+          throw new BadDataError('Group could not be refreshed.');
         }
       }
-    } catch (e: any) {
-      try {
-        await tnymph.rollback(transaction);
-      } catch (e: any) {
-        nymph.config.debugError(
-          'tilmeld',
-          `Rollback of transaction ${transaction} failed, reason: ${e.message}`,
-        );
+    }
+
+    for (let callback of (this.constructor as typeof User)
+      .beforeDeleteCallbacks) {
+      if (callback) {
+        await callback(this);
       }
-      this.$setNymph(nymph);
-      throw e;
     }
 
-    let committed = false;
-    try {
-      committed = await tnymph.commit(transaction);
-    } catch (e: any) {
-      committed = false;
+    if (tilmeld.User.current(true).$is(this)) {
+      await this.$logout();
     }
-    this.$setNymph(nymph);
 
-    if (!committed) {
-      throw new MethodFailedError('Transaction could not be committed.');
+    if (this.$data.group != null && this.$is(this.$data.group.user)) {
+      // Read the skip ac value here, because super.$delete changes it.
+      const $skipAcWhenDeleting = this.$skipAcWhenDeleting;
+
+      // Delete the user.
+      await super.$delete();
+      // Delete the generated group.
+      if ($skipAcWhenDeleting) {
+        await this.$data.group.$deleteSkipAC();
+      } else {
+        await this.$data.group.$delete();
+      }
+    } else {
+      await super.$delete();
+    }
+
+    for (let callback of (this.constructor as typeof User)
+      .afterDeleteCallbacks) {
+      if (callback) {
+        await callback(this);
+      }
     }
   }
 

@@ -1,13 +1,13 @@
 import crypto from 'node:crypto';
 import {
-  type Nymph,
   type EntityData,
   type EntityJson,
   type EntityPatch,
   type Options,
   type Selector,
   type SerializedEntityData,
-  MethodFailedError,
+  transaction,
+  transactional,
 } from '@nymphjs/nymph';
 import { nanoid } from '@nymphjs/guid';
 import { difference, xor } from 'lodash-es';
@@ -326,7 +326,7 @@ export default class Group extends AbleObject<GroupData> {
     return uniques;
   }
 
-  public $getAvatar() {
+  public $getAvatar(): string {
     if (this.$data.avatar != null && this.$data.avatar !== '') {
       return this.$data.avatar;
     }
@@ -493,7 +493,7 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   /**
-   * Check whether the group is a descendant of a group.
+   * Check whether the group is a descendant of the given group.
    *
    * @param group The group, or the group's GUID.
    * @returns True or false.
@@ -531,7 +531,7 @@ export default class Group extends AbleObject<GroupData> {
    *
    * @returns An array of groups.
    */
-  public async $getChildren() {
+  public async $getChildren(): Promise<(Group & GroupData)[]> {
     const tilmeld = enforceTilmeld(this);
     return await this.$nymph.getEntities(
       { class: tilmeld.Group },
@@ -582,7 +582,7 @@ export default class Group extends AbleObject<GroupData> {
    *
    * @returns The level of the group.
    */
-  public async $getLevel() {
+  public async $getLevel(): Promise<number> {
     const tilmeld = enforceTilmeld(this);
     let group = await tilmeld.Group.factory(this.guid ?? undefined);
     let parent = group.parent;
@@ -1011,61 +1011,43 @@ export default class Group extends AbleObject<GroupData> {
       }
     }
 
-    const transaction = 'tilmeld-save-group-' + (this.guid || nanoid());
-    const nymph = this.$nymph;
-    const tnymph = await nymph.startTransaction(transaction);
-    this.$setNymph(tnymph);
-    tilmeld = enforceTilmeld(this);
-
     let preGuid = this.guid;
     let preCdate = this.cdate;
     let preMdate = this.mdate;
+    return await transaction(
+      this.$nymph,
+      'tilmeld-save-group-' + (this.guid || nanoid()),
+      async (nymph) => {
+        this.$setNymph(nymph);
 
-    try {
-      for (let callback of (this.constructor as typeof Group)
-        .beforeSaveCallbacks) {
-        if (callback) {
-          await callback(this);
+        for (let callback of (this.constructor as typeof Group)
+          .beforeSaveCallbacks) {
+          if (callback) {
+            await callback(this);
+          }
         }
-      }
 
-      await super.$save();
+        await super.$save();
 
-      this.$originalGroupname = this.$data.groupname;
-
-      for (let callback of (this.constructor as typeof Group)
-        .afterSaveCallbacks) {
-        if (callback) {
-          await callback(this);
+        for (let callback of (this.constructor as typeof Group)
+          .afterSaveCallbacks) {
+          if (callback) {
+            await callback(this);
+          }
         }
-      }
-    } catch (e: any) {
-      try {
-        await tnymph.rollback(transaction);
-      } catch (e: any) {
-        nymph.config.debugError(
-          'tilmeld',
-          `Rollback of transaction ${transaction} failed, reason: ${e.message}`,
-        );
-      }
-      this.guid = preGuid;
-      this.cdate = preCdate;
-      this.mdate = preMdate;
-      this.$setNymph(nymph);
-      throw e;
-    }
+      },
+      async (nymph, committed) => {
+        this.$setNymph(nymph);
 
-    let committed = false;
-    try {
-      committed = await tnymph.commit(transaction);
-    } catch (e: any) {
-      committed = false;
-    }
-    this.$setNymph(nymph);
-
-    if (!committed) {
-      throw new MethodFailedError('Transaction could not be committed.');
-    }
+        if (committed) {
+          this.$originalGroupname = this.$data.groupname;
+        } else {
+          this.guid = preGuid;
+          this.cdate = preCdate;
+          this.mdate = preMdate;
+        }
+      },
+    );
   }
 
   /*
@@ -1084,8 +1066,11 @@ export default class Group extends AbleObject<GroupData> {
     return false;
   }
 
+  @transactional
   public async $delete() {
     let tilmeld = enforceTilmeld(this);
+    const User = this.$nymph.getEntityClass(UserClass);
+
     if (!this.$skipAcWhenDeleting && !tilmeld.gatekeeper('tilmeld/admin')) {
       throw new AccessControlError(
         "You don't have the authority to delete groups.",
@@ -1097,123 +1082,73 @@ export default class Group extends AbleObject<GroupData> {
       );
     }
 
-    const transaction = 'tilmeld-delete-group-' + this.guid;
-    const nymph = this.$nymph;
-    const tnymph = await nymph.startTransaction(transaction);
-    this.$setNymph(tnymph);
-    tilmeld = enforceTilmeld(this);
-    const User = tnymph.getEntityClass(UserClass);
-
-    try {
-      for (let callback of (this.constructor as typeof Group)
-        .beforeDeleteCallbacks) {
-        if (callback) {
-          await callback(this);
-        }
+    for (let callback of (this.constructor as typeof Group)
+      .beforeDeleteCallbacks) {
+      if (callback) {
+        await callback(this);
       }
-
-      // Delete descendants.
-      const descendants = await this.$getDescendants();
-      if (descendants.length) {
-        for (let curGroup of descendants) {
-          try {
-            if (this.$skipAcWhenDeleting) {
-              await curGroup.$deleteSkipAC();
-            } else {
-              await curGroup.$delete();
-            }
-          } catch (e: any) {
-            await tnymph.rollback(transaction);
-            this.$setNymph(nymph);
-            throw e;
-          }
-        }
-      }
-
-      // Remove users from this primary group.
-      const primaryUsers = await tnymph.getEntities(
-        {
-          class: User,
-          skipAc: true,
-        },
-        {
-          type: '&',
-          ref: ['group', this],
-        },
-      );
-      for (let user of primaryUsers) {
-        delete user.group;
-        try {
-          if (this.$skipAcWhenDeleting) {
-            await user.$saveSkipAC();
-          } else {
-            await user.$save();
-          }
-        } catch (e: any) {
-          await tnymph.rollback(transaction);
-          this.$setNymph(nymph);
-          throw e;
-        }
-      }
-
-      // Remove users from this secondary group.
-      const secondaryUsers = await tnymph.getEntities(
-        {
-          class: User,
-          skipAc: true,
-        },
-        {
-          type: '&',
-          ref: ['groups', this],
-        },
-      );
-      for (let user of secondaryUsers) {
-        user.$delGroup(this);
-        try {
-          if (this.$skipAcWhenDeleting) {
-            await user.$saveSkipAC();
-          } else {
-            await user.$save();
-          }
-        } catch (e: any) {
-          await tnymph.rollback(transaction);
-          this.$setNymph(nymph);
-          throw e;
-        }
-      }
-
-      // Delete the group.
-      await super.$delete();
-
-      for (let callback of (this.constructor as typeof Group)
-        .afterDeleteCallbacks) {
-        if (callback) {
-          await callback(this);
-        }
-      }
-    } catch (e: any) {
-      try {
-        await tnymph.rollback(transaction);
-      } catch (e: any) {
-        nymph.config.debugError(
-          'tilmeld',
-          `Rollback of transaction ${transaction} failed, reason: ${e.message}`,
-        );
-      }
-      this.$setNymph(nymph);
-      throw e;
     }
 
-    let committed = false;
-    try {
-      committed = await tnymph.commit(transaction);
-    } catch (e: any) {
-      committed = false;
+    // Delete descendants.
+    const descendants = await this.$getDescendants();
+    if (descendants.length) {
+      for (let curGroup of descendants) {
+        if (this.$skipAcWhenDeleting) {
+          await curGroup.$deleteSkipAC();
+        } else {
+          await curGroup.$delete();
+        }
+      }
     }
-    this.$setNymph(nymph);
 
-    if (!committed) {
-      throw new MethodFailedError('Transaction could not be committed.');
+    // Remove users from this primary group.
+    const primaryUsers = await this.$nymph.getEntities(
+      {
+        class: User,
+        skipAc: true,
+      },
+      {
+        type: '&',
+        ref: ['group', this],
+      },
+    );
+    for (let user of primaryUsers) {
+      delete user.group;
+      if (this.$skipAcWhenDeleting) {
+        await user.$saveSkipAC();
+      } else {
+        await user.$save();
+      }
+    }
+
+    // Remove users from this secondary group.
+    const secondaryUsers = await this.$nymph.getEntities(
+      {
+        class: User,
+        skipAc: true,
+      },
+      {
+        type: '&',
+        ref: ['groups', this],
+      },
+    );
+    for (let user of secondaryUsers) {
+      user.$delGroup(this);
+      if (this.$skipAcWhenDeleting) {
+        await user.$saveSkipAC();
+      } else {
+        await user.$save();
+      }
+    }
+
+    // Delete the group.
+    await super.$delete();
+
+    for (let callback of (this.constructor as typeof Group)
+      .afterDeleteCallbacks) {
+      if (callback) {
+        await callback(this);
+      }
     }
   }
 
