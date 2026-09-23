@@ -18,7 +18,7 @@ import type {
   PubSubSubscribable,
   PubSubUpdate,
 } from './PubSub.types.js';
-import { entityConstructorsToClassNames } from './utils.js';
+import { entityConstructorsToClassNames, entitiesToGuids } from './utils.js';
 import { ClientError } from './HttpRequester.js';
 
 export default class PubSub {
@@ -85,7 +85,7 @@ export default class PubSub {
     | PubSubSubscribable<PubSubUpdate<string[]>> {
     const query = [
       entityConstructorsToClassNames(options),
-      ...entityConstructorsToClassNames(selectors),
+      ...entityConstructorsToClassNames(entitiesToGuids(selectors)),
     ];
     const jsonQuery = JSON.stringify(query);
     const subscribe = (
@@ -132,7 +132,7 @@ export default class PubSub {
     | PubSubSubscribable<PubSubUpdate<string | null>> {
     const query = [
       { ...entityConstructorsToClassNames(options), limit: 1 },
-      ...entityConstructorsToClassNames(selectors),
+      ...entityConstructorsToClassNames(entitiesToGuids(selectors)),
     ];
     const jsonQuery = JSON.stringify(query);
     const subscribe = (
