@@ -822,11 +822,7 @@ export default class Entity<
       cdate: this.cdate,
       mdate: this.mdate,
       tags: this.tags,
-      ...referencesToEntities(
-        classNamesToEntityConstructors(this.$nymph, this.$dataStore, false),
-        this.$nymph,
-        this.$skipAc,
-      ),
+      ...this.$dataStore,
     };
   }
 

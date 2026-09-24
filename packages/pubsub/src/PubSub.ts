@@ -717,7 +717,7 @@ export default class PubSub {
       source: 'client',
     };
     // Find qref queries.
-    const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
+    const qrefQueries = this.findQRefQueries(...selectors);
 
     if (data.action === 'subscribe') {
       // Client is subscribing to a query.
@@ -1527,7 +1527,7 @@ export default class PubSub {
     }
   }
 
-  private findQRefQueries(options: MessageOptions, ...selectors: Selector[]) {
+  private findQRefQueries(...selectors: Selector[]) {
     const qrefQueries: [MessageOptions, ...Selector[]][] = [];
 
     for (const curSelector of selectors) {
@@ -1539,7 +1539,7 @@ export default class PubSub {
           continue;
         }
 
-        if (value === undefined) {
+        if (value == null) {
           continue;
         }
 
@@ -1554,7 +1554,7 @@ export default class PubSub {
           }
         } else if (key === 'selector' || key === '!selector') {
           const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-          qrefQueries.push(...this.findQRefQueries(options, ...tmpArr));
+          qrefQueries.push(...this.findQRefQueries(...tmpArr));
         }
       }
     }
