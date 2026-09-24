@@ -132,41 +132,35 @@ describe('Tilmeld Client', () => {
     const { User } = await createNymphTilmeldServer();
 
     try {
-      const admin = User.factorySync() as UserClass & CurrentUserData;
+      let admin = User.factorySync() as UserClass & CurrentUserData;
 
       let result = await admin.$register({
         password: 'supersecretadminpassword',
       });
-
       expect(result.result).toBeFalsy();
       expect(result.loggedin).toBeFalsy();
       expect(result.message).toEqual('Please specify a username.');
       expect(admin.guid).toBeNull();
 
+      admin = User.factorySync() as UserClass & CurrentUserData;
       admin.username = 'admin';
-      try {
-        expect(
-          (result = await admin.$register({
-            password: 'supersecretadminpassword',
-          })),
-        ).toThrow();
-      } catch (e: any) {
-        expect(e.status).toEqual(400);
-        expect(e.message).toEqual('Please specify a valid email.');
-      }
+      result = await admin.$register({
+        password: 'supersecretadminpassword',
+      });
+      expect(result.result).toBeFalsy();
+      expect(result.loggedin).toBeFalsy();
+      expect(result.message).toEqual('Please specify a valid email.');
+      expect(admin.guid).toBeNull();
 
+      admin = User.factorySync() as UserClass & CurrentUserData;
+      admin.username = 'admin';
       admin.email = 'root@localhost';
-      try {
-        expect(
-          (result = await admin.$register({
-            password: 'supersecretadminpassword',
-          })),
-        ).toThrow();
-      } catch (e: any) {
-        expect(e.status).toEqual(400);
-        expect(e.message).toEqual('Invalid Group:  "name" is required');
-      }
-
+      result = await admin.$register({
+        password: 'supersecretadminpassword',
+      });
+      expect(result.result).toBeFalsy();
+      expect(result.loggedin).toBeFalsy();
+      expect(result.message).toEqual('Invalid Group:  "name" is required');
       expect(admin.guid).toBeNull();
     } catch (e: any) {
       console.error('Error running test: ', e);

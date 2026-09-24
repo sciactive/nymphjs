@@ -16,8 +16,14 @@ export function entityConstructorsToClassNames(item: any): any {
     item.prototype instanceof Entity &&
     typeof item.class === 'string'
   ) {
-    // Convert entity classes to strings.
-    return item.class;
+    // Convert entity classes to class references.
+    return ['nymph_class_reference', item.class];
+  } else if (
+    item instanceof Entity &&
+    typeof item.$toReference === 'function'
+  ) {
+    // Don't touch entities.
+    return item;
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
     return item.map((entry) => entityConstructorsToClassNames(entry));
@@ -41,6 +47,13 @@ export function entitiesToReferences(item: any): any {
   ) {
     // Convert entities to references.
     return item.$toReference();
+  } else if (
+    typeof item === 'function' &&
+    item.prototype instanceof Entity &&
+    typeof item.class === 'string'
+  ) {
+    // Don't touch Entity classes.
+    return item;
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
     return item.map((entry) => entitiesToReferences(entry));
@@ -48,26 +61,6 @@ export function entitiesToReferences(item: any): any {
     let newObj = Object.create(item);
     for (let [key, value] of Object.entries(item)) {
       newObj[key] = entitiesToReferences(value);
-    }
-    return newObj;
-  }
-  // Not an entity or array, just return it.
-  return item;
-}
-
-export function entitiesToGuids(item: any): any {
-  if (item == null) {
-    return item;
-  } else if (item instanceof Entity && item.guid != null) {
-    // Convert entities to guids.
-    return item.guid;
-  } else if (Array.isArray(item)) {
-    // Recurse into lower arrays.
-    return item.map((entry) => entitiesToGuids(entry));
-  } else if (item instanceof Object) {
-    let newObj = Object.create(item);
-    for (let [key, value] of Object.entries(item)) {
-      newObj[key] = entitiesToGuids(value);
     }
     return newObj;
   }

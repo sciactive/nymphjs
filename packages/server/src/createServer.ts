@@ -3,16 +3,15 @@ import express, { NextFunction, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import {
   Nymph,
-  Entity,
   EntityConflictError,
   EntityConstructor,
   EntityInterface,
   EntityJson,
   EntityPatch,
-  EntityReference,
   InvalidParametersError,
   TilmeldAccessLevels,
   classNamesToEntityConstructors,
+  referencesToEntities,
   Options,
   Selector,
 } from '@nymphjs/nymph';
@@ -148,27 +147,30 @@ export function createServer(
           return;
         }
         let [options, ...selectors] = data as [Options, ...Selector[]];
-        let EntityClass;
-        try {
-          EntityClass = response.locals.nymph.getEntityClass(data[0].class);
-          if (!EntityClass.restEnabled) {
-            httpError(response, 403);
-            return;
-          }
-        } catch (e: any) {
-          httpError(response, 400, e);
-          return;
-        }
-        options.class = EntityClass;
         options.source = 'client';
         options.skipAc = false;
         if (options.return === 'object') {
           options.return = 'entity';
         }
         try {
+          options = classNamesToEntityConstructors(
+            response.locals.nymph,
+            options,
+            true,
+          );
+        } catch (e: any) {
+          if (e?.message === 'Not accessible.') {
+            httpError(response, 403);
+            return;
+          } else {
+            httpError(response, 500, e);
+            return;
+          }
+        }
+        try {
           selectors = classNamesToEntityConstructors(
             response.locals.nymph,
-            selectors,
+            referencesToEntities(selectors, response.locals.nymph, false, true),
             true,
           );
         } catch (e: any) {
@@ -346,9 +348,15 @@ export function createServer(
           return;
         }
         try {
-          const params = referencesToEntities(
-            [...data.params],
+          const params = classNamesToEntityConstructors(
             response.locals.nymph,
+            referencesToEntities(
+              [...data.params],
+              response.locals.nymph,
+              false,
+              true,
+            ),
+            true,
           );
           if (data.static) {
             let EntityClass: EntityConstructor;
@@ -836,41 +844,6 @@ export function createServer(
       entity.$jsonAcceptData(entityData as EntityJson, allowConflict);
     }
     return entity;
-  }
-
-  /**
-   * Check if an item is a reference, and if it is, convert it to an entity.
-   *
-   * This function will recurse into deeper arrays and objects.
-   *
-   * @param item The item to check.
-   * @returns The item, converted.
-   */
-  function referencesToEntities(item: any, nymph: Nymph): any {
-    if (item == null) {
-      return item;
-    } else if (Array.isArray(item)) {
-      if (item.length === 3 && item[0] === 'nymph_entity_reference') {
-        try {
-          const EntityClass = nymph.getEntityClass(item[2]);
-          if (!EntityClass.restEnabled) {
-            throw new ForbiddenClassError('Not accessible.');
-          }
-          return EntityClass.factoryReference(item as EntityReference);
-        } catch (e: any) {
-          return item;
-        }
-      }
-      return item.map((entry) => referencesToEntities(entry, nymph));
-    } else if (typeof item === 'object' && !(item instanceof Entity)) {
-      // Only do this for non-entity objects.
-      const newItem: { [k: string]: any } = {};
-      for (let curProperty in item) {
-        newItem[curProperty] = referencesToEntities(item[curProperty], nymph);
-      }
-      return newItem;
-    }
-    return item;
   }
 
   /**

@@ -19,7 +19,6 @@ import type {
 } from './Nymph.types.js';
 import type PubSub from './PubSub.js';
 import {
-  entitiesToGuids,
   entitiesToReferences,
   entityConstructorsToClassNames,
 } from './utils.js';
@@ -371,8 +370,8 @@ export default class Nymph {
       data: {
         action: 'entity',
         data: [
-          { ...options, class: options.class.class },
-          ...entityConstructorsToClassNames(entitiesToGuids(selectors)),
+          entityConstructorsToClassNames(options),
+          ...entityConstructorsToClassNames(entitiesToReferences(selectors)),
         ],
       },
     });
@@ -408,8 +407,8 @@ export default class Nymph {
         data: {
           action: 'entities',
           data: [
-            { ...options, class: options.class.class },
-            ...entityConstructorsToClassNames(entitiesToGuids(selectors)),
+            entityConstructorsToClassNames(options),
+            ...entityConstructorsToClassNames(entitiesToReferences(selectors)),
           ],
         },
       });

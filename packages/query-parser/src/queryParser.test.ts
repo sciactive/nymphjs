@@ -5,6 +5,12 @@ const BlogPost = function () {} as unknown as typeof Entity;
 const Category = function () {} as unknown as typeof Entity;
 const List = function () {} as unknown as typeof Entity;
 
+const Mail = function () {} as unknown as typeof Entity;
+const Headers = function () {} as unknown as typeof Entity;
+const Body = function () {} as unknown as typeof Entity;
+const Label = function () {} as unknown as typeof Entity;
+const Domain = function () {} as unknown as typeof Entity;
+
 describe('queryParser', () => {
   it('parses a basic query', () => {
     const query = 'search';
@@ -1810,6 +1816,124 @@ describe('queryParser', () => {
         type: '&',
         contain: [['categories', '{Category parent<{Category}']],
         equal: [['id', 'top']],
+      },
+    ]);
+  });
+
+  it('parses a realistic query', () => {
+    const query =
+      'labels<{Label [aggbox]}> -[trash] [delivered] -<spam> -<bare> -<autoreply> -<draft> -<sent> limit:10 reverse:true';
+    const [options, ...selectors] = queryParser({
+      query,
+      entityClass: Mail,
+      defaultFields: ['subject', 'from', 'sender'],
+      qrefMap: {
+        Mail: {
+          class: Mail,
+          defaultFields: ['subject', 'from', 'sender'],
+        },
+        Headers: {
+          class: Headers,
+          defaultFields: ['Message-ID'],
+        },
+        Body: {
+          class: Body,
+          defaultFields: ['text'],
+        },
+        Label: {
+          class: Label,
+          defaultFields: ['name', 'id'],
+        },
+        Domain: {
+          class: Domain,
+          defaultFields: ['fqdn'],
+        },
+      },
+      bareHandler: (
+        input,
+        entityClass,
+        defaultFields = ['subject', 'from', 'sender'],
+      ) => {
+        if (entityClass === Mail) {
+          return {
+            type: '|',
+            search: defaultFields.map((field) => [field, input]) as [
+              string,
+              string,
+            ][],
+            qref: [
+              [
+                'body',
+                [
+                  { class: Body },
+                  {
+                    type: '&',
+                    search: ['text', input],
+                  },
+                ],
+              ],
+              [
+                'body',
+                [
+                  { class: Body },
+                  {
+                    type: '&',
+                    search: ['html', input],
+                  },
+                ],
+              ],
+              [
+                'body',
+                [
+                  { class: Body },
+                  {
+                    type: '&',
+                    search: ['attachments', input],
+                  },
+                ],
+              ],
+            ],
+          };
+        }
+        if (defaultFields.length) {
+          return {
+            type: '|',
+            search: defaultFields.map((field) => [field, input]) as [
+              string,
+              string,
+            ][],
+          };
+        }
+        return {};
+      },
+    });
+
+    expect(options).toEqual({
+      class: Mail,
+      limit: 10,
+      reverse: true,
+    });
+
+    expect(selectors).toEqual([
+      {
+        type: '&',
+        '!tag': ['spam', 'bare', 'autoreply', 'draft', 'sent'],
+        '!truthy': ['trash'],
+        qref: [
+          [
+            'labels',
+            [
+              {
+                class: Label,
+              },
+              {
+                truthy: ['aggbox'],
+                type: '&',
+              },
+            ],
+          ],
+        ],
+        truthy: ['delivered'],
       },
     ]);
   });

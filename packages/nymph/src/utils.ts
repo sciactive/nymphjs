@@ -15,76 +15,79 @@ export function uniqueStrings(array: string[]) {
   return Object.keys(obj);
 }
 
-export function classNamesToEntityConstructors(
+export function classNamesToEntityConstructors<T extends any>(
   nymph: Nymph,
-  selectors: Selector[],
+  item: T,
   enforceRestEnabledFlag = false,
-): Selector[] {
-  const newSelectors: Selector[] = [];
-
-  for (const curSelector of selectors) {
-    const newSelector: Selector = { type: curSelector.type };
-
-    for (const k in curSelector) {
-      const key = k as keyof Selector;
-      const value = curSelector[key];
-
-      if (key === 'type') {
-        continue;
-      }
-
-      if (value === undefined) {
-        continue;
-      }
-
-      if (key === 'qref' || key === '!qref') {
-        const tmpArr = (
-          Array.isArray(((value as Selector['qref']) ?? [])[0])
-            ? value
-            : [value]
-        ) as [string, [Options, ...Selector[]]][];
-        for (let i = 0; i < tmpArr.length; i++) {
-          const name = tmpArr[i][0];
-          const [qrefOptions, ...selectors] = tmpArr[i][1];
-          const QrefEntityClass = qrefOptions.class
-            ? nymph.getEntityClass(qrefOptions.class)
-            : nymph.getEntityClass('Entity');
-          if (enforceRestEnabledFlag && !QrefEntityClass.restEnabled) {
-            throw new Error('Not accessible.');
-          }
-          const options = { ...qrefOptions, class: QrefEntityClass };
-          if (!newSelector[key]) {
-            newSelector[key] = [];
-          }
-          (newSelector[key] as [string, [Options, ...Selector[]]][]).push([
-            name,
-            [
-              options,
-              ...classNamesToEntityConstructors(
-                nymph,
-                selectors,
-                enforceRestEnabledFlag,
-              ),
-            ],
-          ]);
-        }
-      } else if (key === 'selector' || key === '!selector') {
-        const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-        newSelector[key] = classNamesToEntityConstructors(
-          nymph,
-          tmpArr,
-          enforceRestEnabledFlag,
-        );
-      } else {
-        // @ts-ignore: ts doesn't know what value is here.
-        newSelector[key] = value;
-      }
+): T {
+  if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
+    return item;
+  } else if (
+    Array.isArray(item) &&
+    item.length === 2 &&
+    item[0] === 'nymph_class_reference' &&
+    typeof item[1] === 'string'
+  ) {
+    // Convert class references to entity classes.
+    const EntityClass = nymph.getEntityClass(item[1]);
+    if (enforceRestEnabledFlag && !EntityClass.restEnabled) {
+      throw new Error('Not accessible.');
     }
-
-    newSelectors.push(newSelector);
+    return EntityClass as T;
+  } else if (
+    item instanceof Entity &&
+    typeof item.$toReference === 'function'
+  ) {
+    // Don't touch entities.
+    return item;
+  } else if (Array.isArray(item)) {
+    // Recurse into lower arrays.
+    return item.map((entry) =>
+      classNamesToEntityConstructors(nymph, entry, enforceRestEnabledFlag),
+    ) as T;
+  } else if (item instanceof Object) {
+    let newObj = Object.create(item);
+    for (let [key, value] of Object.entries(item)) {
+      newObj[key] = classNamesToEntityConstructors(
+        nymph,
+        value,
+        enforceRestEnabledFlag,
+      );
+    }
+    return newObj;
   }
+  // Not an entity or array, just return it.
+  return item;
+}
 
-  return newSelectors;
+export function entityConstructorsToClassNames(item: any): any {
+  if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
+    return item;
+  } else if (
+    typeof item === 'function' &&
+    item.prototype instanceof Entity &&
+    typeof item.class === 'string'
+  ) {
+    // Convert entity classes to class references.
+    return ['nymph_class_reference', item.class];
+  } else if (
+    item instanceof Entity &&
+    typeof item.$toReference === 'function'
+  ) {
+    // Don't touch entities.
+    return item;
+  } else if (Array.isArray(item)) {
+    // Recurse into lower arrays.
+    return item.map((entry) => entityConstructorsToClassNames(entry));
+  } else if (item instanceof Object) {
+    let newObj = Object.create(item);
+    for (let [key, value] of Object.entries(item)) {
+      newObj[key] = entityConstructorsToClassNames(value);
+    }
+    return newObj;
+  }
+  // Not an entity or array, just return it.
+  return item;
 }
 
 export function entitiesToReferences(item: any, existingOnly?: boolean): any {
@@ -96,6 +99,13 @@ export function entitiesToReferences(item: any, existingOnly?: boolean): any {
   ) {
     // Convert entities to references.
     return item.$toReference(existingOnly);
+  } else if (
+    typeof item === 'function' &&
+    item.prototype instanceof Entity &&
+    typeof item.class === 'string'
+  ) {
+    // Don't touch Entity classes.
+    return item;
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
     return item.map((entry) => entitiesToReferences(entry, existingOnly));
@@ -114,6 +124,7 @@ export function referencesToEntities(
   item: any,
   nymph: Nymph,
   useSkipAc = false,
+  enforceRestEnabledFlag = false,
 ): any {
   if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
     return item;
@@ -122,6 +133,9 @@ export function referencesToEntities(
     if (item[0] === 'nymph_entity_reference') {
       try {
         const EntityClass = nymph.getEntityClass(item[2]);
+        if (enforceRestEnabledFlag && !EntityClass.restEnabled) {
+          throw new Error('Not accessible.');
+        }
         const entity = EntityClass.factoryReference(item as EntityReference);
         entity.$useSkipAc(useSkipAc);
         entity.$nymph = nymph;

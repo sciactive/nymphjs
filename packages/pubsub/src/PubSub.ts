@@ -1,11 +1,15 @@
 import {
   Nymph,
+  Entity,
   EntityConstructor,
   EntityInterface,
   Options,
   Selector,
   SerializedEntityData,
   classNamesToEntityConstructors,
+  referencesToEntities,
+  entityConstructorsToClassNames,
+  entitiesToReferences,
 } from '@nymphjs/nymph';
 import ws from 'websocket';
 import { difference } from 'lodash-es';
@@ -691,13 +695,21 @@ export default class PubSub {
     },
   ) {
     let args: [MessageOptions, ...Selector[]] = JSON.parse(data.query);
-    let EntityClass = this.nymph.getEntityClass(args[0].class);
-    if (!EntityClass.restEnabled) {
-      throw new Error('Not accessible.');
-    }
-    const etype = EntityClass.ETYPE;
+
     const serialArgs = JSON.stringify(args);
-    const [clientOptions, ...selectors] = args;
+    let [clientOptions, ...selectors] = args;
+    clientOptions = classNamesToEntityConstructors(
+      this.nymph,
+      clientOptions,
+      true,
+    );
+    selectors = classNamesToEntityConstructors(
+      this.nymph,
+      referencesToEntities(selectors, this.nymph, false, true),
+      true,
+    );
+    let EntityClass = clientOptions.class;
+    const etype = EntityClass.ETYPE;
     const options: Options & { return: 'entity' } = {
       ...clientOptions,
       class: EntityClass,
@@ -707,25 +719,21 @@ export default class PubSub {
     // Find qref queries.
     const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
 
-    // Check that all qref queries are accessible classes.
-    for (const qrefQuery of qrefQueries) {
-      const args = qrefQuery;
-      const EntityClass = this.nymph.getEntityClass(args[0].class);
-      if (!EntityClass.restEnabled) {
-        throw new Error('Not accessible.');
-      }
-    }
-
     if (data.action === 'subscribe') {
       // Client is subscribing to a query.
 
       // First subscribe to qrefQueries, giving this one as a reference.
       for (const qrefQuery of qrefQueries) {
+        let [options, ...selectors] = qrefQuery;
+        options = entityConstructorsToClassNames(options);
+        selectors = entityConstructorsToClassNames(
+          entitiesToReferences(selectors),
+        );
         await this.handleSubscriptionQuery(
           from,
           {
             action: 'subscribe',
-            query: JSON.stringify(qrefQuery),
+            query: JSON.stringify([options, ...selectors]),
           },
           {
             etype,
@@ -1118,9 +1126,19 @@ export default class PubSub {
       if ((data.event === 'create' || data.event === 'update') && data.entity) {
         // Check if it matches the query.
         try {
-          const [clientOptions, ...selectors] = JSON.parse(curQuery);
+          let [clientOptions, ...selectors] = JSON.parse(curQuery);
+          clientOptions = classNamesToEntityConstructors(
+            this.nymph,
+            clientOptions,
+            true,
+          );
+          selectors = classNamesToEntityConstructors(
+            this.nymph,
+            referencesToEntities(selectors, this.nymph, false, true),
+            true,
+          );
           const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
-          const EntityClass = this.nymph.getEntityClass(clientOptions.class);
+          const EntityClass = clientOptions.class;
           const entityData = data.entity.data;
           entityData.cdate = data.entity.cdate;
           entityData.mdate = data.entity.mdate;
@@ -1232,14 +1250,18 @@ export default class PubSub {
           const [clientOptions, ...clientSelectors] = JSON.parse(query);
           const options: Options = {
             ...clientOptions,
-            class: nymph.getEntityClass(clientOptions.class),
+            class: classNamesToEntityConstructors(
+              nymph,
+              clientOptions.class,
+              true,
+            ),
             return: 'entity',
             source: 'client',
             skipAc: false,
           };
           const selectors = classNamesToEntityConstructors(
             nymph,
-            clientSelectors,
+            referencesToEntities(clientSelectors, nymph, false, true),
             true,
           );
           if (this.sessions.has(curClient)) {
@@ -1559,10 +1581,13 @@ export default class PubSub {
           for (let i = 0; i < tmpArr.length; i++) {
             const name = tmpArr[i][0];
             const [qrefOptions, ...qrefSelectors] = tmpArr[i][1];
-            const query = JSON.stringify(tmpArr[i][1]);
-            const QrefEntityClass = qrefOptions.class
-              ? this.nymph.getEntityClass(qrefOptions.class)
-              : this.nymph.getEntityClass('Entity');
+            const query = JSON.stringify([
+              entityConstructorsToClassNames(qrefOptions),
+              ...entityConstructorsToClassNames(
+                entitiesToReferences(qrefSelectors),
+              ),
+            ]);
+            const QrefEntityClass = qrefOptions.class ?? Entity;
             const data =
               this.querySubs[QrefEntityClass.ETYPE][query].get(client);
             if (data) {
