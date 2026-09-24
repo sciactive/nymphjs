@@ -13,6 +13,7 @@ export type ACProperties = {
 };
 
 export type EntityReference = ['nymph_entity_reference', string, string];
+export type ClassReference = ['nymph_class_reference', string];
 
 export type EntityData = {
   [k: string]: any;
@@ -31,7 +32,7 @@ export type EntityObject = {
 };
 
 export type EntityJson = {
-  class: string;
+  class: EntityConstructor;
   guid: string | null;
   cdate: number | null;
   mdate: number | null;
@@ -40,7 +41,7 @@ export type EntityJson = {
 };
 
 export type EntityPatch = {
-  class: string;
+  class: EntityConstructor;
   guid: string;
   mdate: number | null;
   set: EntityData;
@@ -249,6 +250,9 @@ export interface EntityInterface extends DataObjectInterface {
   /**
    * Accept JSON data from the client.
    *
+   * The given data must already be dereferenced (class references turned into
+   * classes and entity references turned into entities).
+   *
    * This function uses the security protection lists:
    *
    * - $protectedTags
@@ -264,6 +268,9 @@ export interface EntityInterface extends DataObjectInterface {
   $jsonAcceptData(input: EntityJson, allowConflict?: boolean): void;
   /**
    * Accept JSON patch from the client.
+   *
+   * The given data must already be dereferenced (class references turned into
+   * classes and entity references turned into entities).
    *
    * This function uses the security protection lists:
    *

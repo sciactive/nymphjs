@@ -154,8 +154,6 @@ export class MockNymph {
   }
 
   public async saveEntity(entity: EntityInterface): Promise<boolean> {
-    const className = (entity.constructor as any).class as string;
-
     if (entity.guid == null) {
       entity.guid = guid();
       entity.cdate = Date.now();
@@ -171,7 +169,7 @@ export class MockNymph {
     entity.mdate = Date.now();
 
     const entityJson: EntityJson = {
-      class: className,
+      class: entity.constructor as EntityConstructor,
       guid: entity.guid,
       cdate: entity.cdate,
       mdate: entity.mdate,

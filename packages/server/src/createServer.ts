@@ -282,16 +282,33 @@ export function createServer(
           }
           let entity: EntityInterface;
           try {
-            entity = await loadEntity(entData, response.locals.nymph);
+            entity = await loadEntity(
+              classNamesToEntityConstructors(
+                response.locals.nymph,
+                referencesToEntities(
+                  entData,
+                  response.locals.nymph,
+                  false,
+                  true,
+                ),
+                true,
+              ),
+              response.locals.nymph,
+            );
           } catch (e: any) {
             if (e instanceof EntityConflictError) {
               conflict = true;
+              lastException = e;
             } else if (e instanceof ForbiddenClassError) {
               forbidden = true;
+              lastException = e;
             } else if (e.message === NOT_FOUND_ERROR) {
               notfound = true;
             } else if (e instanceof InvalidParametersError) {
               invalidRequest = true;
+              lastException = e;
+            } else if (e.message === 'Not accessible.') {
+              forbidden = true;
               lastException = e;
             } else {
               lastException = e;
@@ -322,10 +339,10 @@ export function createServer(
             httpError(response, 400, lastException);
             return;
           } else if (conflict) {
-            httpError(response, 409);
+            httpError(response, 409, lastException);
             return;
           } else if (forbidden) {
-            httpError(response, 403);
+            httpError(response, 403, lastException);
             return;
           } else if (notfound) {
             httpError(response, 404);
@@ -452,16 +469,30 @@ export function createServer(
           } else {
             let entity: EntityInterface;
             try {
-              entity = await loadEntity(data.entity, response.locals.nymph);
+              entity = await loadEntity(
+                classNamesToEntityConstructors(
+                  response.locals.nymph,
+                  referencesToEntities(
+                    data.entity,
+                    response.locals.nymph,
+                    false,
+                    true,
+                  ),
+                  true,
+                ),
+                response.locals.nymph,
+              );
             } catch (e: any) {
               if (e instanceof EntityConflictError) {
-                httpError(response, 409);
+                httpError(response, 409, e);
               } else if (e instanceof ForbiddenClassError) {
-                httpError(response, 403);
+                httpError(response, 403, e);
               } else if (e.message === NOT_FOUND_ERROR) {
                 httpError(response, 404, e);
               } else if (e instanceof InvalidParametersError) {
                 httpError(response, 400, e);
+              } else if (e.message === 'Not accessible.') {
+                httpError(response, 403);
               } else {
                 httpError(response, 500, e);
               }
@@ -502,7 +533,7 @@ export function createServer(
           }
         } catch (e: any) {
           if (e instanceof ForbiddenClassError) {
-            httpError(response, 403);
+            httpError(response, 403, e);
             return;
           } else {
             httpError(response, 500, e);
@@ -629,16 +660,29 @@ export function createServer(
         }
         let entity: EntityInterface;
         try {
-          entity = await loadEntity(entData, response.locals.nymph, patch);
+          entity = await loadEntity(
+            classNamesToEntityConstructors(
+              response.locals.nymph,
+              referencesToEntities(entData, response.locals.nymph, false, true),
+              true,
+            ),
+            response.locals.nymph,
+            patch,
+          );
         } catch (e: any) {
           if (e instanceof EntityConflictError) {
             conflict = true;
+            lastException = e;
           } else if (e instanceof ForbiddenClassError) {
             forbidden = true;
+            lastException = e;
           } else if (e.message === NOT_FOUND_ERROR) {
             notfound = true;
           } else if (e instanceof InvalidParametersError) {
             invalidRequest = true;
+            lastException = e;
+          } else if (e.message === 'Not accessible.') {
+            forbidden = true;
             lastException = e;
           } else {
             lastException = e;
@@ -668,9 +712,9 @@ export function createServer(
         if (invalidRequest) {
           httpError(response, 400, lastException);
         } else if (forbidden) {
-          httpError(response, 403);
+          httpError(response, 403, lastException);
         } else if (conflict) {
-          httpError(response, 409);
+          httpError(response, 409, lastException);
         } else if (notfound) {
           httpError(response, 404);
         } else {
@@ -813,13 +857,13 @@ export function createServer(
     patch = false,
     allowConflict = false,
   ): Promise<EntityInterface> {
-    if (entityData.class === 'Entity') {
+    let EntityClass = entityData.class;
+    if (EntityClass.class === 'Entity') {
       // Don't let clients use the `Entity` class, since it has no validity/AC checks.
-      throw new InvalidParametersError(
+      throw new ForbiddenClassError(
         "Can't use Entity class directly from the front end.",
       );
     }
-    let EntityClass = nymph.getEntityClass(entityData.class);
     if (!EntityClass.restEnabled) {
       throw new ForbiddenClassError('Not accessible.');
     }

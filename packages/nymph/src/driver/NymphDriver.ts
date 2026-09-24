@@ -6,6 +6,7 @@ import { Tokenizer } from '@sciactive/tokenizer';
 
 import type Nymph from '../Nymph.js';
 import type { Selector, Options, FormattedSelector } from '../Nymph.types.js';
+import Entity from '../Entity.js';
 import type { EntityInstanceType, EntityObjectType } from '../Entity.js';
 import type {
   EntityConstructor,
@@ -735,8 +736,19 @@ export default abstract class NymphDriver {
     ) {
       return true;
     }
+    if (
+      value instanceof Entity &&
+      value.guid != null &&
+      guids.indexOf(value.guid) !== -1
+    ) {
+      return true;
+    }
     // Search through arrays and objects looking for the reference.
-    if (value != null && (Array.isArray(value) || typeof value === 'object')) {
+    if (
+      value != null &&
+      (Array.isArray(value) ||
+        (typeof value === 'object' && !(value instanceof Entity)))
+    ) {
       for (const key in value) {
         if (this.entityReferenceSearch(value[key], guids)) {
           return true;

@@ -273,7 +273,7 @@ describe('Entity', () => {
         null: null,
         uniques: [],
       },
-      class: 'TestModel',
+      class: ['nymph_class_reference', 'TestModel'],
     });
   });
 
@@ -333,7 +333,7 @@ describe('Entity', () => {
     testEntity.cdate = 13;
     testEntity.mdate = 14;
     testEntity.$jsonAcceptPatch({
-      class: TestModel.class,
+      class: TestModel,
       guid: testEntity.guid as string,
       mdate: 15,
       set: {
@@ -379,7 +379,7 @@ describe('Entity', () => {
     testEntity.cdate = 13;
     testEntity.mdate = 14;
     testEntity.$jsonAcceptPatch({
-      class: TestModel.class,
+      class: TestModel,
       guid: testEntity.guid as string,
       mdate: 15,
       set: {
@@ -424,7 +424,7 @@ describe('Entity', () => {
 
     try {
       testEntity.$jsonAcceptPatch({
-        class: TestModel.class,
+        class: TestModel,
         guid: data.guid,
         mdate: data.mdate,
         set: {

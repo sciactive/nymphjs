@@ -58,7 +58,7 @@ let todos = [];
 let userCount = 0;
 let subscription = pubsub.subscribeEntities(
   {
-    class: Todo.class,
+    class: Todo,
   },
   {
     type: '&',

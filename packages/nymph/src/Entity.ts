@@ -22,7 +22,9 @@ import {
   MethodFailedError,
 } from './errors/index.js';
 import {
+  classNamesToEntityConstructors,
   entitiesToReferences,
+  entityConstructorsToClassNames,
   referencesToEntities,
   uniqueStrings,
 } from './utils.js';
@@ -272,7 +274,11 @@ export default class Entity<
 
         if (this.$sdata.hasOwnProperty(name)) {
           data[name] = referencesToEntities(
-            JSON.parse(this.$sdata[name]),
+            classNamesToEntityConstructors(
+              this.$nymph,
+              JSON.parse(this.$sdata[name]),
+              false,
+            ),
             this.$nymph,
             this.$skipAc,
           );
@@ -325,7 +331,11 @@ export default class Entity<
 
         if (this.$sdata.hasOwnProperty(name)) {
           data[name] = referencesToEntities(
-            JSON.parse(this.$sdata[name]),
+            classNamesToEntityConstructors(
+              this.$nymph,
+              JSON.parse(this.$sdata[name]),
+              false,
+            ),
             this.$nymph,
             this.$skipAc,
           );
@@ -587,7 +597,7 @@ export default class Entity<
       return this.$sleepingReference;
     }
     const obj: EntityJson = {
-      class: (this.constructor as any).class as string,
+      class: entityConstructorsToClassNames(this.constructor),
       guid: this.guid,
       cdate: this.cdate,
       mdate: this.mdate,
@@ -599,7 +609,9 @@ export default class Entity<
       ...Object.keys(this.$sdata),
     ]) {
       if (this.$privateData.indexOf(key) === -1) {
-        obj.data[key] = entitiesToReferences(this.$data[key], true);
+        obj.data[key] = entityConstructorsToClassNames(
+          entitiesToReferences(this.$data[key], true),
+        );
       }
     }
     return obj;
@@ -617,6 +629,11 @@ export default class Entity<
           if (data.$nymph !== nymph) {
             data.$setNymph(nymph);
           }
+        } else if (
+          typeof data === 'function' &&
+          data.prototype instanceof Entity
+        ) {
+          data.nymph = nymph;
         } else if (typeof data === 'object') {
           for (let name in data) {
             recurseData(data[name]);
@@ -715,7 +732,9 @@ export default class Entity<
         const _unused: any = (this as any)[key];
       }
     }
-    return entitiesToReferences({ ...this.$dataStore }, referenceOnlyExisting);
+    return entityConstructorsToClassNames(
+      entitiesToReferences({ ...this.$dataStore }, referenceOnlyExisting),
+    );
   }
 
   public $getSData() {
@@ -801,7 +820,11 @@ export default class Entity<
       cdate: this.cdate,
       mdate: this.mdate,
       tags: this.tags,
-      ...referencesToEntities(this.$dataStore, this.$nymph, this.$skipAc),
+      ...referencesToEntities(
+        classNamesToEntityConstructors(this.$nymph, this.$dataStore, false),
+        this.$nymph,
+        this.$skipAc,
+      ),
     };
   }
 
@@ -946,6 +969,7 @@ export default class Entity<
 
     this.$putData({
       ...nonAllowlistData,
+      // Data has already been dereferenced.
       ...data,
       ...protectedData,
       ...privateData,
@@ -1002,11 +1026,8 @@ export default class Entity<
       ) {
         continue;
       }
-      (this.$data as any)[name] = referencesToEntities(
-        patch.set[name],
-        this.$nymph,
-        this.$skipAc,
-      );
+      // Data has already been dereferenced.
+      (this.$data as any)[name] = patch.set[name];
     }
 
     for (const name of patch.unset) {
@@ -1060,7 +1081,7 @@ export default class Entity<
     }
     for (const name in data) {
       (this.$dataStore as any)[name] = referencesToEntities(
-        data[name],
+        classNamesToEntityConstructors(this.$nymph, data[name], false),
         this.$nymph,
         this.$skipAc,
       );

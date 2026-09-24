@@ -1,7 +1,6 @@
 import Entity from './Entity.js';
 import { EntityReference } from './Entity.types.js';
 import Nymph from './Nymph.js';
-import { Options, Selector } from './Nymph.types.js';
 
 export function xor(a: any, b: any): boolean {
   return !!(a && !b) || (!a && b);
@@ -13,6 +12,29 @@ export function uniqueStrings(array: string[]) {
     obj[array[i]] = true;
   }
   return Object.keys(obj);
+}
+
+export function entityConstructorsToClassNames(item: any): any {
+  if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
+    return item;
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+    // Convert entity classes to class references.
+    return ['nymph_class_reference', item.class];
+  } else if (item instanceof Entity) {
+    // Don't touch entities.
+    return item;
+  } else if (Array.isArray(item)) {
+    // Recurse into lower arrays.
+    return item.map((entry) => entityConstructorsToClassNames(entry));
+  } else if (item instanceof Object) {
+    let newObj = Object.create(item);
+    for (let [key, value] of Object.entries(item)) {
+      newObj[key] = entityConstructorsToClassNames(value);
+    }
+    return newObj;
+  }
+  // Not an entity or array, just return it.
+  return item;
 }
 
 export function classNamesToEntityConstructors<T extends any>(
@@ -34,11 +56,11 @@ export function classNamesToEntityConstructors<T extends any>(
       throw new Error('Not accessible.');
     }
     return EntityClass as T;
-  } else if (
-    item instanceof Entity &&
-    typeof item.$toReference === 'function'
-  ) {
+  } else if (item instanceof Entity) {
     // Don't touch entities.
+    return item;
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+    // Don't touch Entity classes.
     return item;
   } else if (Array.isArray(item)) {
     // Recurse into lower arrays.
@@ -60,50 +82,13 @@ export function classNamesToEntityConstructors<T extends any>(
   return item;
 }
 
-export function entityConstructorsToClassNames(item: any): any {
-  if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
-    return item;
-  } else if (
-    typeof item === 'function' &&
-    item.prototype instanceof Entity &&
-    typeof item.class === 'string'
-  ) {
-    // Convert entity classes to class references.
-    return ['nymph_class_reference', item.class];
-  } else if (
-    item instanceof Entity &&
-    typeof item.$toReference === 'function'
-  ) {
-    // Don't touch entities.
-    return item;
-  } else if (Array.isArray(item)) {
-    // Recurse into lower arrays.
-    return item.map((entry) => entityConstructorsToClassNames(entry));
-  } else if (item instanceof Object) {
-    let newObj = Object.create(item);
-    for (let [key, value] of Object.entries(item)) {
-      newObj[key] = entityConstructorsToClassNames(value);
-    }
-    return newObj;
-  }
-  // Not an entity or array, just return it.
-  return item;
-}
-
 export function entitiesToReferences(item: any, existingOnly?: boolean): any {
   if (item == null || Buffer.isBuffer(item) || ArrayBuffer.isView(item)) {
     return item;
-  } else if (
-    item instanceof Entity &&
-    typeof item.$toReference === 'function'
-  ) {
+  } else if (item instanceof Entity) {
     // Convert entities to references.
     return item.$toReference(existingOnly);
-  } else if (
-    typeof item === 'function' &&
-    item.prototype instanceof Entity &&
-    typeof item.class === 'string'
-  ) {
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
     // Don't touch Entity classes.
     return item;
   } else if (Array.isArray(item)) {
@@ -145,12 +130,27 @@ export function referencesToEntities(
       }
     } else {
       // Recurse into lower arrays.
-      return item.map((entry) => referencesToEntities(entry, nymph, useSkipAc));
+      return item.map((entry) =>
+        referencesToEntities(entry, nymph, useSkipAc, enforceRestEnabledFlag),
+      );
     }
-  } else if (Entity && item instanceof Object && !(item instanceof Entity)) {
+  } else if (item instanceof Entity) {
+    // Don't touch entities.
+    return item;
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+    // Don't touch Entity classes.
+    return item;
+  } else if (item instanceof Object) {
+    let newObj = Object.create(item);
     for (let [key, value] of Object.entries(item)) {
-      item[key] = referencesToEntities(value, nymph);
+      newObj[key] = referencesToEntities(
+        value,
+        nymph,
+        useSkipAc,
+        enforceRestEnabledFlag,
+      );
     }
+    return newObj;
   }
   // Not an array, just return it.
   return item;

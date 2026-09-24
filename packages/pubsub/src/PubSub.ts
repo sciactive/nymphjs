@@ -854,11 +854,16 @@ export default class PubSub {
 
       // First unsubscribe from qrefQueries.
       for (const qrefQuery of qrefQueries) {
+        let [options, ...selectors] = qrefQuery;
+        options = entityConstructorsToClassNames(options);
+        selectors = entityConstructorsToClassNames(
+          entitiesToReferences(selectors),
+        );
         await this.handleSubscriptionQuery(
           from,
           {
             action: 'unsubscribe',
-            query: JSON.stringify(qrefQuery),
+            query: JSON.stringify([options, ...selectors]),
           },
           {
             etype,
@@ -1139,16 +1144,24 @@ export default class PubSub {
           );
           const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
           const EntityClass = clientOptions.class;
-          const entityData = data.entity.data;
-          entityData.cdate = data.entity.cdate;
-          entityData.mdate = data.entity.mdate;
+          const entityJson = classNamesToEntityConstructors(
+            this.nymph,
+            referencesToEntities(data.entity, this.nymph, false, true),
+            true,
+          );
+          const entityData = entityJson.data;
+          entityData.cdate = entityJson.cdate;
+          entityData.mdate = entityJson.mdate;
           const entitySData: SerializedEntityData = {};
-          if (typeof data.entity.class !== 'string') {
+          if (
+            !(entityJson.class.prototype instanceof Entity) ||
+            !entityJson.class.restEnabled
+          ) {
             throw new Error(
               `Received entity data class is not valid: ${data.entity.class}`,
             );
           }
-          const DataEntityClass = this.nymph.getEntityClass(data.entity.class);
+          const DataEntityClass = entityJson.class as EntityConstructor;
 
           if (
             EntityClass.ETYPE === DataEntityClass.ETYPE &&
@@ -1159,7 +1172,7 @@ export default class PubSub {
                 entitySData,
                 selectors,
                 data.guid,
-                data.entity?.tags ?? [],
+                entityJson.tags ?? [],
               ))
           ) {
             // It either matches the query, or there are qref queries.
@@ -1188,7 +1201,7 @@ export default class PubSub {
                     entitySData,
                     translatedSelectors,
                     data.guid,
-                    data.entity?.tags ?? [],
+                    entityJson.tags ?? [],
                   )
                 ) {
                   // The query doesn't match when the qref queries are filled.
@@ -1618,7 +1631,6 @@ export default class PubSub {
                 // selector.
                 let newValue: Selector[];
                 const oldValue = newSelector['selector'];
-                delete newSelector[key];
                 if (
                   oldValue == null ||
                   (Array.isArray(oldValue) && !oldValue.length)
@@ -1647,9 +1659,22 @@ export default class PubSub {
             }
           }
         } else if (key === 'selector' || key === '!selector') {
-          const tmpArr = (Array.isArray(value) ? value : [value]) as Selector[];
-          newSelector[key] = this.translateQRefSelectors(client, tmpArr);
-        } else if (key === 'ref' || key === '!ref') {
+          // This one gets inserted for qref queries, so it might be in there
+          // already.
+          const tmpArr = (
+            Array.isArray(value ?? []) ? value : [value]
+          ) as Selector[];
+
+          if (!newSelector[key]) {
+            newSelector[key] = [];
+          }
+          // It also needs to be translated.
+          (newSelector[key] as Selector[]).push(
+            ...this.translateQRefSelectors(client, tmpArr),
+          );
+        } else if (key === '!ref') {
+          // This one gets inserted for !qref queries, so it might be in there
+          // already.
           const tmpArr = (
             Array.isArray(((value as Selector['ref']) ?? [])[0])
               ? value
@@ -1663,6 +1688,7 @@ export default class PubSub {
             ...tmpArr,
           );
         } else {
+          // This is a clause we don't need to translate.
           // @ts-ignore: ts doesn't know what value is here.
           newSelector[key] = value;
         }

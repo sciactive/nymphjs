@@ -11,17 +11,12 @@ export function uniqueStrings(array: string[]) {
 }
 
 export function entityConstructorsToClassNames(item: any): any {
-  if (
-    typeof item === 'function' &&
-    item.prototype instanceof Entity &&
-    typeof item.class === 'string'
-  ) {
+  if (item == null) {
+    return item;
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
     // Convert entity classes to class references.
     return ['nymph_class_reference', item.class];
-  } else if (
-    item instanceof Entity &&
-    typeof item.$toReference === 'function'
-  ) {
+  } else if (item instanceof Entity) {
     // Don't touch entities.
     return item;
   } else if (Array.isArray(item)) {
@@ -38,20 +33,50 @@ export function entityConstructorsToClassNames(item: any): any {
   return item;
 }
 
-export function entitiesToReferences(item: any): any {
+export function classNamesToEntityConstructors<T extends any>(
+  nymph: Nymph,
+  item: T,
+): T {
   if (item == null) {
     return item;
   } else if (
-    item instanceof Entity &&
-    typeof item.$toReference === 'function'
+    Array.isArray(item) &&
+    item.length === 2 &&
+    item[0] === 'nymph_class_reference' &&
+    typeof item[1] === 'string'
   ) {
+    // Convert class references to entity classes.
+    const EntityClass = nymph.getEntityClass(item[1]);
+    return EntityClass as T;
+  } else if (item instanceof Entity) {
+    // Don't touch entities.
+    return item;
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+    // Don't touch Entity classes.
+    return item;
+  } else if (Array.isArray(item)) {
+    // Recurse into lower arrays.
+    return item.map((entry) =>
+      classNamesToEntityConstructors(nymph, entry),
+    ) as T;
+  } else if (item instanceof Object) {
+    let newObj = Object.create(item);
+    for (let [key, value] of Object.entries(item)) {
+      newObj[key] = classNamesToEntityConstructors(nymph, value);
+    }
+    return newObj;
+  }
+  // Not an entity or array, just return it.
+  return item;
+}
+
+export function entitiesToReferences(item: any): any {
+  if (item == null) {
+    return item;
+  } else if (item instanceof Entity) {
     // Convert entities to references.
     return item.$toReference();
-  } else if (
-    typeof item === 'function' &&
-    item.prototype instanceof Entity &&
-    typeof item.class === 'string'
-  ) {
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
     // Don't touch Entity classes.
     return item;
   } else if (Array.isArray(item)) {
@@ -84,10 +109,18 @@ export function referencesToEntities(item: any, nymph: Nymph): any {
       // Recurse into lower arrays.
       return item.map((item) => referencesToEntities(item, nymph));
     }
-  } else if (Entity && item instanceof Object && !(item instanceof Entity)) {
+  } else if (item instanceof Entity) {
+    // Don't touch entities.
+    return item;
+  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+    // Don't touch Entity classes.
+    return item;
+  } else if (item instanceof Object) {
+    let newObj = Object.create(item);
     for (let [key, value] of Object.entries(item)) {
-      item[key] = referencesToEntities(value, nymph);
+      newObj[key] = referencesToEntities(value, nymph);
     }
+    return newObj;
   }
   // Not an array, just return it.
   return item;

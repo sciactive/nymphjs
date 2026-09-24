@@ -19,6 +19,7 @@ import type {
 } from './Nymph.types.js';
 import type PubSub from './PubSub.js';
 import {
+  classNamesToEntityConstructors,
   entitiesToReferences,
   entityConstructorsToClassNames,
 } from './utils.js';
@@ -439,7 +440,10 @@ export default class Nymph {
   public initEntity<T extends EntityConstructor = EntityConstructor>(
     entityJSON: EntityJson<T>,
   ): EntityInstanceType<T> {
-    const EntityClass = this.getEntityClass(entityJSON.class);
+    const EntityClass = classNamesToEntityConstructors<T>(
+      this,
+      entityJSON.class as unknown as T,
+    );
     if (!EntityClass) {
       throw new ClassNotAvailableError(
         entityJSON.class + ' class cannot be found.',
@@ -491,7 +495,10 @@ export default class Nymph {
         item.hasOwnProperty('mdate') &&
         item.hasOwnProperty('tags') &&
         item.hasOwnProperty('data') &&
-        this.getEntityClass((item as any as EntityJson).class)
+        classNamesToEntityConstructors(
+          this,
+          (item as any as EntityJson).class,
+        ) != null
       ) {
         return this.initEntity(item as any as EntityJson) as T;
       } else {

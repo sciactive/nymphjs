@@ -14,6 +14,8 @@ import {
   entitiesToReferences,
   referencesToEntities,
   sortObj,
+  entityConstructorsToClassNames,
+  classNamesToEntityConstructors,
 } from './utils.js';
 
 export type EntityDataType<T> =
@@ -388,7 +390,7 @@ export default class Entity<
   public toJSON() {
     this.$check();
     const obj: EntityJson = {
-      class: (this.constructor as any).class as string,
+      class: entityConstructorsToClassNames(this.constructor),
       guid: this.guid,
       cdate: this.cdate,
       mdate: this.mdate,
@@ -396,7 +398,9 @@ export default class Entity<
       data: {},
     };
     for (let [key, value] of Object.entries(this.$dataStore)) {
-      obj.data[key] = entitiesToReferences(value);
+      obj.data[key] = entityConstructorsToClassNames(
+        entitiesToReferences(value),
+      );
     }
     return obj;
   }
@@ -418,7 +422,13 @@ export default class Entity<
     this.$dataStore = Object.entries(entityJson.data)
       .map(([key, value]) => {
         this.$dirty[key] = false;
-        return { key, value: referencesToEntities(value, this.$nymph) };
+        return {
+          key,
+          value: classNamesToEntityConstructors(
+            this.$nymph,
+            referencesToEntities(value, this.$nymph),
+          ),
+        };
       })
       .reduce(
         (obj, { key, value }) => Object.assign(obj, { [key]: value }),
@@ -501,7 +511,7 @@ export default class Entity<
     const patch: EntityPatch = {
       guid: this.guid,
       mdate: this.mdate,
-      class: (this.constructor as EntityConstructor).class,
+      class: entityConstructorsToClassNames(this.constructor),
       addTags: this.tags.filter(
         (tag) => this.$originalTags.indexOf(tag) === -1,
       ),
@@ -515,7 +525,9 @@ export default class Entity<
     for (let [key, dirty] of Object.entries(this.$dirty)) {
       if (dirty) {
         if (key in this.$data) {
-          patch.set[key] = entitiesToReferences(this.$data[key]);
+          patch.set[key] = entityConstructorsToClassNames(
+            entitiesToReferences(this.$data[key]),
+          );
         } else {
           patch.unset.push(key);
         }
