@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.125](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.124...v1.0.0-beta.125) (2026-09-24)
+
+### Bug Fixes
+
+- client translation errors, pubsub qref translation, entities can contain classes in db now ([2902fe3](https://forge.sciactive.com/sciactive/nymphjs/commits/2902fe3166b456cd0d8012c10991f9a16a4a99bb))
+
 # [1.0.0-beta.124](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.123...v1.0.0-beta.124) (2026-09-24)
 
 ### Bug Fixes
