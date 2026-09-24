@@ -10,6 +10,12 @@ import type {
 import { Options, Selector } from './Nymph.types.js';
 import { ClassNotAvailableError, EntityConflictError } from './errors/index.js';
 import Entity from './Entity.js';
+import {
+  classNamesToEntityConstructors,
+  entitiesToReferences,
+  entityConstructorsToClassNames,
+  referencesToEntities,
+} from './utils.js';
 
 const entities: { [k: string]: EntityJson } = {};
 
@@ -62,7 +68,20 @@ export class MockNymphDriver {
     entity.cdate = entityJson.cdate;
     entity.mdate = entityJson.mdate;
     entity.tags = entityJson.tags;
-    entity.$putData(entityJson.data, {}, 'server');
+    entity.$putData(
+      classNamesToEntityConstructors(
+        this.nymph as unknown as Nymph,
+        referencesToEntities(
+          entityJson.data,
+          this.nymph as unknown as Nymph,
+          !!options.skipAc,
+          false,
+        ),
+        false,
+      ),
+      {},
+      'server',
+    );
 
     return entity as EntityInstanceType<T>;
   }
@@ -174,7 +193,13 @@ export class MockNymph {
       cdate: entity.cdate,
       mdate: entity.mdate,
       tags: [...entity.tags],
-      data: JSON.parse(JSON.stringify(entity.$getData(true))),
+      data: JSON.parse(
+        JSON.stringify(
+          entityConstructorsToClassNames(
+            entitiesToReferences(entity.$getData(true), true),
+          ),
+        ),
+      ),
     };
 
     entities[entity.guid] = entityJson;

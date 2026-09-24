@@ -15,6 +15,10 @@ import {
   TestModelData,
   TestEmptyModel as TestEmptyModelClass,
 } from '../testArtifacts.js';
+import {
+  entitiesToReferences,
+  entityConstructorsToClassNames,
+} from '../utils.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -2706,7 +2710,9 @@ export function ExportImportTest(
       expect(model).not.toBeNull();
 
       if (model != null) {
-        const data = model.$getData(true);
+        const data = entityConstructorsToClassNames(
+          entitiesToReferences(model.$getData(true), true),
+        );
         // These should not actually be saved in the DB.
         data.number = 424242424242;
         // But this should become searchable.

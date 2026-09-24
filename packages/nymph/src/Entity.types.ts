@@ -291,6 +291,9 @@ export interface EntityInterface extends DataObjectInterface {
    * This should only be used by Nymph to push the data from storage or the
    * client.
    *
+   * The given data must already be dereferenced (class references turned into
+   * classes and entity references turned into entities).
+   *
    * `sdata` is used by Nymph to avoid unserializing data that hasn't been
    * requested yet.
    *

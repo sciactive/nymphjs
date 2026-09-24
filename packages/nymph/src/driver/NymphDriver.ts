@@ -20,7 +20,13 @@ import {
   InvalidParametersError,
   UnableToConnectError,
 } from '../errors/index.js';
-import { xor } from '../utils.js';
+import {
+  classNamesToEntityConstructors,
+  entitiesToReferences,
+  entityConstructorsToClassNames,
+  referencesToEntities,
+  xor,
+} from '../utils.js';
 
 // from: https://stackoverflow.com/a/6969486/664915
 function escapeRegExp(string: string): string {
@@ -1340,7 +1346,20 @@ export default abstract class NymphDriver {
               entity.cdate = cdate;
               entity.mdate = mdate;
               entity.tags = tags;
-              entity.$putData(data, sdata, 'server');
+              entity.$putData(
+                classNamesToEntityConstructors(
+                  this.nymph,
+                  referencesToEntities(
+                    data,
+                    this.nymph,
+                    !!options.skipAc,
+                    false,
+                  ),
+                  false,
+                ),
+                sdata,
+                'server',
+              );
               return {
                 result: Promise.resolve(null),
                 process: () => [entity],
@@ -1458,11 +1477,29 @@ export default abstract class NymphDriver {
                   cdate,
                   mdate,
                   tags,
-                  ...data,
+                  ...classNamesToEntityConstructors(
+                    this.nymph,
+                    referencesToEntities(
+                      data,
+                      this.nymph,
+                      !!options.skipAc,
+                      false,
+                    ),
+                    false,
+                  ),
                   ...Object.fromEntries(
                     Object.entries(sdata).map(([name, value]) => [
                       name,
-                      JSON.parse(value),
+                      classNamesToEntityConstructors(
+                        this.nymph,
+                        referencesToEntities(
+                          JSON.parse(value),
+                          this.nymph,
+                          !!options.skipAc,
+                          false,
+                        ),
+                        false,
+                      ),
                     ]),
                   ),
                 } as EntityObjectType<T>);
@@ -1481,7 +1518,20 @@ export default abstract class NymphDriver {
                 if (this.putDataCounter == 100) {
                   throw new Error('Infinite loop detected in Entity loading.');
                 }
-                entity.$putData(data, sdata, 'server');
+                entity.$putData(
+                  classNamesToEntityConstructors(
+                    this.nymph,
+                    referencesToEntities(
+                      data,
+                      this.nymph,
+                      !!options.skipAc,
+                      false,
+                    ),
+                    false,
+                  ),
+                  sdata,
+                  'server',
+                );
                 this.putDataCounter--;
                 entities.push(entity);
               }
@@ -1549,7 +1599,11 @@ export default abstract class NymphDriver {
       }
     }
     const tags = difference(entity.tags, ['']);
-    const data = entity.$getData();
+    const data = entityConstructorsToClassNames(
+      // Explicitly save references to entities that aren't saved yet to help
+      // save circular references by saving with a guaranteed GUID.
+      entitiesToReferences(entity.$getData(), false),
+    );
     const sdata = entity.$getSData();
     const uniques = await entity.$getUniques();
     const EntityClass = entity.constructor as EntityConstructor;

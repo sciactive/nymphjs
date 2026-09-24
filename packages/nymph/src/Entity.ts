@@ -681,7 +681,7 @@ export default class Entity<
   public $clearCache() {
     this.$check();
 
-    this.$putData(this.$getData(false, true), this.$getSData());
+    this.$putData(this.$getData(false), this.$getSData());
   }
 
   public $getClientEnabledMethods() {
@@ -718,12 +718,16 @@ export default class Entity<
     if (!isEqual(obTags, myTags)) {
       return false;
     }
-    const obData = object.$getData(true, true);
-    const myData = this.$getData(true, true);
+    const obData = entityConstructorsToClassNames(
+      entitiesToReferences(object.$getData(true), true),
+    );
+    const myData = entityConstructorsToClassNames(
+      entitiesToReferences(this.$getData(true), true),
+    );
     return isEqual(obData, myData);
   }
 
-  public $getData(includeSData = false, referenceOnlyExisting?: boolean) {
+  public $getData(includeSData = false) {
     this.$check();
 
     if (includeSData) {
@@ -732,9 +736,7 @@ export default class Entity<
         const _unused: any = (this as any)[key];
       }
     }
-    return entityConstructorsToClassNames(
-      entitiesToReferences({ ...this.$dataStore }, referenceOnlyExisting),
-    );
+    return { ...this.$dataStore };
   }
 
   public $getSData() {
@@ -874,8 +876,12 @@ export default class Entity<
       if (!isEqual(obTags, myTags)) {
         return false;
       }
-      const obData = object.$getData(true, true);
-      const myData = this.$getData(true, true);
+      const obData = entityConstructorsToClassNames(
+        entitiesToReferences(object.$getData(true), true),
+      );
+      const myData = entityConstructorsToClassNames(
+        entitiesToReferences(this.$getData(true), true),
+      );
       return isEqual(obData, myData);
     }
   }
@@ -956,7 +962,7 @@ export default class Entity<
 
     let nonAllowlistData: EntityData = {};
     if (this.$allowlistData != null) {
-      nonAllowlistData = { ...this.$getData(true, true) };
+      nonAllowlistData = { ...this.$getData(true) };
       for (const name of this.$allowlistData) {
         delete nonAllowlistData[name];
       }
@@ -969,7 +975,6 @@ export default class Entity<
 
     this.$putData({
       ...nonAllowlistData,
-      // Data has already been dereferenced.
       ...data,
       ...protectedData,
       ...privateData,
@@ -1026,7 +1031,6 @@ export default class Entity<
       ) {
         continue;
       }
-      // Data has already been dereferenced.
       (this.$data as any)[name] = patch.set[name];
     }
 
@@ -1072,21 +1076,13 @@ export default class Entity<
   ) {
     this.$check();
 
-    const mySdata = sdata ?? this.$getSData();
-    for (const name in data) {
-      delete mySdata[name];
-    }
     for (const name in this.$dataStore) {
       delete this.$dataStore[name];
     }
     for (const name in data) {
-      (this.$dataStore as any)[name] = referencesToEntities(
-        classNamesToEntityConstructors(this.$nymph, data[name], false),
-        this.$nymph,
-        this.$skipAc,
-      );
+      (this.$dataStore as any)[name] = data[name];
     }
-    this.$sdata = mySdata;
+    this.$sdata = sdata ?? {};
     // Set original AC values if not set..
     if (this.$originalAcValues == null) {
       this.$originalAcValues = this.$getCurrentAcValues();
@@ -1178,11 +1174,7 @@ export default class Entity<
           this.tags = entity.tags;
           this.cdate = entity.cdate;
           this.mdate = entity.mdate;
-          this.$putData(
-            entity.$getData(false, true),
-            entity.$getSData(),
-            'server',
-          );
+          this.$putData(entity.$getData(false), entity.$getSData(), 'server');
 
           return this;
         })
@@ -1261,7 +1253,7 @@ export default class Entity<
     this.tags = refresh.tags;
     this.cdate = refresh.cdate;
     this.mdate = refresh.mdate;
-    this.$putData(refresh.$getData(false, true), refresh.$getSData(), 'server');
+    this.$putData(refresh.$getData(false), refresh.$getSData(), 'server');
     return true;
   }
 
