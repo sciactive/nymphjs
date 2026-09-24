@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.126](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.125...v1.0.0-beta.126) (2026-09-24)
+
+### Bug Fixes
+
+- move reference and dereference logic from entity to driver, save with guaranteed guids ([6a297b9](https://forge.sciactive.com/sciactive/nymphjs/commits/6a297b98eeb528dabaacecbb270ec17286deb9e2))
+
 # [1.0.0-beta.125](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.124...v1.0.0-beta.125) (2026-09-24)
 
 ### Bug Fixes
