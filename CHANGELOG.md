@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.124](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.123...v1.0.0-beta.124) (2026-09-24)
+
+### Bug Fixes
+
+- client class translation in queries and params ([849355c](https://forge.sciactive.com/sciactive/nymphjs/commits/849355c7ad2dfb594415454c2d491b6868508434))
+
 # [1.0.0-beta.123](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.122...v1.0.0-beta.123) (2026-09-23)
 
 ### Bug Fixes
