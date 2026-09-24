@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.127](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.126...v1.0.0-beta.127) (2026-09-24)
+
+### Bug Fixes
+
+- validatable does not need to dereference, data store is already dereferenced ([b815f31](https://forge.sciactive.com/sciactive/nymphjs/commits/b815f3177b2bae38fbb316bf011e950773be9fac))
+
 # [1.0.0-beta.126](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.125...v1.0.0-beta.126) (2026-09-24)
 
 ### Bug Fixes
