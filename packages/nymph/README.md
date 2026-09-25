@@ -104,7 +104,7 @@ export default class Todo extends Entity<TodoData> {
 
 ## Options
 
-See the [config declaration file](src/conf/d.ts).
+See the [config declaration file](src/conf/index.ts).
 
 # Live Migrations
 

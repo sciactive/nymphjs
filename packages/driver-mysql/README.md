@@ -34,7 +34,7 @@ const nymph = new Nymph({}, new MySQLDriver(mysqlConfig));
 
 ## Options
 
-See the [config declaration file](src/conf/d.ts).
+See the [config declaration file](src/conf/index.ts).
 
 # License
 

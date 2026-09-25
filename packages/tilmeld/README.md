@@ -49,7 +49,7 @@ const { User, Group } = tilmeld;
 
 ## Options
 
-See the [config declaration file](src/conf/d.ts).
+See the [config declaration file](src/conf/index.ts).
 
 ## Abilities
 

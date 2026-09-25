@@ -115,7 +115,7 @@ const pubsub = new PubSub(pubSubConfig, nymph, wsServer);
 
 ## Options
 
-See the [config declaration file](src/conf/d.ts).
+See the [config declaration file](src/conf/index.ts).
 
 # License
 

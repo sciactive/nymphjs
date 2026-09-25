@@ -31,7 +31,7 @@ const nymph = new Nymph({}, new SQLite3Driver(sqliteConfig));
 
 ## Options
 
-See the [config declaration file](src/conf/d.ts).
+See the [config declaration file](src/conf/index.ts).
 
 # License
 
