@@ -1185,7 +1185,7 @@ export default class Entity<
     return new Promise((resolve, reject) => {
       // Run this once this entity is wake.
       const wakeProps = () => {
-        let newLevel;
+        let newLevel: number | undefined;
         // If level is undefined, keep going forever, otherwise, stop once we've
         // gone deep enough.
         if (level !== undefined) {
@@ -1195,22 +1195,35 @@ export default class Entity<
           resolve(this);
           return;
         }
-        const promises = [];
+        const promises: Promise<any>[] = [];
         // Go through data looking for entities to wake.
-        for (let [key, value] of Object.entries(this.$data)) {
-          if (value instanceof Entity && value.$isASleepingReference) {
-            promises.push(value.$wakeAll(newLevel));
-          } else if (Array.isArray(value)) {
-            for (let i = 0; i < value.length; i++) {
-              if (
-                value[i] instanceof Entity &&
-                value[i].$isASleepingReference
-              ) {
-                promises.push(value[i].$wakeAll(newLevel));
-              }
+        const walkData = (data: any) => {
+          if (data == null) {
+            return;
+          } else if (
+            typeof data === 'function' &&
+            data.prototype instanceof Entity
+          ) {
+            // Ignore this, it is an entity class.
+            return;
+          } else if (data instanceof Entity) {
+            // Wake it up.
+            if (data.$isASleepingReference) {
+              promises.push(data.$wakeAll(newLevel));
+            }
+          } else if (Array.isArray(data)) {
+            // Recurse into lower arrays.
+            for (let i = 0; i < data.length; i++) {
+              walkData(data[i]);
+            }
+          } else if (data instanceof Object) {
+            // Recurse into objects.
+            for (let [key, value] of Object.entries(data)) {
+              walkData(value);
             }
           }
-        }
+        };
+        walkData(this.$data);
         if (promises.length) {
           Promise.all(promises).then(
             () => resolve(this),
