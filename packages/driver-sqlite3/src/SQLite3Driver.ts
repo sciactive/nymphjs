@@ -377,55 +377,36 @@ export default class SQLite3Driver extends NymphDriver {
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_guid`,
-      )} ON ${SQLite3Driver.escape(`${this.prefix}data_${etype}`)} ("guid");`,
+        `${this.prefix}data_${etype}_id_name_guid`,
+      )} ON ${SQLite3Driver.escape(`${this.prefix}data_${etype}`)} ("name", "guid");`,
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_guid_name`,
+        `${this.prefix}data_${etype}_id_name_string_guid`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}data_${etype}`,
-      )} ("guid", "name");`,
+      )} ("name", "string", "guid");`,
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_name`,
-      )} ON ${SQLite3Driver.escape(`${this.prefix}data_${etype}`)} ("name");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_name_string`,
+        `${this.prefix}data_${etype}_id_name_number_guid`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}data_${etype}`,
-      )} ("name", "string");`,
+      )} ("name", "number", "guid");`,
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_name_number`,
+        `${this.prefix}data_${etype}_id_name_truthy_guid`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}data_${etype}`,
-      )} ("name", "number");`,
+      )} ("name", "truthy", "guid");`,
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_guid_name_number`,
+        `${this.prefix}data_${etype}_id_name_json_guid`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}data_${etype}`,
-      )} ("guid", "name", "number");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_name_truthy`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}`,
-      )} ("name", "truthy");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}_id_guid_name_truthy`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}data_${etype}`,
-      )} ("guid", "name", "truthy");`,
+      )} ("name", "json", "guid")`,
     );
   }
 
@@ -440,59 +421,10 @@ export default class SQLite3Driver extends NymphDriver {
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_guid`,
+        `${this.prefix}references_${etype}_id_name_reference_guid`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}references_${etype}`,
-      )} ("guid");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_name`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}`,
-      )} ("name");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_name_reference`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}`,
-      )} ("name", "reference");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_reference`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}`,
-      )} ("reference");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_guid_name`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}`,
-      )} ("guid", "name");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_guid_name_reference`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}`,
-      )} ("guid", "name", "reference");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_reference_name_guid`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}`,
-      )} ("reference", "name", "guid");`,
-    );
-    this.queryRun(
-      `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}_id_reference_guid_name`,
-      )} ON ${SQLite3Driver.escape(
-        `${this.prefix}references_${etype}`,
-      )} ("reference", "guid", "name");`,
+      )} ("name", "reference", "guid");`,
     );
   }
 
@@ -507,10 +439,10 @@ export default class SQLite3Driver extends NymphDriver {
     );
     this.queryRun(
       `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-        `${this.prefix}tokens_${etype}_id_name_token`,
+        `${this.prefix}tokens_${etype}_id_name_token_guid`,
       )} ON ${SQLite3Driver.escape(
         `${this.prefix}tokens_${etype}`,
-      )} ("name", "token");`,
+      )} ("name", "token", "guid");`,
     );
   }
 
@@ -781,13 +713,13 @@ export default class SQLite3Driver extends NymphDriver {
     }[] = [];
 
     for (let [scope, suffix] of [
-      ['data', '_json'],
+      ['data', '_string_guid'],
       ['references', '_reference_guid'],
-      ['tokens', '_token_position_stem'],
+      ['tokens', '_token_guid'],
     ] as (
-      | ['data', '_json']
+      | ['data', '_string_guid']
       | ['references', '_reference_guid']
-      | ['tokens', '_token_position_stem']
+      | ['tokens', '_token_guid']
     )[]) {
       const indexDefinitions: IterableIterator<any> = this.queryArray(
         `SELECT "name", "sql" FROM "sqlite_master" WHERE "type"='index' AND "name" LIKE @pattern;`,
@@ -828,31 +760,31 @@ export default class SQLite3Driver extends NymphDriver {
     if (definition.scope === 'data') {
       this.queryRun(
         `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_json`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_string_guid`,
         )} ON ${SQLite3Driver.escape(
           `${this.prefix}data_${etype}`,
-        )} ("json") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+        )} ("string", "guid") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
       );
       this.queryRun(
         `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_string`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_number_guid`,
         )} ON ${SQLite3Driver.escape(
           `${this.prefix}data_${etype}`,
-        )} ("string") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+        )} ("number", "guid") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
       );
       this.queryRun(
         `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_number`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_truthy_guid`,
         )} ON ${SQLite3Driver.escape(
           `${this.prefix}data_${etype}`,
-        )} ("number") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+        )} ("truthy", "guid") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
       );
       this.queryRun(
         `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_truthy`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_json_guid`,
         )} ON ${SQLite3Driver.escape(
           `${this.prefix}data_${etype}`,
-        )} ("truthy") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+        )} ("json", "guid") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
       );
     } else if (definition.scope === 'references') {
       this.queryRun(
@@ -865,10 +797,10 @@ export default class SQLite3Driver extends NymphDriver {
     } else if (definition.scope === 'tokens') {
       this.queryRun(
         `CREATE INDEX IF NOT EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}tokens_${etype}_id_custom_${definition.name}_token_position_stem`,
+          `${this.prefix}tokens_${etype}_id_custom_${definition.name}_token_guid`,
         )} ON ${SQLite3Driver.escape(
           `${this.prefix}tokens_${etype}`,
-        )} ("token", "position", "stem") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
+        )} ("token", "guid") WHERE "name"=${SQLite3Driver.escapeValue(definition.property)};`,
       );
     }
     return true;
@@ -883,22 +815,22 @@ export default class SQLite3Driver extends NymphDriver {
     if (scope === 'data') {
       this.queryRun(
         `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${name}_json`,
+          `${this.prefix}data_${etype}_id_custom_${name}_string_guid`,
         )};`,
       );
       this.queryRun(
         `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${name}_string`,
+          `${this.prefix}data_${etype}_id_custom_${name}_number_guid`,
         )};`,
       );
       this.queryRun(
         `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${name}_number`,
+          `${this.prefix}data_${etype}_id_custom_${name}_truthy_guid`,
         )};`,
       );
       this.queryRun(
         `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}data_${etype}_id_custom_${name}_truthy`,
+          `${this.prefix}data_${etype}_id_custom_${name}_json_guid`,
         )};`,
       );
     } else if (scope === 'references') {
@@ -910,7 +842,7 @@ export default class SQLite3Driver extends NymphDriver {
     } else if (scope === 'tokens') {
       this.queryRun(
         `DROP INDEX IF EXISTS ${SQLite3Driver.escape(
-          `${this.prefix}tokens_${etype}_id_custom_${name}_token_position_stem`,
+          `${this.prefix}tokens_${etype}_id_custom_${name}_token_guid`,
         )};`,
       );
     }

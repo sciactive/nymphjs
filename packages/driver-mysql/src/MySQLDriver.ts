@@ -330,15 +330,11 @@ export default class MySQLDriver extends NymphDriver {
           \`number\` DOUBLE,
           \`truthy\` BOOLEAN,
           PRIMARY KEY (\`guid\`, \`name\`(255)),
-          INDEX \`id_guid\` USING HASH (\`guid\`),
-          INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
-          INDEX \`id_name\` USING BTREE (\`name\`(255)),
-          INDEX \`id_name_json\` USING BTREE (\`name\`(255), (CAST(\`json\` AS CHAR(512)) COLLATE utf8mb4_bin)),
-          INDEX \`id_name_string\` USING BTREE (\`name\`(255), \`string\`(512)),
-          INDEX \`id_name_number\` USING BTREE (\`name\`(255), \`number\`),
-          INDEX \`id_guid_name_number\` USING BTREE (\`guid\`, \`name\`(255), \`number\`),
-          INDEX \`id_name_truthy\` USING HASH (\`name\`(255), \`truthy\`),
-          INDEX \`id_guid_name_truthy\` USING HASH (\`guid\`, \`name\`(255), \`truthy\`)
+          INDEX \`id_name_guid\` USING BTREE (\`name\`(255), \`guid\`),
+          INDEX \`id_name_string_guid\` USING BTREE (\`name\`(255), \`string\`(500), \`guid\`),
+          INDEX \`id_name_number_guid\` USING BTREE (\`name\`(255), \`number\`, \`guid\`),
+          INDEX \`id_name_truthy_guid\` USING BTREE (\`name\`(255), \`truthy\`, \`guid\`),
+          INDEX \`id_name_json_guid\` USING BTREE (\`name\`(255), (CAST(\`json\` AS CHAR(500)) COLLATE utf8mb4_bin), \`guid\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
     );
@@ -360,14 +356,7 @@ export default class MySQLDriver extends NymphDriver {
           \`name\` TEXT NOT NULL,
           \`reference\` BINARY(12) NOT NULL,
           PRIMARY KEY (\`guid\`, \`name\`(255), \`reference\`),
-          INDEX \`id_guid\` USING HASH (\`guid\`),
-          INDEX \`id_name\` USING HASH (\`name\`(255)),
-          INDEX \`id_name_reference\` USING HASH (\`name\`(255), \`reference\`),
-          INDEX \`id_reference\` USING HASH (\`reference\`),
-          INDEX \`id_guid_name\` USING HASH (\`guid\`, \`name\`(255)),
-          INDEX \`id_guid_name_reference\` USING HASH (\`guid\`, \`name\`(255), \`reference\`),
-          INDEX \`id_reference_name_guid\` USING BTREE (\`reference\`, \`name\`(255), \`guid\`),
-          INDEX \`id_reference_guid_name\` USING BTREE (\`reference\`, \`guid\`, \`name\`(255))
+          INDEX \`id_name_reference_guid\` USING HASH (\`name\`(255), \`reference\`, \`guid\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
     );
@@ -391,8 +380,7 @@ export default class MySQLDriver extends NymphDriver {
           \`position\` INT UNSIGNED NOT NULL,
           \`stem\` BOOLEAN NOT NULL,
           PRIMARY KEY (\`guid\`, \`name\`(255), \`token\`, \`position\`),
-          INDEX \`id_guid_name_token_position\` USING HASH (\`guid\`, \`name\`(255), \`token\`, \`position\`),
-          INDEX \`id_name_token\` USING btree (\`name\`(255), \`token\`)
+          INDEX \`id_name_token_guid\` USING btree (\`name\`(255), \`token\`, \`guid\`)
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
     );
@@ -809,13 +797,13 @@ export default class MySQLDriver extends NymphDriver {
     }[] = [];
 
     for (let [scope, suffix] of [
-      ['data', '_json'],
+      ['data', '_string_guid'],
       ['references', '_reference_guid'],
-      ['tokens', '_token_position_stem'],
+      ['tokens', '_token_guid'],
     ] as (
-      | ['data', '_json']
+      | ['data', '_string_guid']
       | ['references', '_reference_guid']
-      | ['tokens', '_token_position_stem']
+      | ['tokens', '_token_guid']
     )[]) {
       const indexDefinitions = await this.queryArray(
         `SHOW INDEXES FROM ${MySQLDriver.escape(
@@ -858,31 +846,31 @@ export default class MySQLDriver extends NymphDriver {
     if (definition.scope === 'data') {
       await this.queryRun(
         `CREATE INDEX ${MySQLDriver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_json`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_string_guid`,
         )} USING btree ON ${MySQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), (CAST(\`json\` AS CHAR(512)) COLLATE utf8mb4_bin));`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`string\`(500), \`guid\`);`,
       );
       await this.queryRun(
         `CREATE INDEX ${MySQLDriver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_string`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_number_guid`,
         )} USING btree ON ${MySQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`string\`(512));`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`number\`, \`guid\`);`,
       );
       await this.queryRun(
         `CREATE INDEX ${MySQLDriver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_number`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_truthy_guid`,
         )} USING btree ON ${MySQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`number\`);`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`truthy\`, \`guid\`);`,
       );
       await this.queryRun(
         `CREATE INDEX ${MySQLDriver.escape(
-          `${this.prefix}data_${etype}_id_custom_${definition.name}_truthy`,
+          `${this.prefix}data_${etype}_id_custom_${definition.name}_json_guid`,
         )} USING btree ON ${MySQLDriver.escape(
           `${this.prefix}data_${etype}`,
-        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`truthy\`);`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), (CAST(\`json\` AS CHAR(500)) COLLATE utf8mb4_bin), \`guid\`);`,
       );
     } else if (definition.scope === 'references') {
       await this.queryRun(
@@ -895,10 +883,10 @@ export default class MySQLDriver extends NymphDriver {
     } else if (definition.scope === 'tokens') {
       await this.queryRun(
         `CREATE INDEX ${MySQLDriver.escape(
-          `${this.prefix}tokens_${etype}_id_custom_${definition.name}_token_position_stem`,
+          `${this.prefix}tokens_${etype}_id_custom_${definition.name}_token_guid`,
         )} USING btree ON ${MySQLDriver.escape(
           `${this.prefix}tokens_${etype}`,
-        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`token\`, \`position\`, \`stem\`);`,
+        )} (((\`name\` = ${MySQLDriver.escapeValue(definition.property)})), \`token\`, \`guid\`);`,
       );
     }
     return true;
@@ -914,22 +902,22 @@ export default class MySQLDriver extends NymphDriver {
       if (scope === 'data') {
         await this.queryRun(
           `DROP INDEX ${MySQLDriver.escape(
-            `${this.prefix}data_${etype}_id_custom_${name}_json`,
+            `${this.prefix}data_${etype}_id_custom_${name}_string_guid`,
           )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
         );
         await this.queryRun(
           `DROP INDEX ${MySQLDriver.escape(
-            `${this.prefix}data_${etype}_id_custom_${name}_string`,
+            `${this.prefix}data_${etype}_id_custom_${name}_number_guid`,
           )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
         );
         await this.queryRun(
           `DROP INDEX ${MySQLDriver.escape(
-            `${this.prefix}data_${etype}_id_custom_${name}_number`,
+            `${this.prefix}data_${etype}_id_custom_${name}_truthy_guid`,
           )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
         );
         await this.queryRun(
           `DROP INDEX ${MySQLDriver.escape(
-            `${this.prefix}data_${etype}_id_custom_${name}_truthy`,
+            `${this.prefix}data_${etype}_id_custom_${name}_json_guid`,
           )} ON ${MySQLDriver.escape(`${this.prefix}data_${etype}`)};`,
         );
       } else if (scope === 'references') {
@@ -941,7 +929,7 @@ export default class MySQLDriver extends NymphDriver {
       } else if (scope === 'tokens') {
         await this.queryRun(
           `DROP INDEX ${MySQLDriver.escape(
-            `${this.prefix}tokens_${etype}_id_custom_${name}_token_position_stem`,
+            `${this.prefix}tokens_${etype}_id_custom_${name}_token_guid`,
           )} ON ${MySQLDriver.escape(`${this.prefix}tokens_${etype}`)};`,
         );
       }
@@ -1413,7 +1401,7 @@ export default class MySQLDriver extends NymphDriver {
                 }
                 const name = `param${++count.i}`;
                 const value = `param${++count.i}`;
-                if (svalue.length < 512) {
+                if (svalue.length < 500) {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
                     'EXISTS (SELECT `guid` FROM ' +
@@ -1422,9 +1410,9 @@ export default class MySQLDriver extends NymphDriver {
                     ieTable +
                     '.`guid` AND `name`=@' +
                     name +
-                    ' AND (CAST(`json` AS CHAR(512)) COLLATE utf8mb4_bin)=CAST(CAST(@' +
+                    ' AND (CAST(`json` AS CHAR(500)) COLLATE utf8mb4_bin)=CAST(CAST(@' +
                     value +
-                    ' AS JSON) AS CHAR(512)))';
+                    ' AS JSON) AS CHAR(500)))';
                 } else {
                   curQuery +=
                     (xor(typeIsNot, clauseNot) ? 'NOT ' : '') +
