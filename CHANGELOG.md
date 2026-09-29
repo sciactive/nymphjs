@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.128](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.127...v1.0.0-beta.128) (2026-09-29)
+
+### Bug Fixes
+
+- properly walk deeper arrays and objects in ([2a68c6b](https://forge.sciactive.com/sciactive/nymphjs/commits/2a68c6bdef86938eeef66f4660bd7a36c34d63d0))
+
+### Features
+
+- fix indexes to properly optimize queries, requires full reimport ([0a54f5b](https://forge.sciactive.com/sciactive/nymphjs/commits/0a54f5baa663163f6876d17c5ef6bebefa4cd9fa))
+
 # [1.0.0-beta.127](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.126...v1.0.0-beta.127) (2026-09-24)
 
 ### Bug Fixes
