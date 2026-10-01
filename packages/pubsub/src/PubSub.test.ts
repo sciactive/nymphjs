@@ -790,22 +790,29 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('increasing uids', async () => {
-    await new Promise<void>(async (resolve) => {
+    await new Promise<void>(async (finalResolve) => {
       let receivedFirst = false;
       let lastUpdate: number = 0;
+
+      // Don't go too fast.
+      let { promise, resolve } = Promise.withResolvers<void>();
+
       const subscription = pubsub.subscribeUID('testIncUID')(
         async (value) => {
           if (!receivedFirst) {
             receivedFirst = true;
             expect(value).toBeNull();
+            resolve();
             return;
           }
 
           expect(value).toEqual(lastUpdate + 1);
           lastUpdate = value;
+          resolve();
+
           if (value == 100) {
             subscription.unsubscribe();
-            resolve();
+            finalResolve();
           }
         },
         (err) => {
@@ -817,6 +824,8 @@ describe('Nymph REST Server and Client', () => {
 
       let directValue: number = -1;
       while (directValue < 100) {
+        await promise;
+        ({ promise, resolve } = Promise.withResolvers<void>());
         directValue = await nymph.newUID('testIncUID');
       }
     });

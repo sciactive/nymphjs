@@ -40,15 +40,13 @@
   "dependencies": {
     "@nymphjs/guid": "^1.0.0-beta.128",
     "@nymphjs/nymph": "^1.0.0-beta.128",
-    "@sciactive/tokenizer": "^3.4.0",
-    "better-sqlite3": "^13.0.3"
+    "@sciactive/tokenizer": "^3.4.0"
   },
   "devDependencies": {
     "@nymphjs/tilmeld": "^1.0.0-beta.128",
     "@swc/core": "^1.16.1",
     "@swc/jest": "^0.2.39",
     "@tsconfig/recommended": "^1.0.13",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
     "cross-env": "^10.1.0",

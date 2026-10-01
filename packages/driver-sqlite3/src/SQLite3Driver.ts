@@ -1,4 +1,4 @@
-import SQLite3 from 'better-sqlite3';
+import { DatabaseSync } from 'node:sqlite';
 import type {
   SearchTerm,
   SearchOrTerm,
@@ -33,12 +33,12 @@ import {
 } from './conf/index.js';
 
 class InternalStore {
-  public link: SQLite3.Database;
-  public linkWrite?: SQLite3.Database;
+  public link: DatabaseSync;
+  public linkWrite?: DatabaseSync;
   public connected: boolean = false;
   public transactionsStarted = 0;
 
-  constructor(link: SQLite3.Database) {
+  constructor(link: DatabaseSync) {
     this.link = link;
   }
 }
@@ -106,20 +106,20 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   private _connect(write: boolean) {
-    const { filename, fileMustExist, timeout, explicitWrite, wal, verbose } =
+    const { filename, fileMustExist, timeout, explicitWrite, wal } =
       this.config;
 
     try {
-      const setOptions = (link: SQLite3.Database) => {
+      const setOptions = (link: DatabaseSync) => {
         // Set database and connection options.
         if (wal) {
-          link.pragma('journal_mode = WAL;');
+          link.exec('PRAGMA journal_mode = WAL;');
         }
-        link.pragma('encoding = "UTF-8";');
-        link.pragma('foreign_keys = 1;');
-        link.pragma('case_sensitive_like = 1;');
+        link.exec('PRAGMA encoding = "UTF-8";');
+        link.exec('PRAGMA foreign_keys = 1;');
+        link.exec('PRAGMA case_sensitive_like = 1;');
         for (let pragma of this.config.pragmas) {
-          link.pragma(pragma);
+          link.exec(`PRAGMA ${pragma}`);
         }
         // Create the preg_match and regexp functions.
         link.function('regexp', { deterministic: true }, ((
@@ -130,38 +130,32 @@ export default class SQLite3Driver extends NymphDriver {
         ) => any);
       };
 
-      let link: SQLite3.Database;
+      let link: DatabaseSync;
       try {
-        link = new SQLite3(filename, {
-          readonly: !explicitWrite && !write,
-          fileMustExist,
+        link = new DatabaseSync(filename, {
+          readOnly: !explicitWrite && !write,
           timeout,
-          verbose,
         });
       } catch (e: any) {
         if (
-          e.code === 'SQLITE_CANTOPEN' &&
+          e.code === 'ERR_SQLITE_CANTOPEN' &&
           !explicitWrite &&
           !write &&
-          !this.config.fileMustExist
+          !fileMustExist
         ) {
           // This happens when the file doesn't exist and we attempt to open it
           // readonly.
           // First open it in write mode.
-          const writeLink = new SQLite3(filename, {
-            readonly: false,
-            fileMustExist,
+          const writeLink = new DatabaseSync(filename, {
+            readOnly: false,
             timeout,
-            verbose,
           });
           setOptions(writeLink);
           writeLink.close();
           // Now open in readonly.
-          link = new SQLite3(filename, {
-            readonly: true,
-            fileMustExist,
+          link = new DatabaseSync(filename, {
+            readOnly: true,
             timeout,
-            verbose,
           });
         } else {
           throw e;
@@ -500,7 +494,7 @@ export default class SQLite3Driver extends NymphDriver {
       const errorCode = e?.code;
       const errorMsg = e?.message;
       if (
-        errorCode === 'SQLITE_ERROR' &&
+        errorCode === 'ERR_SQLITE_ERROR' &&
         errorMsg.match(/^no such table: /) &&
         this.createTables()
       ) {
@@ -517,7 +511,7 @@ export default class SQLite3Driver extends NymphDriver {
           );
         }
       } else if (
-        errorCode === 'SQLITE_CONSTRAINT_UNIQUE' &&
+        errorCode === 'ERR_SQLITE_ERROR' &&
         errorMsg.match(/^UNIQUE constraint failed: /)
       ) {
         throw new EntityUniqueConstraintError(`Unique constraint violation.`);
@@ -851,7 +845,7 @@ export default class SQLite3Driver extends NymphDriver {
 
   public async getEtypes() {
     const tables: IterableIterator<any> = this.queryArray(
-      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix;",
+      `SELECT "name" FROM "sqlite_master" WHERE "type"='table' AND "name" LIKE @prefix;`,
       {
         params: {
           prefix: this.prefix + 'entities_' + '%',
@@ -3366,7 +3360,7 @@ export default class SQLite3Driver extends NymphDriver {
     'json' | 'tokens' | 'tilmeldColumns' | false
   > {
     const table: any = this.queryGet(
-      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix LIMIT 1;",
+      `SELECT "name" FROM "sqlite_master" WHERE "type"='table' AND "name" LIKE @prefix LIMIT 1;`,
       {
         params: {
           prefix: this.prefix + 'data_' + '%',
@@ -3375,7 +3369,7 @@ export default class SQLite3Driver extends NymphDriver {
     );
     if (table?.name) {
       const result: any = this.queryGet(
-        "SELECT 1 AS `exists` FROM pragma_table_info(@table) WHERE `name`='json';",
+        `SELECT 1 AS "exists" FROM pragma_table_info(@table) WHERE "name"='json';`,
         {
           params: {
             table: table.name,
@@ -3387,7 +3381,7 @@ export default class SQLite3Driver extends NymphDriver {
       }
     }
     const table2: any = this.queryGet(
-      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @tokenTable LIMIT 1;",
+      `SELECT "name" FROM "sqlite_master" WHERE "type"='table' AND "name" LIKE @tokenTable LIMIT 1;`,
       {
         params: {
           tokenTable: this.prefix + 'tokens_' + '%',
@@ -3398,7 +3392,7 @@ export default class SQLite3Driver extends NymphDriver {
       return 'tokens';
     }
     const table3: any = this.queryGet(
-      "SELECT `name` FROM `sqlite_master` WHERE `type`='table' AND `name` LIKE @prefix LIMIT 1;",
+      `SELECT "name" FROM "sqlite_master" WHERE "type"='table' AND "name" LIKE @prefix LIMIT 1;`,
       {
         params: {
           prefix: this.prefix + 'entities_' + '%',
@@ -3407,7 +3401,7 @@ export default class SQLite3Driver extends NymphDriver {
     );
     if (table3?.name) {
       const result: any = this.queryGet(
-        "SELECT 1 AS `exists` FROM pragma_table_info(@table) WHERE `name`='user';",
+        `SELECT 1 AS "exists" FROM pragma_table_info(@table) WHERE "name"='user';`,
         {
           params: {
             table: table3.name,

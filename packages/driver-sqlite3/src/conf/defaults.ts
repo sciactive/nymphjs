@@ -8,5 +8,4 @@ export default {
   explicitWrite: false,
   wal: false,
   pragmas: [],
-  verbose: undefined,
 } as SQLite3DriverConfig;

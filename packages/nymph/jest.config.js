@@ -14,7 +14,7 @@ const jestConfig = {
             tsx: true,
             decorators: true,
           },
-          target: 'es2023',
+          target: 'es2024',
         },
         module: {
           type: 'commonjs',

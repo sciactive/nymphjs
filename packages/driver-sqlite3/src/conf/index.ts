@@ -59,10 +59,6 @@ export interface SQLite3DriverConfig {
    * (Don't include the PRAGMA keyword, but do include the semicolon.)
    */
   pragmas: string[];
-  /**
-   * Function that gets called with every SQL string executed.
-   */
-  verbose: ((message?: any, ...additionalArgs: any[]) => void) | undefined;
 }
 
 import defaults from './defaults.js';
