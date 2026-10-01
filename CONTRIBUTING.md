@@ -2,7 +2,7 @@
 
 Thank you for contributing! There are some guidelines you should know.
 
-This project adheres to the [SciActive Human Contribution Policy](HUMAN-CONTRIBUTION-POLICY.md).
+This project adheres to the [SciActive Human Contribution Policy 2-NE](HUMAN-CONTRIBUTION-POLICY-2-NE.md).
 
 First, let's get you started.
 
@@ -18,8 +18,6 @@ Now let's get the repo set up for development.
 
 ```
 cd nymphjs
-
-# This will take a while as it runs bootstrap.
 npm i
 ```
 
@@ -27,7 +25,7 @@ Now you're set up. If there are package-lock.json files updated after setting up
 
 ## Testing
 
-When you need to test something that involves one of the bigger DBs, there are DB run scripts called `test:db:run` that will set up a DB running in a docker container in the MySQL and Postgres driver directories. You can start all of them with the `test:db:run` script in the root dir.
+When you need to test something that involves one of the bigger DBs, there are DB run scripts called `test:db:start` that will set up a DB running in a docker container in the MySQL and Postgres driver directories. You can start all of them with the `test:db:start` script in the root dir.
 
 Once the DB container is running, you can run the `test` script.
 
