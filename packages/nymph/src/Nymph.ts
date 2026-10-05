@@ -1122,6 +1122,15 @@ export default class Nymph {
     }
   }
 
+  public async exportEntity(etype: string, guid: string): Promise<string> {
+    try {
+      return await this.driver.exportEntity(etype, guid);
+    } catch (e: any) {
+      this.config.debugError('nymph', `Failed to export: ${e}`);
+      throw e;
+    }
+  }
+
   /**
    * Import entities from a file.
    *

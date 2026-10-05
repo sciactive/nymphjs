@@ -132,6 +132,8 @@ export default abstract class NymphDriver {
     void,
     undefined | false
   >;
+  abstract exportEntity(etype: string, guid: string): Promise<string>;
+
   abstract getEntities<T extends EntityConstructor = EntityConstructor>(
     options: Options<T> & { return: 'count' },
     ...selectors: Selector[]
@@ -155,6 +157,7 @@ export default abstract class NymphDriver {
     EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] | number
   >;
   abstract getUID(name: string): Promise<number | null>;
+
   abstract importEntity(entity: {
     guid: string;
     cdate: number;
@@ -180,10 +183,12 @@ export default abstract class NymphDriver {
     etype: string;
   }): Promise<void>;
   abstract importUID(uid: { name: string; value: number }): Promise<void>;
+
   abstract newUID(name: string): Promise<number | null>;
   abstract renameUID(oldName: string, newName: string): Promise<boolean>;
-  abstract saveEntity(entity: EntityInterface): Promise<boolean>;
   abstract setUID(name: string, value: number): Promise<boolean>;
+
+  abstract saveEntity(entity: EntityInterface): Promise<boolean>;
 
   /**
    * Initialize the Nymph driver.

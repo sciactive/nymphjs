@@ -1025,92 +1025,114 @@ export default class MySQLDriver extends NymphDriver {
 
     for (const etype of etypes) {
       // Export entities.
-      const dataIterator = (
-        await this.queryArray(
-          `SELECT LOWER(HEX(e.\`guid\`)) AS \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, LOWER(HEX(e.\`user\`)) AS \`user\`, LOWER(HEX(e.\`group\`)) AS \`group\`, e.\`acUser\`, e.\`acGroup\`, e.\`acOther\`, e.\`acRead\`, e.\`acWrite\`, e.\`acFull\`, d.\`name\`, d.\`value\`, d.\`json\`, d.\`string\`, d.\`number\`
+      const entityIterator = this.exportEntityInternal(etype);
+      for await (let content of entityIterator) {
+        yield { type: 'entity', content };
+      }
+    }
+  }
+
+  public async exportEntity(etype: string, guid: string): Promise<string> {
+    const entityIterator = this.exportEntityInternal(etype, guid);
+    let exportContent = '';
+    for await (let content of entityIterator) {
+      exportContent += content;
+    }
+
+    return exportContent;
+  }
+
+  private async *exportEntityInternal(
+    etype: string,
+    guid?: string,
+  ): AsyncGenerator<string, void, false | undefined> {
+    // Export entities.
+    const dataIterator = (
+      await this.queryArray(
+        `SELECT LOWER(HEX(e.\`guid\`)) AS \`guid\`, e.\`tags\`, e.\`cdate\`, e.\`mdate\`, LOWER(HEX(e.\`user\`)) AS \`user\`, LOWER(HEX(e.\`group\`)) AS \`group\`, e.\`acUser\`, e.\`acGroup\`, e.\`acOther\`, e.\`acRead\`, e.\`acWrite\`, e.\`acFull\`, d.\`name\`, d.\`value\`, d.\`json\`, d.\`string\`, d.\`number\`
           FROM ${MySQLDriver.escape(`${this.prefix}entities_${etype}`)} e
           LEFT JOIN ${MySQLDriver.escape(
             `${this.prefix}data_${etype}`,
-          )} d ON e.\`guid\`=d.\`guid\`
+          )} d ON e.\`guid\`=d.\`guid\`${guid == null ? '' : ` WHERE e.\`guid\`=UNHEX(@guid)`}
           ORDER BY e.\`guid\`;`,
-        )
-      )[Symbol.iterator]();
-      let datum = dataIterator.next();
-      while (!datum.done) {
-        const guid = datum.value.guid;
-        const tags = datum.value.tags
-          .slice(1, -1)
-          .split(' ')
-          .filter((tag: string) => tag)
-          .join(',');
-        const cdate = datum.value.cdate;
-        const mdate = datum.value.mdate;
-        const user = datum.value.user;
-        const group = datum.value.group;
-        const acUser = datum.value.acUser;
-        const acGroup = datum.value.acGroup;
-        const acOther = datum.value.acOther;
-        const acRead = datum.value.acRead?.slice(1, -1).split(' ');
-        const acWrite = datum.value.acWrite?.slice(1, -1).split(' ');
-        const acFull = datum.value.acFull?.slice(1, -1).split(' ');
-        let currentEntityExport: string[] = [];
-        currentEntityExport.push(`{${guid}}<${etype}>[${tags}]`);
-        currentEntityExport.push(`\tcdate=${JSON.stringify(cdate)}`);
-        currentEntityExport.push(`\tmdate=${JSON.stringify(mdate)}`);
-        if (this.nymph.tilmeld != null) {
-          if (user != null) {
-            currentEntityExport.push(
-              `\tuser=${JSON.stringify(['nymph_entity_reference', user, 'User'])}`,
-            );
-          }
-          if (group != null) {
-            currentEntityExport.push(
-              `\tgroup=${JSON.stringify(['nymph_entity_reference', group, 'Group'])}`,
-            );
-          }
-          if (acUser != null) {
-            currentEntityExport.push(`\tacUser=${JSON.stringify(acUser)}`);
-          }
-          if (acGroup != null) {
-            currentEntityExport.push(`\tacGroup=${JSON.stringify(acGroup)}`);
-          }
-          if (acOther != null) {
-            currentEntityExport.push(`\tacOther=${JSON.stringify(acOther)}`);
-          }
-          if (acRead != null) {
-            currentEntityExport.push(`\tacRead=${JSON.stringify(acRead)}`);
-          }
-          if (acWrite != null) {
-            currentEntityExport.push(`\tacWrite=${JSON.stringify(acWrite)}`);
-          }
-          if (acFull != null) {
-            currentEntityExport.push(`\tacFull=${JSON.stringify(acFull)}`);
-          }
+        guid == null ? undefined : { params: { guid } },
+      )
+    )[Symbol.iterator]();
+    let datum = dataIterator.next();
+    while (!datum.done) {
+      const guid = datum.value.guid;
+      const tags = datum.value.tags
+        .slice(1, -1)
+        .split(' ')
+        .filter((tag: string) => tag)
+        .join(',');
+      const cdate = datum.value.cdate;
+      const mdate = datum.value.mdate;
+      const user = datum.value.user;
+      const group = datum.value.group;
+      const acUser = datum.value.acUser;
+      const acGroup = datum.value.acGroup;
+      const acOther = datum.value.acOther;
+      const acRead = datum.value.acRead?.slice(1, -1).split(' ');
+      const acWrite = datum.value.acWrite?.slice(1, -1).split(' ');
+      const acFull = datum.value.acFull?.slice(1, -1).split(' ');
+      let currentEntityExport: string[] = [];
+      currentEntityExport.push(`{${guid}}<${etype}>[${tags}]`);
+      currentEntityExport.push(`\tcdate=${JSON.stringify(cdate)}`);
+      currentEntityExport.push(`\tmdate=${JSON.stringify(mdate)}`);
+      if (this.nymph.tilmeld != null) {
+        if (user != null) {
+          currentEntityExport.push(
+            `\tuser=${JSON.stringify(['nymph_entity_reference', user, 'User'])}`,
+          );
         }
-        if (datum.value.name != null) {
-          // This do will keep going and adding the data until the
-          // next entity is reached. $row will end on the next entity.
-          do {
-            const value =
-              datum.value.value === 'N'
-                ? JSON.stringify(datum.value.number)
-                : datum.value.value === 'S'
-                  ? JSON.stringify(datum.value.string)
-                  : datum.value.value === 'J'
-                    ? JSON.stringify(datum.value.json)
-                    : datum.value.value;
-            currentEntityExport.push(`\t${datum.value.name}=${value}`);
-            datum = dataIterator.next();
-          } while (!datum.done && datum.value.guid === guid);
-        } else {
-          // Make sure that datum is incremented :)
+        if (group != null) {
+          currentEntityExport.push(
+            `\tgroup=${JSON.stringify(['nymph_entity_reference', group, 'Group'])}`,
+          );
+        }
+        if (acUser != null) {
+          currentEntityExport.push(`\tacUser=${JSON.stringify(acUser)}`);
+        }
+        if (acGroup != null) {
+          currentEntityExport.push(`\tacGroup=${JSON.stringify(acGroup)}`);
+        }
+        if (acOther != null) {
+          currentEntityExport.push(`\tacOther=${JSON.stringify(acOther)}`);
+        }
+        if (acRead != null) {
+          currentEntityExport.push(`\tacRead=${JSON.stringify(acRead)}`);
+        }
+        if (acWrite != null) {
+          currentEntityExport.push(`\tacWrite=${JSON.stringify(acWrite)}`);
+        }
+        if (acFull != null) {
+          currentEntityExport.push(`\tacFull=${JSON.stringify(acFull)}`);
+        }
+      }
+      if (datum.value.name != null) {
+        // This do will keep going and adding the data until the
+        // next entity is reached. $row will end on the next entity.
+        do {
+          const value =
+            datum.value.value === 'N'
+              ? JSON.stringify(datum.value.number)
+              : datum.value.value === 'S'
+                ? JSON.stringify(datum.value.string)
+                : datum.value.value === 'J'
+                  ? JSON.stringify(datum.value.json)
+                  : datum.value.value;
+          currentEntityExport.push(`\t${datum.value.name}=${value}`);
           datum = dataIterator.next();
-        }
-        currentEntityExport.push('');
+        } while (!datum.done && datum.value.guid === guid);
+      } else {
+        // Make sure that datum is incremented :)
+        datum = dataIterator.next();
+      }
+      currentEntityExport.push('');
 
-        if (yield { type: 'entity', content: currentEntityExport.join('\n') }) {
-          return;
-        }
+      if (yield currentEntityExport.join('\n')) {
+        return;
       }
     }
   }

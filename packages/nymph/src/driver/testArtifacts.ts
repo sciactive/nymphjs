@@ -2675,6 +2675,31 @@ export function ExportImportTest(
       expect(await nymph.needsMigration()).toEqual(false);
     });
 
+    it('export one entity', async () => {
+      const firstEntity = await nymph.getEntity({ class: TestModel });
+
+      expect(firstEntity).not.toBeNull();
+      expect(firstEntity?.guid).not.toBeNull();
+
+      if (firstEntity == null || firstEntity.guid == null) {
+        throw new Error('Just need this for TS.');
+      }
+
+      let expectedExport = `{${firstEntity.guid}}<${TestModel.ETYPE}>[${firstEntity?.tags.join(',')}]\n`;
+      expectedExport += `\tcdate=${firstEntity.cdate}\n`;
+      expectedExport += `\tmdate=${firstEntity.mdate}\n`;
+      for (let [name, value] of Object.entries(firstEntity.$getData(true))) {
+        expectedExport += `\t${name}=${JSON.stringify(value)}\n`;
+      }
+
+      const entityExport = await nymph.exportEntity(
+        TestModel.ETYPE,
+        firstEntity.guid,
+      );
+
+      expect(entityExport).toEqual(expectedExport);
+    });
+
     it('export data', async () => {
       expect(await nymph.export(__dirname + '/testentityexport.nex')).toEqual(
         true,
