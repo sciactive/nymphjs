@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.129](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.128...v1.0.0-beta.129) (2026-10-05)
+
+### Features
+
+- migrate to built in node sqlite, target es2024 ([d7c78c0](https://forge.sciactive.com/sciactive/nymphjs/commits/d7c78c06072d785b228ff790eb005ab4f84529e9))
+
 # [1.0.0-beta.128](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.127...v1.0.0-beta.128) (2026-09-29)
 
 **Note:** Version bump only for package @nymphjs/client-node
