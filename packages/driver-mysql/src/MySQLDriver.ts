@@ -1054,7 +1054,7 @@ export default class MySQLDriver extends NymphDriver {
           LEFT JOIN ${MySQLDriver.escape(
             `${this.prefix}data_${etype}`,
           )} d ON e.\`guid\`=d.\`guid\`${guid == null ? '' : ` WHERE e.\`guid\`=UNHEX(@guid)`}
-          ORDER BY e.\`guid\`;`,
+          ORDER BY e.\`guid\`, d.\`name\`;`,
         guid == null ? undefined : { params: { guid } },
       )
     )[Symbol.iterator]();
@@ -3300,6 +3300,12 @@ export default class MySQLDriver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          let processedData = this.removeAndReturnACValues(
+            etype,
+            { ...data },
+            { ...sdata },
+          );
+          ({ data, sdata } = processedData);
           let {
             user,
             group,
@@ -3309,7 +3315,7 @@ export default class MySQLDriver extends NymphDriver {
             acRead,
             acWrite,
             acFull,
-          } = this.removeAndReturnACValues(etype, data, sdata);
+          } = processedData;
           await this.queryRun(
             `INSERT INTO ${MySQLDriver.escape(
               `${this.prefix}entities_${etype}`,
@@ -3341,6 +3347,12 @@ export default class MySQLDriver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          let processedData = this.removeAndReturnACValues(
+            etype,
+            { ...data },
+            { ...sdata },
+          );
+          ({ data, sdata } = processedData);
           let {
             user,
             group,
@@ -3350,7 +3362,7 @@ export default class MySQLDriver extends NymphDriver {
             acRead,
             acWrite,
             acFull,
-          } = this.removeAndReturnACValues(etype, data, sdata);
+          } = processedData;
           if (this.config.rowLocking) {
             const promises = [];
             promises.push(

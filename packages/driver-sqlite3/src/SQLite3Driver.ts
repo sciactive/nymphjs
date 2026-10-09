@@ -953,7 +953,7 @@ export default class SQLite3Driver extends NymphDriver {
         `${this.prefix}entities_${etype}`,
       )} e LEFT JOIN ${SQLite3Driver.escape(
         `${this.prefix}data_${etype}`,
-      )} d USING ("guid")${guid == null ? '' : ` WHERE e."guid"=@guid`} ORDER BY e."guid";`,
+      )} d USING ("guid")${guid == null ? '' : ` WHERE e."guid"=@guid`} ORDER BY e."guid", d."name";`,
       guid == null ? undefined : { params: { guid } },
     )[Symbol.iterator]();
     let datum = dataIterator.next();
@@ -3116,6 +3116,12 @@ export default class SQLite3Driver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          let processedData = this.removeAndReturnACValues(
+            etype,
+            { ...data },
+            { ...sdata },
+          );
+          ({ data, sdata } = processedData);
           let {
             user,
             group,
@@ -3125,7 +3131,7 @@ export default class SQLite3Driver extends NymphDriver {
             acRead,
             acWrite,
             acFull,
-          } = this.removeAndReturnACValues(etype, data, sdata);
+          } = processedData;
           this.queryRun(
             `INSERT INTO ${SQLite3Driver.escape(
               `${this.prefix}entities_${etype}`,
@@ -3157,6 +3163,12 @@ export default class SQLite3Driver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          let processedData = this.removeAndReturnACValues(
+            etype,
+            { ...data },
+            { ...sdata },
+          );
+          ({ data, sdata } = processedData);
           let {
             user,
             group,
@@ -3166,7 +3178,7 @@ export default class SQLite3Driver extends NymphDriver {
             acRead,
             acWrite,
             acFull,
-          } = this.removeAndReturnACValues(etype, data, sdata);
+          } = processedData;
           const info = this.queryRun(
             `UPDATE ${SQLite3Driver.escape(
               `${this.prefix}entities_${etype}`,

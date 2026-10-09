@@ -2688,7 +2688,9 @@ export function ExportImportTest(
       let expectedExport = `{${firstEntity.guid}}<${TestModel.ETYPE}>[${firstEntity?.tags.join(',')}]\n`;
       expectedExport += `\tcdate=${firstEntity.cdate}\n`;
       expectedExport += `\tmdate=${firstEntity.mdate}\n`;
-      for (let [name, value] of Object.entries(firstEntity.$getData(true))) {
+      for (let [name, value] of Object.entries(firstEntity.$getData(true)).sort(
+        (a, b) => a[0].localeCompare(b[0]),
+      )) {
         expectedExport += `\t${name}=${JSON.stringify(value)}\n`;
       }
 

@@ -969,6 +969,8 @@ export default abstract class NymphDriver {
     }
 
     return {
+      data,
+      sdata,
       user,
       group,
       acUser,

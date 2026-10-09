@@ -1430,7 +1430,7 @@ export default class PostgreSQLDriver extends NymphDriver {
           LEFT JOIN ${PostgreSQLDriver.escape(
             `${this.prefix}data_${etype}`,
           )} d ON e."guid"=d."guid"${guid == null ? '' : ` WHERE e."guid"=decode(@guid, 'hex')`}
-          ORDER BY e."guid";`,
+          ORDER BY e."guid", d."name";`,
       guid == null ? undefined : { params: { guid } },
     );
     let datum = await dataIterator.next();
@@ -3665,6 +3665,12 @@ export default class PostgreSQLDriver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          let processedData = this.removeAndReturnACValues(
+            etype,
+            { ...data },
+            { ...sdata },
+          );
+          ({ data, sdata } = processedData);
           let {
             user,
             group,
@@ -3674,7 +3680,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             acRead,
             acWrite,
             acFull,
-          } = this.removeAndReturnACValues(etype, data, sdata);
+          } = processedData;
           await this.queryRun(
             `INSERT INTO ${PostgreSQLDriver.escape(
               `${this.prefix}entities_${etype}`,
@@ -3706,6 +3712,12 @@ export default class PostgreSQLDriver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          let processedData = this.removeAndReturnACValues(
+            etype,
+            { ...data },
+            { ...sdata },
+          );
+          ({ data, sdata } = processedData);
           let {
             user,
             group,
@@ -3715,7 +3727,7 @@ export default class PostgreSQLDriver extends NymphDriver {
             acRead,
             acWrite,
             acFull,
-          } = this.removeAndReturnACValues(etype, data, sdata);
+          } = processedData;
           const promises = [];
           promises.push(
             this.queryRun(
