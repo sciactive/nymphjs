@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.130](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.129...v1.0.0-beta.130) (2026-10-09)
+
+### Bug Fixes
+
+- ac props stay in data and end up cluttering data tables ([b0e2c6f](https://forge.sciactive.com/sciactive/nymphjs/commits/b0e2c6f0a17e831baeb241d4806133492269b0e4))
+
 # [1.0.0-beta.129](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.128...v1.0.0-beta.129) (2026-10-05)
 
 ### Features
