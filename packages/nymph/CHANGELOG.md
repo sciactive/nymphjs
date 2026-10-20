@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.131](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.130...v1.0.0-beta.131) (2026-10-20)
+
+### Features
+
+- return proxy from places that should, throw errors from proxy on sleeping entity in client ([50d0b56](https://forge.sciactive.com/sciactive/nymphjs/commits/50d0b56fe4ef4fd9aed076ae82c81368ff4c8adb))
+
 # [1.0.0-beta.130](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.129...v1.0.0-beta.130) (2026-10-09)
 
 ### Bug Fixes
