@@ -357,114 +357,122 @@ export default class Entity<
 
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
-    return new Proxy(this, {
-      has: (entity: Entity, name: string) => {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          return name in entity;
-        }
+    return this.$proxy();
+  }
 
-        this.$check();
-        return name in entity.$data;
-      },
-
-      get: (entity: Entity, name: string) => {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
-            this.$check();
+  private $existingProxy?: this & T;
+  protected $proxy() {
+    if (this.$existingProxy == null) {
+      this.$existingProxy = new Proxy(this, {
+        has: (entity: this, name: string) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            return name in entity;
           }
-          return (entity as any)[name];
-        }
 
-        this.$check();
-        if (name in entity.$data) {
-          return entity.$data[name];
-        }
-        return undefined;
-      },
+          this.$check();
+          return name in entity.$data;
+        },
 
-      set: (entity: Entity, name: string, value: any) => {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
-            this.$check();
+        get: (entity: this, name: string) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            return (entity as any)[name];
           }
-          (entity as any)[name] = value;
-        } else {
+
           this.$check();
-          (entity.$data as any)[name] = value;
-        }
-        return true;
-      },
-
-      deleteProperty: (entity: Entity, name: string) => {
-        if (name in entity) {
-          return delete (entity as any)[name];
-        } else if (name in entity.$data) {
-          this.$check();
-          return delete entity.$data[name];
-        }
-        return true;
-      },
-
-      getPrototypeOf: (entity: Entity) => {
-        return entity.constructor.prototype;
-      },
-
-      defineProperty: (
-        entity: Entity,
-        name: string,
-        descriptor: PropertyDescriptor,
-      ) => {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
-            this.$check();
+          if (name in entity.$data) {
+            return entity.$data[name];
           }
-          Object.defineProperty(entity, name, descriptor);
-        } else {
-          this.$check();
-          Object.defineProperty(entity.$data, name, descriptor);
-        }
-        return true;
-      },
+          return undefined;
+        },
 
-      getOwnPropertyDescriptor: (entity: Entity, name: string) => {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+        set: (entity: this, name: string, value: any) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            (entity as any)[name] = value;
+          } else {
             this.$check();
+            (entity.$data as any)[name] = value;
           }
-          return Object.getOwnPropertyDescriptor(entity, name);
-        } else {
-          this.$check();
-          return Object.getOwnPropertyDescriptor(entity.$data, name);
-        }
-      },
+          return true;
+        },
 
-      ownKeys: (entity: Entity) => {
-        this.$check();
-        return Object.getOwnPropertyNames(entity).concat(
-          Object.getOwnPropertyNames(entity.$data),
-        );
-      },
-    }) as Entity<T>;
+        deleteProperty: (entity: this, name: string) => {
+          if (name in entity) {
+            return delete (entity as any)[name];
+          } else if (name in entity.$data) {
+            this.$check();
+            return delete entity.$data[name];
+          }
+          return true;
+        },
+
+        getPrototypeOf: (entity: this) => {
+          return entity.constructor.prototype;
+        },
+
+        defineProperty: (
+          entity: this,
+          name: string,
+          descriptor: PropertyDescriptor,
+        ) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            Object.defineProperty(entity, name, descriptor);
+          } else {
+            this.$check();
+            Object.defineProperty(entity.$data, name, descriptor);
+          }
+          return true;
+        },
+
+        getOwnPropertyDescriptor: (entity: this, name: string) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            return Object.getOwnPropertyDescriptor(entity, name);
+          } else {
+            this.$check();
+            return Object.getOwnPropertyDescriptor(entity.$data, name);
+          }
+        },
+
+        ownKeys: (entity: this) => {
+          this.$check();
+          return Object.getOwnPropertyNames(entity).concat(
+            Object.getOwnPropertyNames(entity.$data),
+          );
+        },
+      }) as this & T;
+    }
+    return this.$existingProxy;
   }
 
   /**
@@ -1117,7 +1125,7 @@ export default class Entity<
    * Check if this is a sleeping reference and throw an error if so.
    */
   protected $check() {
-    if (this.$isASleepingReference || this.$sleepingReference != null) {
+    if (this.$asleep()) {
       throw new EntityIsSleepingReferenceError(
         'This entity is in a sleeping reference state. You must use .$wake() to wake it.',
       );
@@ -1135,9 +1143,9 @@ export default class Entity<
    * Wake from a sleeping reference.
    */
   public $wake() {
-    if (!this.$isASleepingReference || this.$sleepingReference == null) {
+    if (!this.$asleep()) {
       this.$wakePromise = null;
-      return Promise.resolve(this);
+      return Promise.resolve(this.$proxy());
     }
     if (this.$sleepingReference?.[1] == null) {
       throw new InvalidStateError(
@@ -1172,7 +1180,7 @@ export default class Entity<
           this.mdate = entity.mdate;
           this.$putData(entity.$getData(false), entity.$getSData(), 'server');
 
-          return this;
+          return this.$proxy();
         })
         .finally(() => {
           this.$wakePromise = null;
@@ -1192,7 +1200,7 @@ export default class Entity<
           newLevel = level - 1;
         }
         if (newLevel !== undefined && newLevel < 0) {
-          resolve(this);
+          resolve(this.$proxy());
           return;
         }
         const promises: Promise<any>[] = [];
@@ -1226,11 +1234,11 @@ export default class Entity<
         walkData(this.$data);
         if (promises.length) {
           Promise.all(promises).then(
-            () => resolve(this),
+            () => resolve(this.$proxy()),
             (errObj) => reject(errObj),
           );
         } else {
-          resolve(this);
+          resolve(this.$proxy());
         }
       };
 
@@ -1285,7 +1293,7 @@ export default class Entity<
       return this.$sleepingReference;
     }
     if (existingOnly && this.guid == null) {
-      return this;
+      return this.$proxy();
     }
     return [
       'nymph_entity_reference',

@@ -240,9 +240,6 @@ export type UserData = {
  * @see http://nymph.io/
  */
 export default class User extends AbleObject<UserData> {
-  /**
-   * The instance of Tilmeld to use for queries.
-   */
   static ETYPE = 'tilmeld_user';
   static class = 'User';
   private static checkUsernameCallbacks: TilmeldCheckUsernameCallback[] = [];
@@ -727,7 +724,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLoginCallbacks) {
       if (callback) {
-        await callback(this);
+        await callback(this.$proxy());
       }
     }
 
@@ -803,7 +800,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLoginCallbacks) {
       if (callback) {
-        await callback(this);
+        await callback(this.$proxy());
       }
     }
 
@@ -822,7 +819,7 @@ export default class User extends AbleObject<UserData> {
       for (let callback of (this.constructor as typeof User)
         .beforeLogoutCallbacks) {
         if (callback) {
-          await callback(this);
+          await callback(this.$proxy());
         }
       }
     } catch (e: any) {
@@ -839,7 +836,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLogoutCallbacks) {
       if (callback) {
-        await callback(this);
+        await callback(this.$proxy());
       }
     }
 
@@ -2620,7 +2617,7 @@ export default class User extends AbleObject<UserData> {
         for (let callback of (this.constructor as typeof User)
           .beforeSaveCallbacks) {
           if (callback) {
-            await callback(this);
+            await callback(this.$proxy());
           }
         }
 
@@ -2639,7 +2636,7 @@ export default class User extends AbleObject<UserData> {
         for (let callback of (this.constructor as typeof User)
           .afterSaveCallbacks) {
           if (callback) {
-            await callback(this);
+            await callback(this.$proxy());
           }
         }
       },
@@ -2725,7 +2722,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .beforeDeleteCallbacks) {
       if (callback) {
-        await callback(this);
+        await callback(this.$proxy());
       }
     }
 
@@ -2752,7 +2749,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterDeleteCallbacks) {
       if (callback) {
-        await callback(this);
+        await callback(this.$proxy());
       }
     }
   }

@@ -133,9 +133,6 @@ export type GroupData = {
  * @see http://nymph.io/
  */
 export default class Group extends AbleObject<GroupData> {
-  /**
-   * The instance of Tilmeld to use for queries.
-   */
   static ETYPE = 'tilmeld_group';
   static class = 'Group';
   private static checkGroupnameCallbacks: TilmeldCheckGroupnameCallback[] = [];
@@ -1022,7 +1019,7 @@ export default class Group extends AbleObject<GroupData> {
         for (let callback of (this.constructor as typeof Group)
           .beforeSaveCallbacks) {
           if (callback) {
-            await callback(this);
+            await callback(this.$proxy());
           }
         }
 
@@ -1031,7 +1028,7 @@ export default class Group extends AbleObject<GroupData> {
         for (let callback of (this.constructor as typeof Group)
           .afterSaveCallbacks) {
           if (callback) {
-            await callback(this);
+            await callback(this.$proxy());
           }
         }
       },
@@ -1084,7 +1081,7 @@ export default class Group extends AbleObject<GroupData> {
     for (let callback of (this.constructor as typeof Group)
       .beforeDeleteCallbacks) {
       if (callback) {
-        await callback(this);
+        await callback(this.$proxy());
       }
     }
 
@@ -1137,7 +1134,7 @@ export default class Group extends AbleObject<GroupData> {
     for (let callback of (this.constructor as typeof Group)
       .afterDeleteCallbacks) {
       if (callback) {
-        await callback(this);
+        await callback(this.$proxy());
       }
     }
   }

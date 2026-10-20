@@ -99,17 +99,15 @@ export default class Entity<
     this.$nymph = (this.constructor as EntityConstructor).nymph;
     this.$dataHandler = {
       has: (data: EntityData, name: string) => {
-        if (typeof name !== 'symbol' && this.$isASleepingReference) {
-          console.error(`Tried to check data on a sleeping reference: ${name}`);
-          return false;
+        if (typeof name !== 'symbol') {
+          this.$check();
         }
         return name in data;
       },
 
       get: (data: EntityData, name: string) => {
-        if (typeof name !== 'symbol' && this.$isASleepingReference) {
-          console.error(`Tried to get data on a sleeping reference: ${name}`);
-          return undefined;
+        if (typeof name !== 'symbol') {
+          this.$check();
         }
         if (data.hasOwnProperty(name)) {
           return data[name];
@@ -118,9 +116,8 @@ export default class Entity<
       },
 
       set: (data: EntityData, name: string, value: any) => {
-        if (typeof name !== 'symbol' && this.$isASleepingReference) {
-          console.error(`Tried to set data on a sleeping reference: ${name}`);
-          return false;
+        if (typeof name !== 'symbol') {
+          this.$check();
         }
         if (typeof name !== 'symbol') {
           this.$dirty[name] = true;
@@ -130,11 +127,8 @@ export default class Entity<
       },
 
       deleteProperty: (data: EntityData, name: string) => {
-        if (typeof name !== 'symbol' && this.$isASleepingReference) {
-          console.error(
-            `Tried to delete data on a sleeping reference: ${name}`,
-          );
-          return false;
+        if (typeof name !== 'symbol') {
+          this.$check();
         }
         if (data.hasOwnProperty(name)) {
           this.$dirty[name] = true;
@@ -148,11 +142,8 @@ export default class Entity<
         name: string,
         descriptor: PropertyDescriptor,
       ) => {
-        if (typeof name !== 'symbol' && this.$isASleepingReference) {
-          console.error(
-            `Tried to define data on a sleeping reference: ${name}`,
-          );
-          return false;
+        if (typeof name !== 'symbol') {
+          this.$check();
         }
         if (typeof name !== 'symbol') {
           this.$dirty[name] = true;
@@ -162,113 +153,136 @@ export default class Entity<
       },
 
       getOwnPropertyDescriptor: (data: EntityData, name: string) => {
-        if (typeof name !== 'symbol' && this.$isASleepingReference) {
-          console.error(
-            `Tried to get property descriptor on a sleeping reference: ${name}`,
-          );
-          return undefined;
+        if (typeof name !== 'symbol') {
+          this.$check();
         }
         return Object.getOwnPropertyDescriptor(data, name);
       },
 
       ownKeys: (data: EntityData) => {
-        if (this.$isASleepingReference) {
-          console.error(`Tried to enumerate data on a sleeping reference.`);
-          return undefined;
-        }
+        this.$check();
         return Object.getOwnPropertyNames(data);
       },
     };
     this.$dataStore = {} as T;
     this.$data = new Proxy(this.$dataStore, this.$dataHandler);
 
-    return new Proxy(this, {
-      has(entity: Entity, name: string) {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          return name in entity;
-        }
-        return name in entity.$data;
-      },
+    return this.$proxy();
+  }
 
-      get(entity: Entity, name: string) {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          return (entity as EntityInterface)[name];
-        }
-        if (name in entity.$data) {
-          return entity.$data[name];
-        }
-        return undefined;
-      },
+  private $existingProxy?: this & T;
+  protected $proxy() {
+    if (this.$existingProxy == null) {
+      this.$existingProxy = new Proxy(this, {
+        has: (entity: this, name: string) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            return name in entity;
+          }
 
-      set(entity: Entity, name: string, value: any) {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          (entity as EntityInterface)[name] = value;
-        } else {
-          entity.$data[name] = value;
-        }
-        return true;
-      },
+          this.$check();
+          return name in entity.$data;
+        },
 
-      deleteProperty(entity: Entity, name: string) {
-        if (name in entity) {
-          return delete (entity as EntityInterface)[name];
-        } else if (name in entity.$data) {
-          return delete entity.$data[name];
-        }
-        return true;
-      },
+        get: (entity: this, name: string) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            return (entity as any)[name];
+          }
 
-      getPrototypeOf(entity: Entity) {
-        return entity.constructor.prototype;
-      },
+          this.$check();
+          if (name in entity.$data) {
+            return entity.$data[name];
+          }
+          return undefined;
+        },
 
-      defineProperty(
-        entity: Entity,
-        name: string,
-        descriptor: PropertyDescriptor,
-      ) {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          Object.defineProperty(entity, name, descriptor);
-        } else {
-          Object.defineProperty(entity.$data, name, descriptor);
-        }
-        return true;
-      },
+        set: (entity: this, name: string, value: any) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            (entity as any)[name] = value;
+          } else {
+            this.$check();
+            (entity.$data as any)[name] = value;
+          }
+          return true;
+        },
 
-      getOwnPropertyDescriptor(entity: Entity, name: string) {
-        if (
-          typeof name !== 'string' ||
-          name in entity ||
-          name.substring(0, 1) === '$'
-        ) {
-          return Object.getOwnPropertyDescriptor(entity, name);
-        } else {
-          return Object.getOwnPropertyDescriptor(entity.$data, name);
-        }
-      },
+        deleteProperty: (entity: this, name: string) => {
+          if (name in entity) {
+            return delete (entity as any)[name];
+          } else if (name in entity.$data) {
+            this.$check();
+            return delete entity.$data[name];
+          }
+          return true;
+        },
 
-      ownKeys(entity: Entity) {
-        return Object.getOwnPropertyNames(entity).concat(
-          Object.getOwnPropertyNames(entity.$data),
-        );
-      },
-    }) as Entity<T>;
+        getPrototypeOf: (entity: this) => {
+          return entity.constructor.prototype;
+        },
+
+        defineProperty: (
+          entity: this,
+          name: string,
+          descriptor: PropertyDescriptor,
+        ) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            Object.defineProperty(entity, name, descriptor);
+          } else {
+            this.$check();
+            Object.defineProperty(entity.$data, name, descriptor);
+          }
+          return true;
+        },
+
+        getOwnPropertyDescriptor: (entity: this, name: string) => {
+          if (
+            typeof name !== 'string' ||
+            name in entity ||
+            name.substring(0, 1) === '$'
+          ) {
+            if (name === 'tags' || name === 'cdate' || name === 'mdate') {
+              this.$check();
+            }
+            return Object.getOwnPropertyDescriptor(entity, name);
+          } else {
+            this.$check();
+            return Object.getOwnPropertyDescriptor(entity.$data, name);
+          }
+        },
+
+        ownKeys: (entity: this) => {
+          this.$check();
+          return Object.getOwnPropertyNames(entity).concat(
+            Object.getOwnPropertyNames(entity.$data),
+          );
+        },
+      }) as this & T;
+    }
+    return this.$existingProxy;
   }
 
   /**
@@ -407,7 +421,7 @@ export default class Entity<
 
   public $init(entityJson: EntityJson | null) {
     if (entityJson == null) {
-      return this;
+      return this.$proxy();
     }
 
     this.$isASleepingReference = false;
@@ -438,7 +452,7 @@ export default class Entity<
 
     this.$nymph.setEntityToCache(this.constructor as EntityConstructor, this);
 
-    return this as Entity<T>;
+    return this.$proxy();
   }
 
   public $addTag(...tags: string[]) {
@@ -595,7 +609,7 @@ export default class Entity<
    * Check if this is a sleeping reference and throw an error if so.
    */
   protected $check() {
-    if (this.$isASleepingReference || this.$sleepingReference != null) {
+    if (this.$asleep()) {
       throw new EntityIsSleepingReferenceError(
         'This entity is in a sleeping reference state. You must use .$wake() to wake it.',
       );
@@ -613,9 +627,9 @@ export default class Entity<
    * Wake from a sleeping reference.
    */
   public $wake() {
-    if (!this.$isASleepingReference) {
+    if (!this.$asleep()) {
       this.$wakePromise = null;
-      return Promise.resolve(this);
+      return Promise.resolve(this.$proxy());
     }
     if (this.$sleepingReference?.[1] == null) {
       throw new InvalidStateError(
@@ -653,7 +667,7 @@ export default class Entity<
           newLevel = level - 1;
         }
         if (newLevel !== undefined && newLevel < 0) {
-          resolve(this);
+          resolve(this.$proxy());
           return;
         }
         const promises: Promise<any>[] = [];
@@ -687,15 +701,15 @@ export default class Entity<
         walkData(this.$data);
         if (promises.length) {
           Promise.all(promises).then(
-            () => resolve(this),
+            () => resolve(this.$proxy()),
             (errObj) => reject(errObj),
           );
         } else {
-          resolve(this);
+          resolve(this.$proxy());
         }
       };
 
-      if (this.$isASleepingReference) {
+      if (this.$asleep()) {
         this.$wake().then(wakeProps, (errObj) => reject(errObj));
       } else {
         wakeProps();
@@ -710,7 +724,7 @@ export default class Entity<
   }
 
   public async $refresh() {
-    if (this.$isASleepingReference) {
+    if (this.$asleep()) {
       await this.$wake();
       return true;
     }
@@ -770,13 +784,13 @@ export default class Entity<
     return data.return;
   }
 
-  public $toReference(): EntityReference | EntityInterface {
-    if (this.$isASleepingReference && this.$sleepingReference) {
+  public $toReference() {
+    if (this.$isASleepingReference && this.$sleepingReference != null) {
       return this.$sleepingReference;
     }
 
     if (this.guid == null) {
-      return this as EntityInterface;
+      return this.$proxy();
     }
     return [
       'nymph_entity_reference',
