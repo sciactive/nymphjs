@@ -5,7 +5,12 @@ import { strtotime } from 'locutus/php/datetime/index';
 import { Tokenizer } from '@sciactive/tokenizer';
 
 import type Nymph from '../Nymph.js';
-import type { Selector, Options, FormattedSelector } from '../Nymph.types.js';
+import {
+  type Selector,
+  type Options,
+  type FormattedSelector,
+  TilmeldAccessLevels,
+} from '../Nymph.types.js';
 import Entity from '../Entity.js';
 import type { EntityInstanceType, EntityObjectType } from '../Entity.js';
 import type {
@@ -1026,7 +1031,9 @@ export default abstract class NymphDriver {
               ...qrefOptions,
               class: QrefEntityClass,
               source: options.source,
+              skipAc: options.skipAc,
             };
+            delete newOptions.return;
             const newSelectors = this.formatSelectors(qrefSelectors, options);
             qrefs.push(
               [newOptions, ...newSelectors.selectors],
@@ -1284,33 +1291,59 @@ export default abstract class NymphDriver {
     if (
       this.nymph.config.cache &&
       !options.skipCache &&
-      selectors.length &&
+      options.source !== 'client' &&
+      selectors.length === 1 &&
+      Object.keys(selectors[0]).length === 2 &&
+      'type' in selectors[0] &&
+      selectors[0].type === '&' &&
       'guid' in selectors[0] &&
-      typeof selectors[0].guid === 'number'
+      typeof selectors[0].guid === 'string'
     ) {
-      // Only safe to use the cache option with no other selectors than a GUID
-      // and tags.
-      if (
-        selectors.length === 1 &&
-        selectors[0].type === '&' &&
-        (Object.keys(selectors[0]).length === 2 ||
-          (Object.keys(selectors[0]).length === 3 && 'tag' in selectors[0]))
-      ) {
-        const cacheEntity = this.pullCache(selectors[0]['guid']);
+      // Only safe to use the cache option with no other selectors than a GUID.
+      const cacheEntity = this.pullCache(selectors[0]['guid']);
 
-        if (
-          cacheEntity != null &&
-          cacheEntity.guid != null &&
-          (!('tag' in selectors[0]) ||
-            !(
-              Array.isArray(selectors[0].tag)
-                ? selectors[0].tag
-                : [selectors[0].tag]
-            ).find((tag) => tag == null || !cacheEntity.tags.includes(tag)))
-        ) {
-          // Return the value from the cache.
-          const { guid, cdate, mdate, tags, data, sdata } = cacheEntity;
+      if (cacheEntity != null && cacheEntity.guid != null) {
+        // Pull the value from the cache.
+        const { guid, cdate, mdate, tags, data, sdata } = cacheEntity;
 
+        const entity = this.nymph
+          .getEntityClass(EntityClass.class)
+          .factorySync() as EntityInstanceType<T>;
+
+        if (!entity) {
+          throw new ClassNotAvailableError(
+            `Tried to use missing class "${EntityClass.class}".`,
+          );
+        }
+
+        entity.$nymph = this.nymph;
+        if (options.skipAc != null) {
+          entity.$useSkipAc(!!options.skipAc);
+        }
+        entity.guid = guid;
+        entity.cdate = cdate;
+        entity.mdate = mdate;
+        entity.tags = tags;
+        entity.$putData(
+          classNamesToEntityConstructors(
+            this.nymph,
+            referencesToEntities(data, this.nymph, !!options.skipAc, false),
+            false,
+          ),
+          sdata,
+          'server',
+        );
+
+        // Make sure the user has access to the entity.
+        let hasAccess = true;
+        if (this.nymph.tilmeld) {
+          hasAccess = this.nymph.tilmeld.checkPermissions(
+            entity,
+            TilmeldAccessLevels.READ_ACCESS,
+          );
+        }
+
+        if (hasAccess) {
           if (options.return === 'count') {
             return {
               result: Promise.resolve(null),
@@ -1341,41 +1374,9 @@ export default abstract class NymphDriver {
               ],
             };
           } else {
-            const entity = this.nymph
-              .getEntityClass(EntityClass.class)
-              .factorySync() as EntityInstanceType<T>;
-            if (entity) {
-              entity.$nymph = this.nymph;
-              if (options.skipAc != null) {
-                entity.$useSkipAc(!!options.skipAc);
-              }
-              entity.guid = guid;
-              entity.cdate = cdate;
-              entity.mdate = mdate;
-              entity.tags = tags;
-              entity.$putData(
-                classNamesToEntityConstructors(
-                  this.nymph,
-                  referencesToEntities(
-                    data,
-                    this.nymph,
-                    !!options.skipAc,
-                    false,
-                  ),
-                  false,
-                ),
-                sdata,
-                'server',
-              );
-              return {
-                result: Promise.resolve(null),
-                process: () => [entity],
-              };
-            }
-
             return {
               result: Promise.resolve(null),
-              process: () => [],
+              process: () => [entity],
             };
           }
         }

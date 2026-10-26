@@ -488,4 +488,8 @@ export interface TilmeldInterface {
     name: string,
     type?: TilmeldAccessLevels,
   ): Promise<boolean>;
+  checkPermissions(
+    entity: EntityInterface,
+    type?: TilmeldAccessLevels,
+  ): boolean;
 }

@@ -715,6 +715,7 @@ export default class PubSub {
       class: EntityClass,
       return: 'entity',
       source: 'client',
+      skipAc: false,
     };
     // Find qref queries.
     const qrefQueries = this.findQRefQueries(...selectors);
@@ -791,10 +792,7 @@ export default class PubSub {
         if (sendEntities) {
           entities = existingSub.current.length
             ? await nymph.getEntities(
-                {
-                  class: EntityClass,
-                  source: 'client',
-                },
+                { class: EntityClass, source: 'client', skipAc: false },
                 { type: '|', guid: existingSub.current },
               )
             : [];

@@ -1158,10 +1158,7 @@ export default class Entity<
       );
       this.$wakePromise = this.$nymph
         .getEntity(
-          {
-            class: EntityClass,
-            skipAc: this.$skipAc,
-          },
+          { class: EntityClass, skipAc: this.$skipAc },
           { type: '&', guid: this.$sleepingReference[1] },
         )
         .then((entity) => {

@@ -1,6 +1,7 @@
 import { URL } from 'node:url';
 import {
   Nymph,
+  Entity,
   EntityInterface,
   FormattedSelector,
   Options,
@@ -564,9 +565,15 @@ export default class Tilmeld implements TilmeldInterface {
     if (options == null) {
       throw new Error('No options in argument.');
     } else if (
-      'class' in options &&
-      (options.class?.factorySync() instanceof User ||
-        options.class?.factorySync() instanceof Group)
+      !('class' in options) ||
+      !(options.class?.prototype instanceof Entity)
+    ) {
+      throw new Error('No class in options.');
+    } else if (options.class.class === 'Entity') {
+      throw new Error("Can't use Entity class directly.");
+    } else if (
+      options.class.factorySync() instanceof User ||
+      options.class.factorySync() instanceof Group
     ) {
       // They are requesting a user/group. Always accessible for reading.
       return;
