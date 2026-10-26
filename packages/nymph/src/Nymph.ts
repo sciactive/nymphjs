@@ -716,8 +716,6 @@ export default class Nymph {
    * - return - What to return. "entity", "object", "guid", or "count". Defaults
    *   to "entity".
    * - source - Will be 'client' if the query came from a REST call.
-   * - skipCache - If true, Nymph will skip the cache and retrieve the entity
-   *   from the DB.
    * - skipAc - If true, Tilmeld will not filter returned entities according to
    *   access controls. (If Tilmeld is installed.) (This is *always* set to
    *   false by the REST server.)

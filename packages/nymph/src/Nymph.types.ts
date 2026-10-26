@@ -227,10 +227,6 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
    */
   source?: string;
   /**
-   * If true, Nymph will skip the cache and retrieve the entity from the DB.
-   */
-  skipCache?: boolean;
-  /**
    * The level(s) of access control requested.
    *
    * Limiting the access control can significantly improve the performance of

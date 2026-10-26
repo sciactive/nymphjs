@@ -99,7 +99,7 @@ export interface DataObjectInterface {
    */
   $is(object: any): boolean;
   /**
-   * Refresh the object from storage. (Bypasses Nymph's cache.)
+   * Refresh the object from storage.
    *
    * @returns False if the data has not been saved, true on success. An error is
    *          thrown on failure.
@@ -164,8 +164,7 @@ export interface EntityInterface extends DataObjectInterface {
   /**
    * Replace any referenced entities in the data with sleeping references.
    *
-   * Calling this function ensures that the next time a referenced entity is
-   * accessed, it will be retrieved from the DB (unless it is in Nymph's cache).
+   * After calling this function, referenced entities must be awoken again.
    */
   $clearCache(): void;
   /**
@@ -297,9 +296,8 @@ export interface EntityInterface extends DataObjectInterface {
    * `sdata` is used by Nymph to avoid unserializing data that hasn't been
    * requested yet.
    *
-   * If `source` is set to "server", the data is coming from the DB or the
-   * cache. If not, assume the data is coming from the client and can't be
-   * trusted.
+   * If `source` is set to "server", the data is coming from the DB. If not,
+   * assume the data is coming from the client and can't be trusted.
    *
    * @param data The data object.
    * @param sdata The serialized data object.

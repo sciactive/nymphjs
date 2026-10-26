@@ -673,10 +673,6 @@ export default class SQLite3Driver extends NymphDriver {
     }
 
     await this.commit('nymph-delete');
-    // Remove any cached versions of this entity.
-    if (this.nymph.config.cache) {
-      this.cleanCache(guid);
-    }
     return true;
   }
 

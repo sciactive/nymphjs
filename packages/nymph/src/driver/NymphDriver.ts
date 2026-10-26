@@ -53,22 +53,6 @@ export default abstract class NymphDriver {
   protected tokenizer = new Tokenizer();
 
   /**
-   * A cache to make entity retrieval faster.
-   */
-  protected entityCache: {
-    [k: string]: {
-      cdate: number;
-      mdate: number;
-      tags: string[];
-      data: EntityData;
-      sdata: SerializedEntityData;
-    };
-  } = {};
-  /**
-   * A counter for the entity cache to determine the most accessed entities.
-   */
-  protected entityCount: { [k: string]: number } = {};
-  /**
    * Protect against infinite loops.
    */
   private putDataCounter = 0;
@@ -364,8 +348,6 @@ export default abstract class NymphDriver {
             sdata[propMatch[1]] = propMatch[2];
           }
         }
-        // Clear the entity cache.
-        this.entityCache = {};
       }
       // Save the last entity.
       if (guid) {
@@ -684,15 +666,6 @@ export default abstract class NymphDriver {
       );
       throw e;
     }
-  }
-
-  /**
-   * Remove all copies of an entity from the cache.
-   *
-   * @param guid The GUID of the entity to remove.
-   */
-  protected cleanCache(guid: string) {
-    delete this.entityCache[guid];
   }
 
   public async deleteEntity(entity: EntityInterface) {
@@ -1287,102 +1260,6 @@ export default abstract class NymphDriver {
       );
     }
 
-    // Check if the requested entity is cached.
-    if (
-      this.nymph.config.cache &&
-      !options.skipCache &&
-      options.source !== 'client' &&
-      selectors.length === 1 &&
-      Object.keys(selectors[0]).length === 2 &&
-      'type' in selectors[0] &&
-      selectors[0].type === '&' &&
-      'guid' in selectors[0] &&
-      typeof selectors[0].guid === 'string'
-    ) {
-      // Only safe to use the cache option with no other selectors than a GUID.
-      const cacheEntity = this.pullCache(selectors[0]['guid']);
-
-      if (cacheEntity != null && cacheEntity.guid != null) {
-        // Pull the value from the cache.
-        const { guid, cdate, mdate, tags, data, sdata } = cacheEntity;
-
-        const entity = this.nymph
-          .getEntityClass(EntityClass.class)
-          .factorySync() as EntityInstanceType<T>;
-
-        if (!entity) {
-          throw new ClassNotAvailableError(
-            `Tried to use missing class "${EntityClass.class}".`,
-          );
-        }
-
-        entity.$nymph = this.nymph;
-        if (options.skipAc != null) {
-          entity.$useSkipAc(!!options.skipAc);
-        }
-        entity.guid = guid;
-        entity.cdate = cdate;
-        entity.mdate = mdate;
-        entity.tags = tags;
-        entity.$putData(
-          classNamesToEntityConstructors(
-            this.nymph,
-            referencesToEntities(data, this.nymph, !!options.skipAc, false),
-            false,
-          ),
-          sdata,
-          'server',
-        );
-
-        // Make sure the user has access to the entity.
-        let hasAccess = true;
-        if (this.nymph.tilmeld) {
-          hasAccess = this.nymph.tilmeld.checkPermissions(
-            entity,
-            TilmeldAccessLevels.READ_ACCESS,
-          );
-        }
-
-        if (hasAccess) {
-          if (options.return === 'count') {
-            return {
-              result: Promise.resolve(null),
-              process: () => 1,
-            };
-          } else if (options.return === 'guid') {
-            return {
-              result: Promise.resolve(null),
-              process: () => [guid],
-            };
-          } else if (options.return === 'object') {
-            return {
-              result: Promise.resolve(null),
-              process: () => [
-                {
-                  guid,
-                  cdate,
-                  mdate,
-                  tags,
-                  ...data,
-                  ...Object.fromEntries(
-                    Object.entries(sdata).map(([name, value]) => [
-                      name,
-                      JSON.parse(value),
-                    ]),
-                  ),
-                } as EntityObjectType<T>,
-              ],
-            };
-          } else {
-            return {
-              result: Promise.resolve(null),
-              process: () => [entity],
-            };
-          }
-        }
-      }
-    }
-
     try {
       const formattedSelectors = this.formatSelectors(selectors, options);
       this.nymph.runQueryCallbacks(options, formattedSelectors.selectors);
@@ -1543,9 +1420,6 @@ export default abstract class NymphDriver {
                 this.putDataCounter--;
                 entities.push(entity);
               }
-              if (this.nymph.config.cache) {
-                this.pushCache(guid, cdate, mdate, tags, data, sdata);
-              }
             }
           }
 
@@ -1640,10 +1514,6 @@ export default abstract class NymphDriver {
           entity.mdate = mdate;
         }
       } else {
-        // Removed any cached versions of this entity.
-        if (this.nymph.config.cache) {
-          this.cleanCache(entity.guid);
-        }
         success = await saveExistingEntityCallback({
           entity,
           guid: entity.guid,
@@ -1660,17 +1530,6 @@ export default abstract class NymphDriver {
       }
       if (commitTransactionCallback) {
         success = await commitTransactionCallback(success);
-      }
-      // Cache the entity.
-      if (success && this.nymph.config.cache) {
-        this.pushCache(
-          entity.guid as string,
-          entity.cdate as number,
-          entity.mdate as number,
-          entity.tags,
-          data,
-          sdata,
-        );
       }
 
       if (!success) {
@@ -1695,95 +1554,6 @@ export default abstract class NymphDriver {
       entity.cdate = originalCdate;
       entity.mdate = originalMdate;
       throw e;
-    }
-  }
-
-  /**
-   * Pull an entity from the cache.
-   *
-   * @param guid The entity's GUID.
-   * @returns The entity's data or null if it's not cached.
-   */
-  protected pullCache(guid: string): {
-    guid: string;
-    cdate: number;
-    mdate: number;
-    tags: string[];
-    data: EntityData;
-    sdata: SerializedEntityData;
-  } | null {
-    // Increment the entity access count.
-    if (!(guid in this.entityCount)) {
-      this.entityCount[guid] = 0;
-    }
-    this.entityCount[guid]++;
-    if (guid in this.entityCache) {
-      return {
-        guid,
-        cdate: this.entityCache[guid]['cdate'],
-        mdate: this.entityCache[guid]['mdate'],
-        tags: this.entityCache[guid]['tags'],
-        data: this.entityCache[guid]['data'],
-        sdata: this.entityCache[guid]['sdata'],
-      };
-    }
-    return null;
-  }
-
-  /**
-   * Push an entity onto the cache.
-   *
-   * @param guid The entity's GUID.
-   * @param cdate The entity's cdate.
-   * @param mdate The entity's mdate.
-   * @param tags The entity's tags.
-   * @param data The entity's data.
-   * @param sdata The entity's sdata.
-   */
-  protected pushCache(
-    guid: string,
-    cdate: number,
-    mdate: number,
-    tags: string[],
-    data: EntityData,
-    sdata: SerializedEntityData,
-  ) {
-    if (guid == null) {
-      return;
-    }
-    // Increment the entity access count.
-    if (!(guid in this.entityCount)) {
-      this.entityCount[guid] = 0;
-    }
-    this.entityCount[guid]++;
-    // Check the threshold.
-    if (this.entityCount[guid] < this.nymph.config.cacheThreshold) {
-      return;
-    }
-    // Cache the entity.
-    this.entityCache[guid] = {
-      cdate,
-      mdate,
-      tags,
-      data,
-      sdata,
-    };
-    while (
-      this.nymph.config.cacheLimit &&
-      Object.keys(this.entityCache).length >= this.nymph.config.cacheLimit
-    ) {
-      // Find which entity has been accessed the least.
-      const least =
-        Object.entries(this.entityCount)
-          .sort(([_guidA, countA], [_guidB, countB]) => countA - countB)
-          .pop()?.[0] ?? null;
-      if (least == null) {
-        // This should never happen.
-        return;
-      }
-      // Remove it.
-      delete this.entityCache[least];
-      delete this.entityCount[least];
     }
   }
 

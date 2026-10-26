@@ -24,9 +24,6 @@ function getDebuggers(source: string) {
 }
 
 export default {
-  cache: false,
-  cacheThreshold: 1,
-  cacheLimit: 10,
   emptyListError: false,
   updateMDate: true,
   debugInfo: (source, message) => {
