@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.132](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.131...v1.0.0-beta.132) (2026-10-26)
+
+### Bug Fixes
+
+- entity cache was never actually used ([1e8ef9b](https://forge.sciactive.com/sciactive/nymphjs/commits/1e8ef9bb95119faec448694b511f48ea6efdbb64))
+
 # [1.0.0-beta.131](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.130...v1.0.0-beta.131) (2026-10-20)
 
 ### Features

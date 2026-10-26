@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.132](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.131...v1.0.0-beta.132) (2026-10-26)
+
+### Features
+
+- remove caching feature because it is too risky ([2fc17e0](https://forge.sciactive.com/sciactive/nymphjs/commits/2fc17e0e4bcd70520c1f19fbbe590d57ae90cd8c))
+
 # [1.0.0-beta.131](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.130...v1.0.0-beta.131) (2026-10-20)
 
 **Note:** Version bump only for package @nymphjs/driver-sqlite3
