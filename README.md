@@ -82,6 +82,8 @@ The GUID and unique code generators are used to generate new GUIDs for Nymph obj
 
 # Breaking Changes
 
+Not really a breaking change, but in 1.0.0-beta.133, the TypeScript defintions changed, and now you can (and should) define and use an entity without the ".$data." part inside entity functions. Using that still works, so this change only causes TS to complain.
+
 In version 1.0.0-beta.122, the "$save()", "$patch()", and "$delete()" entity methods stopped returning a boolean, and instead throw an error on failure. The "$refresh()" method stopped returning 0 and instead throws an error on failure.
 
 In version 1.0.0-beta.110, the access control lists "acRead", "acWrite", and "acFull" became arrays of GUIDs (strings) instead of arrays of Users and Groups. The data migration from 1.0.0-beta.109 will handle this for you.
