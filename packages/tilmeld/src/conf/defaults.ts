@@ -7,8 +7,8 @@ import { nanoid } from '@nymphjs/guid';
 import { nymphJoiProps } from '@nymphjs/nymph';
 
 import type { Config } from './index.js';
-import User from '../User.js';
-import Group from '../Group.js';
+import { User } from '../User.js';
+import { Group } from '../Group.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

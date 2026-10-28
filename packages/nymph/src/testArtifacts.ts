@@ -2,7 +2,7 @@ import Entity from './Entity.js';
 import { transactional } from './decorators/index.js';
 import { transaction } from './helpers/index.js';
 
-export type TestModelData = {
+export interface TestModelData {
   name?: string;
   null?: null;
   string?: string;
@@ -24,7 +24,9 @@ export type TestModelData = {
   index?: string;
   // For uniqueness tests.
   uniques?: string[];
-};
+}
+
+export interface TestModel extends TestModelData {}
 
 /**
  * This class is a test class that extends the Entity class.
@@ -43,12 +45,12 @@ export class TestModel extends Entity<TestModelData> {
     super();
 
     this.$addTag('test');
-    this.$data.boolean = true;
-    this.$data.uniques = [];
+    this.boolean = true;
+    this.uniques = [];
   }
 
   public async $getUniques() {
-    return this.$data.uniques ?? [];
+    return this.uniques ?? [];
   }
 
   public $useProtectedData() {
@@ -72,12 +74,12 @@ export class TestModel extends Entity<TestModelData> {
 
   @transactional
   public async $testTransactionalDecorator(throwError: boolean) {
-    this.$data.string = 'this has been changed';
+    this.string = 'this has been changed';
 
-    if (this.$data.reference) {
-      await this.$data.reference.$wake();
-      this.$data.reference.string = 'this has been changed too';
-      await this.$data.reference.$save();
+    if (this.reference) {
+      await this.reference.$wake();
+      this.reference.string = 'this has been changed too';
+      await this.reference.$save();
     }
 
     await this.$save();
@@ -95,12 +97,12 @@ export class TestModel extends Entity<TestModelData> {
       'test-transaction',
       async (nymph) => {
         this.$setNymph(nymph);
-        this.$data.string = 'this has been changed';
+        this.string = 'this has been changed';
 
-        if (this.$data.reference) {
-          await this.$data.reference.$wake();
-          this.$data.reference.string = 'this has been changed too';
-          await this.$data.reference.$save();
+        if (this.reference) {
+          await this.reference.$wake();
+          this.reference.string = 'this has been changed too';
+          await this.reference.$save();
         }
 
         await this.$save();
@@ -127,6 +129,8 @@ export class TestBModel extends TestModel {
 }
 
 export type TestEmptyModelData = {};
+
+export interface TestEmptyModel extends TestEmptyModelData {}
 
 /**
  * This class is a test class that extends the Entity class.

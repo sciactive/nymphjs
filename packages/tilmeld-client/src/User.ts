@@ -1,12 +1,11 @@
 import { Nymph, Entity } from '@nymphjs/client';
 
-import type Group from './Group.js';
-import type { AdminGroupData, CurrentGroupData } from './Group.js';
+import type { Group, AdminGroupData, CurrentGroupData } from './Group.js';
 
 export type EventType = 'register' | 'login' | 'logout';
 export type RegisterCallback = (user: User & CurrentUserData) => void;
 export type LoginCallback = (user: User & CurrentUserData) => void;
-export type LogoutCallback = (user: User & UserData) => void;
+export type LogoutCallback = (user: User) => void;
 
 export type ClientConfig = {
   regFields: string[];
@@ -19,7 +18,7 @@ export type ClientConfig = {
   unverifiedAccess: boolean;
 };
 
-export type UserData = {
+export interface UserData {
   /**
    * The user's username.
    */
@@ -49,9 +48,9 @@ export type UserData = {
    * Whether the user can log in.
    */
   enabled?: boolean;
-};
+}
 
-export type CurrentUserData = UserData & {
+export interface CurrentUserData extends UserData {
   /**
    * The abilities granted to the user.
    */
@@ -81,9 +80,9 @@ export type CurrentUserData = UserData & {
    * verification.
    */
   newEmailAddress?: string;
-};
+}
 
-export type AdminUserData = CurrentUserData & {
+export interface AdminUserData extends CurrentUserData {
   /**
    * The user's primary group.
    */
@@ -133,7 +132,7 @@ export type AdminUserData = CurrentUserData & {
    * issued before this date will not authenticate the user.
    */
   revokeTokenDate?: number;
-};
+}
 
 type InstanceStore = {
   registerCallbacks: RegisterCallback[];
@@ -145,7 +144,9 @@ type InstanceStore = {
   currentToken?: string;
 };
 
-export default class User extends Entity<UserData> {
+export interface User extends UserData {}
+
+export class User extends Entity<UserData> {
   protected static stores = new WeakMap<Nymph, InstanceStore>();
 
   // The name of the server class
@@ -177,7 +178,7 @@ export default class User extends Entity<UserData> {
     this.handleToken();
   }
 
-  static async factoryUsername(username?: string): Promise<User & UserData> {
+  static async factoryUsername(username?: string): Promise<User> {
     const entity = new this();
     if (username != null) {
       const entity = await this.nymph.getEntity(
@@ -204,17 +205,17 @@ export default class User extends Entity<UserData> {
       sort?: string;
       reverse?: boolean;
     },
-  ): Promise<(User & UserData)[]> {
+  ): Promise<User[]> {
     return await this.serverCallStatic('getDomainUsers', [domain, options]);
   }
 
   constructor() {
     super();
 
-    this.$data.enabled = true;
-    (this.$data as CurrentUserData).abilities = [];
-    (this.$data as CurrentUserData).groups = [];
-    (this.$data as CurrentUserData).inheritAbilities = true;
+    this.enabled = true;
+    (this as CurrentUserData).abilities = [];
+    (this as CurrentUserData).groups = [];
+    (this as CurrentUserData).inheritAbilities = true;
   }
 
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {

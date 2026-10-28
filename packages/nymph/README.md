@@ -54,7 +54,11 @@ async function run() {
 
   const otherPendingTodos = await nymph.getEntities(
     { class: Todo },
-    { type: '&', '!guid': myEntity.guid, equal: ['done', false] },
+    {
+      type: '&',
+      '!guid': myEntity.guid,
+      equal: ['done', false],
+    },
   );
 
   const total = otherPendingTodos.length;
@@ -71,22 +75,22 @@ async function run() {
 // Todo.ts
 import { Entity } from '@nymphjs/nymph';
 
-export type TodoData = {
+export interface TodoData {
   text: string;
   done: boolean;
-};
+}
 
-export default class Todo extends Entity<TodoData> {
+export interface Todo extends TodoData {}
+
+export class Todo extends Entity<TodoData> {
   static ETYPE = 'todo'; // This is used for the table name(s) in the DB.
   static class = 'Todo'; // This is used to map references to their class.
 
   constructor() {
     super();
 
-    // Within the methods of an entity, you will use `this.$data` to access
-    // its data. Outside, you don't need the $data part.
-    this.$data.text = '';
-    this.$data.done = false;
+    this.text = '';
+    this.done = false;
   }
 
   async $getOtherTodos() {
@@ -95,7 +99,10 @@ export default class Todo extends Entity<TodoData> {
     // instance of Nymph, so it could be a transactional instance.
     const otherTodos = await this.$nymph.getEntities(
       { class: Todo },
-      { type: '!&', guid: this.guid },
+      {
+        type: '!&',
+        guid: this.guid,
+      },
     );
     return otherTodos;
   }

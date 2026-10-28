@@ -107,9 +107,7 @@ export type EntityObjectType<T extends EntityConstructor> =
  * will fill its data from the DB. You can call clearCache() to turn all the
  * entities back into sleeping references.
  */
-export default class Entity<
-  T extends EntityData = EntityData,
-> implements EntityInterface {
+export default class Entity<T extends {} = {}> implements EntityInterface {
   /**
    * The instance of Nymph to use for queries.
    */
@@ -364,7 +362,7 @@ export default class Entity<
   protected $proxy() {
     if (this.$existingProxy == null) {
       this.$existingProxy = new Proxy(this, {
-        has: (entity: this, name: string) => {
+        has: (entity: Record<string, any>, name: string) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -377,7 +375,7 @@ export default class Entity<
           return name in entity.$data;
         },
 
-        get: (entity: this, name: string) => {
+        get: (entity: Record<string, any>, name: string) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -396,7 +394,7 @@ export default class Entity<
           return undefined;
         },
 
-        set: (entity: this, name: string, value: any) => {
+        set: (entity: Record<string, any>, name: string, value: any) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -413,7 +411,7 @@ export default class Entity<
           return true;
         },
 
-        deleteProperty: (entity: this, name: string) => {
+        deleteProperty: (entity: Record<string, any>, name: string) => {
           if (name in entity) {
             return delete (entity as any)[name];
           } else if (name in entity.$data) {
@@ -423,12 +421,12 @@ export default class Entity<
           return true;
         },
 
-        getPrototypeOf: (entity: this) => {
+        getPrototypeOf: (entity: Record<string, any>) => {
           return entity.constructor.prototype;
         },
 
         defineProperty: (
-          entity: this,
+          entity: Record<string, any>,
           name: string,
           descriptor: PropertyDescriptor,
         ) => {
@@ -448,7 +446,10 @@ export default class Entity<
           return true;
         },
 
-        getOwnPropertyDescriptor: (entity: this, name: string) => {
+        getOwnPropertyDescriptor: (
+          entity: Record<string, any>,
+          name: string,
+        ) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -464,7 +465,7 @@ export default class Entity<
           }
         },
 
-        ownKeys: (entity: this) => {
+        ownKeys: (entity: Record<string, any>) => {
           this.$check();
           return Object.getOwnPropertyNames(entity).concat(
             Object.getOwnPropertyNames(entity.$data),
@@ -487,7 +488,7 @@ export default class Entity<
       new (): E;
     },
     guid?: string,
-  ): Promise<E & EntityDataType<E>> {
+  ): Promise<E> {
     const entity = new this();
     if (guid != null) {
       const entity = await (
@@ -499,19 +500,17 @@ export default class Entity<
         { type: '&', guid },
       );
       if (entity != null) {
-        return entity as E & EntityDataType<E>;
+        return entity as E;
       }
     }
-    return entity as E & EntityDataType<E>;
+    return entity as E;
   }
 
   /**
    * Create a new entity instance.
    */
-  public static factorySync<E extends Entity>(this: {
-    new (): E;
-  }): E & EntityDataType<E> {
-    return new this() as E & EntityDataType<E>;
+  public static factorySync<E extends Entity>(this: { new (): E }): E {
+    return new this() as E;
   }
 
   /**
@@ -528,10 +527,10 @@ export default class Entity<
       new (): E;
     },
     reference: EntityReference,
-  ): E & EntityDataType<E> {
+  ): E {
     const entity = new this();
     entity.$referenceSleep(reference);
-    return entity as E & EntityDataType<E>;
+    return entity as E;
   }
 
   /**
@@ -601,7 +600,7 @@ export default class Entity<
   }
 
   public toJSON() {
-    if (this.$isASleepingReference) {
+    if (this.$isASleepingReference && this.$sleepingReference) {
       return this.$sleepingReference;
     }
     const obj: EntityJson = {
@@ -618,7 +617,7 @@ export default class Entity<
     ]) {
       if (this.$privateData.indexOf(key) === -1) {
         obj.data[key] = entityConstructorsToClassNames(
-          entitiesToReferences(this.$data[key], true),
+          entitiesToReferences((this.$data as EntityData)[key], true),
         );
       }
     }
@@ -769,9 +768,9 @@ export default class Entity<
     return {
       user: this.$getAcUid(),
       group: this.$getAcGid(),
-      acUser: this.$data.acUser ?? null,
-      acGroup: this.$data.acGroup ?? null,
-      acOther: this.$data.acOther ?? null,
+      acUser: (this.$data as EntityData).acUser ?? null,
+      acGroup: (this.$data as EntityData).acGroup ?? null,
+      acOther: (this.$data as EntityData).acOther ?? null,
       acRead: this.$getAcReadIds(),
       acWrite: this.$getAcWriteIds(),
       acFull: this.$getAcFullIds(),
@@ -788,7 +787,7 @@ export default class Entity<
         return userValue[1];
       }
     }
-    return (this.$data.user?.guid ?? null) as string | null;
+    return ((this.$data as EntityData).user?.guid ?? null) as string | null;
   }
   public $getAcGid() {
     if ('group' in this.$sdata) {
@@ -800,21 +799,24 @@ export default class Entity<
         return groupValue[1];
       }
     }
-    return (this.$data.group?.guid ?? null) as string | null;
+    return ((this.$data as EntityData).group?.guid ?? null) as string | null;
   }
   public $getAcReadIds() {
-    return (this.$data.acRead?.map((entity: EntityInterface | string) =>
-      typeof entity === 'string' ? entity : entity.guid,
+    return ((this.$data as EntityData).acRead?.map(
+      (entity: EntityInterface | string) =>
+        typeof entity === 'string' ? entity : entity.guid,
     ) ?? null) as (string | null)[] | null;
   }
   public $getAcWriteIds() {
-    return (this.$data.acWrite?.map((entity: EntityInterface | string) =>
-      typeof entity === 'string' ? entity : entity.guid,
+    return ((this.$data as EntityData).acWrite?.map(
+      (entity: EntityInterface | string) =>
+        typeof entity === 'string' ? entity : entity.guid,
     ) ?? null) as (string | null)[] | null;
   }
   public $getAcFullIds() {
-    return (this.$data.acFull?.map((entity: EntityInterface | string) =>
-      typeof entity === 'string' ? entity : entity.guid,
+    return ((this.$data as EntityData).acFull?.map(
+      (entity: EntityInterface | string) =>
+        typeof entity === 'string' ? entity : entity.guid,
     ) ?? null) as (string | null)[] | null;
   }
 
@@ -924,7 +926,7 @@ export default class Entity<
     const privateData: EntityData = {};
     for (const name of this.$privateData) {
       if (name in this.$data) {
-        privateData[name] = this.$data[name];
+        privateData[name] = (this.$data as EntityData)[name];
       }
       if (name in data) {
         delete data[name];
@@ -957,7 +959,7 @@ export default class Entity<
     }
     for (const name of protectedProps) {
       if (name in this.$data) {
-        protectedData[name] = this.$data[name];
+        protectedData[name] = (this.$data as EntityData)[name];
       }
       if (name in data) {
         delete data[name];
@@ -982,7 +984,7 @@ export default class Entity<
       ...data,
       ...protectedData,
       ...privateData,
-    });
+    } as T);
   }
 
   public $jsonAcceptPatch(patch: EntityPatch, allowConflict = false) {
@@ -1047,7 +1049,7 @@ export default class Entity<
       ) {
         continue;
       }
-      delete this.$data[name];
+      delete (this.$data as EntityData)[name];
     }
 
     for (const tag of patch.addTags) {
@@ -1073,11 +1075,7 @@ export default class Entity<
     }
   }
 
-  public $putData(
-    data: EntityData,
-    sdata?: SerializedEntityData,
-    _source?: 'server',
-  ) {
+  public $putData(data: T, sdata?: SerializedEntityData, _source?: 'server') {
     this.$check();
 
     for (const name in this.$dataStore) {
@@ -1175,7 +1173,11 @@ export default class Entity<
           this.tags = entity.tags;
           this.cdate = entity.cdate;
           this.mdate = entity.mdate;
-          this.$putData(entity.$getData(false), entity.$getSData(), 'server');
+          this.$putData(
+            entity.$getData(false) as T,
+            entity.$getSData(),
+            'server',
+          );
 
           return this.$proxy();
         })
@@ -1266,7 +1268,7 @@ export default class Entity<
     this.tags = refresh.tags;
     this.cdate = refresh.cdate;
     this.mdate = refresh.mdate;
-    this.$putData(refresh.$getData(false), refresh.$getSData(), 'server');
+    this.$putData(refresh.$getData(false) as T, refresh.$getSData(), 'server');
     return true;
   }
 

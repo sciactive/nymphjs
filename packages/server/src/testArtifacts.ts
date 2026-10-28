@@ -5,7 +5,7 @@ import {
 } from '@nymphjs/nymph';
 import { Entity } from '@nymphjs/client';
 
-export type EmployeeBaseData<T> = {
+export interface EmployeeBaseData<T> {
   name?: string;
   id?: number;
   title?: string;
@@ -21,11 +21,13 @@ export type EmployeeBaseData<T> = {
 
   thing?: string;
   other?: string;
-};
+}
 
-export type EmployeeModelData = EmployeeBaseData<EmployeeModel>;
+export interface EmployeeModelData extends EmployeeBaseData<EmployeeModel> {}
 
 const IS_MANAGER = true;
+
+export interface EmployeeModel extends EmployeeModelData {}
 
 /**
  * This class is a test class that extends the Entity class.
@@ -69,9 +71,9 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
     super();
 
     this.$addTag('employee');
-    this.$data.current = true;
-    this.$data.startDate = Date.now();
-    this.$data.subordinates = [];
+    this.current = true;
+    this.startDate = Date.now();
+    this.subordinates = [];
     if (!IS_MANAGER) {
       this.$privateData.push('salary');
     }
@@ -80,32 +82,32 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
   public async $save() {
     // Validate employee data.
     const error = new EntityInvalidDataError('Invalid entity data.');
-    if (this.$data.name == null || this.$data.name === '') {
+    if (this.name == null || this.name === '') {
       error.addField('name');
     }
-    if (this.$data.title == null || this.$data.title === '') {
+    if (this.title == null || this.title === '') {
       error.addField('title');
     }
-    if (this.$data.startDate == null) {
+    if (this.startDate == null) {
       error.addField('startDate');
     }
     if (error.getFields().length) {
       throw error;
     }
     // Generate employee ID.
-    if (this.$data.id == null) {
-      this.$data.id = (await this.$nymph.newUID('employee')) ?? undefined;
+    if (this.id == null) {
+      this.id = (await this.$nymph.newUID('employee')) ?? undefined;
     }
     return await super.$save();
   }
 
   public $testMethodStateless(value: number) {
-    this.$data.name = 'bad name';
+    this.name = 'bad name';
     return value + 1;
   }
 
   public $testMethod(value: number) {
-    this.$data.current = false;
+    this.current = false;
     return value + 2;
   }
 
@@ -164,7 +166,9 @@ export class BadFunctionCallError extends Error {
   }
 }
 
-export type EmployeeData = EmployeeBaseData<Employee>;
+export interface EmployeeData extends EmployeeBaseData<Employee> {}
+
+export interface Employee extends EmployeeData {}
 
 export class Employee extends Entity<EmployeeData> {
   // The name of the server class
@@ -174,8 +178,8 @@ export class Employee extends Entity<EmployeeData> {
     super();
 
     this.$addTag('employee');
-    this.$data.current = true;
-    this.$data.subordinates = [];
+    this.current = true;
+    this.subordinates = [];
   }
 
   $testMethod(value: number) {
@@ -223,9 +227,11 @@ export class Employee extends Entity<EmployeeData> {
   }
 }
 
-export type RestrictedModelData = {
+export interface RestrictedModelData {
   name: string;
-};
+}
+
+export interface RestrictedModel extends RestrictedModelData {}
 
 /**
  * This class is a test class that extends the Entity class.
@@ -239,13 +245,13 @@ export class RestrictedModel extends EntityServer<RestrictedModelData> {
   constructor() {
     super();
 
-    this.$data.name = '';
+    this.name = '';
   }
 
   public async $save() {
     // Validate entity data.
     const error = new EntityInvalidDataError('Invalid entity data.');
-    if (this.$data.name == null || this.$data.name === '') {
+    if (this.name == null || this.name === '') {
       error.addField('name');
     }
     if (error.getFields().length) {
@@ -263,9 +269,11 @@ export class RestrictedModel extends EntityServer<RestrictedModelData> {
   }
 }
 
-export type RestrictedData = {
+export interface RestrictedData {
   name: string;
-};
+}
+
+export interface Restricted extends RestrictedData {}
 
 export class Restricted extends Entity<RestrictedData> {
   // The name of the server class
@@ -274,7 +282,7 @@ export class Restricted extends Entity<RestrictedData> {
   constructor() {
     super();
 
-    this.$data.name = '';
+    this.name = '';
   }
 
   $testMethod(value: number) {
@@ -286,9 +294,11 @@ export class Restricted extends Entity<RestrictedData> {
   }
 }
 
-export type PubSubDisabledModelData = {
+export interface PubSubDisabledModelData {
   name: string;
-};
+}
+
+export interface PubSubDisabledModel extends PubSubDisabledModelData {}
 
 /**
  * This class is a test class that extends the Entity class.
@@ -302,13 +312,13 @@ export class PubSubDisabledModel extends EntityServer<PubSubDisabledModelData> {
   constructor() {
     super();
 
-    this.$data.name = '';
+    this.name = '';
   }
 
   public async $save() {
     // Validate entity data.
     const error = new EntityInvalidDataError('Invalid entity data.');
-    if (this.$data.name == null || this.$data.name === '') {
+    if (this.name == null || this.name === '') {
       error.addField('name');
     }
     if (error.getFields().length) {
@@ -318,9 +328,11 @@ export class PubSubDisabledModel extends EntityServer<PubSubDisabledModelData> {
   }
 }
 
-export type PubSubDisabledData = {
+export interface PubSubDisabledData {
   name: string;
-};
+}
+
+export interface PubSubDisabled extends PubSubDisabledData {}
 
 export class PubSubDisabled extends Entity<PubSubDisabledData> {
   // The name of the server class
@@ -329,6 +341,6 @@ export class PubSubDisabled extends Entity<PubSubDisabledData> {
   constructor() {
     super();
 
-    this.$data.name = '';
+    this.name = '';
   }
 }

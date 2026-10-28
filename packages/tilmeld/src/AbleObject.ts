@@ -1,24 +1,30 @@
 import { Entity } from '@nymphjs/nymph';
 
+export interface AbleObjectData {
+  abilities?: string[];
+}
+
+export interface AbleObject<T extends {}> extends AbleObjectData {}
+
 /**
  * AbleObject abstract class.
  *
  * Used in entities which support abilities, such as users and groups.
  */
-export default abstract class AbleObject<
-  T extends { abilities?: string[] },
-> extends Entity<T> {
+export abstract class AbleObject<T extends {}> extends Entity<
+  T & AbleObjectData
+> {
   /**
    * Grant an ability.
    *
    * @param ability The ability.
    */
   public $grant(ability: string) {
-    if (!Array.isArray(this.$data.abilities)) {
-      this.$data.abilities = [];
+    if (!Array.isArray(this.abilities)) {
+      this.abilities = [];
     }
-    if (!this.$data.abilities.includes(ability)) {
-      this.$data.abilities.push(ability);
+    if (!this.abilities.includes(ability)) {
+      this.abilities.push(ability);
     }
   }
 
@@ -28,14 +34,14 @@ export default abstract class AbleObject<
    * @param ability The ability.
    */
   public $revoke(ability: string) {
-    if (!Array.isArray(this.$data.abilities)) {
-      this.$data.abilities = [];
+    if (!Array.isArray(this.abilities)) {
+      this.abilities = [];
     }
     let idx: number;
     do {
-      idx = this.$data.abilities.indexOf(ability);
+      idx = this.abilities.indexOf(ability);
       if (idx !== -1) {
-        this.$data.abilities.splice(idx, 1);
+        this.abilities.splice(idx, 1);
       }
     } while (idx !== -1);
   }

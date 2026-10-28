@@ -1,10 +1,8 @@
 import type { EmailOptions, EmailConfig } from 'email-templates';
 
 import type Tilmeld from '../Tilmeld.js';
-import type Group from '../Group.js';
-import type { GroupData } from '../Group.js';
-import type User from '../User.js';
-import type { UserData } from '../User.js';
+import type { Group } from '../Group.js';
+import type { User } from '../User.js';
 
 /**
  * Tilmeld Config
@@ -267,11 +265,7 @@ export interface Config {
   /**
    * Function to build the JWT for user sessions.
    */
-  jwtBuilder: (
-    config: Config,
-    user: User & UserData,
-    switchToken?: boolean,
-  ) => string;
+  jwtBuilder: (config: Config, user: User, switchToken?: boolean) => string;
   /**
    * Function to verify that a JWT was signed with the secret key, validate its
    * data, validate the XSRF token, and extract the GUID and dates.
@@ -301,7 +295,7 @@ export interface Config {
   configEmail: (
     tilmeld: Tilmeld,
     options: EmailOptions,
-    user: User & UserData,
+    user: User,
   ) => Promise<EmailConfig>;
   /**
    * Send an email to a user. Uses `email-templates` by default.
@@ -331,7 +325,7 @@ export interface Config {
   sendEmail: (
     tilmeld: Tilmeld,
     options: EmailOptions,
-    user: User & UserData,
+    user: User,
   ) => Promise<boolean>;
   /**
    * The address you'd like to receive a notification of registered users, if
@@ -350,7 +344,7 @@ export interface Config {
    * verified. For example, username might be an array or a number.
    */
   failedLoginAttempt: (
-    user: (User & UserData) | null,
+    user: User | null,
     data: {
       username: string;
       password: string;
@@ -361,11 +355,11 @@ export interface Config {
   /**
    * The validator used to check groups before saving.
    */
-  validatorGroup: (tilmeld: Tilmeld, group: Group & GroupData) => void;
+  validatorGroup: (tilmeld: Tilmeld, group: Group) => void;
   /**
    * The validator used to check users before saving.
    */
-  validatorUser: (tilmeld: Tilmeld, user: User & UserData) => void;
+  validatorUser: (tilmeld: Tilmeld, user: User) => void;
 }
 
 import defaults from './defaults.js';

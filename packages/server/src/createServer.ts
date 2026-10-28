@@ -6,6 +6,7 @@ import {
   EntityConflictError,
   EntityConstructor,
   EntityInterface,
+  EntityData,
   EntityJson,
   EntityPatch,
   InvalidParametersError,
@@ -467,7 +468,7 @@ export function createServer(
               }
             }
           } else {
-            let entity: EntityInterface;
+            let entity: EntityInterface & EntityData;
             try {
               entity = await loadEntity(
                 classNamesToEntityConstructors(

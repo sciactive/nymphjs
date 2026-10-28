@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import {
-  type EntityData,
   type EntityJson,
   type EntityPatch,
   type Options,
@@ -14,7 +13,7 @@ import { difference, xor } from 'lodash-es';
 import { splitn } from '@sciactive/splitn';
 
 import { enforceTilmeld } from './enforceTilmeld.js';
-import AbleObject from './AbleObject.js';
+import { AbleObject } from './AbleObject.js';
 import {
   AccessControlError,
   BadDataError,
@@ -22,8 +21,7 @@ import {
   BadUsernameError,
   CouldNotChangeDefaultPrimaryGroupError,
 } from './errors/index.js';
-import UserClass from './User.js';
-import type { UserData } from './User.js';
+import { User as UserClass } from './User.js';
 
 export type GroupEventType =
   | 'checkGroupname'
@@ -37,7 +35,7 @@ export type GroupEventType =
  * process and return the included message, disallowing the groupname.
  */
 export type TilmeldCheckGroupnameCallback = (
-  group: Group & GroupData,
+  group: Group,
   data: { groupname: string },
 ) => Promise<{ result: boolean; message?: string }>;
 /**
@@ -45,33 +43,25 @@ export type TilmeldCheckGroupnameCallback = (
  *
  * The transaction is available in `group.$nymph`.
  */
-export type TilmeldBeforeGroupSaveCallback = (
-  group: Group & GroupData,
-) => Promise<void>;
+export type TilmeldBeforeGroupSaveCallback = (group: Group) => Promise<void>;
 /**
  * This is run before the transaction is committed, and you can perform
  * additional functions on the transaction, which is available in
  * `group.$nymph`.
  */
-export type TilmeldAfterGroupSaveCallback = (
-  group: Group & GroupData,
-) => Promise<void>;
+export type TilmeldAfterGroupSaveCallback = (group: Group) => Promise<void>;
 /**
  * The transaction is available in `group.$nymph`.
  */
-export type TilmeldBeforeGroupDeleteCallback = (
-  group: Group & GroupData,
-) => Promise<void>;
+export type TilmeldBeforeGroupDeleteCallback = (group: Group) => Promise<void>;
 /**
  * This is run before the transaction is committed, and you can perform
  * additional functions on the transaction, which is available in
  * `group.$nymph`.
  */
-export type TilmeldAfterGroupDeleteCallback = (
-  group: Group & GroupData,
-) => Promise<void>;
+export type TilmeldAfterGroupDeleteCallback = (group: Group) => Promise<void>;
 
-export type GroupData = {
+export interface GroupData {
   /**
    * The abilities granted to the group.
    */
@@ -99,11 +89,11 @@ export type GroupData = {
   /**
    * The group's parent.
    */
-  parent?: Group & GroupData;
+  parent?: Group;
   /**
    * If generatePrimary is on, this will be the user who generated this group.
    */
-  user?: (UserClass & UserData) | null;
+  user?: UserClass | null;
 
   /**
    * Whether the group can be used.
@@ -121,7 +111,9 @@ export type GroupData = {
    * Whether this group is a default secondary group for unverified users.
    */
   unverifiedSecondary?: boolean;
-};
+}
+
+export interface Group extends GroupData {}
 
 /**
  * A user group data model.
@@ -132,7 +124,7 @@ export type GroupData = {
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export default class Group extends AbleObject<GroupData> {
+export class Group extends AbleObject<GroupData> {
   static ETYPE = 'tilmeld_group';
   static class = 'Group';
   private static checkGroupnameCallbacks: TilmeldCheckGroupnameCallback[] = [];
@@ -193,9 +185,7 @@ export default class Group extends AbleObject<GroupData> {
     return super.getFTSText(name, value);
   }
 
-  static async factoryGroupname(
-    groupname?: string,
-  ): Promise<Group & GroupData> {
+  static async factoryGroupname(groupname?: string): Promise<Group> {
     const entity = new this();
     if (groupname != null) {
       const entity = await this.nymph.getEntity(
@@ -266,7 +256,7 @@ export default class Group extends AbleObject<GroupData> {
     selectors: Selector[],
   ) {
     const tilmeld = enforceTilmeld(this);
-    let assignableGroups: (Group & GroupData)[] = [];
+    let assignableGroups: Group[] = [];
 
     if (highestParent === false) {
       return assignableGroups;
@@ -294,7 +284,7 @@ export default class Group extends AbleObject<GroupData> {
             return null;
           }),
         )
-      ).filter((group) => group != null) as (Group & GroupData)[];
+      ).filter((group) => group != null) as Group[];
     }
     return assignableGroups;
   }
@@ -303,38 +293,38 @@ export default class Group extends AbleObject<GroupData> {
     super();
 
     // Defaults.
-    this.$data.enabled = true;
-    this.$data.abilities = [];
+    this.enabled = true;
+    this.abilities = [];
     this.$updateDataProtection();
   }
 
   async $getUniques(): Promise<string[]> {
     const tilmeld = enforceTilmeld(this);
-    const uniques = [`u:${this.$data.groupname}`];
+    const uniques = [`u:${this.groupname}`];
     if (
       !tilmeld.config.emailUsernames &&
       tilmeld.config.userFields.includes('email')
     ) {
-      uniques.push(`e:${this.$data.email}`);
+      uniques.push(`e:${this.email}`);
     }
-    if (this.$data.defaultPrimary) {
+    if (this.defaultPrimary) {
       uniques.push(`o:default-primary`);
     }
     return uniques;
   }
 
   public $getAvatar(): string {
-    if (this.$data.avatar != null && this.$data.avatar !== '') {
-      return this.$data.avatar;
+    if (this.avatar != null && this.avatar !== '') {
+      return this.avatar;
     }
-    if (this.$data.email == null || !this.$data.email.length) {
+    if (this.email == null || !this.email.length) {
       return 'https://secure.gravatar.com/avatar/?d=mm&s=40';
     }
     return (
       'https://secure.gravatar.com/avatar/' +
       crypto
         .createHash('sha256')
-        .update(this.$data.email.trim().toLowerCase())
+        .update(this.email.trim().toLowerCase())
         .digest('hex')
         .toLowerCase() +
       '?d=identicon&s=40'
@@ -373,7 +363,7 @@ export default class Group extends AbleObject<GroupData> {
 
     if (
       incoming.includes('system/admin') !==
-        this.$data.abilities?.includes('system/admin') &&
+        this.abilities?.includes('system/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
@@ -384,7 +374,7 @@ export default class Group extends AbleObject<GroupData> {
 
     if (
       incoming.includes('tilmeld/admin') !==
-        this.$data.abilities?.includes('tilmeld/admin') &&
+        this.abilities?.includes('tilmeld/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
@@ -395,7 +385,7 @@ export default class Group extends AbleObject<GroupData> {
 
     if (
       incoming.includes('tilmeld/switch') !==
-        this.$data.abilities?.includes('tilmeld/switch') &&
+        this.abilities?.includes('tilmeld/switch') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
@@ -407,7 +397,7 @@ export default class Group extends AbleObject<GroupData> {
     if (
       xor(
         incoming.filter((ability: string) => ability.startsWith('tilmeld/')),
-        this.$data.abilities?.filter((ability: string) =>
+        this.abilities?.filter((ability: string) =>
           ability.startsWith('tilmeld/'),
         ) ?? [],
       ).length &&
@@ -422,20 +412,20 @@ export default class Group extends AbleObject<GroupData> {
   }
 
   public $putData(
-    data: EntityData,
+    data: GroupData,
     sdata?: SerializedEntityData,
     source?: 'server',
   ) {
     super.$putData(data, sdata, source);
     // TODO: Fix these being added by the drivers.
     // @ts-ignore
-    delete this.$data.acRead;
+    delete this.acRead;
     // @ts-ignore
-    delete this.$data.acWrite;
+    delete this.acWrite;
     // @ts-ignore
-    delete this.$data.acFull;
+    delete this.acFull;
     if (source === 'server') {
-      this.$originalGroupname = this.$data.groupname;
+      this.$originalGroupname = this.groupname;
     }
     this.$updateDataProtection();
   }
@@ -445,12 +435,12 @@ export default class Group extends AbleObject<GroupData> {
    *
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
-  public $updateDataProtection(givenUser?: UserClass & UserData) {
+  public $updateDataProtection(givenUser?: UserClass) {
     const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
     let [_groupname, domain] = tilmeld.config.domainSupport
-      ? splitn(this.$data.groupname ?? '', '@', 2)
-      : [this.$data.groupname, null];
+      ? splitn(this.groupname ?? '', '@', 2)
+      : [this.groupname, null];
     // Lowercase the domain part.
     if (domain) {
       domain = domain.toLowerCase();
@@ -472,9 +462,9 @@ export default class Group extends AbleObject<GroupData> {
       this.$privateData = [];
       this.$allowlistData = undefined;
     } else if (
-      this.$data.user != null &&
+      this.user != null &&
       user != null &&
-      this.$data.user.guid === user.guid
+      this.user.guid === user.guid
     ) {
       // Users can see their group's data.
       this.$privateData = [];
@@ -495,11 +485,9 @@ export default class Group extends AbleObject<GroupData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public async $isDescendant(
-    givenGroup: (Group & GroupData) | string,
-  ): Promise<boolean> {
+  public async $isDescendant(givenGroup: Group | string): Promise<boolean> {
     const tilmeld = enforceTilmeld(this);
-    let group: Group & GroupData;
+    let group: Group;
     if (typeof givenGroup === 'string') {
       group = await tilmeld.Group.factory(givenGroup);
     } else {
@@ -509,7 +497,7 @@ export default class Group extends AbleObject<GroupData> {
       return false;
     }
     // Check to see if the group is a descendant of the given group.
-    const parent = this.$data.parent;
+    const parent = this.parent;
     await parent?.$wake();
     if (parent == null) {
       return false;
@@ -528,7 +516,7 @@ export default class Group extends AbleObject<GroupData> {
    *
    * @returns An array of groups.
    */
-  public async $getChildren(): Promise<(Group & GroupData)[]> {
+  public async $getChildren(): Promise<Group[]> {
     const tilmeld = enforceTilmeld(this);
     return await this.$nymph.getEntities(
       { class: tilmeld.Group },
@@ -550,9 +538,9 @@ export default class Group extends AbleObject<GroupData> {
   public async $getDescendants(
     andSelf = false,
     andDisabled = false,
-  ): Promise<(Group & GroupData)[]> {
+  ): Promise<Group[]> {
     const tilmeld = enforceTilmeld(this);
-    let groups: (Group & GroupData)[] = [];
+    let groups: Group[] = [];
     const entities = await this.$nymph.getEntities(
       { class: tilmeld.Group },
       {
@@ -608,9 +596,9 @@ export default class Group extends AbleObject<GroupData> {
     descendants = false,
     limit?: number,
     offset?: number,
-  ): Promise<(UserClass & UserData)[]> {
+  ): Promise<UserClass[]> {
     const tilmeld = enforceTilmeld(this);
-    let groups: (Group & GroupData)[] = [];
+    let groups: Group[] = [];
     if (descendants) {
       groups = await this.$getDescendants();
     }
@@ -626,14 +614,8 @@ export default class Group extends AbleObject<GroupData> {
         ref: [
           ['group', this],
           ['groups', this],
-          ...groups.map((group): [string, Group & GroupData] => [
-            'group',
-            group,
-          ]),
-          ...groups.map((group): [string, Group & GroupData] => [
-            'groups',
-            group,
-          ]),
+          ...groups.map((group): [string, Group] => ['group', group]),
+          ...groups.map((group): [string, Group] => ['groups', group]),
         ],
       },
     );
@@ -651,18 +633,18 @@ export default class Group extends AbleObject<GroupData> {
     const tilmeld = enforceTilmeld(this);
     if (!tilmeld.config.emailUsernames) {
       let [groupname, domain] = tilmeld.config.domainSupport
-        ? splitn(this.$data.groupname ?? '', '@', 2)
-        : [this.$data.groupname, null];
+        ? splitn(this.groupname ?? '', '@', 2)
+        : [this.groupname, null];
 
       // Lowercase the domain part.
       if (domain) {
         domain = domain.toLowerCase();
-        this.$data.groupname = `${groupname}@${domain}`;
+        this.groupname = `${groupname}@${domain}`;
       }
 
       if (
-        this.$data.groupname == null ||
-        !this.$data.groupname.length ||
+        this.groupname == null ||
+        !this.groupname.length ||
         groupname == null ||
         !groupname.length
       ) {
@@ -724,7 +706,7 @@ export default class Group extends AbleObject<GroupData> {
         type: '&',
         ilike: [
           'groupname',
-          this.$data.groupname.replace(/([\\%_])/g, (s) => `\\${s}`),
+          this.groupname.replace(/([\\%_])/g, (s) => `\\${s}`),
         ],
       };
       if (this.guid != null) {
@@ -742,7 +724,7 @@ export default class Group extends AbleObject<GroupData> {
         .checkGroupnameCallbacks) {
         if (callback) {
           const result = await callback(this, {
-            groupname: this.$data.groupname,
+            groupname: this.groupname,
           });
           if (!result.result) {
             return { message: 'Groupname is not available.', ...result };
@@ -756,11 +738,11 @@ export default class Group extends AbleObject<GroupData> {
           this.guid != null ? 'Groupname is valid.' : 'Groupname is available!',
       };
     } else {
-      this.$data.email = this.$data.groupname;
-      if (this.$data.groupname == null || !this.$data.groupname.length) {
+      this.email = this.groupname;
+      if (this.groupname == null || !this.groupname.length) {
         return { result: false, message: 'Please specify an email.' };
       }
-      if (this.$data.groupname.length < tilmeld.config.minUsernameLength) {
+      if (this.groupname.length < tilmeld.config.minUsernameLength) {
         return {
           result: false,
           message:
@@ -769,7 +751,7 @@ export default class Group extends AbleObject<GroupData> {
             ' characters.',
         };
       }
-      if (this.$data.groupname.length > tilmeld.config.maxUsernameLength) {
+      if (this.groupname.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:
@@ -790,13 +772,13 @@ export default class Group extends AbleObject<GroupData> {
    */
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
-    if (this.$data.email === '') {
+    if (this.email === '') {
       return { result: true, message: '' };
     }
-    if (this.$data.email == null) {
+    if (this.email == null) {
       return { result: false, message: 'Please specify a valid email.' };
     }
-    if (!tilmeld.config.validEmailRegex.test(this.$data.email)) {
+    if (!tilmeld.config.validEmailRegex.test(this.email)) {
       return {
         result: false,
         message: tilmeld.config.validEmailRegexNotice,
@@ -804,7 +786,7 @@ export default class Group extends AbleObject<GroupData> {
     }
     const selector: Selector = {
       type: '&',
-      ilike: ['email', this.$data.email.replace(/([\\%_])/g, (s) => `\\${s}`)],
+      ilike: ['email', this.email.replace(/([\\%_])/g, (s) => `\\${s}`)],
     };
     if (this.guid != null) {
       selector['!guid'] = this.guid;
@@ -829,20 +811,20 @@ export default class Group extends AbleObject<GroupData> {
 
   public async $save() {
     let tilmeld = enforceTilmeld(this);
-    if (this.$data.groupname == null || !this.$data.groupname.trim().length) {
+    if (this.groupname == null || !this.groupname.trim().length) {
       throw new BadUsernameError('Groupname must not be empty.');
     }
 
     // Lowercase the domain part.
     if (tilmeld.config.domainSupport) {
-      const [groupname, domain] = splitn(this.$data.groupname ?? '', '@', 2);
+      const [groupname, domain] = splitn(this.groupname ?? '', '@', 2);
       if (domain) {
-        this.$data.groupname = `${groupname}@${domain.toLowerCase()}`;
+        this.groupname = `${groupname}@${domain.toLowerCase()}`;
       }
     }
 
     if (tilmeld.config.domainSupport) {
-      const [_groupname, domain] = splitn(this.$data.groupname ?? '', '@', 2);
+      const [_groupname, domain] = splitn(this.groupname ?? '', '@', 2);
       const [_originalGroupname, originalDomain] = splitn(
         this.$originalGroupname ?? '',
         '@',
@@ -887,53 +869,47 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     // Formatting.
-    this.$data.groupname = this.$data.groupname.trim();
+    this.groupname = this.groupname.trim();
     if (tilmeld.config.emailUsernames) {
-      this.$data.email = this.$data.groupname;
+      this.email = this.groupname;
     }
-    this.$data.email = (this.$data.email ?? '').trim();
-    this.$data.name = (this.$data.name ?? '').trim();
-    this.$data.phone = (this.$data.phone ?? '').trim();
-    this.$data.enabled = !!this.$data.enabled;
+    this.email = (this.email ?? '').trim();
+    this.name = (this.name ?? '').trim();
+    this.phone = (this.phone ?? '').trim();
+    this.enabled = !!this.enabled;
 
     // Clear empty values.
-    if (this.$data.name === '' || !tilmeld.config.userFields.includes('name')) {
-      delete this.$data.name;
+    if (this.name === '' || !tilmeld.config.userFields.includes('name')) {
+      delete this.name;
     }
-    if (
-      this.$data.email === '' ||
-      !tilmeld.config.userFields.includes('email')
-    ) {
-      delete this.$data.email;
+    if (this.email === '' || !tilmeld.config.userFields.includes('email')) {
+      delete this.email;
     }
-    if (this.$data.avatar === '') {
-      delete this.$data.avatar;
+    if (this.avatar === '') {
+      delete this.avatar;
     }
-    if (
-      this.$data.phone === '' ||
-      !tilmeld.config.userFields.includes('phone')
-    ) {
-      delete this.$data.phone;
+    if (this.phone === '' || !tilmeld.config.userFields.includes('phone')) {
+      delete this.phone;
     }
-    if (this.$data.parent == null) {
-      delete this.$data.parent;
+    if (this.parent == null) {
+      delete this.parent;
     }
-    if (this.$data.user == null) {
-      delete this.$data.user;
+    if (this.user == null) {
+      delete this.user;
     }
-    if (!this.$data.defaultPrimary) {
-      delete this.$data.defaultPrimary;
+    if (!this.defaultPrimary) {
+      delete this.defaultPrimary;
     }
-    if (!this.$data.defaultSecondary) {
-      delete this.$data.defaultSecondary;
+    if (!this.defaultSecondary) {
+      delete this.defaultSecondary;
     }
-    if (!this.$data.unverifiedSecondary) {
-      delete this.$data.unverifiedSecondary;
+    if (!this.unverifiedSecondary) {
+      delete this.unverifiedSecondary;
     }
 
     // Groups should never have 'system/admin', 'tilmeld/admin',
     // 'tilmeld/switch', or domain admin abilities.
-    this.$data.abilities = (this.$data.abilities ?? []).filter((ability) => {
+    this.abilities = (this.abilities ?? []).filter((ability) => {
       if (
         ['system/admin', 'tilmeld/admin', 'tilmeld/switch'].indexOf(ability) !==
         -1
@@ -965,7 +941,7 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     // Validate group parent. Make sure it's not a descendant of this group.
-    const parent = this.$data.parent;
+    const parent = this.parent;
     await parent?.$wake();
     if (
       parent &&
@@ -985,7 +961,7 @@ export default class Group extends AbleObject<GroupData> {
     }
 
     // Only one default primary group is allowed.
-    if (this.$data.defaultPrimary) {
+    if (this.defaultPrimary) {
       const currentPrimary = await this.$nymph.getEntity(
         { class: tilmeld.Group },
         { type: '&', truthy: 'defaultPrimary' },
@@ -1036,7 +1012,7 @@ export default class Group extends AbleObject<GroupData> {
         this.$setNymph(nymph);
 
         if (committed) {
-          this.$originalGroupname = this.$data.groupname;
+          this.$originalGroupname = this.groupname;
         } else {
           this.guid = preGuid;
           this.cdate = preCdate;
@@ -1072,7 +1048,7 @@ export default class Group extends AbleObject<GroupData> {
         "You don't have the authority to delete groups.",
       );
     }
-    if (this.$data.groupname !== this.$originalGroupname) {
+    if (this.groupname !== this.$originalGroupname) {
       throw new AccessControlError(
         "You can't delete a group while switching its groupname.",
       );

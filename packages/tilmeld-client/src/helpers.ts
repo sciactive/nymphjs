@@ -1,4 +1,4 @@
-import type UserClass from './User.js';
+import type { User as UserClass } from './User.js';
 import type { ClientConfig, CurrentUserData } from './User.js';
 
 export type RegistrationDetails = {

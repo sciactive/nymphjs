@@ -1,9 +1,8 @@
 import { Entity, Options, Selector } from '@nymphjs/client';
 
-import type User from './User.js';
-import type { CurrentUserData } from './User.js';
+import type { User, CurrentUserData } from './User.js';
 
-export type GroupData = {
+export interface GroupData {
   /**
    * The group's groupname.
    */
@@ -19,7 +18,7 @@ export type GroupData = {
   /**
    * The group's parent.
    */
-  parent?: Group & GroupData;
+  parent?: Group;
 
   /**
    * Whether the group can be used.
@@ -37,9 +36,9 @@ export type GroupData = {
    * Whether this group is a default secondary group for unverified users.
    */
   unverifiedSecondary?: boolean;
-};
+}
 
-export type CurrentGroupData = GroupData & {
+export interface CurrentGroupData extends GroupData {
   /**
    * The abilities granted to the group.
    */
@@ -56,17 +55,17 @@ export type CurrentGroupData = GroupData & {
    * If generatePrimary is on, this will be the user who generated this group.
    */
   user?: (User & CurrentUserData) | null;
-};
+}
 
-export type AdminGroupData = CurrentGroupData;
+export interface AdminGroupData extends CurrentGroupData {}
 
-export default class Group extends Entity<GroupData> {
+export interface Group extends GroupData {}
+
+export class Group extends Entity<GroupData> {
   // The name of the server class
   public static class = 'Group';
 
-  static async factoryGroupname(
-    groupname?: string,
-  ): Promise<Group & GroupData> {
+  static async factoryGroupname(groupname?: string): Promise<Group> {
     const entity = new this();
     if (groupname != null) {
       const entity = await this.nymph.getEntity(
@@ -88,8 +87,8 @@ export default class Group extends Entity<GroupData> {
   constructor() {
     super();
 
-    this.$data.enabled = true;
-    (this.$data as CurrentGroupData).abilities = [];
+    this.enabled = true;
+    (this as CurrentGroupData).abilities = [];
   }
 
   public async $checkGroupname(): Promise<{
@@ -107,13 +106,11 @@ export default class Group extends Entity<GroupData> {
     return await this.$serverCall('$getAvatar', [], true);
   }
 
-  public async $getChildren(): Promise<(Group & GroupData)[]> {
+  public async $getChildren(): Promise<Group[]> {
     return await this.$serverCall('$getChildren', [], true);
   }
 
-  public async $getDescendants(
-    andSelf = false,
-  ): Promise<(Group & GroupData)[]> {
+  public async $getDescendants(andSelf = false): Promise<Group[]> {
     return await this.$serverCall('$getDescendants', [andSelf], true);
   }
 
@@ -121,16 +118,14 @@ export default class Group extends Entity<GroupData> {
     return await this.$serverCall('$getLevel', [], true);
   }
 
-  public async $isDescendant(
-    givenGroup: (Group & GroupData) | string,
-  ): Promise<boolean> {
+  public async $isDescendant(givenGroup: Group | string): Promise<boolean> {
     return await this.$serverCall('$isDescendant', [givenGroup], true);
   }
 
   public static async getPrimaryGroups(
     options?: Options,
     selectors?: Selector[],
-  ): Promise<(Group & GroupData)[]> {
+  ): Promise<Group[]> {
     return await this.serverCallStatic('getPrimaryGroups', [
       { options, class: this.class },
       selectors,
@@ -140,7 +135,7 @@ export default class Group extends Entity<GroupData> {
   public static async getSecondaryGroups(
     options?: Options,
     selectors?: Selector[],
-  ): Promise<(Group & GroupData)[]> {
+  ): Promise<Group[]> {
     return await this.serverCallStatic('getSecondaryGroups', [
       { options, class: this.class },
       selectors,

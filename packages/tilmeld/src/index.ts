@@ -5,21 +5,15 @@ export * from './enforceTilmeld.js';
 export * from './decorators/index.js';
 export * from './errors/index.js';
 
-import AbleObject from './AbleObject.js';
-export { AbleObject };
+export * from './AbleObject.js';
 
 export * from './Group.js';
-import Group from './Group.js';
-export { Group };
 
 import Tilmeld from './Tilmeld.js';
 export { Tilmeld };
 
 export * from './Tilmeld.types.js';
 
-import tilmeldJoiProps from './tilmeldJoiProps.js';
-export { tilmeldJoiProps };
+export * from './tilmeldJoiProps.js';
 
 export * from './User.js';
-import User from './User.js';
-export { User };

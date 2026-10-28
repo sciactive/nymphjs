@@ -9,7 +9,6 @@ import {
   type Selector,
   type Options,
   type FormattedSelector,
-  TilmeldAccessLevels,
 } from '../Nymph.types.js';
 import Entity from '../Entity.js';
 import type { EntityInstanceType, EntityObjectType } from '../Entity.js';

@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import {
-  type EntityData,
   type EntityJson,
   type EntityPatch,
   type Selector,
@@ -17,9 +16,8 @@ import { toDataURL } from 'qrcode';
 import { splitn } from '@sciactive/splitn';
 
 import { enforceTilmeld } from './enforceTilmeld.js';
-import AbleObject from './AbleObject.js';
-import GroupClass from './Group.js';
-import type { GroupData } from './Group.js';
+import { AbleObject } from './AbleObject.js';
+import { Group as GroupClass } from './Group.js';
 import {
   AccessControlError,
   BadDataError,
@@ -46,7 +44,7 @@ export type EventType =
  * process and return the included message, disallowing the username.
  */
 export type TilmeldCheckUsernameCallback = (
-  user: User & UserData,
+  user: User,
   data: { username: string },
 ) => Promise<{ result: boolean; message?: string }>;
 /**
@@ -54,7 +52,7 @@ export type TilmeldCheckUsernameCallback = (
  * whether registration is allowed and whether the user is already registered.
  */
 export type TilmeldBeforeRegisterCallback = (
-  user: User & UserData,
+  user: User,
   data: { password: string; additionalData?: { [k: string]: any } },
 ) => Promise<void>;
 /**
@@ -62,7 +60,7 @@ export type TilmeldBeforeRegisterCallback = (
  * additional functions on the transaction, which is available in `user.$nymph`.
  */
 export type TilmeldAfterRegisterCallback = (
-  user: User & UserData,
+  user: User,
   result: { loggedin: boolean; message: string },
 ) => Promise<void>;
 /**
@@ -70,9 +68,7 @@ export type TilmeldAfterRegisterCallback = (
  *
  * The transaction is available in `user.$nymph`.
  */
-export type TilmeldBeforeSaveCallback = (
-  user: User & UserData,
-) => Promise<void>;
+export type TilmeldBeforeSaveCallback = (user: User) => Promise<void>;
 /**
  * This is run before the transaction is committed, and you can perform
  * additional functions on the transaction, which is available in `user.$nymph`.
@@ -80,45 +76,35 @@ export type TilmeldBeforeSaveCallback = (
  * This is run after a new email verification email has been sent, so throwing
  * an error will cause confusion for the user if they've changed their email.
  */
-export type TilmeldAfterSaveCallback = (user: User & UserData) => Promise<void>;
+export type TilmeldAfterSaveCallback = (user: User) => Promise<void>;
 /**
  * This is run after the authentication checks, but before the login action.
  */
 export type TilmeldBeforeLoginCallback = (
-  user: User & UserData,
+  user: User,
   data: {
     username: string;
     password: string;
     additionalData?: { [k: string]: any };
   },
 ) => Promise<void>;
-export type TilmeldAfterLoginCallback = (
-  user: User & UserData,
-) => Promise<void>;
-export type TilmeldBeforeLogoutCallback = (
-  user: User & UserData,
-) => Promise<void>;
-export type TilmeldAfterLogoutCallback = (
-  user: User & UserData,
-) => Promise<void>;
+export type TilmeldAfterLoginCallback = (user: User) => Promise<void>;
+export type TilmeldBeforeLogoutCallback = (user: User) => Promise<void>;
+export type TilmeldAfterLogoutCallback = (user: User) => Promise<void>;
 /**
  * This is run before the user is logged out (if the current user is being
  * deleted).
  *
  * The transaction is available in `user.$nymph`.
  */
-export type TilmeldBeforeDeleteCallback = (
-  user: User & UserData,
-) => Promise<void>;
+export type TilmeldBeforeDeleteCallback = (user: User) => Promise<void>;
 /**
  * This is run before the transaction is committed, and you can perform
  * additional functions on the transaction, which is available in `user.$nymph`.
  */
-export type TilmeldAfterDeleteCallback = (
-  user: User & UserData,
-) => Promise<void>;
+export type TilmeldAfterDeleteCallback = (user: User) => Promise<void>;
 
-export type UserData = {
+export interface UserData {
   /**
    * The abilities granted to the user.
    */
@@ -159,11 +145,11 @@ export type UserData = {
   /**
    * The user's primary group.
    */
-  group?: GroupClass & GroupData;
+  group?: GroupClass;
   /**
    * The user's secondary groups.
    */
-  groups?: (GroupClass & GroupData)[];
+  groups?: GroupClass[];
   /**
    * Whether the user should inherit the abilities of his groups.
    */
@@ -228,7 +214,9 @@ export type UserData = {
    * Two factor auth secret.
    */
   totpSecret?: string;
-};
+}
+
+export interface User extends UserData {}
 
 /**
  * A user data model.
@@ -239,7 +227,7 @@ export type UserData = {
  * @copyright SciActive Inc
  * @see http://nymph.io/
  */
-export default class User extends AbleObject<UserData> {
+export class User extends AbleObject<UserData> {
   static ETYPE = 'tilmeld_user';
   static class = 'User';
   private static checkUsernameCallbacks: TilmeldCheckUsernameCallback[] = [];
@@ -324,7 +312,7 @@ export default class User extends AbleObject<UserData> {
   /**
    * The user's group descendants.
    */
-  private $descendantGroups?: (GroupClass & GroupData)[];
+  private $descendantGroups?: GroupClass[];
   /**
    * Used to save the current email address to send verification if it changes
    * from the frontend.
@@ -366,7 +354,7 @@ export default class User extends AbleObject<UserData> {
     return super.getFTSText(name, value);
   }
 
-  static async factoryUsername(username?: string): Promise<User & UserData> {
+  static async factoryUsername(username?: string): Promise<User> {
     const entity = new this();
     if (username != null) {
       const entity = await this.nymph.getEntity(
@@ -383,13 +371,9 @@ export default class User extends AbleObject<UserData> {
     return entity;
   }
 
-  public static current(returnObjectIfNotExist: true): User & UserData;
-  public static current(
-    returnObjectIfNotExist?: false,
-  ): (User & UserData) | null;
-  public static current(
-    returnObjectIfNotExist?: boolean,
-  ): (User & UserData) | null {
+  public static current(returnObjectIfNotExist: true): User;
+  public static current(returnObjectIfNotExist?: false): User | null;
+  public static current(returnObjectIfNotExist?: boolean): User | null {
     const tilmeld = enforceTilmeld(this);
     if (tilmeld.currentUser == null) {
       return returnObjectIfNotExist ? this.factorySync() : null;
@@ -412,7 +396,7 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: 'Account recovery is not allowed.' };
     }
 
-    let user: User & UserData;
+    let user: User;
     const options: EmailOptions = {};
 
     if (!tilmeld.config.emailUsernames && data.recoveryType === 'username') {
@@ -575,7 +559,7 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: 'Incorrect login/password.' };
     }
     const user = await tilmeld.User.factoryUsername(data.username);
-    const result: { result: boolean; message: string; user?: User & UserData } =
+    const result: { result: boolean; message: string; user?: User } =
       await user.$login(data);
     if (result.result) {
       user.$updateDataProtection();
@@ -636,24 +620,24 @@ export default class User extends AbleObject<UserData> {
     super();
 
     // Defaults.
-    this.$data.enabled = true;
-    this.$data.abilities = [];
-    this.$data.groups = [];
-    this.$data.inheritAbilities = true;
+    this.enabled = true;
+    this.abilities = [];
+    this.groups = [];
+    this.inheritAbilities = true;
     this.$updateDataProtection();
   }
 
   async $getUniques(): Promise<string[]> {
     const tilmeld = enforceTilmeld(this);
-    const uniques = [`u:${this.$data.username}`];
+    const uniques = [`u:${this.username}`];
     if (
       !tilmeld.config.emailUsernames &&
       tilmeld.config.userFields.includes('email')
     ) {
-      uniques.push(`e:${this.$data.email}`);
+      uniques.push(`e:${this.email}`);
 
-      if (this.$data.newEmailAddress != null) {
-        uniques.push(`e:${this.$data.newEmailAddress}`);
+      if (this.newEmailAddress != null) {
+        uniques.push(`e:${this.newEmailAddress}`);
       }
     }
     return uniques;
@@ -674,14 +658,14 @@ export default class User extends AbleObject<UserData> {
       await tilmeld.config.failedLoginAttempt(this, data);
       return { result: false, message: 'Incorrect login/password.' };
     }
-    if (!this.$data.enabled) {
+    if (!this.enabled) {
       return { result: false, message: 'Your account is disabled.' };
     }
     if (await this.$gatekeeper()) {
       return { result: true, message: 'You are already logged in.' };
     }
 
-    if (this.$data.totpSecret != null) {
+    if (this.totpSecret != null) {
       if (
         data.code == null ||
         typeof data.code !== 'string' ||
@@ -713,7 +697,7 @@ export default class User extends AbleObject<UserData> {
 
     this.$nymph.config.debugLog(
       'tilmeld',
-      `User login for "${this.$data.username}".`,
+      `User login for "${this.username}".`,
     );
 
     // Authentication was successful, attempt to login.
@@ -724,7 +708,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLoginCallbacks) {
       if (callback) {
-        await callback(this.$proxy());
+        await callback(this);
       }
     }
 
@@ -752,7 +736,7 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: "You can't switch to yourself." };
     }
 
-    const toAbilities = this.$data.abilities || [];
+    const toAbilities = this.abilities || [];
     const fromAbilities = user.abilities || [];
 
     if (
@@ -777,7 +761,7 @@ export default class User extends AbleObject<UserData> {
         .beforeLoginCallbacks) {
         if (callback) {
           await callback(this, {
-            username: this.$data.username || '',
+            username: this.username || '',
             password: '',
             ...(data || {}),
           });
@@ -789,7 +773,7 @@ export default class User extends AbleObject<UserData> {
 
     this.$nymph.config.debugLog(
       'tilmeld',
-      `User login switch for "${user.username}" to "${this.$data.username}".`,
+      `User login switch for "${user.username}" to "${this.username}".`,
     );
 
     // Authentication was successful, attempt to login.
@@ -800,7 +784,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLoginCallbacks) {
       if (callback) {
-        await callback(this.$proxy());
+        await callback(this);
       }
     }
 
@@ -819,7 +803,7 @@ export default class User extends AbleObject<UserData> {
       for (let callback of (this.constructor as typeof User)
         .beforeLogoutCallbacks) {
         if (callback) {
-          await callback(this.$proxy());
+          await callback(this);
         }
       }
     } catch (e: any) {
@@ -828,7 +812,7 @@ export default class User extends AbleObject<UserData> {
 
     this.$nymph.config.debugLog(
       'tilmeld',
-      `User logout for "${this.$data.username}".`,
+      `User logout for "${this.username}".`,
     );
 
     await tilmeld.logout();
@@ -836,7 +820,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterLogoutCallbacks) {
       if (callback) {
-        await callback(this.$proxy());
+        await callback(this);
       }
     }
 
@@ -844,17 +828,17 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $getAvatar(): string {
-    if (this.$data.avatar != null && this.$data.avatar !== '') {
-      return this.$data.avatar;
+    if (this.avatar != null && this.avatar !== '') {
+      return this.avatar;
     }
-    if (this.$data.email == null || this.$data.email === '') {
+    if (this.email == null || this.email === '') {
       return 'https://secure.gravatar.com/avatar/?d=mm&s=40';
     }
     return (
       'https://secure.gravatar.com/avatar/' +
       crypto
         .createHash('sha256')
-        .update(this.$data.email.trim().toLowerCase())
+        .update(this.email.trim().toLowerCase())
         .digest('hex')
         .toLowerCase() +
       '?d=identicon&s=40'
@@ -862,15 +846,15 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $getGid() {
-    if (this.$data.group) {
-      return this.$data.group.guid;
+    if (this.group) {
+      return this.group.guid;
     }
     return null;
   }
 
   public $getGids() {
-    if (this.$data.groups) {
-      return this.$data.groups
+    if (this.groups) {
+      return this.groups
         .map((group) => group.guid)
         .filter((guid) => guid != null) as string[];
     }
@@ -880,15 +864,15 @@ export default class User extends AbleObject<UserData> {
   /**
    * Get the user's group descendants.
    */
-  public async $getDescendantGroups(): Promise<(GroupClass & GroupData)[]> {
+  public async $getDescendantGroups(): Promise<GroupClass[]> {
     if (this.$descendantGroups == null) {
       this.$descendantGroups = [];
-      if (this.$data.group != null) {
-        await this.$data.group.$wake();
-        this.$descendantGroups = await this.$data.group.$getDescendants();
+      if (this.group != null) {
+        await this.group.$wake();
+        this.$descendantGroups = await this.group.$getDescendants();
       }
-      await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
-      for (let curGroup of this.$data.groups ?? []) {
+      await Promise.all(this.groups?.map((e) => e.$wake()) || []);
+      for (let curGroup of this.groups ?? []) {
         this.$descendantGroups = this.$descendantGroups?.concat(
           await curGroup.$getDescendants(),
         );
@@ -920,9 +904,8 @@ export default class User extends AbleObject<UserData> {
       // While loading, accessing abilities on the current user will infinitely
       // loop, but if this is the current user, we can use its abilities.
       const abilities =
-        (isCurrentUser || user == null
-          ? this.$data.abilities
-          : user?.abilities) ?? [];
+        (isCurrentUser || user == null ? this.abilities : user?.abilities) ??
+        [];
       const isNewUser = input.guid == null;
       const isDomainUser =
         !isCurrentUser &&
@@ -964,7 +947,7 @@ export default class User extends AbleObject<UserData> {
 
     if (
       incoming.includes('system/admin') !==
-        this.$data.abilities?.includes('system/admin') &&
+        this.abilities?.includes('system/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
@@ -975,7 +958,7 @@ export default class User extends AbleObject<UserData> {
 
     if (
       incoming.includes('tilmeld/admin') !==
-        this.$data.abilities?.includes('tilmeld/admin') &&
+        this.abilities?.includes('tilmeld/admin') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
@@ -986,7 +969,7 @@ export default class User extends AbleObject<UserData> {
 
     if (
       incoming.includes('tilmeld/switch') !==
-        this.$data.abilities?.includes('tilmeld/switch') &&
+        this.abilities?.includes('tilmeld/switch') &&
       (!tilmeld.currentUser ||
         !tilmeld.currentUser.abilities?.includes('system/admin'))
     ) {
@@ -998,7 +981,7 @@ export default class User extends AbleObject<UserData> {
     if (
       xor(
         incoming.filter((ability: string) => ability.startsWith('tilmeld/')),
-        this.$data.abilities?.filter((ability: string) =>
+        this.abilities?.filter((ability: string) =>
           ability.startsWith('tilmeld/'),
         ) ?? [],
       ).length &&
@@ -1013,21 +996,21 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $putData(
-    data: EntityData,
+    data: UserData,
     sdata?: SerializedEntityData,
     source?: 'server',
   ) {
     super.$putData(data, sdata, source);
     // TODO: Fix these being added by the drivers.
     // @ts-ignore
-    delete this.$data.acRead;
+    delete this.acRead;
     // @ts-ignore
-    delete this.$data.acWrite;
+    delete this.acWrite;
     // @ts-ignore
-    delete this.$data.acFull;
+    delete this.acFull;
     if (source === 'server') {
-      this.$originalEmail = this.$data.email;
-      this.$originalUsername = this.$data.username;
+      this.$originalEmail = this.email;
+      this.$originalUsername = this.username;
     }
     this.$updateDataProtection();
   }
@@ -1037,12 +1020,12 @@ export default class User extends AbleObject<UserData> {
    *
    * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
    */
-  public $updateDataProtection(givenUser?: User & UserData) {
+  public $updateDataProtection(givenUser?: User) {
     const tilmeld = enforceTilmeld(this);
     let user = givenUser ?? tilmeld.User.current();
     let [_username, domain] = tilmeld.config.domainSupport
-      ? splitn(this.$originalUsername ?? this.$data.username ?? '', '@', 2)
-      : [this.$originalUsername ?? this.$data.username, null];
+      ? splitn(this.$originalUsername ?? this.username ?? '', '@', 2)
+      : [this.$originalUsername ?? this.username, null];
     // Lowercase the domain part.
     if (domain) {
       domain = domain.toLowerCase();
@@ -1060,9 +1043,7 @@ export default class User extends AbleObject<UserData> {
     // While loading, accessing abilities on the current user will infinitely
     // loop, but if this is the current user, we can use its abilities.
     const abilities =
-      (isCurrentUser || user == null
-        ? this.$data.abilities
-        : user?.abilities) ?? [];
+      (isCurrentUser || user == null ? this.abilities : user?.abilities) ?? [];
     const isNewUser = this.guid == null;
     const isDomainUser =
       tilmeld.config.domainSupport &&
@@ -1214,10 +1195,10 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $updateGroupDataProtection() {
-    if (this.$data.group != null && !this.$data.group.$asleep()) {
-      this.$data.group.$updateDataProtection();
+    if (this.group != null && !this.group.$asleep()) {
+      this.group.$updateDataProtection();
     }
-    for (let group of this.$data.groups ?? []) {
+    for (let group of this.groups ?? []) {
       if (!group.$asleep()) {
         group.$updateDataProtection();
       }
@@ -1250,7 +1231,7 @@ export default class User extends AbleObject<UserData> {
     }
     return (
       (ability in this.$gatekeeperCache && !!this.$gatekeeperCache[ability]) ||
-      !!this.$data.abilities?.includes('system/admin')
+      !!this.abilities?.includes('system/admin')
     );
   }
 
@@ -1259,16 +1240,16 @@ export default class User extends AbleObject<UserData> {
    */
   public async $getGatekeeperCache() {
     await this.$wake();
-    let abilities = this.$data.abilities ?? [];
-    if (this.$data.inheritAbilities) {
-      await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
-      for (let curGroup of this.$data.groups ?? []) {
+    let abilities = this.abilities ?? [];
+    if (this.inheritAbilities) {
+      await Promise.all(this.groups?.map((e) => e.$wake()) || []);
+      for (let curGroup of this.groups ?? []) {
         if (curGroup.enabled) {
           abilities = abilities.concat(curGroup.abilities ?? []);
         }
       }
-      await this.$data.group?.$wake();
-      const group = this.$data.group;
+      await this.group?.$wake();
+      const group = this.group;
       if (group != null && group.cdate != null && group.enabled) {
         abilities = abilities.concat(group.abilities ?? []);
       }
@@ -1301,10 +1282,10 @@ export default class User extends AbleObject<UserData> {
       tilmeld.config.setupPath
     }/verify`;
 
-    if (this.$data.secret != null) {
+    if (this.secret != null) {
       const link = `${verifyUrl}?action=verify&id=${encodeURIComponent(
         this.guid,
-      )}&secret=${encodeURIComponent(this.$data.secret)}`;
+      )}&secret=${encodeURIComponent(this.secret)}`;
       success =
         success &&
         (await tilmeld.config.sendEmail(
@@ -1313,8 +1294,8 @@ export default class User extends AbleObject<UserData> {
             template: 'VerifyEmail',
             message: {
               to: {
-                name: this.$data.name ?? '',
-                address: this.$data.email ?? '',
+                name: this.name ?? '',
+                address: this.email ?? '',
               },
             },
             locals: { verifyLink: link },
@@ -1323,10 +1304,10 @@ export default class User extends AbleObject<UserData> {
         ));
     }
 
-    if (this.$data.newEmailSecret != null) {
+    if (this.newEmailSecret != null) {
       const link = `${verifyUrl}?action=verifychange&id=${encodeURIComponent(
         this.guid,
-      )}&secret=${encodeURIComponent(this.$data.newEmailSecret)}`;
+      )}&secret=${encodeURIComponent(this.newEmailSecret)}`;
       success =
         success &&
         (await tilmeld.config.sendEmail(
@@ -1335,24 +1316,24 @@ export default class User extends AbleObject<UserData> {
             template: 'VerifyEmailChange',
             message: {
               to: {
-                name: this.$data.name ?? '',
-                address: this.$data.newEmailAddress ?? '',
+                name: this.name ?? '',
+                address: this.newEmailAddress ?? '',
               },
             },
             locals: {
               verifyLink: link,
-              oldEmail: this.$data.cancelEmailAddress,
-              newEmail: this.$data.newEmailAddress,
+              oldEmail: this.cancelEmailAddress,
+              newEmail: this.newEmailAddress,
             },
           },
           this,
         ));
     }
 
-    if (this.$data.cancelEmailSecret != null) {
+    if (this.cancelEmailSecret != null) {
       const link = `${verifyUrl}?action=cancelchange&id=${encodeURIComponent(
         this.guid,
-      )}&secret=${encodeURIComponent(this.$data.cancelEmailSecret)}`;
+      )}&secret=${encodeURIComponent(this.cancelEmailSecret)}`;
       success =
         success &&
         (await tilmeld.config.sendEmail(
@@ -1361,14 +1342,14 @@ export default class User extends AbleObject<UserData> {
             template: 'CancelEmailChange',
             message: {
               to: {
-                name: this.$data.name ?? '',
-                address: this.$data.cancelEmailAddress ?? '',
+                name: this.name ?? '',
+                address: this.cancelEmailAddress ?? '',
               },
             },
             locals: {
               cancelLink: link,
-              oldEmail: this.$data.cancelEmailAddress,
-              newEmail: this.$data.newEmailAddress ?? this.$data.email,
+              oldEmail: this.cancelEmailAddress,
+              newEmail: this.newEmailAddress ?? this.email,
             },
           },
           this,
@@ -1384,15 +1365,15 @@ export default class User extends AbleObject<UserData> {
    * @param group The group.
    * @returns True if the user is already in the group. The resulting array of groups if the user was not.
    */
-  public async $addGroup(group: GroupClass & GroupData) {
-    await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
-    let groups = this.$data.groups;
+  public async $addGroup(group: GroupClass) {
+    await Promise.all(this.groups?.map((e) => e.$wake()) || []);
+    let groups = this.groups;
     if (groups == null) {
       groups = [];
     }
     if (!group.$inArray(groups)) {
       groups.push(group);
-      this.$data.groups = groups;
+      this.groups = groups;
       return groups;
     }
     return true;
@@ -1408,19 +1389,19 @@ export default class User extends AbleObject<UserData> {
     const tilmeld = enforceTilmeld(this);
     switch (tilmeld.config.pwMethod) {
       case 'plain':
-        return this.$data.password === password;
+        return this.password === password;
       case 'digest':
         return (
-          this.$data.password ===
+          this.password ===
           crypto.createHash('sha256').update(password).digest('base64')
         );
       case 'salt':
       default:
         return (
-          this.$data.password ===
+          this.password ===
           crypto
             .createHash('sha256')
-            .update(password + this.$data.salt)
+            .update(password + this.salt)
             .digest('base64')
         );
     }
@@ -1432,18 +1413,18 @@ export default class User extends AbleObject<UserData> {
    * @param group The group.
    * @returns True if the user wasn't in the group. The resulting array of groups if the user was.
    */
-  public async $delGroup(group: GroupClass & GroupData) {
-    await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
-    let groups = this.$data.groups || [];
-    if (this.$data.groups != null && group.$inArray(groups)) {
-      const newGroups: (GroupClass & GroupData)[] = [];
+  public async $delGroup(group: GroupClass) {
+    await Promise.all(this.groups?.map((e) => e.$wake()) || []);
+    let groups = this.groups || [];
+    if (this.groups != null && group.$inArray(groups)) {
+      const newGroups: GroupClass[] = [];
       for (let curGroup of groups) {
         if (!group.$is(curGroup)) {
           newGroups.push(curGroup);
         }
       }
-      this.$data.groups = newGroups;
-      return this.$data.groups;
+      this.groups = newGroups;
+      return this.groups;
     }
     return true;
   }
@@ -1454,21 +1435,19 @@ export default class User extends AbleObject<UserData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public async $inGroup(group: (GroupClass & GroupData) | string) {
+  public async $inGroup(group: GroupClass | string) {
     if (typeof group === 'string') {
-      if (this.$data.group?.guid === group) {
+      if (this.group?.guid === group) {
         return true;
       }
-      for (let curGroup of this.$data.groups ?? []) {
+      for (let curGroup of this.groups ?? []) {
         if (curGroup.guid === group) {
           return true;
         }
       }
       return false;
     }
-    return (
-      group.$is(this.$data.group) || group.$inArray(this.$data.groups ?? [])
-    );
+    return group.$is(this.group) || group.$inArray(this.groups ?? []);
   }
 
   /**
@@ -1477,18 +1456,18 @@ export default class User extends AbleObject<UserData> {
    * @param group The group, or the group's GUID.
    * @returns True or false.
    */
-  public async $isDescendant(group: (GroupClass & GroupData) | string) {
+  public async $isDescendant(group: GroupClass | string) {
     // Check to see if the user is in a descendant group of the given group.
-    await this.$data.group?.$wake();
+    await this.group?.$wake();
     if (
-      this.$data.group != null &&
-      this.$data.group?.cdate != null &&
-      (await this.$data.group?.$isDescendant(group))
+      this.group != null &&
+      this.group?.cdate != null &&
+      (await this.group?.$isDescendant(group))
     ) {
       return true;
     }
-    await Promise.all(this.$data.groups?.map((e) => e.$wake()) || []);
-    for (let curGroup of this.$data.groups ?? []) {
+    await Promise.all(this.groups?.map((e) => e.$wake()) || []);
+    for (let curGroup of this.groups ?? []) {
       if (await curGroup.$isDescendant(group)) {
         return true;
       }
@@ -1509,7 +1488,7 @@ export default class User extends AbleObject<UserData> {
   }): Promise<{ result: boolean; message: string }> {
     this.$nymph.config.debugLog(
       'tilmeld',
-      `Password change request for "${this.$data.username}".`,
+      `Password change request for "${this.username}".`,
     );
     if (!('newPassword' in data) || !data.newPassword.length) {
       return { result: false, message: 'Please specify a password.' };
@@ -1517,13 +1496,13 @@ export default class User extends AbleObject<UserData> {
     if (!this.$checkPassword(data.currentPassword ?? '')) {
       this.$nymph.config.debugLog(
         'tilmeld',
-        `Incorrect password for change request for "${this.$data.username}".`,
+        `Incorrect password for change request for "${this.username}".`,
       );
       return { result: false, message: 'Incorrect password.' };
     }
-    this.$data.passwordTemp = data.newPassword;
+    this.passwordTemp = data.newPassword;
     if (data.revokeCurrentTokens) {
-      this.$data.revokeTokenDate = Date.now();
+      this.revokeTokenDate = Date.now();
     }
     try {
       await this.$save();
@@ -1547,26 +1526,26 @@ export default class User extends AbleObject<UserData> {
     const tilmeld = enforceTilmeld(this);
     switch (tilmeld.config.pwMethod) {
       case 'plain':
-        delete this.$data.salt;
-        this.$data.password = password;
+        delete this.salt;
+        this.password = password;
         break;
       case 'digest':
-        delete this.$data.salt;
-        this.$data.password = crypto
+        delete this.salt;
+        this.password = crypto
           .createHash('sha256')
           .update(password)
           .digest('base64');
         break;
       case 'salt':
       default:
-        this.$data.salt = nanoid();
-        this.$data.password = crypto
+        this.salt = nanoid();
+        this.password = crypto
           .createHash('sha256')
-          .update(password + this.$data.salt)
+          .update(password + this.salt)
           .digest('base64');
         break;
     }
-    return this.$data.password;
+    return this.password;
   }
 
   /**
@@ -1582,7 +1561,7 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: 'Incorrect password.' };
     }
 
-    this.$data.revokeTokenDate = Date.now();
+    this.revokeTokenDate = Date.now();
 
     try {
       await this.$save();
@@ -1598,7 +1577,7 @@ export default class User extends AbleObject<UserData> {
   }
 
   public $hasTOTPSecret(): boolean {
-    return this.$data.totpSecret != null;
+    return this.totpSecret != null;
   }
 
   /**
@@ -1608,7 +1587,7 @@ export default class User extends AbleObject<UserData> {
    * @returns True if the code is valid, otherwise false.
    */
   public $checkTOTPCode(code: string) {
-    if (this.$data.totpSecret == null) {
+    if (this.totpSecret == null) {
       return false;
     }
 
@@ -1616,11 +1595,11 @@ export default class User extends AbleObject<UserData> {
 
     const totp = new TOTP({
       issuer: tilmeld.config.appName,
-      label: this.$data.username,
+      label: this.username,
       algorithm: 'SHA1',
       digits: 6,
       period: 30,
-      secret: this.$data.totpSecret,
+      secret: this.totpSecret,
     });
 
     return totp.validate({ token: code, window: 2 }) != null;
@@ -1638,7 +1617,7 @@ export default class User extends AbleObject<UserData> {
   }> {
     const tilmeld = enforceTilmeld(this);
 
-    if (this.$data.totpSecret != null) {
+    if (this.totpSecret != null) {
       throw new BadDataError('You already have a 2FA secret.');
     }
 
@@ -1646,7 +1625,7 @@ export default class User extends AbleObject<UserData> {
 
     const totp = new TOTP({
       issuer: tilmeld.config.appName,
-      label: this.$data.username,
+      label: this.username,
       algorithm: 'SHA1',
       digits: 6,
       period: 30,
@@ -1675,7 +1654,7 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: 'Incorrect password.' };
     }
 
-    if (this.$data.totpSecret != null) {
+    if (this.totpSecret != null) {
       return { result: false, message: 'You already have a 2FA secret.' };
     }
 
@@ -1699,7 +1678,7 @@ export default class User extends AbleObject<UserData> {
 
     const totp = new TOTP({
       issuer: tilmeld.config.appName,
-      label: this.$data.username,
+      label: this.username,
       algorithm: 'SHA1',
       digits: 6,
       period: 30,
@@ -1710,7 +1689,7 @@ export default class User extends AbleObject<UserData> {
       return { result: false, message: '2FA code is incorrect.' };
     }
 
-    this.$data.totpSecret = data.secret;
+    this.totpSecret = data.secret;
 
     try {
       await this.$save();
@@ -1746,17 +1725,17 @@ export default class User extends AbleObject<UserData> {
         return { result: false, message: '2FA code is invalid.' };
       }
 
-      if (this.$data.totpSecret == null) {
+      if (this.totpSecret == null) {
         return { result: false, message: "You don't have a 2FA secret." };
       }
 
       const totp = new TOTP({
         issuer: tilmeld.config.appName,
-        label: this.$data.username,
+        label: this.username,
         algorithm: 'SHA1',
         digits: 6,
         period: 30,
-        secret: this.$data.totpSecret,
+        secret: this.totpSecret,
       });
 
       if (totp.validate({ token: data.code, window: 2 }) == null) {
@@ -1769,7 +1748,7 @@ export default class User extends AbleObject<UserData> {
       };
     }
 
-    delete this.$data.totpSecret;
+    delete this.totpSecret;
 
     try {
       await this.$save();
@@ -1789,23 +1768,23 @@ export default class User extends AbleObject<UserData> {
 
     this.$nymph.config.debugInfo(
       'tilmeld',
-      `Username check "${this.$data.username}".`,
+      `Username check "${this.username}".`,
     );
 
     if (!tilmeld.config.emailUsernames) {
       let [username, domain] = tilmeld.config.domainSupport
-        ? splitn(this.$data.username ?? '', '@', 2)
-        : [this.$data.username, null];
+        ? splitn(this.username ?? '', '@', 2)
+        : [this.username, null];
 
       // Lowercase the domain part.
       if (domain) {
         domain = domain.toLowerCase();
-        this.$data.username = `${username}@${domain}`;
+        this.username = `${username}@${domain}`;
       }
 
       if (
-        this.$data.username == null ||
-        !this.$data.username.length ||
+        this.username == null ||
+        !this.username.length ||
         username == null ||
         !username.length
       ) {
@@ -1863,7 +1842,7 @@ export default class User extends AbleObject<UserData> {
         type: '&',
         ilike: [
           'username',
-          this.$data.username.replace(/([\\%_])/g, (s) => `\\${s}`),
+          this.username.replace(/([\\%_])/g, (s) => `\\${s}`),
         ],
       };
       if (this.guid != null) {
@@ -1881,7 +1860,7 @@ export default class User extends AbleObject<UserData> {
         .checkUsernameCallbacks) {
         if (callback) {
           const result = await callback(this, {
-            username: this.$data.username,
+            username: this.username,
           });
           if (!result.result) {
             return { message: 'Username is not available.', ...result };
@@ -1895,11 +1874,11 @@ export default class User extends AbleObject<UserData> {
           this.guid != null ? 'Username is valid.' : 'Username is available!',
       };
     } else {
-      this.$data.email = this.$data.username;
-      if (this.$data.username == null || !this.$data.username.length) {
+      this.email = this.username;
+      if (this.username == null || !this.username.length) {
         return { result: false, message: 'Please specify an email.' };
       }
-      if (this.$data.username.length < tilmeld.config.minUsernameLength) {
+      if (this.username.length < tilmeld.config.minUsernameLength) {
         return {
           result: false,
           message:
@@ -1908,7 +1887,7 @@ export default class User extends AbleObject<UserData> {
             ' characters.',
         };
       }
-      if (this.$data.username.length > tilmeld.config.maxUsernameLength) {
+      if (this.username.length > tilmeld.config.maxUsernameLength) {
         return {
           result: false,
           message:
@@ -1930,24 +1909,21 @@ export default class User extends AbleObject<UserData> {
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
-    this.$nymph.config.debugInfo(
-      'tilmeld',
-      `Email check "${this.$data.email}".`,
-    );
+    this.$nymph.config.debugInfo('tilmeld', `Email check "${this.email}".`);
 
-    if (this.$data.email == null || !this.$data.email.length) {
+    if (this.email == null || !this.email.length) {
       if (tilmeld.config.verifyEmail) {
         return { result: false, message: 'Please specify an email.' };
       } else {
         return { result: true, message: '' };
       }
     }
-    if (!tilmeld.config.validEmailRegex.test(this.$data.email)) {
+    if (!tilmeld.config.validEmailRegex.test(this.email)) {
       return { result: false, message: tilmeld.config.validEmailRegexNotice };
     }
     const selector: Selector = {
       type: '&',
-      ilike: ['email', this.$data.email.replace(/([\\%_])/g, (s) => `\\${s}`)],
+      ilike: ['email', this.email.replace(/([\\%_])/g, (s) => `\\${s}`)],
     };
     if (this.guid != null) {
       selector['!guid'] = this.guid;
@@ -1978,16 +1954,13 @@ export default class User extends AbleObject<UserData> {
   public async $checkPhone(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
-    this.$nymph.config.debugInfo(
-      'tilmeld',
-      `Phone check "${this.$data.phone}".`,
-    );
+    this.$nymph.config.debugInfo('tilmeld', `Phone check "${this.phone}".`);
 
-    if (this.$data.phone == null || !this.$data.phone.length) {
+    if (this.phone == null || !this.phone.length) {
       return { result: false, message: 'Please specify a phone number.' };
     }
 
-    const stripToDigits = this.$data.phone.replace(/\D/g, () => '');
+    const stripToDigits = this.phone.replace(/\D/g, () => '');
     if (!/\d{10}/.test(stripToDigits)) {
       return {
         result: false,
@@ -2051,16 +2024,16 @@ export default class User extends AbleObject<UserData> {
 
     this.$password(data.password);
     if (tilmeld.config.regFields.includes('name')) {
-      this.$data.name =
-        this.$data.nameFirst +
-        (this.$data.nameMiddle == null ? '' : ' ' + this.$data.nameMiddle) +
-        (this.$data.nameLast == null ? '' : ' ' + this.$data.nameLast);
-      if (this.$data.name === '') {
-        this.$data.name = this.$data.username;
+      this.name =
+        this.nameFirst +
+        (this.nameMiddle == null ? '' : ' ' + this.nameMiddle) +
+        (this.nameLast == null ? '' : ' ' + this.nameLast);
+      if (this.name === '') {
+        this.name = this.username;
       }
     }
     if (tilmeld.config.emailUsernames) {
-      this.$data.email = this.$data.username;
+      this.email = this.username;
     }
 
     try {
@@ -2087,10 +2060,10 @@ export default class User extends AbleObject<UserData> {
           ) {
             // The user will be enabled after verifying their e-mail address.
             if (!tilmeld.config.unverifiedAccess) {
-              this.$data.enabled = false;
+              this.enabled = false;
             }
           } else {
-            this.$data.enabled = true;
+            this.enabled = true;
           }
 
           // If createAdmin is true and there are no other users, grant
@@ -2109,14 +2082,14 @@ export default class User extends AbleObject<UserData> {
             }
             if (!otherUsers.length) {
               this.$grant('system/admin');
-              this.$data.enabled = true;
+              this.enabled = true;
               madeAdmin = true;
             }
           }
 
           this.$nymph.config.debugLog(
             'tilmeld',
-            `Registering new user "${this.$data.username}".`,
+            `Registering new user "${this.username}".`,
           );
 
           await this.$saveSkipAC();
@@ -2129,7 +2102,7 @@ export default class User extends AbleObject<UserData> {
             tilmeld.config.userFields.includes('email')
           ) {
             message +=
-              `Almost there. An email has been sent to ${this.$data.email} ` +
+              `Almost there. An email has been sent to ${this.email} ` +
               'with a verification link for you to finish registration.';
           } else if (
             tilmeld.config.verifyEmail &&
@@ -2142,7 +2115,7 @@ export default class User extends AbleObject<UserData> {
             }
             message +=
               "You're now logged in! An email has been sent to " +
-              `${this.$data.email} with a verification link for you to finish ` +
+              `${this.email} with a verification link for you to finish ` +
               'registration.';
             loggedin = true;
           } else {
@@ -2177,12 +2150,12 @@ export default class User extends AbleObject<UserData> {
                 template: 'UserRegistered',
                 message: { to: tilmeld.config.userRegisteredRecipient },
                 locals: {
-                  userUsername: this.$data.username,
-                  userName: this.$data.name,
-                  userFirstName: this.$data.nameFirst,
-                  userLastName: this.$data.nameLast,
-                  userEmail: this.$data.email,
-                  userPhone: this.$data.phone,
+                  userUsername: this.username,
+                  userName: this.name,
+                  userFirstName: this.nameFirst,
+                  userLastName: this.nameLast,
+                  userEmail: this.email,
+                  userPhone: this.phone,
                 },
               },
               this,
@@ -2193,7 +2166,7 @@ export default class User extends AbleObject<UserData> {
         } catch (e: any) {
           this.$nymph.config.debugError(
             'tilmeld',
-            `Couldn't send new user registered email for "${this.$data.username}": ${e.message}`,
+            `Couldn't send new user registered email for "${this.username}": ${e.message}`,
           );
         }
       }
@@ -2218,7 +2191,7 @@ export default class User extends AbleObject<UserData> {
 
   public async $save() {
     let tilmeld = enforceTilmeld(this);
-    if (this.$data.username == null || !this.$data.username.trim().length) {
+    if (this.username == null || !this.username.trim().length) {
       throw new BadUsernameError('Username must not be empty.');
     }
 
@@ -2226,7 +2199,7 @@ export default class User extends AbleObject<UserData> {
       !this.$skipAcWhenSaving &&
       tilmeld.gatekeeper('tilmeld/admin') &&
       !tilmeld.gatekeeper('system/admin') &&
-      this.$data.abilities?.includes('system/admin')
+      this.abilities?.includes('system/admin')
     ) {
       throw new AccessControlError(
         "You don't have the authority to modify system admins.",
@@ -2235,14 +2208,14 @@ export default class User extends AbleObject<UserData> {
 
     // Lowercase the domain part.
     if (tilmeld.config.domainSupport) {
-      const [username, domain] = splitn(this.$data.username ?? '', '@', 2);
+      const [username, domain] = splitn(this.username ?? '', '@', 2);
       if (domain) {
-        this.$data.username = `${username}@${domain.toLowerCase()}`;
+        this.username = `${username}@${domain.toLowerCase()}`;
       }
     }
 
     if (tilmeld.config.domainSupport) {
-      const [_username, domain] = splitn(this.$data.username ?? '', '@', 2);
+      const [_username, domain] = splitn(this.username ?? '', '@', 2);
       const [_originalUsername, originalDomain] = splitn(
         this.$originalUsername ?? '',
         '@',
@@ -2289,113 +2262,95 @@ export default class User extends AbleObject<UserData> {
     let sendVerification = false;
 
     // Formatting.
-    this.$data.username = this.$data.username.trim();
+    this.username = this.username.trim();
     if (tilmeld.config.emailUsernames) {
-      this.$data.email = this.$data.username;
+      this.email = this.username;
     }
-    this.$data.nameFirst = (this.$data.nameFirst ?? '').trim();
-    this.$data.nameMiddle = (this.$data.nameMiddle ?? '').trim();
-    this.$data.nameLast = (this.$data.nameLast ?? '').trim();
-    this.$data.phone = (this.$data.phone ?? '').trim();
-    this.$data.name =
-      this.$data.nameFirst +
-      (this.$data.nameMiddle ? ' ' + this.$data.nameMiddle : '') +
-      (this.$data.nameLast ? ' ' + this.$data.nameLast : '');
-    this.$data.enabled = !!this.$data.enabled;
+    this.nameFirst = (this.nameFirst ?? '').trim();
+    this.nameMiddle = (this.nameMiddle ?? '').trim();
+    this.nameLast = (this.nameLast ?? '').trim();
+    this.phone = (this.phone ?? '').trim();
+    this.name =
+      this.nameFirst +
+      (this.nameMiddle ? ' ' + this.nameMiddle : '') +
+      (this.nameLast ? ' ' + this.nameLast : '');
+    this.enabled = !!this.enabled;
 
     // Clear empty values.
-    if (
-      this.$data.nameFirst === '' ||
-      !tilmeld.config.userFields.includes('name')
-    ) {
-      delete this.$data.nameFirst;
+    if (this.nameFirst === '' || !tilmeld.config.userFields.includes('name')) {
+      delete this.nameFirst;
+    }
+    if (this.nameMiddle === '' || !tilmeld.config.userFields.includes('name')) {
+      delete this.nameMiddle;
+    }
+    if (this.nameLast === '' || !tilmeld.config.userFields.includes('name')) {
+      delete this.nameLast;
+    }
+    if (this.name === '' || !tilmeld.config.userFields.includes('name')) {
+      delete this.name;
+    }
+    if (this.email === '' || !tilmeld.config.userFields.includes('email')) {
+      delete this.email;
+    }
+    if (this.avatar === '') {
+      delete this.avatar;
+    }
+    if (this.phone === '' || !tilmeld.config.userFields.includes('phone')) {
+      delete this.phone;
+    }
+    if (this.secret === '' || !tilmeld.config.userFields.includes('email')) {
+      delete this.secret;
     }
     if (
-      this.$data.nameMiddle === '' ||
-      !tilmeld.config.userFields.includes('name')
-    ) {
-      delete this.$data.nameMiddle;
-    }
-    if (
-      this.$data.nameLast === '' ||
-      !tilmeld.config.userFields.includes('name')
-    ) {
-      delete this.$data.nameLast;
-    }
-    if (this.$data.name === '' || !tilmeld.config.userFields.includes('name')) {
-      delete this.$data.name;
-    }
-    if (
-      this.$data.email === '' ||
+      this.emailChangeDate === 0 ||
       !tilmeld.config.userFields.includes('email')
     ) {
-      delete this.$data.email;
-    }
-    if (this.$data.avatar === '') {
-      delete this.$data.avatar;
+      delete this.emailChangeDate;
     }
     if (
-      this.$data.phone === '' ||
-      !tilmeld.config.userFields.includes('phone')
-    ) {
-      delete this.$data.phone;
-    }
-    if (
-      this.$data.secret === '' ||
+      this.newEmailSecret === '' ||
       !tilmeld.config.userFields.includes('email')
     ) {
-      delete this.$data.secret;
+      delete this.newEmailSecret;
     }
     if (
-      this.$data.emailChangeDate === 0 ||
+      this.newEmailAddress === '' ||
       !tilmeld.config.userFields.includes('email')
     ) {
-      delete this.$data.emailChangeDate;
+      delete this.newEmailAddress;
     }
     if (
-      this.$data.newEmailSecret === '' ||
+      this.cancelEmailSecret === '' ||
       !tilmeld.config.userFields.includes('email')
     ) {
-      delete this.$data.newEmailSecret;
+      delete this.cancelEmailSecret;
     }
     if (
-      this.$data.newEmailAddress === '' ||
+      this.cancelEmailAddress === '' ||
       !tilmeld.config.userFields.includes('email')
     ) {
-      delete this.$data.newEmailAddress;
+      delete this.cancelEmailAddress;
     }
     if (
-      this.$data.cancelEmailSecret === '' ||
+      this.recoverSecret === '' ||
       !tilmeld.config.userFields.includes('email')
     ) {
-      delete this.$data.cancelEmailSecret;
+      delete this.recoverSecret;
     }
     if (
-      this.$data.cancelEmailAddress === '' ||
+      this.recoverSecretDate === 0 ||
       !tilmeld.config.userFields.includes('email')
     ) {
-      delete this.$data.cancelEmailAddress;
+      delete this.recoverSecretDate;
     }
-    if (
-      this.$data.recoverSecret === '' ||
-      !tilmeld.config.userFields.includes('email')
-    ) {
-      delete this.$data.recoverSecret;
+    if (this.password === '') {
+      delete this.password;
     }
-    if (
-      this.$data.recoverSecretDate === 0 ||
-      !tilmeld.config.userFields.includes('email')
-    ) {
-      delete this.$data.recoverSecretDate;
+    if (this.passwordTemp === '') {
+      delete this.passwordTemp;
     }
-    if (this.$data.password === '') {
-      delete this.$data.password;
-    }
-    if (this.$data.passwordTemp === '') {
-      delete this.$data.passwordTemp;
-    }
-    if (this.$data.inheritAbilities === false) {
-      delete this.$data.inheritAbilities;
+    if (this.inheritAbilities === false) {
+      delete this.inheritAbilities;
     }
 
     // Verification.
@@ -2425,19 +2380,19 @@ export default class User extends AbleObject<UserData> {
         if (this.guid == null) {
           // If this is the first user, they'll be made an admin, so they don't
           // need to verify.
-          if (!this.$data.abilities?.includes('system/admin')) {
-            this.$data.secret = nanoid();
+          if (!this.abilities?.includes('system/admin')) {
+            this.secret = nanoid();
             sendVerification = true;
           }
         } else if (
           this.$originalEmail != null &&
-          this.$originalEmail !== this.$data.email
+          this.$originalEmail !== this.email
         ) {
           // The user already has an old email address.
           if (
             tilmeld.config.emailRateLimit !== '' &&
-            this.$data.emailChangeDate != null &&
-            this.$data.emailChangeDate >=
+            this.emailChangeDate != null &&
+            this.emailChangeDate >=
               (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000
           ) {
             throw new EmailChangeRateLimitExceededError(
@@ -2445,61 +2400,61 @@ export default class User extends AbleObject<UserData> {
                 new Date(
                   (strtotime(
                     '+' + tilmeld.config.emailRateLimit,
-                    Math.floor(this.$data.emailChangeDate / 1000),
+                    Math.floor(this.emailChangeDate / 1000),
                   ) || 0) * 1000,
                 ).toString() +
                 ' to change your email address again.',
             );
           } else {
             if (
-              this.$data.newEmailSecret == null &&
+              this.newEmailSecret == null &&
               tilmeld.config.emailRateLimit !== '' &&
               // Make sure the user has at least the rate limit time to cancel
               // an email change.
-              (this.$data.emailChangeDate == null ||
-                this.$data.emailChangeDate <
+              (this.emailChangeDate == null ||
+                this.emailChangeDate <
                   (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000)
             ) {
               // Save the old email in case the cancel change link is clicked.
-              this.$data.cancelEmailAddress = this.$originalEmail;
-              this.$data.cancelEmailSecret = nanoid();
-              this.$data.emailChangeDate = Date.now();
+              this.cancelEmailAddress = this.$originalEmail;
+              this.cancelEmailSecret = nanoid();
+              this.emailChangeDate = Date.now();
             }
             // Save the new address and reset to the old one (until they verify
             // it).
-            this.$data.newEmailAddress = this.$data.email;
-            this.$data.email = this.$originalEmail;
+            this.newEmailAddress = this.email;
+            this.email = this.$originalEmail;
             if (tilmeld.config.emailUsernames) {
-              this.$data.username = this.$data.email;
+              this.username = this.email;
             }
-            this.$data.newEmailSecret = nanoid();
+            this.newEmailSecret = nanoid();
             sendVerification = true;
           }
         }
       } else if (
         this.guid != null &&
         this.$originalEmail != null &&
-        this.$originalEmail !== this.$data.email &&
+        this.$originalEmail !== this.email &&
         // Make sure the user has at least the rate limit time to cancel an
         // email change.
-        (this.$data.emailChangeDate == null ||
-          this.$data.emailChangeDate <
+        (this.emailChangeDate == null ||
+          this.emailChangeDate <
             (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000)
       ) {
         // The user doesn't need to verify their new email address, but should
         // be able to cancel the email change from their old address.
-        this.$data.cancelEmailAddress = this.$originalEmail;
-        this.$data.cancelEmailSecret = nanoid();
+        this.cancelEmailAddress = this.$originalEmail;
+        this.cancelEmailSecret = nanoid();
         sendVerification = true;
       }
     }
 
-    if (this.$data.passwordTemp != null) {
-      this.$password(this.$data.passwordTemp);
+    if (this.passwordTemp != null) {
+      this.$password(this.passwordTemp);
     }
-    delete this.$data.passwordTemp;
+    delete this.passwordTemp;
 
-    if (this.$data.password == null) {
+    if (this.password == null) {
       throw new BadDataError('A password is required.');
     }
 
@@ -2514,7 +2469,7 @@ export default class User extends AbleObject<UserData> {
         const tilmeld = enforceTilmeld(this);
         const Group = this.$nymph.getEntityClass(GroupClass);
 
-        let group = this.$data.group;
+        let group = this.group;
         if (group != null) {
           // Make sure to get fresh group data.
           if (group.$asleep()) {
@@ -2544,64 +2499,64 @@ export default class User extends AbleObject<UserData> {
               { type: '&', equal: ['defaultPrimary', true] },
             );
             if (group != null) {
-              this.$data.group = group;
+              this.group = group;
             }
           }
         }
         if (group != null && group.user != null && this.$is(group.user)) {
           // Update the user's generated primary group.
           let changed = false;
-          if (group.groupname !== this.$data.username) {
-            group.groupname = this.$data.username;
+          if (group.groupname !== this.username) {
+            group.groupname = this.username;
             changed = true;
           }
-          if (group.avatar !== this.$data.avatar) {
-            group.avatar = this.$data.avatar;
+          if (group.avatar !== this.avatar) {
+            group.avatar = this.avatar;
             changed = true;
           }
           if (
             tilmeld.config.userFields.includes('email') &&
-            group.email !== this.$data.email
+            group.email !== this.email
           ) {
-            group.email = this.$data.email;
+            group.email = this.email;
             changed = true;
           }
           if (
             tilmeld.config.userFields.includes('name') &&
-            group.name !== this.$data.name
+            group.name !== this.name
           ) {
-            group.name = this.$data.name;
+            group.name = this.name;
             changed = true;
           }
           if (
             tilmeld.config.userFields.includes('phone') &&
-            group.phone !== this.$data.phone
+            group.phone !== this.phone
           ) {
-            group.phone = this.$data.phone;
+            group.phone = this.phone;
             changed = true;
           }
           if (changed || group.guid == null) {
             await group.$saveSkipAC();
           }
-          this.$data.group = group;
+          this.group = group;
         }
 
-        if (this.$data.groups == null || this.$data.groups.length === 0) {
+        if (this.groups == null || this.groups.length === 0) {
           // Add secondary groups.
           if (
             tilmeld.config.userFields.includes('email') &&
             tilmeld.config.verifyEmail &&
             tilmeld.config.unverifiedAccess &&
-            this.$data.secret != null
+            this.secret != null
           ) {
             // Add the default secondaries for unverified users.
-            this.$data.groups = await this.$nymph.getEntities(
+            this.groups = await this.$nymph.getEntities(
               { class: Group },
               { type: '&', equal: ['unverifiedSecondary', true] },
             );
           } else {
             // Add the default secondaries.
-            this.$data.groups = await this.$nymph.getEntities(
+            this.groups = await this.$nymph.getEntities(
               { class: Group },
               { type: '&', equal: ['defaultSecondary', true] },
             );
@@ -2617,7 +2572,7 @@ export default class User extends AbleObject<UserData> {
         for (let callback of (this.constructor as typeof User)
           .beforeSaveCallbacks) {
           if (callback) {
-            await callback(this.$proxy());
+            await callback(this);
           }
         }
 
@@ -2636,7 +2591,7 @@ export default class User extends AbleObject<UserData> {
         for (let callback of (this.constructor as typeof User)
           .afterSaveCallbacks) {
           if (callback) {
-            await callback(this.$proxy());
+            await callback(this);
           }
         }
       },
@@ -2644,8 +2599,8 @@ export default class User extends AbleObject<UserData> {
         this.$setNymph(nymph);
 
         if (committed) {
-          this.$originalEmail = this.$data.email;
-          this.$originalUsername = this.$data.username;
+          this.$originalEmail = this.email;
+          this.$originalUsername = this.username;
 
           try {
             const tilmeld = enforceTilmeld(nymph);
@@ -2693,13 +2648,13 @@ export default class User extends AbleObject<UserData> {
     if (
       !this.$skipAcWhenDeleting &&
       !tilmeld.gatekeeper('system/admin') &&
-      this.$data.abilities?.includes('system/admin')
+      this.abilities?.includes('system/admin')
     ) {
       throw new AccessControlError(
         "You don't have the authority to delete system admins.",
       );
     }
-    if (this.$data.username !== this.$originalUsername) {
+    if (this.username !== this.$originalUsername) {
       throw new AccessControlError(
         "You can't delete a user while switching their username.",
       );
@@ -2709,11 +2664,11 @@ export default class User extends AbleObject<UserData> {
       throw new BadDataError('User could not be refreshed.');
     }
 
-    if (this.$data.group != null) {
-      if (this.$data.group.$asleep()) {
-        await this.$data.group.$wake();
+    if (this.group != null) {
+      if (this.group.$asleep()) {
+        await this.group.$wake();
       } else {
-        if (!(await this.$data.group.$refresh())) {
+        if (!(await this.group.$refresh())) {
           throw new BadDataError('Group could not be refreshed.');
         }
       }
@@ -2722,7 +2677,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .beforeDeleteCallbacks) {
       if (callback) {
-        await callback(this.$proxy());
+        await callback(this);
       }
     }
 
@@ -2730,7 +2685,7 @@ export default class User extends AbleObject<UserData> {
       await this.$logout();
     }
 
-    if (this.$data.group != null && this.$is(this.$data.group.user)) {
+    if (this.group != null && this.$is(this.group.user)) {
       // Read the skip ac value here, because super.$delete changes it.
       const $skipAcWhenDeleting = this.$skipAcWhenDeleting;
 
@@ -2738,9 +2693,9 @@ export default class User extends AbleObject<UserData> {
       await super.$delete();
       // Delete the generated group.
       if ($skipAcWhenDeleting) {
-        await this.$data.group.$deleteSkipAC();
+        await this.group.$deleteSkipAC();
       } else {
-        await this.$data.group.$delete();
+        await this.group.$delete();
       }
     } else {
       await super.$delete();
@@ -2749,7 +2704,7 @@ export default class User extends AbleObject<UserData> {
     for (let callback of (this.constructor as typeof User)
       .afterDeleteCallbacks) {
       if (callback) {
-        await callback(this.$proxy());
+        await callback(this);
       }
     }
   }

@@ -111,10 +111,6 @@ export interface DataObjectInterface {
    * An error is thrown on failure.
    */
   $save(): Promise<void>;
-  /**
-   * The object's data.
-   */
-  [k: string]: any;
 }
 
 /**
@@ -331,6 +327,8 @@ export interface EntityInterface extends DataObjectInterface {
    * @param useSkipAc True or false, whether to use it.
    */
   $useSkipAc(useSkipAc: boolean): void;
+
+  toJSON(): EntityReference | EntityJson;
 }
 
 export type EntityConstructor<

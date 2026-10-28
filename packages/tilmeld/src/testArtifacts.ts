@@ -10,14 +10,16 @@ import Tilmeld from './Tilmeld.js';
 import { requireAbility, requireAuthentication } from './decorators/index.js';
 import { AccessControlError } from './errors/index.js';
 import type { AccessControlData } from './Tilmeld.types.js';
-import type UserClass from './User.js';
+import type { User as UserClass } from './User.js';
 import { UserTest } from './User.testArtifacts.js';
-import type GroupClass from './Group.js';
+import type { Group as GroupClass } from './Group.js';
 import { GroupTest } from './Group.testArtifacts.js';
 
-export type TestModelData = {
+export interface TestModelData extends AccessControlData {
   name?: string;
-} & AccessControlData;
+}
+
+export interface TestModel extends TestModelData {}
 
 /**
  * This class is a test class that extends the Entity class.

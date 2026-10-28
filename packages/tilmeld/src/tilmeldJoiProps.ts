@@ -1,10 +1,10 @@
 import { TilmeldAccessLevels } from '@nymphjs/nymph';
 import Joi from 'joi';
 
-import User from './User.js';
-import Group from './Group.js';
+import { User } from './User.js';
+import { Group } from './Group.js';
 
-export default {
+export const tilmeldJoiProps = {
   user: Joi.object().instance(User),
   group: Joi.object().instance(Group),
   acUser: Joi.number().valid(

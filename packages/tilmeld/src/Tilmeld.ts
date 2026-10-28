@@ -16,8 +16,8 @@ import { splitn } from '@sciactive/splitn';
 
 import { Config, ConfigDefaults as defaults } from './conf/index.js';
 import { AccessControlError } from './errors/index.js';
-import Group, { GroupData } from './Group.js';
-import User, { UserData } from './User.js';
+import { Group } from './Group.js';
+import { User } from './User.js';
 import { AccessControlData } from './Tilmeld.types.js';
 import { enforceTilmeld } from './enforceTilmeld.js';
 
@@ -44,7 +44,7 @@ export default class Tilmeld implements TilmeldInterface {
   /**
    * The currently logged in user.
    */
-  public currentUser: (User & UserData) | null = null;
+  public currentUser: User | null = null;
 
   /**
    * The user class for this instance of Tilmeld.
@@ -261,6 +261,7 @@ export default class Tilmeld implements TilmeldInterface {
     ) {
       const tilmeld = enforceTilmeld(nymph);
       if (
+        '$tilmeldDeleteSkipAC' in entity &&
         typeof entity.$tilmeldDeleteSkipAC === 'function' &&
         entity.$tilmeldDeleteSkipAC()
       ) {
@@ -303,6 +304,7 @@ export default class Tilmeld implements TilmeldInterface {
         return;
       }
       if (
+        '$tilmeldSaveSkipAC' in entity &&
         typeof entity.$tilmeldSaveSkipAC === 'function' &&
         entity.$tilmeldSaveSkipAC()
       ) {
@@ -802,15 +804,15 @@ export default class Tilmeld implements TilmeldInterface {
   public checkPermissions(
     entity: EntityInterface,
     type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
-    user?: (User & UserData) | false,
+    user?: User | false,
     acProperties?: ACProperties,
   ) {
     if (!acProperties) {
       acProperties = entity.$getCurrentAcValues() as ACProperties;
     }
 
-    let userOrNull: (User & UserData) | null = null;
-    let userOrEmpty: User & UserData = this.User.factorySync();
+    let userOrNull: User | null = null;
+    let userOrEmpty: User = this.User.factorySync();
     // Calculate the user.
     if (user == null) {
       userOrNull = this.currentUser;
@@ -838,8 +840,8 @@ export default class Tilmeld implements TilmeldInterface {
     ) {
       const [_local, domain] = splitn(
         (entity instanceof User
-          ? (entity as User & UserData).username
-          : (entity as Group & GroupData).groupname) ?? '',
+          ? (entity as User).username
+          : (entity as Group).groupname) ?? '',
         '@',
         2,
       );
@@ -962,9 +964,9 @@ export default class Tilmeld implements TilmeldInterface {
   public async checkClientUIDPermissions(
     name: string,
     type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
-    user?: (User & UserData) | false,
+    user?: User | false,
   ) {
-    let userOrEmpty: User & UserData = this.User.factorySync();
+    let userOrEmpty: User = this.User.factorySync();
     // Calculate the user.
     if (user == null) {
       userOrEmpty = this.User.current(true);
@@ -1007,7 +1009,7 @@ export default class Tilmeld implements TilmeldInterface {
    *
    * @param user The user.
    */
-  public async fillSession(user: User & UserData) {
+  public async fillSession(user: User) {
     this.currentUser = user;
     this.gatekeeperCache = await user.$getGatekeeperCache();
 
@@ -1200,11 +1202,7 @@ export default class Tilmeld implements TilmeldInterface {
    * @param sendCookie Send the auth token as a cookie.
    * @returns True on success, false on failure.
    */
-  public async login(
-    user: User & UserData,
-    sendAuthHeader: boolean,
-    sendCookie = true,
-  ) {
+  public async login(user: User, sendAuthHeader: boolean, sendCookie = true) {
     if (user.guid != null && user.enabled) {
       if (this.response) {
         if (!this.response.headersSent) {
@@ -1247,7 +1245,7 @@ export default class Tilmeld implements TilmeldInterface {
    * @returns True on success, false on failure.
    */
   public async loginSwitch(
-    user: User & UserData,
+    user: User,
     sendAuthHeader: boolean,
     sendCookie = true,
   ) {

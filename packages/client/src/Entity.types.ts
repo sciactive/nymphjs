@@ -104,10 +104,6 @@ export interface DataObjectInterface {
    * An error is thrown on failure.
    */
   $save(): Promise<void>;
-  /**
-   * The object's data.
-   */
-  [k: string]: any;
 }
 
 /**
@@ -224,6 +220,8 @@ export interface EntityInterface extends DataObjectInterface {
    * @returns A Nymph Entity Reference array as an unsaved entity.
    */
   $toReference(): EntityReference | EntityInterface;
+
+  toJSON(): EntityReference | EntityJson;
 }
 
 export type EntityConstructor<

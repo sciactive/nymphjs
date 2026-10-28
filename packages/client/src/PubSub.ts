@@ -3,6 +3,7 @@ import type { NymphOptions, Options, Selector } from './Nymph.types.js';
 import type { EntityInstanceType } from './Entity.js';
 import type {
   EntityConstructor,
+  EntityData,
   EntityInterface,
   EntityJson,
 } from './Entity.types.js';
@@ -631,8 +632,8 @@ export default class PubSub {
   }
 
   public updateArray(
-    current: EntityInterface[],
-    update: PubSubUpdate<EntityInterface[]>,
+    current: (EntityInterface & EntityData)[],
+    update: PubSubUpdate<(EntityInterface & EntityData)[]>,
   ) {
     if (Array.isArray(update)) {
       const newArr = [...update];
@@ -643,8 +644,8 @@ export default class PubSub {
         return;
       }
 
-      const idMap: { [k: string]: EntityInterface } = {};
-      const newEntities: EntityInterface[] = [];
+      const idMap: { [k: string]: EntityInterface & EntityData } = {};
+      const newEntities: (EntityInterface & EntityData)[] = [];
       while (current.length) {
         const first = current.shift();
         if (!first) {
@@ -670,7 +671,10 @@ export default class PubSub {
           current.push(entity);
         } else if (idMap[guid].mdate !== entity.mdate) {
           // It was modified.
-          idMap[guid].$init(entity.toJSON(), false);
+          const json = entity.toJSON();
+          if (!Array.isArray(json)) {
+            idMap[guid].$init(json, false);
+          }
           current.push(idMap[guid]);
         } else {
           // Item wasn't modified.
@@ -693,7 +697,7 @@ export default class PubSub {
         }
 
         // Get the entity.
-        let entity: EntityInterface | null = null;
+        let entity: (EntityInterface & EntityData) | null = null;
         if ('added' in curUpdate) {
           // Check for it in the array already.
           for (let i = 0; i < current.length; i++) {

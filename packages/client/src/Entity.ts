@@ -24,9 +24,7 @@ export type EntityDataType<T> =
 export type EntityInstanceType<T extends EntityConstructor> =
   T extends new () => infer E ? E & EntityDataType<E> : never;
 
-export default class Entity<
-  T extends EntityData = EntityData,
-> implements EntityInterface {
+export default class Entity<T extends {} = {}> implements EntityInterface {
   /**
    * The instance of Nymph to use for queries.
    */
@@ -174,7 +172,7 @@ export default class Entity<
   protected $proxy() {
     if (this.$existingProxy == null) {
       this.$existingProxy = new Proxy(this, {
-        has: (entity: this, name: string) => {
+        has: (entity: Record<string, any>, name: string) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -187,7 +185,7 @@ export default class Entity<
           return name in entity.$data;
         },
 
-        get: (entity: this, name: string) => {
+        get: (entity: Record<string, any>, name: string) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -206,7 +204,7 @@ export default class Entity<
           return undefined;
         },
 
-        set: (entity: this, name: string, value: any) => {
+        set: (entity: Record<string, any>, name: string, value: any) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -223,7 +221,7 @@ export default class Entity<
           return true;
         },
 
-        deleteProperty: (entity: this, name: string) => {
+        deleteProperty: (entity: Record<string, any>, name: string) => {
           if (name in entity) {
             return delete (entity as any)[name];
           } else if (name in entity.$data) {
@@ -233,12 +231,12 @@ export default class Entity<
           return true;
         },
 
-        getPrototypeOf: (entity: this) => {
+        getPrototypeOf: (entity: Record<string, any>) => {
           return entity.constructor.prototype;
         },
 
         defineProperty: (
-          entity: this,
+          entity: Record<string, any>,
           name: string,
           descriptor: PropertyDescriptor,
         ) => {
@@ -258,7 +256,10 @@ export default class Entity<
           return true;
         },
 
-        getOwnPropertyDescriptor: (entity: this, name: string) => {
+        getOwnPropertyDescriptor: (
+          entity: Record<string, any>,
+          name: string,
+        ) => {
           if (
             typeof name !== 'string' ||
             name in entity ||
@@ -274,7 +275,7 @@ export default class Entity<
           }
         },
 
-        ownKeys: (entity: this) => {
+        ownKeys: (entity: Record<string, any>) => {
           this.$check();
           return Object.getOwnPropertyNames(entity).concat(
             Object.getOwnPropertyNames(entity.$data),
@@ -297,7 +298,7 @@ export default class Entity<
       new (): E;
     },
     guid?: string,
-  ): Promise<E & EntityDataType<E>> {
+  ): Promise<E> {
     const cacheEntity = (
       guid
         ? (this as unknown as EntityConstructor).nymph.getEntityFromCache(
@@ -307,7 +308,7 @@ export default class Entity<
         : null
     ) as Entity | null;
     if (cacheEntity) {
-      return cacheEntity as E & EntityDataType<E>;
+      return cacheEntity as E;
     }
     const entity = new this();
     if (guid != null) {
@@ -320,16 +321,14 @@ export default class Entity<
       ];
       await entity.$wake();
     }
-    return entity as E & EntityDataType<E>;
+    return entity as E;
   }
 
   /**
    * Create a new entity instance.
    */
-  public static factorySync<E extends Entity>(this: {
-    new (): E;
-  }): E & EntityDataType<E> {
-    return new this() as E & EntityDataType<E>;
+  public static factorySync<E extends Entity>(this: { new (): E }): E {
+    return new this() as E;
   }
 
   /**
@@ -346,7 +345,7 @@ export default class Entity<
       new (): E;
     },
     reference: EntityReference,
-  ): E & EntityDataType<E> {
+  ): E {
     const cacheEntity = (
       reference[1]
         ? (this as unknown as EntityConstructor).nymph.getEntityFromCache(
@@ -360,7 +359,7 @@ export default class Entity<
     if (!cacheEntity) {
       entity.$referenceSleep(reference);
     }
-    return entity as E & EntityDataType<E>;
+    return entity as E;
   }
 
   /**
@@ -402,7 +401,9 @@ export default class Entity<
   }
 
   public toJSON() {
-    this.$check();
+    if (this.$isASleepingReference && this.$sleepingReference) {
+      return this.$sleepingReference;
+    }
     const obj: EntityJson = {
       class: entityConstructorsToClassNames(this.constructor),
       guid: this.guid,
@@ -421,7 +422,7 @@ export default class Entity<
 
   public $init(entityJson: EntityJson | null, isFromSave: boolean) {
     if (entityJson == null) {
-      return this.$proxy();
+      return this;
     }
 
     this.$isASleepingReference = false;
@@ -477,7 +478,7 @@ export default class Entity<
 
     this.$nymph.setEntityToCache(this.constructor as EntityConstructor, this);
 
-    return this.$proxy();
+    return this;
   }
 
   public $addTag(...tags: string[]) {
@@ -532,10 +533,14 @@ export default class Entity<
       return false;
     }
     const obData = sortObj(object.toJSON());
-    obData.tags?.sort();
+    if ('tags' in obData) {
+      obData.tags?.sort();
+    }
     // obData.data = sortObj(obData.data);
     const myData = sortObj(this.toJSON());
-    myData.tags?.sort();
+    if ('tags' in myData) {
+      myData.tags?.sort();
+    }
     // myData.data = sortObj(myData.data);
     return isEqual(obData, myData);
   }
@@ -565,7 +570,7 @@ export default class Entity<
       if (dirty) {
         if (key in this.$data) {
           patch.set[key] = entityConstructorsToClassNames(
-            entitiesToReferences(this.$data[key]),
+            entitiesToReferences((this.$data as EntityData)[key]),
           );
         } else {
           patch.unset.push(key);
@@ -610,10 +615,14 @@ export default class Entity<
       return false;
     } else {
       const obData = sortObj(object.toJSON());
-      obData.tags?.sort();
+      if ('tags' in obData) {
+        obData.tags?.sort();
+      }
       // obData.data = sortObj(obData.data);
       const myData = sortObj(this.toJSON());
-      myData.tags?.sort();
+      if ('tags' in myData) {
+        myData.tags?.sort();
+      }
       // myData.data = sortObj(myData.data);
       return isEqual(obData, myData);
     }
@@ -654,7 +663,7 @@ export default class Entity<
   public $wake() {
     if (!this.$asleep()) {
       this.$wakePromise = null;
-      return Promise.resolve(this.$proxy());
+      return Promise.resolve(this);
     }
     if (this.$sleepingReference?.[1] == null) {
       throw new InvalidStateError(
@@ -692,7 +701,7 @@ export default class Entity<
           newLevel = level - 1;
         }
         if (newLevel !== undefined && newLevel < 0) {
-          resolve(this.$proxy());
+          resolve(this);
           return;
         }
         const promises: Promise<any>[] = [];
@@ -726,11 +735,11 @@ export default class Entity<
         walkData(this.$data);
         if (promises.length) {
           Promise.all(promises).then(
-            () => resolve(this.$proxy()),
+            () => resolve(this),
             (errObj) => reject(errObj),
           );
         } else {
-          resolve(this.$proxy());
+          resolve(this);
         }
       };
 
@@ -815,7 +824,7 @@ export default class Entity<
     }
 
     if (this.guid == null) {
-      return this.$proxy();
+      return this;
     }
     return [
       'nymph_entity_reference',

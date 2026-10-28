@@ -1,13 +1,13 @@
-import Group, { GroupData } from './Group.js';
-import User, { UserData } from './User.js';
+import { Group } from './Group.js';
+import { User } from './User.js';
 
-export type AccessControlData = {
-  user?: User & UserData;
-  group?: Group & GroupData;
+export interface AccessControlData {
+  user?: User;
+  group?: Group;
   acUser?: number;
   acGroup?: number;
   acOther?: number;
   acFull?: string[];
   acWrite?: string[];
   acRead?: string[];
-};
+}
