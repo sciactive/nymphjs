@@ -36,7 +36,8 @@ export type NymphOptions = {
    * same class and GUID. This also means that whenever an entity is returned
    * from the server, the single instance in memory will be refreshed. This
    * could have annoying results, like destroying dirty data (the dreaded
-   * triple-D).
+   * triple-D). The dirty data problem can be partially mitigated with
+   * weakCacheKeepDirtyData.
    *
    * This could also be a potential source of memory leaks. Although the
    * entities themselves are referenced weakly so they get garbage collected,
@@ -48,6 +49,17 @@ export type NymphOptions = {
    * can help to synchronize them correctly and avoid data conflicts.
    */
   weakCache?: boolean;
+  /**
+   * Keep dirty data after receiving unrelated updates from the server.
+   *
+   * When an entity in the weak cache is updated from the server due to an
+   * unrelated query (ie, not because it was just saved), all of the properties
+   * that are currently marked dirty will not be overwritten by the new data.
+   *
+   * This could potentially have negative consequences if your data is
+   * complicated and interrelated.
+   */
+  weakCacheKeepDirtyData?: boolean;
   /**
    * Whether to renew tokens when a request is made.
    *

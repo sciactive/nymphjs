@@ -97,7 +97,7 @@ export interface DataObjectInterface {
    * @returns False if the data has not been saved, true on success. An error is
    *          thrown on failure.
    */
-  $refresh(): Promise<boolean | 0>;
+  $refresh(): Promise<boolean>;
   /**
    * Save the object to storage.
    *
@@ -176,8 +176,9 @@ export interface EntityInterface extends DataObjectInterface {
    * Initialize this entity from a JSON representation.
    *
    * @param entityJson The entity JSON.
+   * @param isFromSave True if the entity is being initialized with data just saved to the server.
    */
-  $init(entityJson: EntityJson | null): EntityInterface;
+  $init(entityJson: EntityJson | null, isFromSave: boolean): EntityInterface;
   /**
    * Retrieve this entity's data from the server.
    *

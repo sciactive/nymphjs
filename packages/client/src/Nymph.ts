@@ -45,7 +45,8 @@ export default class Nymph {
   private requestCallbacks: RequestCallback[] = [];
   private responseCallbacks: ResponseCallback[] = [];
   private restUrl: string = '';
-  private weakCache = false;
+  public weakCache = false;
+  public weakCacheKeepDirtyData = false;
   /**
    * Headers that will be sent with every request.
    *
@@ -65,6 +66,7 @@ export default class Nymph {
     this.restUrl = NymphOptions.restUrl;
     // @ts-ignore TS doesn't know about WeakRef.
     this.weakCache = !!NymphOptions.weakCache && typeof WeakRef !== 'undefined';
+    this.weakCacheKeepDirtyData = !!NymphOptions.weakCacheKeepDirtyData;
     if (
       'returnNullOnNotFound' in NymphOptions &&
       NymphOptions.returnNullOnNotFound != null
@@ -259,11 +261,11 @@ export default class Nymph {
         response[i] &&
         response[i].guid != null &&
         (e.guid == null || e.guid === response[i].guid)
-          ? e.$init(response[i])
+          ? e.$init(response[i], method !== 'GET')
           : e,
       ) as T[];
     } else if (!Array.isArray(entity) && response.guid != null) {
-      return entity.$init(response) as T;
+      return entity.$init(response, method !== 'GET') as T;
     }
     throw new Error('Server error');
   }
@@ -320,7 +322,7 @@ export default class Nymph {
       if (options.return && options.return === 'guid') {
         return data as string;
       } else {
-        return this.initEntity(data as EntityJson<T>);
+        return this.initEntity(data as EntityJson<T>, false);
       }
     }
 
@@ -434,11 +436,12 @@ export default class Nymph {
     if (options.return && options.return === 'guid') {
       return data;
     }
-    return data.map((e: EntityJson<T>) => this.initEntity(e));
+    return data.map((e: EntityJson<T>) => this.initEntity(e, false));
   }
 
   public initEntity<T extends EntityConstructor = EntityConstructor>(
     entityJSON: EntityJson<T>,
+    isFromSave: boolean,
   ): EntityInstanceType<T> {
     const EntityClass = classNamesToEntityConstructors<T>(
       this,
@@ -460,7 +463,7 @@ export default class Nymph {
         entity = entityFromCache as EntityInstanceType<T>;
       }
     }
-    return entity.$init(entityJSON) as EntityInstanceType<T>;
+    return entity.$init(entityJSON, isFromSave) as EntityInstanceType<T>;
   }
 
   public getEntityFromCache<T extends EntityConstructor = EntityConstructor>(
@@ -483,10 +486,12 @@ export default class Nymph {
     return this.cache.set(EntityClass, entity);
   }
 
-  public initEntitiesFromData<T extends any>(item: T): T {
+  public initEntitiesFromData<T extends any>(item: T, isFromSave: boolean): T {
     if (Array.isArray(item)) {
       // Recurse into lower arrays.
-      return item.map((entry) => this.initEntitiesFromData(entry)) as T;
+      return item.map((entry) =>
+        this.initEntitiesFromData(entry, isFromSave),
+      ) as T;
     } else if (item instanceof Object && !(item instanceof Entity)) {
       if (
         item.hasOwnProperty('class') &&
@@ -500,11 +505,11 @@ export default class Nymph {
           (item as any as EntityJson).class,
         ) != null
       ) {
-        return this.initEntity(item as any as EntityJson) as T;
+        return this.initEntity(item as any as EntityJson, isFromSave) as T;
       } else {
         for (let [key, value] of Object.entries(item)) {
           // @ts-ignore: Key comes from the object. It's fine.
-          item[key] = this.initEntitiesFromData(value);
+          item[key] = this.initEntitiesFromData(value, isFromSave);
         }
       }
     }
@@ -563,7 +568,7 @@ export default class Nymph {
 
     return {
       ...data,
-      return: this.initEntitiesFromData(data.return),
+      return: this.initEntitiesFromData(data.return, false),
     };
   }
 
@@ -587,7 +592,7 @@ export default class Nymph {
       },
     });
 
-    return this.initEntitiesFromData(data);
+    return this.initEntitiesFromData(data, false);
   }
 
   public async serverCallStaticIterator(
@@ -619,7 +624,7 @@ export default class Nymph {
           if (response instanceof Error) {
             yield response;
           } else {
-            yield that.initEntitiesFromData(response);
+            yield that.initEntitiesFromData(response, false);
           }
         }
       },

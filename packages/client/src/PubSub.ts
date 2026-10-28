@@ -219,7 +219,7 @@ export default class PubSub {
     const newResolve = (args: any) => {
       if (Array.isArray(args)) {
         if (args.length) {
-          entity.$init(args[0].toJSON());
+          entity.$init(args[0].toJSON(), false);
         } else {
           entity.guid = null;
         }
@@ -231,7 +231,7 @@ export default class PubSub {
         if ('removed' in update) {
           entity.guid = null;
         } else {
-          entity.$init(update.data);
+          entity.$init(update.data, false);
         }
       }
 
@@ -387,7 +387,9 @@ export default class PubSub {
           if (typeof callback === 'function') {
             callback(
               set
-                ? data.data.map((e: EntityJson) => this.nymph.initEntity(e))
+                ? data.data.map((e: EntityJson) =>
+                    this.nymph.initEntity(e, false),
+                  )
                 : data,
             );
           }
@@ -668,7 +670,7 @@ export default class PubSub {
           current.push(entity);
         } else if (idMap[guid].mdate !== entity.mdate) {
           // It was modified.
-          idMap[guid].$init(entity.toJSON());
+          idMap[guid].$init(entity.toJSON(), false);
           current.push(idMap[guid]);
         } else {
           // Item wasn't modified.
@@ -696,19 +698,19 @@ export default class PubSub {
           // Check for it in the array already.
           for (let i = 0; i < current.length; i++) {
             if (current[i] != null && current[i].guid === curUpdate.added) {
-              entity = current.splice(i, 1)[0].$init(curUpdate.data);
+              entity = current.splice(i, 1)[0].$init(curUpdate.data, false);
             }
           }
           if (entity == null) {
             // A new entity.
-            entity = this.nymph.initEntity(curUpdate.data);
+            entity = this.nymph.initEntity(curUpdate.data, false);
           }
         }
         if ('updated' in curUpdate) {
           // Extract it from the array.
           for (let i = 0; i < current.length; i++) {
             if (current[i] != null && current[i].guid === curUpdate.updated) {
-              entity = current.splice(i, 1)[0].$init(curUpdate.data);
+              entity = current.splice(i, 1)[0].$init(curUpdate.data, false);
             }
           }
         }

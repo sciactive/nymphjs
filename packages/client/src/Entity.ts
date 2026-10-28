@@ -419,7 +419,7 @@ export default class Entity<
     return obj;
   }
 
-  public $init(entityJson: EntityJson | null) {
+  public $init(entityJson: EntityJson | null, isFromSave: boolean) {
     if (entityJson == null) {
       return this.$proxy();
     }
@@ -430,25 +430,50 @@ export default class Entity<
     this.guid = entityJson.guid;
     this.cdate = entityJson.cdate;
     this.mdate = entityJson.mdate;
-    this.tags = entityJson.tags;
+    if (
+      // The instance is new.
+      !this.$originalTags.length ||
+      // The data is coming from a save.
+      isFromSave ||
+      // The tags haven't been modified.
+      JSON.stringify([...this.tags].sort()) ===
+        JSON.stringify([...this.$originalTags].sort())
+    ) {
+      this.tags = entityJson.tags;
+    }
     this.$originalTags = entityJson.tags.slice(0);
-    this.$dirty = {};
-    this.$dataStore = Object.entries(entityJson.data)
-      .map(([key, value]) => {
-        this.$dirty[key] = false;
-        return {
-          key,
-          value: classNamesToEntityConstructors(
+
+    if (!this.$nymph.weakCache || !this.$nymph.weakCacheKeepDirtyData) {
+      // Clear dirty data tracker.
+      for (let name in this.$dirty) {
+        delete this.$dirty[name];
+      }
+    }
+
+    for (let name in this.$dataStore) {
+      if (!this.$dirty[name]) {
+        if (name in entityJson.data) {
+          this.$dataStore[name] = classNamesToEntityConstructors(
             this.$nymph,
-            referencesToEntities(value, this.$nymph),
-          ),
-        };
-      })
-      .reduce(
-        (obj, { key, value }) => Object.assign(obj, { [key]: value }),
-        {},
-      ) as T;
-    this.$data = new Proxy(this.$dataStore, this.$dataHandler);
+            referencesToEntities(entityJson.data[name], this.$nymph),
+          );
+          this.$dirty[name] = false;
+        } else {
+          delete this.$dataStore[name];
+          delete this.$dirty[name];
+        }
+      }
+    }
+
+    for (let name in entityJson.data as T) {
+      if (!(name in this.$dataStore)) {
+        this.$dataStore[name] = classNamesToEntityConstructors(
+          this.$nymph,
+          referencesToEntities(entityJson.data[name], this.$nymph),
+        );
+        this.$dirty[name] = false;
+      }
+    }
 
     this.$nymph.setEntityToCache(this.constructor as EntityConstructor, this);
 
@@ -647,7 +672,7 @@ export default class Entity<
             const errObj = { data, textStatus: 'No data returned.' };
             return Promise.reject(errObj);
           }
-          return this.$init(data);
+          return this.$init(data, false);
         })
         .finally(() => {
           this.$wakePromise = null;
@@ -744,7 +769,7 @@ export default class Entity<
     if (data == null) {
       throw new Error("The entity's data could not be refreshed.");
     }
-    this.$init(data);
+    this.$init(data, false);
     return true;
   }
 
@@ -779,7 +804,7 @@ export default class Entity<
       stateless,
     );
     if (!stateless && data.entity) {
-      this.$init(data.entity);
+      this.$init(data.entity, false);
     }
     return data.return;
   }
