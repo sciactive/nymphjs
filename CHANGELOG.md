@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.133](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.132...v1.0.0-beta.133) (2026-10-28)
+
+### Features
+
+- add option to keep dirty data when updating weak cache ([ae820ac](https://forge.sciactive.com/sciactive/nymphjs/commits/ae820ac374bc60ee2c7f5c2c696df7376669bb66))
+- remove necessity for data prop inside entities ([34e13f5](https://forge.sciactive.com/sciactive/nymphjs/commits/34e13f57375e82ab9677c6fd42ecc433333e0d22))
+
 # [1.0.0-beta.132](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.131...v1.0.0-beta.132) (2026-10-26)
 
 ### Bug Fixes
