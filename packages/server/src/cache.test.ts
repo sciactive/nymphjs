@@ -23,6 +23,7 @@ const server = app.listen(5081);
 const nymph = new Nymph({
   restUrl: 'http://localhost:5081/test/',
   weakCache: true,
+  weakCacheKeepDirtyData: true,
 });
 const Employee = nymph.addEntityClass(EmployeeClass);
 
@@ -72,6 +73,47 @@ describe('Nymph REST Server and Client with Client Weak Ref Cache', () => {
 
     expect(checkA.current).toEqual(false);
     expect(checkB.current).toEqual(false);
+  });
+
+  it('make two identical queries and check whether the same result is returned', async () => {
+    // @ts-ignore TS doesn't know about WeakRef.
+    if (typeof WeakRef === 'undefined') {
+      throw new Error(
+        'You must run this test in an environment that includes WeakRef.',
+      );
+    }
+
+    const employee = await createJane();
+
+    if (employee.guid == null) {
+      throw new Error('Entity is null.');
+    }
+
+    const checkAPromise = nymph.getEntity(
+      { class: Employee },
+      { type: '&', guid: employee.guid },
+    );
+    const checkBPromise = nymph.getEntity(
+      { class: Employee },
+      { type: '&', guid: employee.guid },
+    );
+
+    const checkA = await checkAPromise;
+
+    if (!checkA) {
+      throw new Error("Couldn't fetch entity.");
+    }
+
+    checkA.name = 'Success!';
+
+    const checkB = await checkBPromise;
+
+    if (!checkB) {
+      throw new Error("Couldn't fetch entity.");
+    }
+
+    expect(checkA.name).toEqual('Success!');
+    expect(checkB.name).toEqual('Success!');
   });
 
   afterAll(() => {

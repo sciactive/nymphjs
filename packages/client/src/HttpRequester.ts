@@ -32,7 +32,7 @@ export interface AbortableAsyncIterator<
   abortController: AbortController;
 }
 
-export default class HttpRequester {
+export class HttpRequester {
   private fetch: WindowOrWorkerGlobalScope['fetch'];
   private requestCallbacks: HttpRequesterRequestCallback[] = [];
   private responseCallbacks: HttpRequesterResponseCallback[] = [];

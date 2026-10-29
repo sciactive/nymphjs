@@ -6,9 +6,10 @@ import type {
   ServerCallResponse,
   ServerCallStaticResponse,
 } from './Entity.types.js';
-import EntityWeakCache from './EntityWeakCache.js';
+import { EntityWeakCache } from './EntityWeakCache.js';
+import { QueryWeakCache } from './QueryWeakCache.js';
 import type { AbortableAsyncIterator } from './HttpRequester.js';
-import HttpRequester, { ClientError } from './HttpRequester.js';
+import { HttpRequester, ClientError } from './HttpRequester.js';
 import type {
   EventType,
   NymphOptions,
@@ -56,7 +57,11 @@ export default class Nymph {
   /**
    * The entity cache.
    */
-  public cache = new EntityWeakCache();
+  public entityCache = new EntityWeakCache();
+  /**
+   * The query cache.
+   */
+  public queryCache = new QueryWeakCache();
   /**
    * Return `null` or empty array instead of error when entity/ies not found.
    */
@@ -158,12 +163,24 @@ export default class Nymph {
   }
 
   public async getUID(name: string) {
-    const data = await requester.GET({
-      url: this.restUrl,
-      headers: { ...this.headers },
-      dataType: 'text',
-      data: { action: 'uid', data: name },
-    });
+    const query = { action: 'uid', data: name };
+    let promise: Promise<any> | null = null;
+    const queryJSON = JSON.stringify(query);
+    if (this.weakCache) {
+      promise = this.queryCache.get(queryJSON);
+    }
+    if (promise == null) {
+      promise = requester.GET({
+        url: this.restUrl,
+        headers: { ...this.headers },
+        dataType: 'text',
+        data: query,
+      });
+      if (this.weakCache) {
+        this.queryCache.set(queryJSON, promise);
+      }
+    }
+    const data = await promise;
     return Number(data);
   }
 
@@ -366,18 +383,31 @@ export default class Nymph {
     if (typeof selectors[0] === 'string') {
       selectors = [{ type: '&', guid: selectors[0] }];
     }
-    const data = await requester.GET({
-      url: this.restUrl,
-      headers: { ...this.headers },
-      dataType: 'json',
-      data: {
-        action: 'entity',
-        data: [
-          entityConstructorsToClassNames(options),
-          ...entityConstructorsToClassNames(entitiesToReferences(selectors)),
-        ],
-      },
-    });
+    const query = {
+      action: 'entity',
+      data: [
+        entityConstructorsToClassNames(options),
+        ...entityConstructorsToClassNames(entitiesToReferences(selectors)),
+      ],
+    };
+    let promise: Promise<any> | null = null;
+    const queryJSON = JSON.stringify(query);
+    if (this.weakCache) {
+      promise = this.queryCache.get(queryJSON);
+    }
+    if (promise == null) {
+      promise = requester.GET({
+        url: this.restUrl,
+        headers: { ...this.headers },
+        dataType: 'json',
+        data: query,
+      });
+      if (this.weakCache) {
+        this.queryCache.set(queryJSON, promise);
+      }
+    }
+
+    const data = await promise;
 
     if (options.return === 'count' || typeof data.guid !== 'undefined') {
       return data;
@@ -403,18 +433,30 @@ export default class Nymph {
   ): Promise<EntityInstanceType<T>[] | string[] | number> {
     let data = null;
     try {
-      data = await requester.GET({
-        url: this.restUrl,
-        headers: { ...this.headers },
-        dataType: 'json',
-        data: {
-          action: 'entities',
-          data: [
-            entityConstructorsToClassNames(options),
-            ...entityConstructorsToClassNames(entitiesToReferences(selectors)),
-          ],
-        },
-      });
+      const query = {
+        action: 'entities',
+        data: [
+          entityConstructorsToClassNames(options),
+          ...entityConstructorsToClassNames(entitiesToReferences(selectors)),
+        ],
+      };
+      let promise: Promise<any> | null = null;
+      const queryJSON = JSON.stringify(query);
+      if (this.weakCache) {
+        promise = this.queryCache.get(queryJSON);
+      }
+      if (promise == null) {
+        promise = requester.GET({
+          url: this.restUrl,
+          headers: { ...this.headers },
+          dataType: 'json',
+          data: query,
+        });
+        if (this.weakCache) {
+          this.queryCache.set(queryJSON, promise);
+        }
+      }
+      data = await promise;
     } catch (e: any) {
       if (
         this.returnNullOnNotFound &&
@@ -455,7 +497,7 @@ export default class Nymph {
     let entity = EntityClass.factorySync();
     if (this.weakCache) {
       // Try to get it from cache.
-      const entityFromCache = this.cache.get(
+      const entityFromCache = this.entityCache.get(
         EntityClass,
         entityJSON.guid || '',
       );
@@ -473,7 +515,10 @@ export default class Nymph {
     if (!this.weakCache) {
       return null;
     }
-    return this.cache.get(EntityClass, guid) as EntityInstanceType<T> | null;
+    return this.entityCache.get(
+      EntityClass,
+      guid,
+    ) as EntityInstanceType<T> | null;
   }
 
   public setEntityToCache(
@@ -483,7 +528,7 @@ export default class Nymph {
     if (!this.weakCache) {
       return;
     }
-    return this.cache.set(EntityClass, entity);
+    return this.entityCache.set(EntityClass, entity);
   }
 
   public initEntitiesFromData<T extends any>(item: T, isFromSave: boolean): T {

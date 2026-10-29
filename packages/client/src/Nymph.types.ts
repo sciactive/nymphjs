@@ -30,7 +30,7 @@ export type NymphOptions = {
    */
   noAutoconnect?: boolean;
   /**
-   * Use a WeakRef based cache of entities.
+   * Use a WeakRef based cache of entities and queries.
    *
    * This ensures all entities returned are the same instance if they have the
    * same class and GUID. This also means that whenever an entity is returned
@@ -43,6 +43,13 @@ export type NymphOptions = {
    * entities themselves are referenced weakly so they get garbage collected,
    * the GUID used as a key and the WeakRef object itself are not weak
    * references, so not destroyed when the instance is garbage collected.
+   *
+   * Queries are also cached with weak references. Practically, what this means
+   * is that if you make two identical queries (getEntity, getEntities, or
+   * getUID) at the same time, only one request will be sent to the server, and
+   * both queries will resolve with the same result. This is particularly useful
+   * if you tend to wake a lot of copies of the same entity (like a user) at the
+   * same time.
    *
    * However, even with these caveats, this might help you if you have a big app
    * with the same entities stored in several different places in memory. This
