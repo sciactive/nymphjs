@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.134](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.133...v1.0.0-beta.134) (2026-10-29)
+
+### Features
+
+- add weak cache of current queries on the client ([951b019](https://forge.sciactive.com/sciactive/nymphjs/commits/951b0191f7bc21a3c542122816084cb8ee49a129))
+
 # [1.0.0-beta.133](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.132...v1.0.0-beta.133) (2026-10-28)
 
 ### Features
