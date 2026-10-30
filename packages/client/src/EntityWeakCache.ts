@@ -20,15 +20,24 @@ export class EntityWeakCache {
     return null;
   }
 
-  set(EntityClass: EntityConstructor, entity: EntityInterface) {
+  set<T extends EntityInterface = EntityInterface>(
+    EntityClass: EntityConstructor,
+    entity: T,
+  ) {
     if (!entity.guid) {
-      return;
+      return entity;
     }
 
     const weakRef = new WeakRef(entity);
-
     const classMap = this.references.get(EntityClass) || {};
+    if (entity.guid in classMap) {
+      const deref = classMap[entity.guid] && classMap[entity.guid].deref();
+      if (deref != null) {
+        return deref;
+      }
+    }
     this.references.set(EntityClass, classMap);
     classMap[entity.guid] = weakRef;
+    return entity;
   }
 }

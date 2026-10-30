@@ -428,12 +428,14 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     this.$isASleepingReference = false;
     this.$sleepingReference = null;
 
+    const instanceIsNew = !this.$originalTags.length;
+
     this.guid = entityJson.guid;
     this.cdate = entityJson.cdate;
     this.mdate = entityJson.mdate;
     if (
       // The instance is new.
-      !this.$originalTags.length ||
+      instanceIsNew ||
       // The data is coming from a save.
       isFromSave ||
       // The tags haven't been modified.
@@ -444,11 +446,18 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     }
     this.$originalTags = entityJson.tags.slice(0);
 
-    if (!this.$nymph.weakCache || !this.$nymph.weakCacheKeepDirtyData) {
+    if (
+      // The instance is new.
+      instanceIsNew ||
+      // Weak cache is not enabled.
+      !this.$nymph.weakCache ||
+      // Weak cache doesn't keep dirty data.
+      !this.$nymph.weakCacheKeepDirtyData ||
+      // This data is coming from a save.
+      isFromSave
+    ) {
       // Clear dirty data tracker.
-      for (let name in this.$dirty) {
-        delete this.$dirty[name];
-      }
+      this.$dirty = {};
     }
 
     for (let name in this.$dataStore) {
@@ -467,7 +476,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     }
 
     for (let name in entityJson.data as T) {
-      if (!(name in this.$dataStore)) {
+      if (!(name in this.$dataStore) && !this.$dirty[name]) {
         this.$dataStore[name] = classNamesToEntityConstructors(
           this.$nymph,
           referencesToEntities(entityJson.data[name], this.$nymph),
