@@ -25,8 +25,6 @@ import {
   entityConstructorsToClassNames,
 } from './utils.js';
 
-let requester: HttpRequester;
-
 export default class Nymph {
   /**
    * And optional PubSub client instance.
@@ -42,6 +40,11 @@ export default class Nymph {
    * The entity class for this instance of Nymph.
    */
   public Entity: typeof Entity;
+
+  /**
+   * This instance's requester.
+   */
+  public requester: HttpRequester;
 
   private requestCallbacks: RequestCallback[] = [];
   private responseCallbacks: ResponseCallback[] = [];
@@ -81,7 +84,7 @@ export default class Nymph {
 
     this.Entity = this.addEntityClass(Entity);
 
-    requester = new HttpRequester(
+    this.requester = new HttpRequester(
       'fetch' in NymphOptions ? NymphOptions.fetch : undefined,
     );
 
@@ -89,13 +92,13 @@ export default class Nymph {
       this.headers['X-Tilmeld-Token-Renewal'] = 'off';
     }
 
-    requester.on('request', (_requester, url, options) => {
+    this.requester.on('request', (_requester, url, options) => {
       for (let i = 0; i < this.requestCallbacks.length; i++) {
         this.requestCallbacks[i] && this.requestCallbacks[i](url, options);
       }
     });
 
-    requester.on('response', (_requester, response, text) => {
+    this.requester.on('response', (_requester, response, text) => {
       for (let i = 0; i < this.responseCallbacks.length; i++) {
         this.responseCallbacks[i] && this.responseCallbacks[i](response, text);
       }
@@ -144,7 +147,7 @@ export default class Nymph {
   }
 
   public async newUID(name: string) {
-    const data = await requester.POST({
+    const data = await this.requester.POST({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'text',
@@ -154,7 +157,7 @@ export default class Nymph {
   }
 
   public async setUID(name: string, value: number) {
-    return await requester.PUT({
+    return await this.requester.PUT({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
@@ -170,7 +173,7 @@ export default class Nymph {
       promise = this.queryCache.get(queryJSON);
     }
     if (promise == null) {
-      promise = requester.GET({
+      promise = this.requester.GET({
         url: this.restUrl,
         headers: { ...this.headers },
         dataType: 'text',
@@ -185,7 +188,7 @@ export default class Nymph {
   }
 
   public async deleteUID(name: string) {
-    return await requester.DELETE({
+    return await this.requester.DELETE({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'text',
@@ -264,7 +267,7 @@ export default class Nymph {
     data: { [k: string]: any },
     plural: boolean,
   ): Promise<T | T[]> {
-    const response = await requester[method]({
+    const response = await this.requester[method]({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
@@ -396,7 +399,7 @@ export default class Nymph {
       promise = this.queryCache.get(queryJSON);
     }
     if (promise == null) {
-      promise = requester.GET({
+      promise = this.requester.GET({
         url: this.restUrl,
         headers: { ...this.headers },
         dataType: 'json',
@@ -446,7 +449,7 @@ export default class Nymph {
         promise = this.queryCache.get(queryJSON);
       }
       if (promise == null) {
-        promise = requester.GET({
+        promise = this.requester.GET({
           url: this.restUrl,
           headers: { ...this.headers },
           dataType: 'json',
@@ -566,7 +569,7 @@ export default class Nymph {
     entity: EntityInterface | EntityInterface[],
     _plural = false,
   ) {
-    return await requester.DELETE({
+    return await this.requester.DELETE({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
@@ -596,7 +599,7 @@ export default class Nymph {
     params: any[],
     stateless = false,
   ): Promise<ServerCallResponse> {
-    const data = await requester.POST({
+    const data = await this.requester.POST({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
@@ -622,7 +625,7 @@ export default class Nymph {
     method: string,
     params: any[],
   ): Promise<ServerCallStaticResponse> {
-    const data = await requester.POST({
+    const data = await this.requester.POST({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
@@ -645,7 +648,7 @@ export default class Nymph {
     method: string,
     params: any[],
   ): Promise<AbortableAsyncIterator<ServerCallStaticResponse>> {
-    const iterable = await requester.POST_ITERATOR({
+    const iterable = await this.requester.POST_ITERATOR({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
