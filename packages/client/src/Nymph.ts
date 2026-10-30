@@ -106,6 +106,14 @@ export default class Nymph {
   }
 
   /**
+   * Clear both the entity and the query caches.
+   */
+  public clearCaches() {
+    this.entityCache = new EntityWeakCache();
+    this.queryCache = new QueryWeakCache();
+  }
+
+  /**
    * Add your class to this instance.
    *
    * This will create a class that extends your class within this instance of

@@ -466,6 +466,8 @@ export class User extends Entity<UserData> {
           if (this.nymph.pubsub) {
             this.nymph.pubsub.authenticate(null);
           }
+          // Make sure entities requested under a previous user are not reused.
+          this.nymph.clearCaches();
           delete store.currentToken;
         }
       } else {
@@ -487,6 +489,8 @@ export class User extends Entity<UserData> {
         if (this.nymph.pubsub) {
           this.nymph.pubsub.authenticate(token, switchToken);
         }
+        // Make sure entities requested under a previous user are not reused.
+        this.nymph.clearCaches();
         store.currentToken = token;
       }
     }
