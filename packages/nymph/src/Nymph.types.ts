@@ -478,7 +478,7 @@ export interface TilmeldInterface {
   gatekeeper(ability?: string): boolean;
   authenticate(skipXsrfToken?: boolean, skipRenew?: boolean): Promise<boolean>;
   clearSession(): void;
-  extractToken(token: string): Promise<any>;
+  extractToken(token: string, enforceRevocation: boolean): Promise<any>;
   fillSession(user: any): Promise<void>;
   checkClientUIDPermissions(
     name: string,

@@ -1036,21 +1036,34 @@ export default class Tilmeld implements TilmeldInterface {
    * Validate and extract the user from a token.
    *
    * @param token The authentication token.
+   * @param enforceRevocation Validate that the token was issued after user's revocation date.
    * @returns The user on success, null on failure.
    */
-  public async extractToken(token: string) {
+  public async extractToken(token: string, enforceRevocation: boolean) {
     this.nymph.config.debugInfo('tilmeld', 'Extracting and validating token.');
     const extract = this.config.jwtExtract(this.config, token);
     if (extract == null) {
       return null;
     }
-    const { guid } = extract;
+    const { guid, issued, expire } = extract;
+
+    if (expire.getTime() <= Date.now()) {
+      return null;
+    }
 
     const user = await this.nymph.getEntity(
       { class: this.User },
       { type: '&', guid },
     );
     if (!user || !user.guid) {
+      return null;
+    }
+
+    if (
+      enforceRevocation &&
+      user.revokeTokenDate != null &&
+      issued.getTime() <= user.revokeTokenDate
+    ) {
       return null;
     }
 
