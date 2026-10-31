@@ -287,9 +287,10 @@ export default class Tilmeld implements TilmeldInterface {
         { class: nymph.getEntityClass(className ?? 'Entity') },
         { type: '&', guid: guid },
       );
-      if (entity != null) {
-        checkPermissionsDelete(nymph, entity);
+      if (entity == null) {
+        throw new AccessControlError("You can't delete this entity by ID.");
       }
+      checkPermissionsDelete(nymph, entity);
     };
     checkPermissionsDeleteByID.skipOnClone = true;
 
