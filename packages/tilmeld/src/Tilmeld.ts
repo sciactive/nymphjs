@@ -1127,6 +1127,7 @@ export default class Tilmeld implements TilmeldInterface {
       authToken = cookies.TILMELDAUTH;
       switchToken = 'TILMELDSWITCH' in cookies ? cookies.TILMELDSWITCH : null;
     } else {
+      this.clearSession();
       return false;
     }
 
