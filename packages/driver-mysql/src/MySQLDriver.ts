@@ -1118,7 +1118,9 @@ export default class MySQLDriver extends NymphDriver {
                 : datum.value.value === 'J'
                   ? JSON.stringify(datum.value.json)
                   : datum.value.value;
-          currentEntityExport.push(`\t${datum.value.name}=${value}`);
+          currentEntityExport.push(
+            `\t${datum.value.name.replace(/\n/g, () => '\\n')}=${value}`,
+          );
           datum = dataIterator.next();
         } while (!datum.done && datum.value.guid === guid);
       } else {

@@ -1493,7 +1493,9 @@ export default class PostgreSQLDriver extends NymphDriver {
                       JSON.stringify(datum.value.json),
                     )
                   : datum.value.value;
-          currentEntityExport.push(`\t${datum.value.name}=${value}`);
+          currentEntityExport.push(
+            `\t${datum.value.name.replace(/\n/g, () => '\\n')}=${value}`,
+          );
           datum = await dataIterator.next();
         } while (!datum.done && datum.value.guid === guid);
       } else {

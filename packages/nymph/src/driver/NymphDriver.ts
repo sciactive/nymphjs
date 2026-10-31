@@ -344,7 +344,7 @@ export default abstract class NymphDriver {
         } else if (propMatch) {
           // Add the variable to the new entity.
           if (guid) {
-            sdata[propMatch[1]] = propMatch[2];
+            sdata[propMatch[1].replace(/\\n/g, () => '\n')] = propMatch[2];
           }
         }
       }
