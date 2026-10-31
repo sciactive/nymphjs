@@ -1251,6 +1251,14 @@ export default abstract class NymphDriver {
     let count = 0;
     const EntityClass =
       options.class ?? (this.nymph.getEntityClass('Entity') as T);
+    if (
+      typeof EntityClass !== 'function' ||
+      !(EntityClass.prototype instanceof Entity)
+    ) {
+      throw new InvalidParametersError(
+        'Invalid entity class passed: ' + JSON.stringify(EntityClass),
+      );
+    }
     const etype = EntityClass.ETYPE;
 
     if (options.source === 'client' && options.return === 'object') {
