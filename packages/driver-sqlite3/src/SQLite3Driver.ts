@@ -2954,6 +2954,7 @@ export default class SQLite3Driver extends NymphDriver {
       return true;
     }
     this.queryRun(`ROLLBACK TO SAVEPOINT ${SQLite3Driver.escape(name)};`);
+    this.queryRun(`RELEASE SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted--;
 
     if (
