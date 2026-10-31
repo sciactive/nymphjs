@@ -186,6 +186,10 @@ export function clearSearchRestrictedData({
 
   const searchRestrictedData = EntityClass.searchRestrictedData;
 
+  if (options.sort != null && searchRestrictedData.includes(options.sort)) {
+    delete options.sort;
+  }
+
   selectors = selectors
     .map((selector) => {
       for (let clause in selector) {
