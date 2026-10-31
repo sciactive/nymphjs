@@ -777,10 +777,10 @@ export default class PubSub {
       }
       const nymph = this.nymph.clone();
       if (nymph.tilmeld != null && authToken != null) {
-        const user = await nymph.tilmeld.extractToken(authToken, true);
+        const { user } = await nymph.tilmeld.extractToken(authToken, true);
         if (user && user.enabled) {
           if (switchToken != null) {
-            const switchUser = await nymph.tilmeld.extractToken(
+            const { user: switchUser } = await nymph.tilmeld.extractToken(
               switchToken,
               false,
             );
@@ -977,10 +977,10 @@ export default class PubSub {
       }
       const nymph = this.nymph.clone();
       if (nymph.tilmeld != null && authToken != null) {
-        const user = await nymph.tilmeld.extractToken(authToken, true);
+        const { user } = await nymph.tilmeld.extractToken(authToken, true);
         if (user && user.enabled) {
           if (switchToken != null) {
-            const switchUser = await nymph.tilmeld.extractToken(
+            const { user: switchUser } = await nymph.tilmeld.extractToken(
               switchToken,
               false,
             );
@@ -1337,10 +1337,10 @@ export default class PubSub {
             switchToken = session?.switchToken;
           }
           if (nymph.tilmeld != null && authToken != null) {
-            const user = await nymph.tilmeld.extractToken(authToken, true);
+            const { user } = await nymph.tilmeld.extractToken(authToken, true);
             if (user && user.enabled) {
               if (switchToken != null) {
-                const switchUser = await nymph.tilmeld.extractToken(
+                const { user: switchUser } = await nymph.tilmeld.extractToken(
                   switchToken,
                   false,
                 );

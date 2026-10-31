@@ -1036,38 +1036,42 @@ export default class Tilmeld implements TilmeldInterface {
    * Validate and extract the user from a token.
    *
    * @param token The authentication token.
-   * @param enforceRevocation Validate that the token was issued after user's revocation date.
-   * @returns The user on success, null on failure.
+   * @param enforceUserRestrictions Validate that the user is enabled and the token was issued after user's revocation date.
+   * @param xsrfToken Validate this XSRF Token against the auth token.
+   * @returns The user and extraction on success, null on failure.
    */
-  public async extractToken(token: string, enforceRevocation: boolean) {
+  public async extractToken(
+    token: string,
+    enforceUserRestrictions: boolean,
+    xsrfToken?: string,
+  ) {
     this.nymph.config.debugInfo('tilmeld', 'Extracting and validating token.');
-    const extract = this.config.jwtExtract(this.config, token);
+    const extract = this.config.jwtExtract(this.config, token, xsrfToken);
     if (extract == null) {
-      return null;
+      return { user: null, extract };
     }
     const { guid, issued, expire } = extract;
 
-    if (expire.getTime() <= Date.now()) {
-      return null;
+    if (expire.getTime() <= Date.now() || issued.getTime() > Date.now()) {
+      return { user: null, extract };
     }
 
     const user = await this.nymph.getEntity(
       { class: this.User },
       { type: '&', guid },
     );
-    if (!user || !user.guid) {
-      return null;
-    }
-
     if (
-      enforceRevocation &&
-      user.revokeTokenDate != null &&
-      issued.getTime() <= user.revokeTokenDate
+      user == null ||
+      user.guid == null ||
+      (enforceUserRestrictions &&
+        (!user.enabled ||
+          (user.revokeTokenDate != null &&
+            issued.getTime() <= user.revokeTokenDate)))
     ) {
-      return null;
+      return { user: null, extract };
     }
 
-    return user;
+    return { user, extract };
   }
 
   /**
@@ -1126,58 +1130,44 @@ export default class Tilmeld implements TilmeldInterface {
       return false;
     }
 
+    let user: User | null;
     let authExtract: { guid: string; issued: Date; expire: Date } | null;
-    let switchExtract: { guid: string; expire: Date } | null;
+    let switchUser: User | null = null;
+    let switchExtract: { guid: string; expire: Date } | null = null;
+    let xsrfToken: string | undefined = undefined;
     if (
       skipXsrfToken ||
       this.request.originalUrl.startsWith(this.config.setupPath)
     ) {
       // The request is for the setup app, or we were told to skip the XSRF
       // check, so don't check for the XSRF token.
-      authExtract = this.config.jwtExtract(this.config, authToken);
-      switchExtract = switchToken
-        ? this.config.jwtExtract(this.config, switchToken)
-        : null;
     } else {
       // The request is for something else, so check for a valid XSRF token,
       // unless the auth token is provided by a header (instead of a cookie).
-      const xsrfToken = this.request.header('x-xsrf-token');
+      xsrfToken = this.request.header('x-xsrf-token');
       if (xsrfToken == null && !fromAuthHeader) {
         return false;
       }
-
-      authExtract = this.config.jwtExtract(this.config, authToken, xsrfToken);
-      switchExtract = switchToken
-        ? this.config.jwtExtract(this.config, switchToken)
-        : null;
+    }
+    ({ user, extract: authExtract } = await this.extractToken(
+      authToken,
+      true,
+      xsrfToken,
+    ));
+    if (switchToken) {
+      ({ user: switchUser, extract: switchExtract } = await this.extractToken(
+        switchToken,
+        false,
+      ));
     }
 
-    if (authExtract == null) {
-      await this.logout();
-      return false;
-    }
-    const { guid, issued, expire } = authExtract;
-    const { guid: switchGuid, expire: switchExpire } = switchExtract || {
-      guid: null,
-      expire: null,
-    };
-
-    const user = await this.User.factory(guid);
-    if (
-      user.guid == null ||
-      !user.enabled ||
-      expire.getTime() <= Date.now() ||
-      issued.getTime() > Date.now() ||
-      (user.revokeTokenDate != null && issued.getTime() <= user.revokeTokenDate)
-    ) {
+    if (user == null) {
       await this.logout();
       return false;
     }
 
-    if (switchGuid && switchExpire && switchExpire.getTime() > Date.now()) {
-      // Load the switch user.
-      const switchUser = await this.User.factory(switchGuid);
-      if (switchUser.guid == null) {
+    if (switchToken) {
+      if (switchUser == null) {
         await this.logoutSwitch();
       } else {
         await this.fillSession(switchUser);
@@ -1192,7 +1182,8 @@ export default class Tilmeld implements TilmeldInterface {
 
     if (
       !skipRenew &&
-      expire.getTime() < Date.now() + this.config.jwtRenew * 1000
+      authExtract &&
+      authExtract.expire.getTime() < Date.now() + this.config.jwtRenew * 1000
     ) {
       // If the user is less than renew time from needing a new token, give them
       // a new one.
