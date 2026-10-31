@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {
+  clearSearchRestrictedData,
   type EntityJson,
   type EntityPatch,
   type Options,
@@ -261,6 +262,11 @@ export class Group extends AbleObject<GroupData> {
     if (highestParent === false) {
       return assignableGroups;
     }
+
+    ({ options, selectors } = clearSearchRestrictedData({
+      options,
+      selectors,
+    }));
 
     assignableGroups = await this.nymph.getEntities(
       { ...options, class: tilmeld.Group },

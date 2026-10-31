@@ -586,6 +586,13 @@ export class User extends AbleObject<UserData> {
       throw new AccessControlError('Domain support is not enabled.');
     }
 
+    if (
+      options?.sort != null &&
+      User.searchRestrictedData.includes(options.sort)
+    ) {
+      throw new AccessControlError("Can't sort by that property.");
+    }
+
     if (!domain) {
       throw new BadDataError('Domain is required.');
     }
@@ -603,7 +610,7 @@ export class User extends AbleObject<UserData> {
 
     return await this.nymph.getEntities(
       {
-        class: this.nymph.getEntityClass(User),
+        class: User,
         ...(options?.limit != null ? { limit: options.limit } : {}),
         ...(options?.offset != null ? { offset: options.offset } : {}),
         ...(options?.sort != null ? { sort: options.sort } : {}),

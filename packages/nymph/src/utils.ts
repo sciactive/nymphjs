@@ -1,5 +1,5 @@
 import Entity from './Entity.js';
-import type { EntityReference } from './Entity.types.js';
+import type { EntityConstructor, EntityReference } from './Entity.types.js';
 import type Nymph from './Nymph.js';
 import type { Options, Selector } from './Nymph.types.js';
 
@@ -171,13 +171,9 @@ export function sortObj<T extends { [k: string]: any }>(obj: T): T {
   return obj;
 }
 
-export function clearSearchRestrictedData({
-  options,
-  selectors,
-}: {
-  options: Options;
-  selectors: Selector[];
-}) {
+export function clearSearchRestrictedData<
+  T extends EntityConstructor = EntityConstructor,
+>({ options, selectors }: { options: Options<T>; selectors: Selector[] }) {
   const EntityClass = options.class;
 
   if (EntityClass == null || !EntityClass.restEnabled) {
