@@ -27,167 +27,169 @@
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
     <Title id="tilmeld-account-title">{title}</Title>
     <Content id="tilmeld-account-content">
-      {#if !$clientConfig.emailUsernames && $clientConfig.allowUsernameChange}
-        <div>
-          <Textfield
-            bind:value={$user.username}
-            label="Username"
-            type="text"
-            style="width: 100%;"
-            helperLine$style="width: 100%;"
-            invalid={usernameVerified === false}
-            input$autocomplete="username"
-            input$autocapitalize="off"
-            input$spellcheck="false"
-            input$emptyValueUndefined
-            {...prefixFilter(restProps, 'username$')}
-          >
-            {#snippet helper()}
-              <HelperText persistent>
-                {usernameVerifiedMessage || ''}
-              </HelperText>
-            {/snippet}
-          </Textfield>
-        </div>
-      {/if}
+      <form onsubmit={preventDefault(stopPropagation(save))}>
+        {#if !$clientConfig.emailUsernames && $clientConfig.allowUsernameChange}
+          <div>
+            <Textfield
+              bind:value={$user.username}
+              label="Username"
+              type="text"
+              style="width: 100%;"
+              helperLine$style="width: 100%;"
+              invalid={usernameVerified === false}
+              input$autocomplete="username"
+              input$autocapitalize="off"
+              input$spellcheck="false"
+              input$emptyValueUndefined
+              {...prefixFilter(restProps, 'username$')}
+            >
+              {#snippet helper()}
+                <HelperText persistent>
+                  {usernameVerifiedMessage || ''}
+                </HelperText>
+              {/snippet}
+            </Textfield>
+          </div>
+        {/if}
 
-      {#if $clientConfig.emailUsernames || $clientConfig.userFields.includes('email')}
-        <div>
-          <Textfield
-            bind:value={$user.email}
-            label="Email"
-            type="email"
-            style="width: 100%;"
-            helperLine$style="width: 100%;"
-            invalid={emailVerified === false}
-            input$autocomplete="email"
-            input$autocapitalize="off"
-            input$spellcheck="false"
-            input$emptyValueUndefined
-            {...prefixFilter(restProps, 'email$')}
-          >
-            {#snippet helper()}
-              <HelperText persistent>
-                {emailVerifiedMessage || ''}
-              </HelperText>
-            {/snippet}
-          </Textfield>
-        </div>
-      {/if}
+        {#if $clientConfig.emailUsernames || $clientConfig.userFields.includes('email')}
+          <div>
+            <Textfield
+              bind:value={$user.email}
+              label="Email"
+              type="email"
+              style="width: 100%;"
+              helperLine$style="width: 100%;"
+              invalid={emailVerified === false}
+              input$autocomplete="email"
+              input$autocapitalize="off"
+              input$spellcheck="false"
+              input$emptyValueUndefined
+              {...prefixFilter(restProps, 'email$')}
+            >
+              {#snippet helper()}
+                <HelperText persistent>
+                  {emailVerifiedMessage || ''}
+                </HelperText>
+              {/snippet}
+            </Textfield>
+          </div>
+        {/if}
 
-      {#if $clientConfig.userFields.includes('name')}
-        <div>
-          <Textfield
-            bind:value={$user.nameFirst}
-            label="First Name"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="given-name"
-            input$emptyValueUndefined
-            {...prefixFilter(restProps, 'nameFirst$')}
-          />
-        </div>
+        {#if $clientConfig.userFields.includes('name')}
+          <div>
+            <Textfield
+              bind:value={$user.nameFirst}
+              label="First Name"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="given-name"
+              input$emptyValueUndefined
+              {...prefixFilter(restProps, 'nameFirst$')}
+            />
+          </div>
 
-        <div>
-          <Textfield
-            bind:value={$user.nameMiddle}
-            label="Middle Name"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="additional-name"
-            input$emptyValueUndefined
-            {...prefixFilter(restProps, 'nameMiddle$')}
-          />
-        </div>
+          <div>
+            <Textfield
+              bind:value={$user.nameMiddle}
+              label="Middle Name"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="additional-name"
+              input$emptyValueUndefined
+              {...prefixFilter(restProps, 'nameMiddle$')}
+            />
+          </div>
 
-        <div>
-          <Textfield
-            bind:value={$user.nameLast}
-            label="Last Name"
-            type="text"
-            style="width: 100%;"
-            input$autocomplete="family-name"
-            input$emptyValueUndefined
-            {...prefixFilter(restProps, 'nameLast$')}
-          />
-        </div>
-      {/if}
+          <div>
+            <Textfield
+              bind:value={$user.nameLast}
+              label="Last Name"
+              type="text"
+              style="width: 100%;"
+              input$autocomplete="family-name"
+              input$emptyValueUndefined
+              {...prefixFilter(restProps, 'nameLast$')}
+            />
+          </div>
+        {/if}
 
-      {#if $clientConfig.userFields.includes('phone')}
-        <div>
-          <Textfield
-            bind:value={$user.phone}
-            label="Phone Number"
-            type="tel"
-            style="width: 100%;"
-            input$autocomplete="tel"
-            input$name="phone"
-            input$emptyValueUndefined
-            {...prefixFilter(restProps, 'phone$')}
-          />
-        </div>
-      {/if}
+        {#if $clientConfig.userFields.includes('phone')}
+          <div>
+            <Textfield
+              bind:value={$user.phone}
+              label="Phone Number"
+              type="tel"
+              style="width: 100%;"
+              input$autocomplete="tel"
+              input$name="phone"
+              input$emptyValueUndefined
+              {...prefixFilter(restProps, 'phone$')}
+            />
+          </div>
+        {/if}
 
-      {@render additional?.()}
-
-      <div class="tilmeld-account-action">
-        <a
-          href={'javascript:void(0);'}
-          onclick={() => {
-            open = false;
-            changePasswordOpen = true;
-          }}
-          {...prefixFilter(restProps, 'changePasswordLink$')}
-        >
-          Change your password.
-        </a>
-      </div>
-
-      <div class="tilmeld-account-action">
-        <a
-          href={'javascript:void(0);'}
-          onclick={() => {
-            open = false;
-            revokeTokensOpen = true;
-          }}
-          {...prefixFilter(restProps, 'revokeTokensLink$')}
-        >
-          Log out of other sessions.
-        </a>
+        {@render additional?.()}
 
         <div class="tilmeld-account-action">
           <a
             href={'javascript:void(0);'}
             onclick={() => {
               open = false;
-              twoFactorOpen = true;
+              changePasswordOpen = true;
             }}
-            {...prefixFilter(restProps, 'twoFactor$')}
+            {...prefixFilter(restProps, 'changePasswordLink$')}
           >
-            {#if hasTOTPSecret === false}
-              Enable two factor authentication (2FA).
-            {:else}
-              Manage two factor authentication (2FA).
-            {/if}
+            Change your password.
           </a>
         </div>
 
-        {#if failureMessage}
-          <div class="tilmeld-account-failure">
-            {failureMessage}
-          </div>
-        {/if}
+        <div class="tilmeld-account-action">
+          <a
+            href={'javascript:void(0);'}
+            onclick={() => {
+              open = false;
+              revokeTokensOpen = true;
+            }}
+            {...prefixFilter(restProps, 'revokeTokensLink$')}
+          >
+            Log out of other sessions.
+          </a>
 
-        {#if loading}
-          <div class="tilmeld-account-loading">
-            <CircularProgress
-              style="height: 24px; width: 24px;"
-              indeterminate
-              {...prefixFilter(restProps, 'progress$')}
-            />
+          <div class="tilmeld-account-action">
+            <a
+              href={'javascript:void(0);'}
+              onclick={() => {
+                open = false;
+                twoFactorOpen = true;
+              }}
+              {...prefixFilter(restProps, 'twoFactor$')}
+            >
+              {#if hasTOTPSecret === false}
+                Enable two factor authentication (2FA).
+              {:else}
+                Manage two factor authentication (2FA).
+              {/if}
+            </a>
           </div>
-        {/if}
-      </div>
+
+          {#if failureMessage}
+            <div class="tilmeld-account-failure">
+              {failureMessage}
+            </div>
+          {/if}
+
+          {#if loading}
+            <div class="tilmeld-account-loading">
+              <CircularProgress
+                style="height: 24px; width: 24px;"
+                indeterminate
+                {...prefixFilter(restProps, 'progress$')}
+              />
+            </div>
+          {/if}
+        </div>
+      </form>
     </Content>
     <Actions>
       <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>

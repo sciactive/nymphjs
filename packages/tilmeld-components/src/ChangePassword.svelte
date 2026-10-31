@@ -20,73 +20,75 @@
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
     <Title id="tilmeld-password-title">{title}</Title>
     <Content id="tilmeld-password-content">
-      <div>
-        <Textfield
-          bind:value={currentPassword}
-          label="Current Password"
-          type="password"
-          style="width: 100%;"
-          input$autocomplete="current-password"
-          {...prefixFilter(restProps, 'password$')}
-        />
-      </div>
-
-      <div>
-        <Textfield
-          bind:value={newPassword}
-          label="New Password"
-          type="password"
-          style="width: 100%;"
-          input$autocomplete="new-password"
-          {...prefixFilter(restProps, 'newPassword$')}
-        />
-      </div>
-
-      <div>
-        <Textfield
-          bind:value={newPassword2}
-          label="Re-enter New Password"
-          type="password"
-          style="width: 100%;"
-          input$autocomplete="new-password"
-          {...prefixFilter(restProps, 'newPassword2$')}
-        />
-      </div>
-
-      <div style="margin: 1em 0;">
-        <FormField>
-          <Checkbox
-            bind:checked={revokeCurrentTokens}
-            {...prefixFilter(restProps, 'revokeTokens$')}
-          />
-          {#snippet label()}
-            Log out of all other sessions.
-            <span
-              style="display: block; font-size: 0.7em; height: 0; overflow: visible;"
-            >
-              Use this if you think you've been hacked.
-            </span>
-          {/snippet}
-        </FormField>
-      </div>
-
-      {@render additional?.()}
-
-      {#if failureMessage}
-        <div class="tilmeld-password-failure">
-          {failureMessage}
-        </div>
-      {/if}
-
-      {#if loading}
-        <div class="tilmeld-password-loading">
-          <CircularProgress
-            style="height: 24px; width: 24px;"
-            indeterminate
-            {...prefixFilter(restProps, 'progress$')}
+      <form onsubmit={preventDefault(stopPropagation(changePassword))}>
+        <div>
+          <Textfield
+            bind:value={currentPassword}
+            label="Current Password"
+            type="password"
+            style="width: 100%;"
+            input$autocomplete="current-password"
+            {...prefixFilter(restProps, 'password$')}
           />
         </div>
-      {/if}
+
+        <div>
+          <Textfield
+            bind:value={newPassword}
+            label="New Password"
+            type="password"
+            style="width: 100%;"
+            input$autocomplete="new-password"
+            {...prefixFilter(restProps, 'newPassword$')}
+          />
+        </div>
+
+        <div>
+          <Textfield
+            bind:value={newPassword2}
+            label="Re-enter New Password"
+            type="password"
+            style="width: 100%;"
+            input$autocomplete="new-password"
+            {...prefixFilter(restProps, 'newPassword2$')}
+          />
+        </div>
+
+        <div style="margin: 1em 0;">
+          <FormField>
+            <Checkbox
+              bind:checked={revokeCurrentTokens}
+              {...prefixFilter(restProps, 'revokeTokens$')}
+            />
+            {#snippet label()}
+              Log out of all other sessions.
+              <span
+                style="display: block; font-size: 0.7em; height: 0; overflow: visible;"
+              >
+                Use this if you think you've been hacked.
+              </span>
+            {/snippet}
+          </FormField>
+        </div>
+
+        {@render additional?.()}
+
+        {#if failureMessage}
+          <div class="tilmeld-password-failure">
+            {failureMessage}
+          </div>
+        {/if}
+
+        {#if loading}
+          <div class="tilmeld-password-loading">
+            <CircularProgress
+              style="height: 24px; width: 24px;"
+              indeterminate
+              {...prefixFilter(restProps, 'progress$')}
+            />
+          </div>
+        {/if}
+      </form>
     </Content>
     <Actions>
       <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>

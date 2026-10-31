@@ -25,101 +25,79 @@
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
     <Title id="tilmeld-recovery-title">{title}</Title>
     <Content id="tilmeld-recovery-content">
-      {#if successRecoveredMessage}
-        {successRecoveredMessage}
-      {:else}
-        {#if !hasSentSecret}
-          {#if !$clientConfig.emailUsernames}
-            <div>
-              <FormField style="margin-right: 1em;">
-                <Radio
-                  bind:group={recoveryType}
-                  value="password"
-                  {...prefixFilter(restProps, 'recoveryTypePassword$')}
-                />
-                {#snippet label()}
-                  I don't know my password.
-                {/snippet}
-              </FormField>
-              <FormField style="margin-right: 1em;">
-                <Radio
-                  bind:group={recoveryType}
-                  value="username"
-                  {...prefixFilter(restProps, 'recoveryTypeUsername$')}
-                />
-                {#snippet label()}
-                  I don't know my username.
-                {/snippet}
-              </FormField>
-            </div>
-          {/if}
-
-          <div>
-            {#if recoveryType === 'password'}
-              <p>
-                To reset your password, type the {$clientConfig.emailUsernames
-                  ? 'email'
-                  : 'username'}
-                you use to sign in below.
-              </p>
-            {/if}
-            {#if recoveryType === 'username'}
-              <p>
-                To get your username, type your email as you entered it when
-                creating your account.
-              </p>
-            {/if}
-          </div>
-
-          <div>
-            <Textfield
-              bind:this={accountElem}
-              bind:value={account}
-              label={$clientConfig.emailUsernames || recoveryType === 'username'
-                ? 'Email Address'
-                : 'Username'}
-              type={$clientConfig.emailUsernames || recoveryType === 'username'
-                ? 'email'
-                : 'text'}
-              input$autocomplete={$clientConfig.emailUsernames ||
-              recoveryType === 'username'
-                ? 'email'
-                : 'username'}
-              input$autocapitalize="off"
-              input$spellcheck="false"
-              {...prefixFilter(restProps, 'account$')}
-            />
-          </div>
-
-          {#if recoveryType === 'password'}
-            <div class="tilmeld-recover-action">
-              <a
-                href={'javascript:void(0);'}
-                onclick={() => (hasSentSecret = 1)}
-                {...prefixFilter(restProps, 'alreadyGotCodeLink$')}
-              >
-                Already Got a Code?
-              </a>
-            </div>
-          {/if}
+      <form
+        onsubmit={preventDefault(
+          stopPropagation(() => {
+            if (!successRecoveredMessage) {
+              if (!hasSentSecret) {
+                sendRecovery();
+              } else {
+                recover();
+              }
+            }
+          }),
+        )}
+      >
+        {#if successRecoveredMessage}
+          {successRecoveredMessage}
         {:else}
-          <div>
-            <p {...prefixFilter(restProps, 'codeSentMessage$')}>
-              A code has been sent to you by email. Enter that code here, and a
-              new password for your account.
-            </p>
-          </div>
+          {#if !hasSentSecret}
+            {#if !$clientConfig.emailUsernames}
+              <div>
+                <FormField style="margin-right: 1em;">
+                  <Radio
+                    bind:group={recoveryType}
+                    value="password"
+                    {...prefixFilter(restProps, 'recoveryTypePassword$')}
+                  />
+                  {#snippet label()}
+                    I don't know my password.
+                  {/snippet}
+                </FormField>
+                <FormField style="margin-right: 1em;">
+                  <Radio
+                    bind:group={recoveryType}
+                    value="username"
+                    {...prefixFilter(restProps, 'recoveryTypeUsername$')}
+                  />
+                  {#snippet label()}
+                    I don't know my username.
+                  {/snippet}
+                </FormField>
+              </div>
+            {/if}
 
-          {#if hasSentSecret === 1}
+            <div>
+              {#if recoveryType === 'password'}
+                <p>
+                  To reset your password, type the {$clientConfig.emailUsernames
+                    ? 'email'
+                    : 'username'}
+                  you use to sign in below.
+                </p>
+              {/if}
+              {#if recoveryType === 'username'}
+                <p>
+                  To get your username, type your email as you entered it when
+                  creating your account.
+                </p>
+              {/if}
+            </div>
+
             <div>
               <Textfield
                 bind:this={accountElem}
                 bind:value={account}
-                label={$clientConfig.emailUsernames
+                label={$clientConfig.emailUsernames ||
+                recoveryType === 'username'
                   ? 'Email Address'
                   : 'Username'}
-                type={$clientConfig.emailUsernames ? 'email' : 'text'}
-                input$autocomplete={$clientConfig.emailUsernames
+                type={$clientConfig.emailUsernames ||
+                recoveryType === 'username'
+                  ? 'email'
+                  : 'text'}
+                input$autocomplete={$clientConfig.emailUsernames ||
+                recoveryType === 'username'
                   ? 'email'
                   : 'username'}
                 input$autocapitalize="off"
@@ -127,65 +105,103 @@
                 {...prefixFilter(restProps, 'account$')}
               />
             </div>
+
+            {#if recoveryType === 'password'}
+              <div class="tilmeld-recover-action">
+                <a
+                  href={'javascript:void(0);'}
+                  onclick={() => (hasSentSecret = 1)}
+                  {...prefixFilter(restProps, 'alreadyGotCodeLink$')}
+                >
+                  Already Got a Code?
+                </a>
+              </div>
+            {/if}
+          {:else}
+            <div>
+              <p {...prefixFilter(restProps, 'codeSentMessage$')}>
+                A code has been sent to you by email. Enter that code here, and
+                a new password for your account.
+              </p>
+            </div>
+
+            {#if hasSentSecret === 1}
+              <div>
+                <Textfield
+                  bind:this={accountElem}
+                  bind:value={account}
+                  label={$clientConfig.emailUsernames
+                    ? 'Email Address'
+                    : 'Username'}
+                  type={$clientConfig.emailUsernames ? 'email' : 'text'}
+                  input$autocomplete={$clientConfig.emailUsernames
+                    ? 'email'
+                    : 'username'}
+                  input$autocapitalize="off"
+                  input$spellcheck="false"
+                  {...prefixFilter(restProps, 'account$')}
+                />
+              </div>
+            {/if}
+
+            <div>
+              <Textfield
+                bind:value={secret}
+                label="Recovery Code"
+                type="text"
+                input$autocomplete="one-time-code"
+                {...prefixFilter(restProps, 'recoveryCode$')}
+              />
+            </div>
+
+            <div>
+              <Textfield
+                bind:value={password}
+                label="Password"
+                type="password"
+                input$autocomplete="new-password"
+                {...prefixFilter(restProps, 'password$')}
+              />
+            </div>
+
+            <div>
+              <Textfield
+                bind:value={password2}
+                label="Re-enter Password"
+                type="password"
+                input$autocomplete="new-password"
+                {...prefixFilter(restProps, 'password2$')}
+              />
+            </div>
+
+            <div class="tilmeld-recover-action">
+              <a
+                href={'javascript:void(0);'}
+                onclick={() => (hasSentSecret = false)}
+                {...prefixFilter(restProps, 'needCodeLink$')}
+              >
+                Need a New Code?
+              </a>
+            </div>
           {/if}
 
-          <div>
-            <Textfield
-              bind:value={secret}
-              label="Recovery Code"
-              type="text"
-              input$autocomplete="one-time-code"
-              {...prefixFilter(restProps, 'recoveryCode$')}
-            />
-          </div>
+          {#if failureMessage}
+            <div class="tilmeld-recover-failure">
+              {failureMessage}
+            </div>
+          {/if}
 
-          <div>
-            <Textfield
-              bind:value={password}
-              label="Password"
-              type="password"
-              input$autocomplete="new-password"
-              {...prefixFilter(restProps, 'password$')}
-            />
-          </div>
-
-          <div>
-            <Textfield
-              bind:value={password2}
-              label="Re-enter Password"
-              type="password"
-              input$autocomplete="new-password"
-              {...prefixFilter(restProps, 'password2$')}
-            />
-          </div>
-
-          <div class="tilmeld-recover-action">
-            <a
-              href={'javascript:void(0);'}
-              onclick={() => (hasSentSecret = false)}
-              {...prefixFilter(restProps, 'needCodeLink$')}
-            >
-              Need a New Code?
-            </a>
-          </div>
+          {#if loading}
+            <div class="tilmeld-recover-loading">
+              <CircularProgress
+                style="height: 24px; width: 24px;"
+                indeterminate
+                {...prefixFilter(restProps, 'progress$')}
+              />
+            </div>
+          {/if}
         {/if}
-
-        {#if failureMessage}
-          <div class="tilmeld-recover-failure">
-            {failureMessage}
-          </div>
-        {/if}
-
-        {#if loading}
-          <div class="tilmeld-recover-loading">
-            <CircularProgress
-              style="height: 24px; width: 24px;"
-              indeterminate
-              {...prefixFilter(restProps, 'progress$')}
-            />
-          </div>
-        {/if}
-      {/if}
+      </form>
     </Content>
     <Actions>
       <Button onclick={() => (open = false)} disabled={loading}>

@@ -40,7 +40,7 @@
       {successLoginMessage}
     </div>
   {:else if totp}
-    <form onsubmit={(e) => e.preventDefault()}>
+    <form onsubmit={preventDefault(stopPropagation(login))}>
       <div {...prefixFilter(restProps, 'codeMessage$')}>
         Enter the 6-digit 2FA code from your authenticator app.
       </div>
@@ -74,7 +74,17 @@
       </div>
     </form>
   {:else}
-    <form onsubmit={(e) => e.preventDefault()}>
+    <form
+      onsubmit={preventDefault(
+        stopPropagation(() => {
+          if (mode === 'login') {
+            login();
+          } else {
+            register();
+          }
+        }),
+      )}
+    >
       <div>
         <Textfield
           bind:value={username}
@@ -259,6 +269,7 @@
   import HelperText from '@smui/textfield/helper-text';
   import type { ActionArray } from '@smui/common/internal';
   import { exclude, prefixFilter, useActions } from '@smui/common/internal';
+  import { preventDefault, stopPropagation } from '@smui/common/events';
   import type { SmuiElementPropMap } from '@smui/common';
   import type {
     User as UserClass,

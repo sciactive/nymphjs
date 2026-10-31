@@ -17,38 +17,40 @@
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
     <Title id="tilmeld-revoke-tokens-title">{title}</Title>
     <Content id="tilmeld-revoke-tokens-content">
-      <div>
-        {description}
-      </div>
-
-      <div style="margin-top: 1em;">
-        <Textfield
-          bind:value={password}
-          label="Password"
-          type="password"
-          style="width: 100%;"
-          input$autocomplete="current-password"
-          {...prefixFilter(restProps, 'password$')}
-        />
-      </div>
-
-      {@render additional?.()}
-
-      {#if failureMessage}
-        <div class="tilmeld-revoke-tokens-failure">
-          {failureMessage}
+      <form onsubmit={preventDefault(stopPropagation(revokeTokens))}>
+        <div>
+          {description}
         </div>
-      {/if}
 
-      {#if loading}
-        <div class="tilmeld-revoke-tokens-loading">
-          <CircularProgress
-            style="height: 24px; width: 24px;"
-            indeterminate
-            {...prefixFilter(restProps, 'progress$')}
+        <div style="margin-top: 1em;">
+          <Textfield
+            bind:value={password}
+            label="Password"
+            type="password"
+            style="width: 100%;"
+            input$autocomplete="current-password"
+            {...prefixFilter(restProps, 'password$')}
           />
         </div>
-      {/if}
+
+        {@render additional?.()}
+
+        {#if failureMessage}
+          <div class="tilmeld-revoke-tokens-failure">
+            {failureMessage}
+          </div>
+        {/if}
+
+        {#if loading}
+          <div class="tilmeld-revoke-tokens-loading">
+            <CircularProgress
+              style="height: 24px; width: 24px;"
+              indeterminate
+              {...prefixFilter(restProps, 'progress$')}
+            />
+          </div>
+        {/if}
+      </form>
     </Content>
     <Actions>
       <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>

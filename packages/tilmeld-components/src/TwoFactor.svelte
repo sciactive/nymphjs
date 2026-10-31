@@ -20,144 +20,156 @@
     <Title id="tilmeld-two-factor-title">{title}</Title>
     {#if hasTOTPSecret === false}
       <Content id="tilmeld-two-factor-content">
-        {#if totpSecret == null}
-          <p>
-            2 Factor Authentication (2FA) adds an additional layer of security.
-            With 2FA, no one can log in without your authenticator device, even
-            with your password.
-          </p>
+        <form
+          onsubmit={preventDefault(
+            stopPropagation(() => {
+              if (totpSecret == null) {
+                beginSetup();
+              } else {
+                enableTOTP();
+              }
+            }),
+          )}
+        >
+          {#if totpSecret == null}
+            <p>
+              2 Factor Authentication (2FA) adds an additional layer of
+              security. With 2FA, no one can log in without your authenticator
+              device, even with your password.
+            </p>
 
-          <p>
-            You'll need an authenticator app that supports TOTP codes. Some
-            popular apps are linked here.
-          </p>
+            <p>
+              You'll need an authenticator app that supports TOTP codes. Some
+              popular apps are linked here.
+            </p>
 
-          <h6 style="margin-top: 0;">Twilio Authy</h6>
+            <h6 style="margin-top: 0;">Twilio Authy</h6>
 
-          <ul>
-            <li>
-              <a
-                href="https://play.google.com/store/apps/details?id=com.authy.authy"
-                target="_blank"
-                rel="noopener noreferrer">Google Play Store</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://apps.apple.com/us/app/twilio-authy/id494168017"
-                target="_blank"
-                rel="noopener noreferrer">Apple App Store</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://authy.com/download/"
-                target="_blank"
-                rel="noopener noreferrer">Desktop App</a
-              >
-            </li>
-          </ul>
+            <ul>
+              <li>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.authy.authy"
+                  target="_blank"
+                  rel="noopener noreferrer">Google Play Store</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://apps.apple.com/us/app/twilio-authy/id494168017"
+                  target="_blank"
+                  rel="noopener noreferrer">Apple App Store</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://authy.com/download/"
+                  target="_blank"
+                  rel="noopener noreferrer">Desktop App</a
+                >
+              </li>
+            </ul>
 
-          <h6 style="margin-top: 0;">Google Authenticator</h6>
+            <h6 style="margin-top: 0;">Google Authenticator</h6>
 
-          <ul>
-            <li>
-              <a
-                href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2"
-                target="_blank"
-                rel="noopener noreferrer">Google Play Store</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://apps.apple.com/us/app/google-authenticator/id388497605"
-                target="_blank"
-                rel="noopener noreferrer">Apple App Store</a
-              >
-            </li>
-          </ul>
+            <ul>
+              <li>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2"
+                  target="_blank"
+                  rel="noopener noreferrer">Google Play Store</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://apps.apple.com/us/app/google-authenticator/id388497605"
+                  target="_blank"
+                  rel="noopener noreferrer">Apple App Store</a
+                >
+              </li>
+            </ul>
 
-          <h6 style="margin-top: 0;">Microsoft Authenticator</h6>
+            <h6 style="margin-top: 0;">Microsoft Authenticator</h6>
 
-          <ul>
-            <li>
-              <a
-                href="https://play.google.com/store/apps/details?id=com.azure.authenticator"
-                target="_blank"
-                rel="noopener noreferrer">Google Play Store</a
-              >
-            </li>
-            <li>
-              <a
-                href="https://apps.apple.com/us/app/microsoft-authenticator/id983156458"
-                target="_blank"
-                rel="noopener noreferrer">Apple App Store</a
-              >
-            </li>
-          </ul>
+            <ul>
+              <li>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.azure.authenticator"
+                  target="_blank"
+                  rel="noopener noreferrer">Google Play Store</a
+                >
+              </li>
+              <li>
+                <a
+                  href="https://apps.apple.com/us/app/microsoft-authenticator/id983156458"
+                  target="_blank"
+                  rel="noopener noreferrer">Apple App Store</a
+                >
+              </li>
+            </ul>
 
-          <p>
-            Once your authenticator app is ready, continue to generate a QR
-            code.
-          </p>
-        {:else}
-          <p>Scan this QR code with your authenticator app:</p>
+            <p>
+              Once your authenticator app is ready, continue to generate a QR
+              code.
+            </p>
+          {:else}
+            <p>Scan this QR code with your authenticator app:</p>
 
-          <div style="text-align: center;">
-            <img alt="TOTP Set Up QR Code" src={totpSecret.qrcode} />
-          </div>
+            <div style="text-align: center;">
+              <img alt="TOTP Set Up QR Code" src={totpSecret.qrcode} />
+            </div>
 
-          <p>Or you can enter this code manually into your app:</p>
+            <p>Or you can enter this code manually into your app:</p>
 
-          <div style="text-align: center;">
-            <code style="word-break: break-all;">{totpSecret.secret}</code>
-          </div>
+            <div style="text-align: center;">
+              <code style="word-break: break-all;">{totpSecret.secret}</code>
+            </div>
 
-          <p>Enter your password to allow this account change:</p>
+            <p>Enter your password to allow this account change:</p>
 
-          <div>
-            <Textfield
-              bind:value={password}
-              label="Password"
-              type="password"
-              style="width: 100%;"
-              input$autocomplete="current-password"
-              {...prefixFilter(restProps, 'password$')}
-            />
-          </div>
+            <div>
+              <Textfield
+                bind:value={password}
+                label="Password"
+                type="password"
+                style="width: 100%;"
+                input$autocomplete="current-password"
+                {...prefixFilter(restProps, 'password$')}
+              />
+            </div>
 
-          <p>
-            Enter a code generated by your app to confirm the account is
-            configured correctly:
-          </p>
+            <p>
+              Enter a code generated by your app to confirm the account is
+              configured correctly:
+            </p>
 
-          <div>
-            <Textfield
-              bind:value={code}
-              label="2FA Code"
-              style="width: 100%;"
-              input$maxlength={6}
-              input$minlength={6}
-              {...prefixFilter(restProps, 'code$')}
-            />
-          </div>
-        {/if}
+            <div>
+              <Textfield
+                bind:value={code}
+                label="2FA Code"
+                style="width: 100%;"
+                input$maxlength={6}
+                input$minlength={6}
+                {...prefixFilter(restProps, 'code$')}
+              />
+            </div>
+          {/if}
 
-        {#if failureMessage}
-          <div class="tilmeld-two-factor-failure">
-            {failureMessage}
-          </div>
-        {/if}
+          {#if failureMessage}
+            <div class="tilmeld-two-factor-failure">
+              {failureMessage}
+            </div>
+          {/if}
 
-        {#if loading}
-          <div class="tilmeld-two-factor-loading">
-            <CircularProgress
-              style="height: 24px; width: 24px;"
-              indeterminate
-              {...prefixFilter(restProps, 'progress$')}
-            />
-          </div>
-        {/if}
+          {#if loading}
+            <div class="tilmeld-two-factor-loading">
+              <CircularProgress
+                style="height: 24px; width: 24px;"
+                indeterminate
+                {...prefixFilter(restProps, 'progress$')}
+              />
+            </div>
+          {/if}
+        </form>
       </Content>
       <Actions>
         <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>
@@ -183,52 +195,54 @@
       </Actions>
     {:else if hasTOTPSecret === true}
       <Content id="tilmeld-two-factor-content">
-        <p>
-          2 Factor Authentication (2FA) is enabled on your account. If you'd
-          like to disable it, you can provide your password and a code generated
-          by your Authenticator app. You can re-enable it by generating a new QR
-          code at any time.
-        </p>
+        <form onsubmit={preventDefault(stopPropagation(disableTOTP))}>
+          <p>
+            2 Factor Authentication (2FA) is enabled on your account. If you'd
+            like to disable it, you can provide your password and a code
+            generated by your Authenticator app. You can re-enable it by
+            generating a new QR code at any time.
+          </p>
 
-        <div>
-          <Textfield
-            bind:value={password}
-            label="Password"
-            type="password"
-            style="width: 100%;"
-            input$autocomplete="current-password"
-            {...prefixFilter(restProps, 'password$')}
-          />
-        </div>
-
-        <div>
-          <Textfield
-            bind:value={code}
-            label="2FA Code"
-            style="width: 100%;"
-            input$maxlength={6}
-            input$minlength={6}
-            {...prefixFilter(restProps, 'code$')}
-          />
-        </div>
-
-        {@render additional?.()}
-
-        {#if failureMessage}
-          <div class="tilmeld-two-factor-failure">
-            {failureMessage}
-          </div>
-        {/if}
-
-        {#if loading}
-          <div class="tilmeld-two-factor-loading">
-            <CircularProgress
-              style="height: 24px; width: 24px;"
-              indeterminate
-              {...prefixFilter(restProps, 'progress$')}
+          <div>
+            <Textfield
+              bind:value={password}
+              label="Password"
+              type="password"
+              style="width: 100%;"
+              input$autocomplete="current-password"
+              {...prefixFilter(restProps, 'password$')}
             />
           </div>
-        {/if}
+
+          <div>
+            <Textfield
+              bind:value={code}
+              label="2FA Code"
+              style="width: 100%;"
+              input$maxlength={6}
+              input$minlength={6}
+              {...prefixFilter(restProps, 'code$')}
+            />
+          </div>
+
+          {@render additional?.()}
+
+          {#if failureMessage}
+            <div class="tilmeld-two-factor-failure">
+              {failureMessage}
+            </div>
+          {/if}
+
+          {#if loading}
+            <div class="tilmeld-two-factor-loading">
+              <CircularProgress
+                style="height: 24px; width: 24px;"
+                indeterminate
+                {...prefixFilter(restProps, 'progress$')}
+              />
+            </div>
+          {/if}
+        </form>
       </Content>
       <Actions>
         <Button disabled={loading} {...prefixFilter(restProps, 'closeButton$')}>
