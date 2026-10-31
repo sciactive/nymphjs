@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.135](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.134...v1.0.0-beta.135) (2026-10-31)
+
+### Bug Fixes
+
+- clear entity and query cache on user login and logout ([48aa48d](https://forge.sciactive.com/sciactive/nymphjs/commits/48aa48d489a0de49025c4c537b7cbc6b9494c18a))
+
 # [1.0.0-beta.134](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.133...v1.0.0-beta.134) (2026-10-29)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-client

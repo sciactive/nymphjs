@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.135](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.134...v1.0.0-beta.135) (2026-10-31)
+
+### Bug Fixes
+
+- clear entity and query cache on user login and logout ([48aa48d](https://forge.sciactive.com/sciactive/nymphjs/commits/48aa48d489a0de49025c4c537b7cbc6b9494c18a))
+- handle new entity better during dirty tracker reset ([875ae76](https://forge.sciactive.com/sciactive/nymphjs/commits/875ae762ee0566366d31e8e098b4254bd22de774))
+- requester should be an instance prop on client ([e6637ad](https://forge.sciactive.com/sciactive/nymphjs/commits/e6637adb166f2fefc8667c77416847b5cf14cb94))
+
 # [1.0.0-beta.134](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.133...v1.0.0-beta.134) (2026-10-29)
 
 ### Features

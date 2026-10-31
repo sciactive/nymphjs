@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.135](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.134...v1.0.0-beta.135) (2026-10-31)
+
+### Bug Fixes
+
+- escape new lines in import and export prop names ([957269a](https://forge.sciactive.com/sciactive/nymphjs/commits/957269ae97b776086e8ecff706241be53f554edc))
+
 # [1.0.0-beta.134](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.133...v1.0.0-beta.134) (2026-10-29)
 
 **Note:** Version bump only for package @nymphjs/driver-postgresql
