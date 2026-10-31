@@ -66,7 +66,3 @@ export type MessageData =
   | SubscribeMessageData
   | PublishMessageData
   | MultipleMessageData;
-
-export type MessageOptions = Options & {
-  class: string;
-};

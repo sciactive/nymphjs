@@ -10,6 +10,7 @@ import {
   referencesToEntities,
   entityConstructorsToClassNames,
   entitiesToReferences,
+  clearSearchRestrictedData,
 } from '@nymphjs/nymph';
 import ws from 'websocket';
 import { difference } from 'lodash-es';
@@ -25,7 +26,6 @@ import type {
   PublishUidMessageData,
   PublishMessageData,
   MessageData,
-  MessageOptions,
 } from './PubSub.types.js';
 
 /**
@@ -694,7 +694,7 @@ export default class PubSub {
       query: string;
     },
   ) {
-    let args: [MessageOptions, ...Selector[]] = JSON.parse(data.query);
+    let args: [Options, ...Selector[]] = JSON.parse(data.query);
 
     const serialArgs = JSON.stringify(args);
     let [clientOptions, ...selectors] = args;
@@ -709,6 +709,23 @@ export default class PubSub {
       true,
     );
     let EntityClass = clientOptions.class;
+    if (EntityClass == null) {
+      this.config.logger(
+        'error',
+        new Date().toISOString(),
+        'Entity class not provided.',
+      );
+      return;
+    }
+    try {
+      ({ options: clientOptions, selectors } = clearSearchRestrictedData({
+        options: clientOptions,
+        selectors,
+      }));
+    } catch (e: any) {
+      this.config.logger('error', new Date().toISOString(), e.message);
+      return;
+    }
     const etype = EntityClass.ETYPE;
     const options: Options & { return: 'entity' } = {
       ...clientOptions,
@@ -1140,8 +1157,25 @@ export default class PubSub {
             referencesToEntities(selectors, this.nymph, false, true),
             true,
           );
-          const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
           const EntityClass = clientOptions.class;
+          if (EntityClass == null) {
+            this.config.logger(
+              'error',
+              new Date().toISOString(),
+              'Entity class not provided.',
+            );
+            return;
+          }
+          try {
+            ({ options: clientOptions, selectors } = clearSearchRestrictedData({
+              options: clientOptions,
+              selectors,
+            }));
+          } catch (e: any) {
+            this.config.logger('error', new Date().toISOString(), e.message);
+            return;
+          }
+          const qrefQueries = this.findQRefQueries(clientOptions, ...selectors);
           const entityJson = classNamesToEntityConstructors(
             this.nymph,
             referencesToEntities(data.entity, this.nymph, false, true),
@@ -1155,9 +1189,12 @@ export default class PubSub {
             !(entityJson.class.prototype instanceof Entity) ||
             !entityJson.class.restEnabled
           ) {
-            throw new Error(
+            this.config.logger(
+              'error',
+              new Date().toISOString(),
               `Received entity data class is not valid: ${data.entity.class}`,
             );
+            return;
           }
           const DataEntityClass = entityJson.class as EntityConstructor;
 
@@ -1259,7 +1296,7 @@ export default class PubSub {
         const nymph = this.nymph.clone();
         try {
           const [clientOptions, ...clientSelectors] = JSON.parse(query);
-          const options: Options = {
+          let options: Options = {
             ...clientOptions,
             class: classNamesToEntityConstructors(
               nymph,
@@ -1270,11 +1307,24 @@ export default class PubSub {
             source: 'client',
             skipAc: false,
           };
-          const selectors = classNamesToEntityConstructors(
+          let selectors = classNamesToEntityConstructors(
             nymph,
             referencesToEntities(clientSelectors, nymph, false, true),
             true,
           );
+          const EntityClass = options.class;
+          if (EntityClass == null) {
+            this.config.logger(
+              'error',
+              new Date().toISOString(),
+              'Entity class not provided.',
+            );
+            return;
+          }
+          ({ options, selectors } = clearSearchRestrictedData({
+            options,
+            selectors,
+          }));
           if (this.sessions.has(curClient)) {
             const session = this.sessions.get(curClient);
             authToken = session?.authToken;
@@ -1526,7 +1576,7 @@ export default class PubSub {
   }
 
   private findQRefQueries(...selectors: Selector[]) {
-    const qrefQueries: [MessageOptions, ...Selector[]][] = [];
+    const qrefQueries: [Options, ...Selector[]][] = [];
 
     for (const curSelector of selectors) {
       for (const k in curSelector) {
@@ -1546,7 +1596,7 @@ export default class PubSub {
             Array.isArray(((value as Selector['qref']) ?? [])[0])
               ? value
               : [value]
-          ) as [string, [MessageOptions, ...Selector[]]][];
+          ) as [string, [Options, ...Selector[]]][];
           for (let [_name, qRefQuery] of tmpArr) {
             qrefQueries.push(qRefQuery);
           }

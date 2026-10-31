@@ -266,6 +266,7 @@ describe('Entity', () => {
         refObject: {
           entity: ['nymph_entity_reference', entityReferenceGuid, 'TestModel'],
         },
+        fish: 'salmon',
         name: 'Entity Test',
         number: 30,
         array: ['full', 'of', 'values', 500],

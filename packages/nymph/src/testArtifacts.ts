@@ -24,6 +24,8 @@ export interface TestModelData {
   index?: string;
   // For uniqueness tests.
   uniques?: string[];
+  // For search restricted data.
+  fish?: string;
 }
 
 export interface TestModel extends TestModelData {}
@@ -47,6 +49,7 @@ export class TestModel extends Entity<TestModelData> {
     this.$addTag('test');
     this.boolean = true;
     this.uniques = [];
+    this.fish = 'salmon';
   }
 
   public async $getUniques() {

@@ -15,6 +15,7 @@ import {
   referencesToEntities,
   Options,
   Selector,
+  clearSearchRestrictedData,
 } from '@nymphjs/nymph';
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
@@ -180,6 +181,20 @@ export function createServer(
             return;
           } else {
             httpError(response, 500, e);
+            return;
+          }
+        }
+        try {
+          ({ options, selectors } = clearSearchRestrictedData({
+            options,
+            selectors,
+          }));
+        } catch (e: any) {
+          if (e?.message === 'Not accessible.') {
+            httpError(response, 403);
+            return;
+          } else {
+            httpError(response, 400, e);
             return;
           }
         }

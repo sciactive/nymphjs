@@ -1,6 +1,7 @@
 import Entity from './Entity.js';
-import { EntityReference } from './Entity.types.js';
-import Nymph from './Nymph.js';
+import type { EntityReference } from './Entity.types.js';
+import type Nymph from './Nymph.js';
+import type { Options, Selector } from './Nymph.types.js';
 
 export function xor(a: any, b: any): boolean {
   return !!(a && !b) || (!a && b);
@@ -168,4 +169,158 @@ export function sortObj<T extends { [k: string]: any }>(obj: T): T {
     obj[tempArray[i]] = temp;
   }
   return obj;
+}
+
+export function clearSearchRestrictedData({
+  options,
+  selectors,
+}: {
+  options: Options;
+  selectors: Selector[];
+}) {
+  const EntityClass = options.class;
+
+  if (EntityClass == null) {
+    throw new Error('No class provided.');
+  }
+
+  const searchRestrictedData = EntityClass.searchRestrictedData;
+
+  selectors = selectors
+    .map((selector) => {
+      for (let clause in selector) {
+        if (
+          clause === 'type' ||
+          clause === 'guid' ||
+          clause === '!guid' ||
+          clause === 'tag' ||
+          clause === '!tag'
+        ) {
+          // Not a prop clause.
+          continue;
+        } else if (clause === 'selector' || clause === '!selector') {
+          const theseSelectors = (
+            Array.isArray(selector[clause])
+              ? selector[clause]
+              : [selector[clause]]
+          ).filter((selector) => selector != null);
+          selector[clause] = clearSearchRestrictedData({
+            options,
+            selectors: theseSelectors,
+          }).selectors;
+
+          if (!selector[clause].length) {
+            delete selector[clause];
+          }
+        } else if (clause === 'qref' || clause === '!qref') {
+          const thisClause = selector[clause];
+          if (thisClause == null) {
+            delete selector[clause];
+            continue;
+          }
+          const theseQrefs = (
+            Array.isArray(thisClause[0]) ? thisClause : [thisClause]
+          ) as [string, [Options, ...Selector[]]][];
+
+          selector[clause] = theseQrefs
+            .map((qref) => {
+              const [name, query] = qref;
+
+              if (searchRestrictedData.includes(name)) {
+                return null;
+              }
+
+              const [theseOptions, ...theseSelectors] = query;
+              const { options: newOptions, selectors: newSelectors } =
+                clearSearchRestrictedData({
+                  options: theseOptions,
+                  selectors: theseSelectors,
+                });
+
+              if (!newSelectors.length) {
+                return null;
+              }
+              return [name, [newOptions, ...newSelectors]] as [
+                string,
+                [Options, ...Selector[]],
+              ];
+            })
+            .filter((qref) => qref != null);
+
+          if (!selector[clause].length) {
+            delete selector[clause];
+          }
+        } else if (
+          clause === 'defined' ||
+          clause === '!defined' ||
+          clause === 'truthy' ||
+          clause === '!truthy'
+        ) {
+          // These clauses are just lists of properties.
+          selector[clause] = (
+            Array.isArray(selector[clause])
+              ? selector[clause]
+              : [selector[clause]]
+          )
+            .filter((prop) => prop != null)
+            .filter((prop) => !searchRestrictedData.includes(prop));
+
+          if (!selector[clause].length) {
+            delete selector[clause];
+          }
+        } else if (
+          clause === 'equal' ||
+          clause === '!equal' ||
+          clause === 'contain' ||
+          clause === '!contain' ||
+          clause === 'search' ||
+          clause === '!search' ||
+          clause === 'match' ||
+          clause === '!match' ||
+          clause === 'imatch' ||
+          clause === '!imatch' ||
+          clause === 'like' ||
+          clause === '!like' ||
+          clause === 'ilike' ||
+          clause === '!ilike' ||
+          clause === 'gt' ||
+          clause === '!gt' ||
+          clause === 'gte' ||
+          clause === '!gte' ||
+          clause === 'lt' ||
+          clause === '!lt' ||
+          clause === 'lte' ||
+          clause === '!lte' ||
+          clause === 'ref' ||
+          clause === '!ref'
+        ) {
+          // These clauses are in the form [prop, value].
+          const thisClause = selector[clause];
+          if (thisClause == null) {
+            delete selector[clause];
+            continue;
+          }
+          selector[clause] = (
+            Array.isArray(thisClause[0]) ? thisClause : [thisClause]
+          )
+            .filter(([prop, _value]) => prop != null)
+            .filter(([prop, _value]) => !searchRestrictedData.includes(prop));
+
+          if (!selector[clause].length) {
+            delete selector[clause];
+          }
+        } else {
+          throw new Error('Invalid clause.');
+        }
+      }
+
+      if (Object.keys(selector).length === 1) {
+        return null;
+      }
+
+      return selector;
+    })
+    .filter((selector) => selector != null);
+
+  return { options, selectors };
 }
