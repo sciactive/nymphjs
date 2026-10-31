@@ -180,8 +180,8 @@ export function clearSearchRestrictedData({
 }) {
   const EntityClass = options.class;
 
-  if (EntityClass == null) {
-    throw new Error('No class provided.');
+  if (EntityClass == null || !EntityClass.restEnabled) {
+    throw new Error('Invalid class provided.');
   }
 
   const searchRestrictedData = EntityClass.searchRestrictedData;
