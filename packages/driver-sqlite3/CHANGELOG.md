@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.136](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.135...v1.0.0-beta.136) (2026-10-31)
+
+### Bug Fixes
+
+- release the savepoint after rolling back in sqlite ([eb0342b](https://forge.sciactive.com/sciactive/nymphjs/commits/eb0342b3a0f31cf9ce179b10d03b81a0e57d4c69))
+
 # [1.0.0-beta.135](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.134...v1.0.0-beta.135) (2026-10-31)
 
 ### Bug Fixes

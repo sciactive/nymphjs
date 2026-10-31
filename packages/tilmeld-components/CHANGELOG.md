@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.136](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.135...v1.0.0-beta.136) (2026-10-31)
+
+### Bug Fixes
+
+- wrap all tilmeld components in form with submit handler ([1b03774](https://forge.sciactive.com/sciactive/nymphjs/commits/1b0377498596bac957f83ec43b178347489d7a7a))
+
 # [1.0.0-beta.135](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.134...v1.0.0-beta.135) (2026-10-31)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-components

@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.136](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.135...v1.0.0-beta.136) (2026-10-31)
+
+### Bug Fixes
+
+- check restEnabled on clearSearchRestrictedData too, so it's recursive ([62beae9](https://forge.sciactive.com/sciactive/nymphjs/commits/62beae98f34fdebcc55baa2d6bf36a6033c94fe1))
+- ensure entity class in query is valid ([e3c450b](https://forge.sciactive.com/sciactive/nymphjs/commits/e3c450b54e518ba7fb46c41b2ceb0763b988ff98))
+- restrict sorting by search restricted data ([93cda14](https://forge.sciactive.com/sciactive/nymphjs/commits/93cda148fa11ac5b9c663fe2a733df69d7cca50e))
+
 # [1.0.0-beta.135](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.134...v1.0.0-beta.135) (2026-10-31)
 
 ### Bug Fixes
