@@ -1132,9 +1132,19 @@ export default class Tilmeld implements TilmeldInterface {
     }
 
     let user: User | null;
-    let authExtract: { guid: string; issued: Date; expire: Date } | null;
+    let authExtract: {
+      guid: string;
+      issued: Date;
+      expire: Date;
+      switch?: true;
+    } | null;
     let switchUser: User | null = null;
-    let switchExtract: { guid: string; expire: Date } | null = null;
+    let switchExtract: {
+      guid: string;
+      issued: Date;
+      expire: Date;
+      switch?: true;
+    } | null = null;
     let xsrfToken: string | undefined = undefined;
     if (
       skipXsrfToken ||
@@ -1162,13 +1172,17 @@ export default class Tilmeld implements TilmeldInterface {
       ));
     }
 
-    if (user == null) {
+    if (user == null || authExtract == null || authExtract.switch) {
       await this.logout();
       return false;
     }
 
     if (switchToken) {
-      if (switchUser == null) {
+      if (
+        switchUser == null ||
+        switchExtract == null ||
+        !switchExtract.switch
+      ) {
         await this.logoutSwitch();
       } else {
         await this.fillSession(switchUser);

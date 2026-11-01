@@ -76,6 +76,7 @@ export default {
           (switchToken ? config.jwtSwitchExpire : config.jwtExpire),
         guid: user.guid,
         xsrfToken: 'TILMELDXSRF-' + nanoid(),
+        ...(switchToken ? { switch: true } : {}),
       },
       secret,
     );
