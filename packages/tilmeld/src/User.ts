@@ -784,7 +784,7 @@ export class User extends AbleObject<UserData> {
     );
 
     // Authentication was successful, attempt to login.
-    if (!(await tilmeld.loginSwitch(this, true))) {
+    if (!(await tilmeld.loginSwitch(user, this, true))) {
       return { result: false, message: 'Incorrect login/password.' };
     }
 

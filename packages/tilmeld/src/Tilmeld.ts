@@ -1133,6 +1133,7 @@ export default class Tilmeld implements TilmeldInterface {
 
     let user: User | null;
     let authExtract: {
+      sub: string;
       guid: string;
       issued: Date;
       expire: Date;
@@ -1140,6 +1141,7 @@ export default class Tilmeld implements TilmeldInterface {
     } | null;
     let switchUser: User | null = null;
     let switchExtract: {
+      sub: string;
       guid: string;
       issued: Date;
       expire: Date;
@@ -1181,7 +1183,8 @@ export default class Tilmeld implements TilmeldInterface {
       if (
         switchUser == null ||
         switchExtract == null ||
-        !switchExtract.switch
+        !switchExtract.switch ||
+        switchExtract.sub !== user.guid
       ) {
         await this.logoutSwitch();
       } else {
@@ -1259,20 +1262,22 @@ export default class Tilmeld implements TilmeldInterface {
    *
    * This effectively logs the current user in to the system as the given user.
    *
-   * @param user The user.
+   * @param user The current user doing the switch.
+   * @param target The target user being switched to.
    * @param sendAuthHeader Send the auth token as a custom header.
    * @param sendCookie Send the auth token as a cookie.
    * @returns True on success, false on failure.
    */
   public async loginSwitch(
     user: User,
+    target: User,
     sendAuthHeader: boolean,
     sendCookie = true,
   ) {
-    if (user.guid != null) {
+    if (target.guid != null) {
       if (this.response) {
         if (!this.response.headersSent) {
-          const token = this.config.jwtBuilder(this.config, user, true);
+          const token = this.config.jwtBuilder(this.config, target, true, user);
 
           if (sendCookie) {
             const appUrl = new URL(this.config.appUrl);
@@ -1291,10 +1296,10 @@ export default class Tilmeld implements TilmeldInterface {
           }
         }
 
-        this.response.locals.user = user;
+        this.response.locals.user = target;
       }
 
-      await this.fillSession(user);
+      await this.fillSession(target);
       return true;
     }
     return false;

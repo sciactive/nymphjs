@@ -777,14 +777,20 @@ export default class PubSub {
       }
       const nymph = this.nymph.clone();
       if (nymph.tilmeld != null && authToken != null) {
-        const { user } = await nymph.tilmeld.extractToken(authToken, true);
-        if (user && user.enabled) {
+        const { user, extract: authExtract } = await nymph.tilmeld.extractToken(
+          authToken,
+          true,
+        );
+        if (user && authExtract != null && !authExtract.switch) {
           if (switchToken != null) {
-            const { user: switchUser } = await nymph.tilmeld.extractToken(
-              switchToken,
-              false,
-            );
-            if (switchUser) {
+            const { user: switchUser, extract: switchExtract } =
+              await nymph.tilmeld.extractToken(switchToken, false);
+            if (
+              switchUser &&
+              switchExtract != null &&
+              switchExtract.switch &&
+              switchExtract.sub === user.guid
+            ) {
               // Log in the switchUser for access controls.
               await nymph.tilmeld.fillSession(switchUser);
             }
@@ -977,14 +983,20 @@ export default class PubSub {
       }
       const nymph = this.nymph.clone();
       if (nymph.tilmeld != null && authToken != null) {
-        const { user } = await nymph.tilmeld.extractToken(authToken, true);
-        if (user && user.enabled) {
+        const { user, extract: authExtract } = await nymph.tilmeld.extractToken(
+          authToken,
+          true,
+        );
+        if (user && authExtract != null && !authExtract.switch) {
           if (switchToken != null) {
-            const { user: switchUser } = await nymph.tilmeld.extractToken(
-              switchToken,
-              false,
-            );
-            if (switchUser) {
+            const { user: switchUser, extract: switchExtract } =
+              await nymph.tilmeld.extractToken(switchToken, false);
+            if (
+              switchUser &&
+              switchExtract != null &&
+              switchExtract.switch &&
+              switchExtract.sub === user.guid
+            ) {
               // Log in the switchUser for access controls.
               await nymph.tilmeld.fillSession(switchUser);
             }
@@ -1337,14 +1349,18 @@ export default class PubSub {
             switchToken = session?.switchToken;
           }
           if (nymph.tilmeld != null && authToken != null) {
-            const { user } = await nymph.tilmeld.extractToken(authToken, true);
-            if (user && user.enabled) {
+            const { user, extract: authExtract } =
+              await nymph.tilmeld.extractToken(authToken, true);
+            if (user && authExtract != null && !authExtract.switch) {
               if (switchToken != null) {
-                const { user: switchUser } = await nymph.tilmeld.extractToken(
-                  switchToken,
-                  false,
-                );
-                if (switchUser) {
+                const { user: switchUser, extract: switchExtract } =
+                  await nymph.tilmeld.extractToken(switchToken, false);
+                if (
+                  switchUser &&
+                  switchExtract != null &&
+                  switchExtract.switch &&
+                  switchExtract.sub === user.guid
+                ) {
                   // Log in the switchUser for access controls.
                   await nymph.tilmeld.fillSession(switchUser);
                 }

@@ -485,9 +485,11 @@ export interface TilmeldInterface {
   ): Promise<{
     user: any;
     extract: {
+      sub: string;
       guid: string;
       issued: Date;
       expire: Date;
+      switch?: true;
     } | null;
   }>;
   fillSession(user: any): Promise<void>;

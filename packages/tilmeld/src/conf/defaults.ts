@@ -61,19 +61,29 @@ export default {
   jwtExpire: 60 * 60 * 24 * 7 * 24, // 24 weeks(ish) (6 months)
   jwtSwitchExpire: 60 * 60 * 6, // 6 hours
   jwtRenew: 60 * 60 * 24 * 7 * 12, // 12 weeks(ish) (3 months)
-  jwtBuilder: (config, user, switchToken) => {
+  jwtBuilder: (config, user, switchToken, switchForUser) => {
     const secret = config.jwtSecret;
     if (secret === '') {
       throw new Error('JWT secret is not configured.');
     }
 
+    if (switchToken && (!switchForUser || switchForUser.guid == null)) {
+      throw new Error(
+        "Issuing a switch token requires providing the user it's for.",
+      );
+    }
+
     return jwt.sign(
       {
         iss: config.appUrl,
+        sub: switchForUser ? switchForUser.guid : user.guid,
         nbf: Math.floor(Date.now() / 1000),
         exp:
           Math.floor(Date.now() / 1000) +
           (switchToken ? config.jwtSwitchExpire : config.jwtExpire),
+        // TODO: remove this guid claim in favor of sub claim
+        // this needs to be done long enough after Nov 1 2026, when sub added
+        // also don't forget to change how switchForUser guid is stored.
         guid: user.guid,
         xsrfToken: 'TILMELDXSRF-' + nanoid(),
         ...(switchToken ? { switch: true } : {}),
@@ -97,7 +107,14 @@ export default {
         return null;
       }
 
-      const { guid, xsrfToken: jwtXsrfToken, exp, nbf } = payload;
+      const {
+        sub,
+        guid,
+        xsrfToken: jwtXsrfToken,
+        switch: switchBool,
+        exp,
+        nbf,
+      } = payload;
 
       if (xsrfToken != null && xsrfToken !== jwtXsrfToken) {
         return null;
@@ -119,7 +136,7 @@ export default {
 
       const expire = new Date(exp * 1000);
 
-      return { guid, issued, expire };
+      return { sub, guid, issued, expire, switch: switchBool };
     } catch (e: any) {
       return null;
     }

@@ -265,7 +265,12 @@ export interface Config {
   /**
    * Function to build the JWT for user sessions.
    */
-  jwtBuilder: (config: Config, user: User, switchToken?: boolean) => string;
+  jwtBuilder: (
+    config: Config,
+    user: User,
+    switchToken?: boolean,
+    switchForUser?: User,
+  ) => string;
   /**
    * Function to verify that a JWT was signed with the secret key, validate its
    * data, validate the XSRF token, and extract the GUID and dates.
@@ -279,7 +284,13 @@ export interface Config {
     config: Config,
     token: string,
     xsrfToken?: string,
-  ) => { guid: string; issued: Date; expire: Date } | null;
+  ) => {
+    sub: string;
+    guid: string;
+    issued: Date;
+    expire: Date;
+    switch?: true;
+  } | null;
   /**
    * The absolute path to the email template directory. Used by the default
    * email sender.
