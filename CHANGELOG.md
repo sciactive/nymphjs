@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.138](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.137...v1.0.0-beta.138) (2026-11-01)
+
+### Bug Fixes
+
+- form under form in login component ([bcbf637](https://forge.sciactive.com/sciactive/nymphjs/commits/bcbf6372e78a4771d0d673e3d5670fa41887c056))
+
 # [1.0.0-beta.137](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.136...v1.0.0-beta.137) (2026-11-01)
 
 ### Bug Fixes
