@@ -247,14 +247,14 @@
             I can't access my account.
           </a>
         </div>
-        <Recover
-          {User}
-          bind:open={recoverOpen}
-          bind:clientConfig
-          {...prefixFilter(restProps, 'recover$')}
-        />
       {/if}
     </form>
+    <Recover
+      {User}
+      bind:open={recoverOpen}
+      bind:clientConfig
+      {...prefixFilter(restProps, 'recover$')}
+    />
   {/if}
 </div>
 
