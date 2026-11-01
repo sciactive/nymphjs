@@ -25,22 +25,22 @@
     <!-- Title cannot contain leading whitespace due to mdc-typography-baseline-top() -->
     <Title id="tilmeld-recovery-title">{title}</Title>
     <Content id="tilmeld-recovery-content">
-      <form
-        onsubmit={preventDefault(
-          stopPropagation(() => {
-            if (!successRecoveredMessage) {
-              if (!hasSentSecret) {
-                sendRecovery();
-              } else {
-                recover();
+      {#if successRecoveredMessage}
+        {successRecoveredMessage}
+      {:else}
+        <form
+          onsubmit={preventDefault(
+            stopPropagation(() => {
+              if (!successRecoveredMessage) {
+                if (!hasSentSecret) {
+                  sendRecovery();
+                } else {
+                  recover();
+                }
               }
-            }
-          }),
-        )}
-      >
-        {#if successRecoveredMessage}
-          {successRecoveredMessage}
-        {:else}
+            }),
+          )}
+        >
           {#if !hasSentSecret}
             {#if !$clientConfig.emailUsernames}
               <div>
@@ -200,8 +200,8 @@
               />
             </div>
           {/if}
-        {/if}
-      </form>
+        </form>
+      {/if}
     </Content>
     <Actions>
       <Button onclick={() => (open = false)} disabled={loading}>
