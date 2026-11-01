@@ -1035,6 +1035,15 @@ export default class Tilmeld implements TilmeldInterface {
   /**
    * Validate and extract the user from a token.
    *
+   * For primary tokens, you want to enforce user restrictions. This keeps
+   * disabled users from logging in and protects accounts with token revocation
+   * dates.
+   *
+   * For switch tokens, you don't want to enforce user restrictions. This allows
+   * an admin to switch to a user even if they are disabled or have revoked the
+   * switch token. Admin actions take precedence over anything a normal user can
+   * do.
+   *
    * @param token The authentication token.
    * @param enforceUserRestrictions Validate that the user is enabled and the token was issued after user's revocation date.
    * @param xsrfToken Validate this XSRF Token against the auth token.
