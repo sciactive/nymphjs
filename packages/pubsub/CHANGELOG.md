@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.137](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.136...v1.0.0-beta.137) (2026-11-01)
+
+### Bug Fixes
+
+- check expiration and revocation on tokens in pububs ([221475f](https://forge.sciactive.com/sciactive/nymphjs/commits/221475f1da72e20427e6fc0c4a4869a40b097165))
+- use the same code path for rest and pubsub to extract jwt ([22cd085](https://forge.sciactive.com/sciactive/nymphjs/commits/22cd085ff23c46a9d55c0ce2d9810672abca74c9))
+
 # [1.0.0-beta.136](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.135...v1.0.0-beta.136) (2026-10-31)
 
 **Note:** Version bump only for package @nymphjs/pubsub
