@@ -2452,6 +2452,7 @@ export class User extends AbleObject<UserData> {
         // be able to cancel the email change from their old address.
         this.cancelEmailAddress = this.$originalEmail;
         this.cancelEmailSecret = nanoid();
+        this.emailChangeDate = Date.now();
         sendVerification = true;
       }
     }
