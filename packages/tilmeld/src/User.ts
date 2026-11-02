@@ -1557,6 +1557,10 @@ export class User extends AbleObject<UserData> {
     currentPassword: string;
     revokeCurrentTokens?: boolean;
   }): Promise<{ result: boolean; message: string }> {
+    const tilmeld = enforceTilmeld(this);
+    if (!tilmeld.gatekeeper()) {
+      return { result: false, message: 'You must be logged in.' };
+    }
     this.$nymph.config.debugLog(
       'tilmeld',
       `Password change request for "${this.username}".`,
@@ -1577,11 +1581,15 @@ export class User extends AbleObject<UserData> {
     }
     try {
       await this.$save();
-      if (data.revokeCurrentTokens) {
-        const tilmeld = enforceTilmeld(this);
+      if (data.revokeCurrentTokens && this.$is(tilmeld.currentUser)) {
         await tilmeld.login(this, true);
       }
-      return { result: true, message: 'Your password has been changed.' };
+      return {
+        result: true,
+        message: this.$is(tilmeld.currentUser)
+          ? 'Your password has been changed.'
+          : "User's password has been changed.",
+      };
     } catch (e: any) {
       return { result: false, message: "Couldn't save new password." };
     }
@@ -1638,6 +1646,10 @@ export class User extends AbleObject<UserData> {
   public async $revokeCurrentTokens(data: {
     password: string;
   }): Promise<{ result: boolean; message: string }> {
+    const tilmeld = enforceTilmeld(this);
+    if (!tilmeld.gatekeeper()) {
+      return { result: false, message: 'You must be logged in.' };
+    }
     if (!(await this.$checkPassword(data.password ?? ''))) {
       return { result: false, message: 'Incorrect password.' };
     }
@@ -1646,12 +1658,18 @@ export class User extends AbleObject<UserData> {
 
     try {
       await this.$save();
-      const tilmeld = enforceTilmeld(this);
-      await tilmeld.login(this, true);
-      return {
-        result: true,
-        message: 'You have logged out of all other sessions.',
-      };
+      if (this.$is(tilmeld.currentUser)) {
+        await tilmeld.login(this, true);
+        return {
+          result: true,
+          message: 'You have logged out of all other sessions.',
+        };
+      } else {
+        return {
+          result: true,
+          message: 'The user has been logged out of all sessions.',
+        };
+      }
     } catch (e: any) {
       return { result: false, message: "Couldn't save revocation date." };
     }
