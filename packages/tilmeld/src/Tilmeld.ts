@@ -212,8 +212,10 @@ export default class Tilmeld implements TilmeldInterface {
     // Check for the skip access control option and add AC selectors.
     const handleQuery = function (
       nymph: Nymph,
-      options: Options,
-      selectors: FormattedSelector[],
+      {
+        options,
+        selectors,
+      }: { options: Options; selectors: FormattedSelector[] },
     ) {
       const tilmeld = enforceTilmeld(nymph);
       if (

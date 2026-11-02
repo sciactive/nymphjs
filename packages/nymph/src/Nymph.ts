@@ -373,12 +373,45 @@ export default class Nymph {
   /**
    * Run all the query callbacks on a query.
    */
-  public runQueryCallbacks(options: Options, selectors: FormattedSelector[]) {
+  public runQueryCallbacks<T extends EntityConstructor = EntityConstructor>(
+    options: Options<T>,
+    selectors: FormattedSelector[],
+  ): [Options<T>, FormattedSelector[]] {
     for (let callback of this.queryCallbacks) {
       if (callback) {
-        callback(this, options, selectors);
+        callback(this, { options, selectors });
       }
     }
+
+    const walkSelectors = (selectors: FormattedSelector[]) => {
+      for (let i in selectors) {
+        const selector = selectors[i];
+        for (let key in selector) {
+          if ((key === 'qref' || key === '!qref') && selector[key]) {
+            for (let qrefi in selector[key]) {
+              const qrefClause = selector[key][qrefi];
+              let [_name, query] = qrefClause;
+              let [qrefOptions, ...qrefSelectors] = query;
+              [qrefOptions, qrefSelectors] = this.runQueryCallbacks(
+                qrefOptions,
+                qrefSelectors,
+              );
+              // @ts-ignore
+              selectors[i][key][qrefi][1] = [qrefOptions, ...qrefSelectors];
+            }
+          } else if (
+            (key === 'selector' || key === '!selector') &&
+            selector[key]
+          ) {
+            walkSelectors(selector[key]);
+          }
+        }
+      }
+    };
+
+    walkSelectors(selectors);
+
+    return [options, selectors];
   }
 
   /**
@@ -894,7 +927,7 @@ export default class Nymph {
     try {
       for (let callback of this.beforeGetEntitiesCallbacks) {
         if (callback) {
-          await callback(this, options, selectors);
+          await callback(this, { options, selectors });
         }
       }
       return await this.driver.getEntities(options, ...selectors);
@@ -965,7 +998,7 @@ export default class Nymph {
       options.limit = 1;
       for (let callback of this.beforeGetEntityCallbacks) {
         if (callback) {
-          await callback(this, options, selectors as Selector[]);
+          await callback(this, { options, selectors: selectors as Selector[] });
         }
       }
       const entities = await this.driver.getEntities(

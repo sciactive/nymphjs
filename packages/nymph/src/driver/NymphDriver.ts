@@ -1269,15 +1269,13 @@ export default abstract class NymphDriver {
 
     try {
       const formattedSelectors = this.formatSelectors(selectors, options);
-      this.nymph.runQueryCallbacks(options, formattedSelectors.selectors);
-      for (let i = 0; i < formattedSelectors.qrefs.length; i++) {
-        const [options, ...selectors] = formattedSelectors.qrefs[i];
-        this.nymph.runQueryCallbacks(options, selectors);
-        formattedSelectors.qrefs[i] = [options, ...selectors];
-      }
-      const { result } = performQueryCallback({
+      const [newOptions, newSelectors] = this.nymph.runQueryCallbacks(
         options,
-        selectors: formattedSelectors.selectors,
+        formattedSelectors.selectors,
+      );
+      const { result } = performQueryCallback({
+        options: newOptions,
+        selectors: newSelectors,
         etype,
       });
 
@@ -1285,12 +1283,12 @@ export default abstract class NymphDriver {
         result,
         process: () => {
           let row = rowFetchCallback();
-          if (options.return === 'count') {
+          if (newOptions.return === 'count') {
             while (row != null) {
               count += getCountCallback(row);
               row = rowFetchCallback();
             }
-          } else if (options.return === 'guid') {
+          } else if (newOptions.return === 'guid') {
             while (row != null) {
               (entities as string[]).push(getGUIDCallback(row));
               row = rowFetchCallback();
@@ -1363,7 +1361,7 @@ export default abstract class NymphDriver {
                 }
               }
 
-              if (options.return === 'object') {
+              if (newOptions.return === 'object') {
                 (entities as EntityObjectType<T>[]).push({
                   guid,
                   cdate,
@@ -1374,7 +1372,7 @@ export default abstract class NymphDriver {
                     referencesToEntities(
                       data,
                       this.nymph,
-                      !!options.skipAc,
+                      !!newOptions.skipAc,
                       false,
                     ),
                     false,
@@ -1387,7 +1385,7 @@ export default abstract class NymphDriver {
                         referencesToEntities(
                           JSON.parse(value),
                           this.nymph,
-                          !!options.skipAc,
+                          !!newOptions.skipAc,
                           false,
                         ),
                         false,
@@ -1399,8 +1397,8 @@ export default abstract class NymphDriver {
                 const entity =
                   EntityClass.factorySync() as EntityInstanceType<T>;
                 entity.$nymph = this.nymph;
-                if (options.skipAc != null) {
-                  entity.$useSkipAc(!!options.skipAc);
+                if (newOptions.skipAc != null) {
+                  entity.$useSkipAc(!!newOptions.skipAc);
                 }
                 entity.guid = guid;
                 entity.cdate = cdate;
@@ -1416,7 +1414,7 @@ export default abstract class NymphDriver {
                     referencesToEntities(
                       data,
                       this.nymph,
-                      !!options.skipAc,
+                      !!newOptions.skipAc,
                       false,
                     ),
                     false,
@@ -1432,7 +1430,7 @@ export default abstract class NymphDriver {
 
           freeResultCallback();
 
-          return options.return === 'count' ? count : entities;
+          return newOptions.return === 'count' ? count : entities;
         },
       };
     } catch (e: any) {

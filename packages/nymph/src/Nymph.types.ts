@@ -55,18 +55,15 @@ export type NymphDisconnectCallback = (
  */
 export type NymphQueryCallback = (
   nymph: Nymph,
-  options: Options,
-  selectors: FormattedSelector[],
+  query: { options: Options; selectors: FormattedSelector[] },
 ) => void;
 export type NymphBeforeGetEntityCallback = (
   nymph: Nymph,
-  options: Options,
-  selectors: Selector[],
+  query: { options: Options; selectors: Selector[] },
 ) => Promise<void>;
 export type NymphBeforeGetEntitiesCallback = (
   nymph: Nymph,
-  options: Options,
-  selectors: Selector[],
+  query: { options: Options; selectors: Selector[] },
 ) => Promise<void>;
 export type NymphBeforeSaveEntityCallback = (
   nymph: Nymph,

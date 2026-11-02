@@ -17,6 +17,7 @@ import { GroupTest } from './Group.testArtifacts.js';
 
 export interface TestModelData extends AccessControlData {
   name?: string;
+  another?: TestModel;
 }
 
 export interface TestModel extends TestModelData {}
@@ -1221,6 +1222,53 @@ export function TilmeldTest(
         { type: '&', guid: bobsEntity.guid || '' },
       );
       expect(verifyEntityAlice).toBeNull();
+    });
+
+    it("alice can't find an entity by qref using an entity she doesn't have permission for", async () => {
+      const { bob, alice } = await makeUsers();
+
+      await tilmeld.fillSession(bob);
+
+      const bobsEntity = await TestModel.factory();
+      bobsEntity.name = "Bob's Entity";
+      await bobsEntity.$save();
+
+      expect(bobsEntity.guid).not.toBeNull();
+      expect(bob.$is(bobsEntity.user)).toEqual(true);
+
+      const testEntityBob = await nymph.getEntity(
+        { class: TestModel },
+        { type: '&', guid: bobsEntity.guid || '' },
+      );
+
+      expect(testEntityBob).not.toBeNull();
+      expect(testEntityBob?.guid).toEqual(bobsEntity.guid);
+
+      tilmeld.clearSession();
+      await tilmeld.fillSession(alice);
+
+      const alicesEntity = await TestModel.factory();
+      alicesEntity.name = "Alice's Entity";
+      await alicesEntity.$save();
+
+      expect(alicesEntity.guid).not.toBeNull();
+      expect(alice.$is(alicesEntity.user)).toEqual(true);
+
+      alicesEntity.another = bobsEntity;
+      await alicesEntity.$save();
+
+      const testEntityAlice = await nymph.getEntity(
+        { class: TestModel },
+        {
+          type: '&',
+          qref: [
+            'another',
+            [{ class: TestModel }, { type: '&', guid: bobsEntity.guid || '' }],
+          ],
+        },
+      );
+
+      expect(testEntityAlice).toBeNull();
     });
 
     it('a clear session can delete an entity everyone has full permission for', async () => {
