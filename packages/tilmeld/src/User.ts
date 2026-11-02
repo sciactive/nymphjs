@@ -894,6 +894,12 @@ export class User extends AbleObject<UserData> {
 
     if ('abilities' in input.data) {
       this.$checkIncomingAbilities(input.data.abilities);
+    } else if (
+      (this.$allowlistData == null ||
+        this.$allowlistData.includes('abilities')) &&
+      (this.$privateData == null || !this.$privateData.includes('abilities'))
+    ) {
+      this.$checkIncomingAbilities(undefined);
     }
 
     // If the user is a new domain user, the data protection needs to be updated
@@ -939,6 +945,10 @@ export class User extends AbleObject<UserData> {
       this.$checkIncomingAbilities(patch.set.abilities);
     }
 
+    if (patch.unset.includes('abilities')) {
+      this.$checkIncomingAbilities(undefined);
+    }
+
     super.$jsonAcceptPatch(patch, allowConflict);
   }
 
@@ -960,6 +970,20 @@ export class User extends AbleObject<UserData> {
     ) {
       throw new BadDataError(
         "You don't have the authority to grant or revoke system/admin.",
+      );
+    }
+
+    if (
+      xor(
+        incoming.filter((ability) => ability.startsWith('system/')),
+        this.abilities?.filter((ability) => ability.startsWith('system/')) ??
+          [],
+      ).length &&
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke system abilities.",
       );
     }
 
@@ -987,10 +1011,9 @@ export class User extends AbleObject<UserData> {
 
     if (
       xor(
-        incoming.filter((ability: string) => ability.startsWith('tilmeld/')),
-        this.abilities?.filter((ability: string) =>
-          ability.startsWith('tilmeld/'),
-        ) ?? [],
+        incoming.filter((ability) => ability.startsWith('tilmeld/')),
+        this.abilities?.filter((ability) => ability.startsWith('tilmeld/')) ??
+          [],
       ).length &&
       (!tilmeld.currentUser ||
         (!tilmeld.currentUser.abilities?.includes('system/admin') &&
