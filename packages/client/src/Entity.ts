@@ -699,16 +699,11 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     return this.$wakePromise;
   }
 
-  public $wakeAll(level?: number) {
+  public $wakeAll(level: number) {
     return new Promise((resolve, reject) => {
       // Run this once this entity is awake.
       const wakeProps = () => {
-        let newLevel: number | undefined;
-        // If level is undefined, keep going forever, otherwise, stop once we've
-        // gone deep enough.
-        if (level !== undefined) {
-          newLevel = level - 1;
-        }
+        let newLevel = level - 1;
         if (newLevel !== undefined && newLevel < 0) {
           resolve(this);
           return;

@@ -1137,13 +1137,10 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     return this.$isASleepingReference || this.$sleepingReference != null;
   }
 
-  /**
-   * Wake from a sleeping reference.
-   */
   public $wake() {
     if (!this.$asleep()) {
       this.$wakePromise = null;
-      return Promise.resolve(this.$proxy());
+      return Promise.resolve(this);
     }
     if (this.$sleepingReference?.[1] == null) {
       throw new InvalidStateError(
@@ -1179,7 +1176,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
             'server',
           );
 
-          return this.$proxy();
+          return this;
         })
         .finally(() => {
           this.$wakePromise = null;
@@ -1188,18 +1185,13 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     return this.$wakePromise;
   }
 
-  public $wakeAll(level?: number) {
+  public $wakeAll(level: number) {
     return new Promise((resolve, reject) => {
       // Run this once this entity is wake.
       const wakeProps = () => {
-        let newLevel: number | undefined;
-        // If level is undefined, keep going forever, otherwise, stop once we've
-        // gone deep enough.
-        if (level !== undefined) {
-          newLevel = level - 1;
-        }
+        let newLevel = level - 1;
         if (newLevel !== undefined && newLevel < 0) {
-          resolve(this.$proxy());
+          resolve(this);
           return;
         }
         const promises: Promise<any>[] = [];
@@ -1233,11 +1225,11 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
         walkData(this.$data);
         if (promises.length) {
           Promise.all(promises).then(
-            () => resolve(this.$proxy()),
+            () => resolve(this),
             (errObj) => reject(errObj),
           );
         } else {
-          resolve(this.$proxy());
+          resolve(this);
         }
       };
 
@@ -1291,7 +1283,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       return this.$sleepingReference;
     }
     if (existingOnly && this.guid == null) {
-      return this.$proxy();
+      return this;
     }
     return [
       'nymph_entity_reference',

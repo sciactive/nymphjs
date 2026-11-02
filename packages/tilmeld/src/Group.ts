@@ -1001,7 +1001,7 @@ export class Group extends AbleObject<GroupData> {
         for (let callback of (this.constructor as typeof Group)
           .beforeSaveCallbacks) {
           if (callback) {
-            await callback(this.$proxy());
+            await callback(this);
           }
         }
 
@@ -1010,7 +1010,7 @@ export class Group extends AbleObject<GroupData> {
         for (let callback of (this.constructor as typeof Group)
           .afterSaveCallbacks) {
           if (callback) {
-            await callback(this.$proxy());
+            await callback(this);
           }
         }
       },
@@ -1063,7 +1063,7 @@ export class Group extends AbleObject<GroupData> {
     for (let callback of (this.constructor as typeof Group)
       .beforeDeleteCallbacks) {
       if (callback) {
-        await callback(this.$proxy());
+        await callback(this);
       }
     }
 
@@ -1116,7 +1116,7 @@ export class Group extends AbleObject<GroupData> {
     for (let callback of (this.constructor as typeof Group)
       .afterDeleteCallbacks) {
       if (callback) {
-        await callback(this.$proxy());
+        await callback(this);
       }
     }
   }

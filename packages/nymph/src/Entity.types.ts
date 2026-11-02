@@ -327,6 +327,19 @@ export interface EntityInterface extends DataObjectInterface {
    * @param useSkipAc True or false, whether to use it.
    */
   $useSkipAc(useSkipAc: boolean): void;
+  /**
+   * Retrieve this entity's data from the database.
+   *
+   * @returns The entity.
+   */
+  $wake(): Promise<EntityInterface>;
+  /**
+   * Ready this entity's data, and the data of entity's within this one's.
+   *
+   * @param level The number of levels deep to wake.
+   * @returns The entity.
+   */
+  $wakeAll(level: number): Promise<EntityInterface>;
 
   toJSON(): EntityReference | EntityJson;
 }

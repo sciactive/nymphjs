@@ -184,10 +184,10 @@ export interface EntityInterface extends DataObjectInterface {
   /**
    * Ready this entity's data, and the data of entity's within this one's.
    *
-   * @param level The number of levels deep to wake. If undefined, it will keep going until there are no more entities. (Careful of infinite loops.)
+   * @param level The number of levels deep to wake.
    * @returns The entity.
    */
-  $wakeAll(level?: number): Promise<EntityInterface>;
+  $wakeAll(level: number): Promise<EntityInterface>;
   /**
    * Remove one or more tags.
    *
