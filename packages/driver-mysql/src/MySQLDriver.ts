@@ -60,6 +60,27 @@ export default class MySQLDriver extends NymphDriver {
     return mysql.escape(input);
   }
 
+  static escapeTags(tags: string[]) {
+    return tags.map(MySQLDriver.escapeTag);
+  }
+
+  static escapeTag(tag: string) {
+    return tag
+      .replace(/\\/g, () => '\\\\')
+      .replace(/_/g, () => '\\_')
+      .replace(/ /g, () => '_');
+  }
+
+  static unescapeTags(tags: string[]) {
+    return tags.map(MySQLDriver.unescapeTag);
+  }
+
+  static unescapeTag(tag: string) {
+    return tag.replace(/\\([\\_])|_/g, (_, char) =>
+      char != null ? char : ' ',
+    );
+  }
+
   constructor(
     config: Partial<MySQLDriverConfig>,
     link?: Pool,
@@ -1057,11 +1078,12 @@ export default class MySQLDriver extends NymphDriver {
     let datum = dataIterator.next();
     while (!datum.done) {
       const guid = datum.value.guid;
-      const tags = datum.value.tags
-        .slice(1, -1)
-        .split(' ')
-        .filter((tag: string) => tag)
-        .join(',');
+      const tags = MySQLDriver.unescapeTags(
+        datum.value.tags
+          .slice(1, -1)
+          .split(' ')
+          .filter((tag: string) => tag),
+      ).join(',');
       const cdate = datum.value.cdate;
       const mdate = datum.value.mdate;
       const user = datum.value.user;
@@ -1200,12 +1222,13 @@ export default class MySQLDriver extends NymphDriver {
                     }
                     const tag = `param${++count.i}`;
                     curQuery += ieTable + '.`tags` NOT REGEXP @' + tag;
-                    params[tag] = ' ' + curTag + ' ';
+                    params[tag] = ' ' + MySQLDriver.escapeTag(curTag) + ' ';
                   }
                 } else {
                   const tag = `param${++count.i}`;
                   curQuery += ieTable + '.`tags` NOT REGEXP @' + tag;
-                  params[tag] = ' (' + curValue.join('|') + ') ';
+                  params[tag] =
+                    ' (' + MySQLDriver.escapeTags(curValue).join('|') + ') ';
                 }
               } else {
                 if (curQuery) {
@@ -1214,7 +1237,8 @@ export default class MySQLDriver extends NymphDriver {
                 const groupQueryParam = `param${++count.i}`;
                 let groupQuery = '';
                 for (const curTag of curValue) {
-                  groupQuery += (typeIsOr ? ' ' : ' +') + curTag;
+                  groupQuery +=
+                    (typeIsOr ? ' ' : ' +') + MySQLDriver.escapeTag(curTag);
                 }
                 curQuery +=
                   'MATCH (' +
@@ -1366,7 +1390,7 @@ export default class MySQLDriver extends NymphDriver {
                   '=@' +
                   value;
                 params[value] = Array.isArray(curValue[1])
-                  ? ' ' + curValue[1].join(' ') + ' '
+                  ? ' ' + MySQLDriver.escapeTags(curValue[1]).join(' ') + ' '
                   : '';
               } else if (typeof curValue[1] === 'number') {
                 if (curQuery) {
@@ -2632,10 +2656,12 @@ export default class MySQLDriver extends NymphDriver {
       (row) => ({
         tags:
           row.tags.length > 2
-            ? row.tags
-                .slice(1, -1)
-                .split(' ')
-                .filter((tag: string) => tag)
+            ? MySQLDriver.unescapeTags(
+                row.tags
+                  .slice(1, -1)
+                  .split(' ')
+                  .filter((tag: string) => tag),
+              )
             : [],
         cdate: isNaN(Number(row.cdate)) ? Date.now() : Number(row.cdate),
         mdate: isNaN(Number(row.mdate)) ? Date.now() : Number(row.mdate),
@@ -2826,7 +2852,7 @@ export default class MySQLDriver extends NymphDriver {
             etypes: [etype],
             params: {
               guid,
-              tags: ' ' + tags.join(' ') + ' ',
+              tags: ' ' + MySQLDriver.escapeTags(tags).join(' ') + ' ',
               cdate: isNaN(cdate) ? null : cdate,
               mdate: isNaN(mdate) ? null : mdate,
               user,
@@ -3298,6 +3324,13 @@ export default class MySQLDriver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          if (
+            tags.find((tag) => tag.match(/[[\x01-\x1F\x7F]]/) || tag.match(/,/))
+          ) {
+            throw new EntityInvalidDataError(
+              'Tags cannot contain control characters or commas.',
+            );
+          }
           let processedData = this.removeAndReturnACValues(
             etype,
             { ...data },
@@ -3322,7 +3355,7 @@ export default class MySQLDriver extends NymphDriver {
               etypes: [etype],
               params: {
                 guid,
-                tags: ' ' + tags.join(' ') + ' ',
+                tags: ' ' + MySQLDriver.escapeTags(tags).join(' ') + ' ',
                 cdate,
                 user,
                 group,
@@ -3452,7 +3485,7 @@ export default class MySQLDriver extends NymphDriver {
             {
               etypes: [etype],
               params: {
-                tags: ' ' + tags.join(' ') + ' ',
+                tags: ' ' + MySQLDriver.escapeTags(tags).join(' ') + ' ',
                 mdate,
                 user,
                 group,

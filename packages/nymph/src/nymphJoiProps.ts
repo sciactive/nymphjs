@@ -15,10 +15,15 @@ export default {
     .required(),
   tags: Joi.array()
     .items(
-      Joi.string().pattern(/[[\x01-\x1F\x7F]]/, {
-        name: 'control characters',
-        invert: true,
-      }),
+      Joi.string()
+        .pattern(/[[\x01-\x1F\x7F]]/, {
+          name: 'control characters',
+          invert: true,
+        })
+        .pattern(/,/, {
+          name: 'comma',
+          invert: true,
+        }),
     )
     .required(),
 };

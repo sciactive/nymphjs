@@ -3663,6 +3663,13 @@ export default class PostgreSQLDriver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
+          if (
+            tags.find((tag) => tag.match(/[[\x01-\x1F\x7F]]/) || tag.match(/,/))
+          ) {
+            throw new EntityInvalidDataError(
+              'Tags cannot contain control characters or commas.',
+            );
+          }
           let processedData = this.removeAndReturnACValues(
             etype,
             { ...data },
