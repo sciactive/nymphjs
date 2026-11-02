@@ -637,6 +637,10 @@ export class User extends AbleObject<UserData> {
   async $getUniques(): Promise<string[]> {
     const tilmeld = enforceTilmeld(this);
     const uniques = [`u:${this.username}`];
+    if (this.abilities?.includes('system/autogranted')) {
+      // Prevent multiple users from ever being granted admin automatically.
+      uniques.push('a:autogranted');
+    }
     if (
       !tilmeld.config.emailUsernames &&
       tilmeld.config.userFields.includes('email')
@@ -2181,6 +2185,7 @@ export class User extends AbleObject<UserData> {
             }
             if (!otherUsers.length) {
               this.$grant('system/admin');
+              this.$grant('system/autogranted');
               this.enabled = true;
               madeAdmin = true;
             }
