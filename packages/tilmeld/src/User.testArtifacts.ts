@@ -32,7 +32,7 @@ export function UserTest(
       newUser.nameFirst = 'New';
       newUser.nameLast = 'User';
       newUser.name = 'New User';
-      newUser.$password('password');
+      await newUser.$password('password');
 
       return newUser;
     }
@@ -74,7 +74,7 @@ export function UserTest(
       newUserA.nameFirst = 'New';
       newUserA.nameLast = 'User';
       newUserA.name = 'New User';
-      newUserA.$password('password');
+      await newUserA.$password('password');
 
       await newUserA.$saveSkipAC();
 
@@ -85,7 +85,7 @@ export function UserTest(
       newUserB.nameFirst = 'New';
       newUserB.nameLast = 'User';
       newUserB.name = 'New User';
-      newUserB.$password('password');
+      await newUserB.$password('password');
 
       try {
         await newUserB.$saveSkipAC();
@@ -118,7 +118,7 @@ export function UserTest(
       newUserA.nameFirst = 'New';
       newUserA.nameLast = 'User';
       newUserA.name = 'New User';
-      newUserA.$password('password');
+      await newUserA.$password('password');
 
       await newUserA.$saveSkipAC();
 
@@ -129,7 +129,7 @@ export function UserTest(
       newUserB.nameFirst = 'New';
       newUserB.nameLast = 'User';
       newUserB.name = 'New User';
-      newUserB.$password('password');
+      await newUserB.$password('password');
 
       try {
         await newUserB.$saveSkipAC();
@@ -152,7 +152,7 @@ export function UserTest(
       domainAdmin.nameFirst = 'Admin';
       domainAdmin.nameLast = 'User';
       domainAdmin.name = 'Admin User';
-      domainAdmin.$password('password');
+      await domainAdmin.$password('password');
       domainAdmin.$grant('tilmeld/domain/example.com/admin');
 
       await domainAdmin.$saveSkipAC();
@@ -167,7 +167,7 @@ export function UserTest(
       domainUser.nameFirst = 'New';
       domainUser.nameLast = 'User';
       domainUser.name = 'New User';
-      domainUser.$password('password');
+      await domainUser.$password('password');
 
       await domainUser.$save();
 
@@ -188,7 +188,7 @@ export function UserTest(
       domainAdmin.nameFirst = 'Admin';
       domainAdmin.nameLast = 'User';
       domainAdmin.name = 'Admin User';
-      domainAdmin.$password('password');
+      await domainAdmin.$password('password');
       domainAdmin.$grant('tilmeld/domain/example.com/admin');
 
       await domainAdmin.$saveSkipAC();
@@ -204,7 +204,7 @@ export function UserTest(
       domainUser.nameFirst = 'New';
       domainUser.nameLast = 'User';
       domainUser.name = 'New User';
-      domainUser.$password('password');
+      await domainUser.$password('password');
 
       try {
         await domainUser.$save();

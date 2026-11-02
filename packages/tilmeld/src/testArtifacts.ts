@@ -147,7 +147,7 @@ export function TilmeldTest(
         admin.nameFirst = 'Admin';
         admin.nameLast = 'User';
         admin.name = 'Admin User';
-        admin.$password('password');
+        await admin.$password('password');
         admin.$grant('system/admin');
         await admin.$saveSkipAC();
       }
@@ -165,7 +165,7 @@ export function TilmeldTest(
         bob.nameFirst = 'Bob';
         bob.nameLast = 'User';
         bob.name = 'Bob User';
-        bob.$password('password');
+        await bob.$password('password');
         bob.$addGroup(abgroup);
         await bob.$saveSkipAC();
       }
@@ -176,7 +176,7 @@ export function TilmeldTest(
         alice.nameFirst = 'Alice';
         alice.nameLast = 'User';
         alice.name = 'Alice User';
-        alice.$password('password');
+        await alice.$password('password');
         alice.$addGroup(abgroup);
         await alice.$saveSkipAC();
       }

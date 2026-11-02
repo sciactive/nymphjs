@@ -518,7 +518,7 @@ export class User extends AbleObject<UserData> {
       `User account recovery for "${user.username}".`,
     );
 
-    user.$password(data.password);
+    await user.$password(data.password);
     delete user.recoverSecret;
     delete user.recoverSecretDate;
     try {
@@ -661,7 +661,7 @@ export class User extends AbleObject<UserData> {
       await tilmeld.config.failedLoginAttempt(null, data);
       return { result: false, message: 'Incorrect login/password.' };
     }
-    if (!this.$checkPassword(data.password)) {
+    if (!(await this.$checkPassword(data.password))) {
       await tilmeld.config.failedLoginAttempt(this, data);
       return { result: false, message: 'Incorrect login/password.' };
     }
@@ -717,6 +717,17 @@ export class User extends AbleObject<UserData> {
       if (callback) {
         await callback(this);
       }
+    }
+
+    // Check if the password uses the old hash method.
+    if (
+      tilmeld.config.pwMethod === 'salt' &&
+      !this.password?.startsWith('scrypt$')
+    ) {
+      // Update the password hash with one using the new method.
+      await this.$refresh();
+      await this.$password(data.password);
+      await this.$save();
     }
 
     // Login was successful.
@@ -1415,25 +1426,55 @@ export class User extends AbleObject<UserData> {
    * @param password The password in question.
    * @returns True if the passwords match, otherwise false.
    */
-  public $checkPassword(password: string) {
+  public async $checkPassword(password: string) {
     const tilmeld = enforceTilmeld(this);
     switch (tilmeld.config.pwMethod) {
       case 'plain':
-        return this.password === password;
+        return crypto.timingSafeEqual(
+          Buffer.from(this.password ?? ''),
+          Buffer.from(password),
+        );
       case 'digest':
-        return (
-          this.password ===
-          crypto.createHash('sha256').update(password).digest('base64')
+        return crypto.timingSafeEqual(
+          Buffer.from(this.password ?? '', 'base64'),
+          crypto.createHash('sha256').update(password).digest(),
         );
       case 'salt':
       default:
-        return (
-          this.password ===
-          crypto
-            .createHash('sha256')
-            .update(password + this.salt)
-            .digest('base64')
-        );
+        if (!this.password?.startsWith('scrypt$')) {
+          // Check using the old hash method.
+          return crypto.timingSafeEqual(
+            Buffer.from(this.password ?? '', 'base64'),
+            crypto
+              .createHash('sha256')
+              .update(password + this.salt)
+              .digest(),
+          );
+        }
+        // Check using the new hash method.
+        const [alg, n, rr, pp, salt, keyB64] = (this.password ?? '').split('$');
+        if (alg !== 'scrypt') {
+          return false;
+        }
+        const expected = Buffer.from(keyB64, 'base64');
+        const N = Number(n),
+          r = Number(rr),
+          p = Number(pp);
+        const key = await new Promise<Buffer>((resolve, reject) => {
+          crypto.scrypt(
+            password,
+            salt,
+            expected.length,
+            { N, r, p, maxmem: 256 * N * r },
+            (err, key) => {
+              if (err) {
+                return reject(err);
+              }
+              resolve(key);
+            },
+          );
+        });
+        return crypto.timingSafeEqual(key, expected);
     }
   }
 
@@ -1523,7 +1564,7 @@ export class User extends AbleObject<UserData> {
     if (!('newPassword' in data) || !data.newPassword.length) {
       return { result: false, message: 'Please specify a password.' };
     }
-    if (!this.$checkPassword(data.currentPassword ?? '')) {
+    if (!(await this.$checkPassword(data.currentPassword ?? ''))) {
       this.$nymph.config.debugLog(
         'tilmeld',
         `Incorrect password for change request for "${this.username}".`,
@@ -1552,7 +1593,7 @@ export class User extends AbleObject<UserData> {
    * @param password The new password.
    * @returns The resulting password or hash which is stored in the entity.
    */
-  public $password(password: string) {
+  public async $password(password: string) {
     const tilmeld = enforceTilmeld(this);
     switch (tilmeld.config.pwMethod) {
       case 'plain':
@@ -1569,10 +1610,20 @@ export class User extends AbleObject<UserData> {
       case 'salt':
       default:
         this.salt = nanoid();
-        this.password = crypto
-          .createHash('sha256')
-          .update(password + this.salt)
-          .digest('base64');
+        const N = 131072;
+        const r = 8;
+        const p = 1;
+        const KEYLEN = 64;
+        const opts = { N, r, p, maxmem: 256 * N * r };
+        const key = await new Promise<Buffer>((resolve, reject) => {
+          crypto.scrypt(password, this.salt ?? '', KEYLEN, opts, (err, key) => {
+            if (err) {
+              return reject(err);
+            }
+            resolve(key);
+          });
+        });
+        this.password = `scrypt$${N}$${r}$${p}$${this.salt}$${key.toString('base64')}`;
         break;
     }
     return this.password;
@@ -1587,7 +1638,7 @@ export class User extends AbleObject<UserData> {
   public async $revokeCurrentTokens(data: {
     password: string;
   }): Promise<{ result: boolean; message: string }> {
-    if (!this.$checkPassword(data.password ?? '')) {
+    if (!(await this.$checkPassword(data.password ?? ''))) {
       return { result: false, message: 'Incorrect password.' };
     }
 
@@ -1680,7 +1731,7 @@ export class User extends AbleObject<UserData> {
     secret: string;
     code: string;
   }): Promise<{ result: boolean; message: string }> {
-    if (!this.$checkPassword(data.password ?? '')) {
+    if (!(await this.$checkPassword(data.password ?? ''))) {
       return { result: false, message: 'Incorrect password.' };
     }
 
@@ -1743,7 +1794,7 @@ export class User extends AbleObject<UserData> {
     const tilmeld = enforceTilmeld(this);
 
     if (data) {
-      if (!this.$checkPassword(data.password ?? '')) {
+      if (!(await this.$checkPassword(data.password ?? ''))) {
         return { result: false, message: 'Incorrect password.' };
       }
 
@@ -2052,7 +2103,7 @@ export class User extends AbleObject<UserData> {
       return { ...unCheck, loggedin: false };
     }
 
-    this.$password(data.password);
+    await this.$password(data.password);
     if (tilmeld.config.regFields.includes('name')) {
       this.name =
         this.nameFirst +
@@ -2481,7 +2532,7 @@ export class User extends AbleObject<UserData> {
     }
 
     if (this.passwordTemp != null) {
-      this.$password(this.passwordTemp);
+      await this.$password(this.passwordTemp);
     }
     delete this.passwordTemp;
 

@@ -164,12 +164,18 @@ export interface Config {
    */
   pwRecoveryTimeLimit: string;
   /**
-   * Method used to store passwords. Salt is more secure if the database is
-   * compromised. Plain: store the password in plaintext. Digest: store the
-   * password's digest (hash). Salt: store the password's digest using a
-   * complex, unique salt.
+   * Method used to store passwords. Salt is the most secure if the database is
+   * compromised.
    *
-   * Digests are SHA-256, so a salt probably isn't necessary, but who knows.
+   * - Plain: Store the password in plain text. A very bad idea.
+   * - Digest: Store the password's digest (hash) using SHA-256. The minimum
+   *   level of security, but not enough for modern apps.
+   * - Salt: Store the password's digest with a complex, unique salt using
+   *   the scrypt algorithm. Modern, secure password storage.
+   *
+   * Really the only reason to use anything other than "salt" is if you need
+   * logins to be so incredibly fast you can't even perceive a delay. So, not in
+   * a web app.
    *
    * Options are: "plain", "digest", "salt"
    */
