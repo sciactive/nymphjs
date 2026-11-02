@@ -680,6 +680,9 @@ export default class SQLite3Driver extends NymphDriver {
     if (!name) {
       throw new InvalidParametersError('Name not given for UID');
     }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     await this.startTransaction('nymph-delete-uid');
     this.queryRun(
       `DELETE FROM ${SQLite3Driver.escape(
@@ -2514,6 +2517,9 @@ export default class SQLite3Driver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     const result: any = this.queryGet(
       `SELECT "cur_uid" FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`,
@@ -2836,6 +2842,9 @@ export default class SQLite3Driver extends NymphDriver {
   }
 
   public async importUID({ name, value }: { name: string; value: number }) {
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     try {
       await this.startTransaction(`nymph-import-uid-${name}`);
       this.queryRun(
@@ -2870,6 +2879,9 @@ export default class SQLite3Driver extends NymphDriver {
   public async newUID(name: string) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.startTransaction('nymph-newuid');
     let curUid: number | undefined = undefined;
@@ -2927,6 +2939,9 @@ export default class SQLite3Driver extends NymphDriver {
   public async renameUID(oldName: string, newName: string) {
     if (oldName == null || newName == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (oldName.length > 128 || newName.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.startTransaction('nymph-rename-uid');
     this.queryRun(
@@ -3291,6 +3306,9 @@ export default class SQLite3Driver extends NymphDriver {
   public async setUID(name: string, curUid: number) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.startTransaction('nymph-set-uid');
     this.queryRun(

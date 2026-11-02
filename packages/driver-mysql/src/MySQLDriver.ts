@@ -452,7 +452,7 @@ export default class MySQLDriver extends NymphDriver {
         )} (
           \`name\` TEXT NOT NULL,
           \`cur_uid\` BIGINT(20) UNSIGNED NOT NULL,
-          PRIMARY KEY (\`name\`(100))
+          PRIMARY KEY (\`name\`(128))
         ) ENGINE ${this.config.engine}
         CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;`,
       );
@@ -792,6 +792,9 @@ export default class MySQLDriver extends NymphDriver {
   public async deleteUID(name: string) {
     if (!name) {
       throw new InvalidParametersError('Name not given for UID');
+    }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.queryRun(
       `DELETE FROM ${MySQLDriver.escape(
@@ -2699,6 +2702,9 @@ export default class MySQLDriver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     const result = await this.queryGet(
       `SELECT \`cur_uid\` FROM ${MySQLDriver.escape(
         `${this.prefix}uids`,
@@ -3045,6 +3051,9 @@ export default class MySQLDriver extends NymphDriver {
   }
 
   public async importUID({ name, value }: { name: string; value: number }) {
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     try {
       await this.internalTransaction(`nymph-import-uid-${name}`);
       await this.queryRun(
@@ -3069,6 +3078,9 @@ export default class MySQLDriver extends NymphDriver {
   public async newUID(name: string) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.internalTransaction('nymph-newuid');
     let curUid: number | null = null;
@@ -3127,6 +3139,9 @@ export default class MySQLDriver extends NymphDriver {
   public async renameUID(oldName: string, newName: string) {
     if (oldName == null || newName == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (oldName.length > 128 || newName.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.queryRun(
       `UPDATE ${MySQLDriver.escape(
@@ -3599,6 +3614,9 @@ export default class MySQLDriver extends NymphDriver {
   public async setUID(name: string, curUid: number) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.queryRun(
       `INSERT INTO ${MySQLDriver.escape(

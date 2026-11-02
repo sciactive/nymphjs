@@ -1127,6 +1127,9 @@ export default class PostgreSQLDriver extends NymphDriver {
     if (!name) {
       throw new InvalidParametersError('Name not given for UID');
     }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     await this.queryRun(
       `DELETE FROM ${PostgreSQLDriver.escape(
         `${this.prefix}uids`,
@@ -3019,6 +3022,9 @@ export default class PostgreSQLDriver extends NymphDriver {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
     }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     const result = await this.queryGet(
       `SELECT "cur_uid" FROM ${PostgreSQLDriver.escape(
         `${this.prefix}uids`,
@@ -3371,6 +3377,9 @@ export default class PostgreSQLDriver extends NymphDriver {
   }
 
   public async importUID({ name, value }: { name: string; value: number }) {
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
+    }
     try {
       await this.internalTransaction(`nymph-import-uid-${name}`);
       await this.queryRun(
@@ -3405,6 +3414,9 @@ export default class PostgreSQLDriver extends NymphDriver {
   public async newUID(name: string) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.internalTransaction('nymph-newuid');
     let curUid: number | undefined = undefined;
@@ -3460,6 +3472,9 @@ export default class PostgreSQLDriver extends NymphDriver {
   public async renameUID(oldName: string, newName: string) {
     if (oldName == null || newName == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (oldName.length > 128 || newName.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.queryRun(
       `UPDATE ${PostgreSQLDriver.escape(
@@ -3918,6 +3933,9 @@ export default class PostgreSQLDriver extends NymphDriver {
   public async setUID(name: string, curUid: number) {
     if (name == null) {
       throw new InvalidParametersError('Name not given for UID.');
+    }
+    if (name.length > 128) {
+      throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     await this.internalTransaction('nymph-setuid');
     try {
