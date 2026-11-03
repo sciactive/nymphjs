@@ -37,9 +37,11 @@ class InternalStore {
   public linkWrite?: DatabaseSync;
   public connected: boolean = false;
   public transactionsStarted = 0;
+  public promise: Promise<void>;
 
-  constructor(link: DatabaseSync) {
+  constructor(link: DatabaseSync, promise: Promise<void>) {
     this.link = link;
+    this.promise = promise;
   }
 }
 
@@ -51,6 +53,7 @@ export default class SQLite3Driver extends NymphDriver {
   protected prefix: string;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected store: InternalStore;
+  protected resolve: () => void = () => {};
 
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
@@ -94,18 +97,18 @@ export default class SQLite3Driver extends NymphDriver {
    *
    * @returns Whether this instance is connected to a SQLite3 database.
    */
-  public connect() {
+  public async connect() {
     if (this.store && this.store.connected) {
-      return Promise.resolve(true);
+      return true;
     }
 
     // Connecting
-    this._connect(false);
+    await this._connect(false);
 
-    return Promise.resolve(this.store.connected);
+    return this.store.connected;
   }
 
-  private _connect(write: boolean) {
+  private async _connect(write: boolean) {
     const { filename, fileMustExist, timeout, explicitWrite, wal } =
       this.config;
 
@@ -131,7 +134,14 @@ export default class SQLite3Driver extends NymphDriver {
       };
 
       let link: DatabaseSync;
+      let { promise, resolve } = Promise.withResolvers<void>();
       try {
+        if ((this.store && explicitWrite) || write) {
+          const myTurn = this.store.promise;
+          this.store.promise = promise;
+          this.resolve = resolve;
+          await myTurn;
+        }
         link = new DatabaseSync(filename, {
           readOnly: !explicitWrite && !write,
           timeout,
@@ -168,7 +178,8 @@ export default class SQLite3Driver extends NymphDriver {
             'Tried to open in write without opening in read first.',
           );
         }
-        this.store = new InternalStore(link);
+        this.store = new InternalStore(link, promise);
+        this.resolve = resolve;
       } else if (write) {
         this.store.linkWrite = link;
       } else {
@@ -210,6 +221,7 @@ export default class SQLite3Driver extends NymphDriver {
       this.store.transactionsStarted = 0;
       this.store.connected = false;
     }
+    this.resolve();
     return this.store.connected;
   }
 
@@ -584,14 +596,13 @@ export default class SQLite3Driver extends NymphDriver {
     this.queryRun(`RELEASE SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted--;
 
-    if (
-      this.store.transactionsStarted === 0 &&
-      this.store.linkWrite &&
-      !this.config.explicitWrite
-    ) {
-      this.store.linkWrite.exec('PRAGMA optimize;');
-      this.store.linkWrite.close();
-      this.store.linkWrite = undefined;
+    if (this.store.transactionsStarted === 0 && this.store.linkWrite) {
+      if (!this.config.explicitWrite) {
+        this.store.linkWrite.exec('PRAGMA optimize;');
+        this.store.linkWrite.close();
+        this.store.linkWrite = undefined;
+      }
+      this.resolve();
     }
 
     return true;
@@ -2972,14 +2983,13 @@ export default class SQLite3Driver extends NymphDriver {
     this.queryRun(`RELEASE SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted--;
 
-    if (
-      this.store.transactionsStarted === 0 &&
-      this.store.linkWrite &&
-      !this.config.explicitWrite
-    ) {
-      this.store.linkWrite.exec('PRAGMA optimize;');
-      this.store.linkWrite.close();
-      this.store.linkWrite = undefined;
+    if (this.store.transactionsStarted === 0 && this.store.linkWrite) {
+      if (!this.config.explicitWrite) {
+        this.store.linkWrite.exec('PRAGMA optimize;');
+        this.store.linkWrite.close();
+        this.store.linkWrite = undefined;
+      }
+      this.resolve();
     }
 
     return true;
@@ -3347,7 +3357,7 @@ export default class SQLite3Driver extends NymphDriver {
       );
     }
     if (!this.config.explicitWrite && !this.store.linkWrite) {
-      this._connect(true);
+      await this._connect(true);
     }
     this.queryRun(`SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.store.transactionsStarted++;
