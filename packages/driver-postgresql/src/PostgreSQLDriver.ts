@@ -3194,6 +3194,16 @@ export default class PostgreSQLDriver extends NymphDriver {
         );
 
         for (const name in sdata) {
+          if (
+            typeof name !== 'string' ||
+            !name.length ||
+            name.match(/^\s|=|\s$/)
+          ) {
+            throw new Error(
+              'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+            );
+          }
+
           const value = sdata[name];
           const uvalue = JSON.parse(value);
           if (value === undefined) {
@@ -3528,6 +3538,16 @@ export default class PostgreSQLDriver extends NymphDriver {
         value: any,
         svalue: string,
       ) => {
+        if (
+          typeof name !== 'string' ||
+          !name.length ||
+          name.match(/^\s|=|\s$/)
+        ) {
+          throw new Error(
+            'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+          );
+        }
+
         if (value === undefined) {
           return;
         }

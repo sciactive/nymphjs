@@ -291,6 +291,16 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       set: (data: EntityData, name: string, value: any) => {
         this.$check();
 
+        if (
+          typeof name !== 'string' ||
+          !name.length ||
+          name.match(/^\s|=|\s$/)
+        ) {
+          throw new Error(
+            'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+          );
+        }
+
         if (this.$sdata.hasOwnProperty(name)) {
           delete this.$sdata[name];
         }
@@ -316,6 +326,16 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
         descriptor: PropertyDescriptor,
       ) => {
         this.$check();
+
+        if (
+          typeof name !== 'string' ||
+          !name.length ||
+          name.match(/^\s|=|\s$/)
+        ) {
+          throw new Error(
+            'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+          );
+        }
 
         if (this.$sdata.hasOwnProperty(name)) {
           delete this.$sdata[name];
@@ -1082,7 +1102,20 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       delete this.$dataStore[name];
     }
     for (const name in data) {
+      if (typeof name !== 'string' || !name.length || name.match(/^\s|=|\s$/)) {
+        throw new Error(
+          'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+        );
+      }
+
       (this.$dataStore as any)[name] = data[name];
+    }
+    for (const name in sdata) {
+      if (typeof name !== 'string' || !name.length || name.match(/^\s|=|\s$/)) {
+        throw new Error(
+          'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+        );
+      }
     }
     this.$sdata = sdata ?? {};
     // Set original AC values if not set..

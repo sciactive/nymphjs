@@ -114,12 +114,19 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       },
 
       set: (data: EntityData, name: string, value: any) => {
-        if (typeof name !== 'symbol') {
-          this.$check();
+        if (
+          typeof name !== 'string' ||
+          !name.length ||
+          name.match(/^\s|=|\s$/)
+        ) {
+          throw new Error(
+            'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+          );
         }
-        if (typeof name !== 'symbol') {
-          this.$dirty[name] = true;
-        }
+
+        this.$check();
+
+        this.$dirty[name] = true;
         data[name] = value;
         return true;
       },
@@ -140,12 +147,20 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
         name: string,
         descriptor: PropertyDescriptor,
       ) => {
-        if (typeof name !== 'symbol') {
-          this.$check();
+        if (
+          typeof name !== 'string' ||
+          !name.length ||
+          name.match(/^\s|=|\s$/)
+        ) {
+          throw new Error(
+            'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
+          );
         }
-        if (typeof name !== 'symbol') {
-          this.$dirty[name] = true;
-        }
+
+        this.$check();
+
+        this.$dirty[name] = true;
+
         Object.defineProperty(data, name, descriptor);
         return true;
       },
