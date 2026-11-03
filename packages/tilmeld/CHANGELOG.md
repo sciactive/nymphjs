@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
+
+### Bug Fixes
+
+- ability checks on incoming abilities ([361222a](https://forge.sciactive.com/sciactive/nymphjs/commits/361222aef87bdeed0478bc91aa9528947e10c0e1))
+- don't allow implicit infinite recursion in wakeAll ([ba7d52e](https://forge.sciactive.com/sciactive/nymphjs/commits/ba7d52eb0837010cc44df1b42830896c801bad09))
+- ensure query callbacks run on all qrefs and can alter selectors ([8e6c148](https://forge.sciactive.com/sciactive/nymphjs/commits/8e6c14851b116380e5d2b3cd5454e2b497a04f65))
+- lock switch tokens to user who created them, implement in pubsub ([f64ec25](https://forge.sciactive.com/sciactive/nymphjs/commits/f64ec25226680f3f398d6b8370b850188f3dabe0))
+- only renew auth tokens on revocation if it's done by the user ([6271a5e](https://forge.sciactive.com/sciactive/nymphjs/commits/6271a5e6b43e42bb7333155a06f110ca0070a7dc))
+- prevent race condition creating two admin accounts as first accounts ([30c0d4e](https://forge.sciactive.com/sciactive/nymphjs/commits/30c0d4e03aeee166f59330c570d215ccd42ad5bb))
+- set email change date for cancel email change link ([e35aeb9](https://forge.sciactive.com/sciactive/nymphjs/commits/e35aeb9fc1238cd53092c3dbe08c18df80199f11))
+- validate that an auth token is not a switch token and vice versa ([ca098cd](https://forge.sciactive.com/sciactive/nymphjs/commits/ca098cd611d8e1480c4ca21b308393a976583c47))
+
+### Features
+
+- use scrypt for password hashing ([ed76327](https://forge.sciactive.com/sciactive/nymphjs/commits/ed76327d71a9ef31421f10f4f2ed219b954fc2d9))
+
 # [1.0.0-beta.138](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.137...v1.0.0-beta.138) (2026-11-01)
 
 **Note:** Version bump only for package @nymphjs/tilmeld

@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
+
+### Bug Fixes
+
+- don't allow implicit infinite recursion in wakeAll ([ba7d52e](https://forge.sciactive.com/sciactive/nymphjs/commits/ba7d52eb0837010cc44df1b42830896c801bad09))
+- ensure query callbacks run on all qrefs and can alter selectors ([8e6c148](https://forge.sciactive.com/sciactive/nymphjs/commits/8e6c14851b116380e5d2b3cd5454e2b497a04f65))
+- escape spaces in tags in mysql, protect against commas in tags ([7b5cd53](https://forge.sciactive.com/sciactive/nymphjs/commits/7b5cd530a84eb23337a577a9c72ba39aa4feb383))
+- lock switch tokens to user who created them, implement in pubsub ([f64ec25](https://forge.sciactive.com/sciactive/nymphjs/commits/f64ec25226680f3f398d6b8370b850188f3dabe0))
+
 # [1.0.0-beta.138](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.137...v1.0.0-beta.138) (2026-11-01)
 
 **Note:** Version bump only for package @nymphjs/nymph

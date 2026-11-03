@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
+
+### Bug Fixes
+
+- escape spaces in tags in mysql, protect against commas in tags ([7b5cd53](https://forge.sciactive.com/sciactive/nymphjs/commits/7b5cd530a84eb23337a577a9c72ba39aa4feb383))
+- set a maximum length for UID names to ensure mysql key fits it ([628dfbd](https://forge.sciactive.com/sciactive/nymphjs/commits/628dfbd31d74c3834936ccd01c4657e891c37cd8))
+
 # [1.0.0-beta.138](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.137...v1.0.0-beta.138) (2026-11-01)
 
 **Note:** Version bump only for package @nymphjs/driver-mysql

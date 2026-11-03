@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
+
+### Bug Fixes
+
+- lock switch tokens to user who created them, implement in pubsub ([f64ec25](https://forge.sciactive.com/sciactive/nymphjs/commits/f64ec25226680f3f398d6b8370b850188f3dabe0))
+
 # [1.0.0-beta.138](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.137...v1.0.0-beta.138) (2026-11-01)
 
 **Note:** Version bump only for package @nymphjs/pubsub
