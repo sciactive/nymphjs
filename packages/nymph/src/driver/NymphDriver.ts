@@ -340,7 +340,7 @@ export default abstract class NymphDriver {
           // Record the new entity's info.
           guid = entityMatch[1];
           etype = entityMatch[2];
-          tags = entityMatch[3].split(',');
+          tags = entityMatch[3].replace(/\\n/g, () => '\n').split(',');
         } else if (propMatch) {
           // Add the variable to the new entity.
           if (guid) {

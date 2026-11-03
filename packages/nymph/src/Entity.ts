@@ -16,6 +16,7 @@ import type {
 } from './Entity.types.js';
 import {
   EntityConflictError,
+  EntityInvalidDataError,
   EntityIsSleepingReferenceError,
   InvalidParametersError,
   InvalidStateError,
@@ -296,7 +297,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
           !name.length ||
           name.match(/^\s|=|\s$/)
         ) {
-          throw new Error(
+          throw new EntityInvalidDataError(
             'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
           );
         }
@@ -332,7 +333,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
           !name.length ||
           name.match(/^\s|=|\s$/)
         ) {
-          throw new Error(
+          throw new EntityInvalidDataError(
             'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
           );
         }
@@ -687,6 +688,19 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     if (tags.length < 1) {
       return;
     }
+
+    for (let tag of tags) {
+      if (
+        typeof tag !== 'string' ||
+        !tag.length ||
+        tag.match(/[\x00-\x1F\x7F\[\],]/)
+      ) {
+        throw new EntityInvalidDataError(
+          'Tags must be non-empty strings without square brackets, control characters, or commas.',
+        );
+      }
+    }
+
     this.tags = uniqueStrings([...this.tags, ...tags]);
   }
 
@@ -1103,7 +1117,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     }
     for (const name in data) {
       if (typeof name !== 'string' || !name.length || name.match(/^\s|=|\s$/)) {
-        throw new Error(
+        throw new EntityInvalidDataError(
           'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
         );
       }
@@ -1112,7 +1126,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     }
     for (const name in sdata) {
       if (typeof name !== 'string' || !name.length || name.match(/^\s|=|\s$/)) {
-        throw new Error(
+        throw new EntityInvalidDataError(
           'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
         );
       }

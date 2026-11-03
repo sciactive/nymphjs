@@ -981,7 +981,9 @@ export default class SQLite3Driver extends NymphDriver {
       const acWrite = datum.value.acWrite?.slice(1, -1).split(',');
       const acFull = datum.value.acFull?.slice(1, -1).split(',');
       let currentEntityExport: string[] = [];
-      currentEntityExport.push(`{${guid}}<${etype}>[${tags}]`);
+      currentEntityExport.push(
+        `{${guid}}<${etype}>[${tags.replace(/\n/g, () => '\\n')}]`,
+      );
       currentEntityExport.push(`\tcdate=${JSON.stringify(cdate)}`);
       currentEntityExport.push(`\tmdate=${JSON.stringify(mdate)}`);
       if (this.nymph.tilmeld != null) {
@@ -2691,7 +2693,7 @@ export default class SQLite3Driver extends NymphDriver {
             !name.length ||
             name.match(/^\s|=|\s$/)
           ) {
-            throw new Error(
+            throw new EntityInvalidDataError(
               'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
             );
           }
@@ -3021,7 +3023,7 @@ export default class SQLite3Driver extends NymphDriver {
           !name.length ||
           name.match(/^\s|=|\s$/)
         ) {
-          throw new Error(
+          throw new EntityInvalidDataError(
             'Property names must be non-empty strings without leading or trailing spaces or equals signs.',
           );
         }
@@ -3160,12 +3162,16 @@ export default class SQLite3Driver extends NymphDriver {
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
           }
-          if (
-            tags.find((tag) => tag.match(/[[\x01-\x1F\x7F]]/) || tag.match(/,/))
-          ) {
-            throw new EntityInvalidDataError(
-              'Tags cannot contain control characters or commas.',
-            );
+          for (let tag of tags) {
+            if (
+              typeof tag !== 'string' ||
+              !tag.length ||
+              tag.match(/[\x00-\x1F\x7F\[\],]/)
+            ) {
+              throw new EntityInvalidDataError(
+                'Tags must be non-empty strings without square brackets, control characters, or commas.',
+              );
+            }
           }
           let processedData = this.removeAndReturnACValues(
             etype,
@@ -3213,6 +3219,17 @@ export default class SQLite3Driver extends NymphDriver {
             Object.keys(sdata).length === 0
           ) {
             throw new EntityInvalidDataError('Entity contains no data.');
+          }
+          for (let tag of tags) {
+            if (
+              typeof tag !== 'string' ||
+              !tag.length ||
+              tag.match(/[\x00-\x1F\x7F\[\],]/)
+            ) {
+              throw new EntityInvalidDataError(
+                'Tags must be non-empty strings without square brackets, control characters, or commas.',
+              );
+            }
           }
           let processedData = this.removeAndReturnACValues(
             etype,
