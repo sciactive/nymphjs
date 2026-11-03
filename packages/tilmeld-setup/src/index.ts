@@ -146,9 +146,9 @@ export function setup(
 
         if (
           tilmeld.config.emailRateLimit !== '' &&
-          user.emailChangeDate != null &&
-          user.emailChangeDate <
-            (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000
+          (user.emailChangeDate == null ||
+            user.emailChangeDate <
+              (strtotime('-' + tilmeld.config.emailRateLimit) || 0) * 1000)
         ) {
           printError(
             400,
