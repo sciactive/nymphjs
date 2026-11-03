@@ -233,6 +233,21 @@ export default {
             .pattern(/^[0-9]+$/, 'numbers'),
         }
       : {};
+    for (let ability of group.abilities ?? []) {
+      if (ability.startsWith('system/')) {
+        throw new Error('Invalid Group: Groups cannot have system abilities.');
+      }
+      if (ability === 'tilmeld/admin') {
+        throw new Error(
+          'Invalid Group: Groups cannot have Tilmeld admin ability.',
+        );
+      }
+      if (ability === 'tilmeld/switch') {
+        throw new Error(
+          'Invalid Group: Groups cannot have Tilmeld switch ability.',
+        );
+      }
+    }
     Joi.attempt(
       group.$getValidatable(),
       Joi.object().keys({

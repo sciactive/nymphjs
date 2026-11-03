@@ -342,6 +342,12 @@ export class Group extends AbleObject<GroupData> {
 
     if ('abilities' in input.data) {
       this.$checkIncomingAbilities(input.data.abilities);
+    } else if (
+      (this.$allowlistData == null ||
+        this.$allowlistData.includes('abilities')) &&
+      (this.$privateData == null || !this.$privateData.includes('abilities'))
+    ) {
+      this.$checkIncomingAbilities(undefined);
     }
 
     super.$jsonAcceptData(input, allowConflict);
@@ -352,6 +358,10 @@ export class Group extends AbleObject<GroupData> {
 
     if ('abilities' in patch.set) {
       this.$checkIncomingAbilities(patch.set.abilities);
+    }
+
+    if (patch.unset.includes('abilities')) {
+      this.$checkIncomingAbilities(undefined);
     }
 
     super.$jsonAcceptPatch(patch, allowConflict);
@@ -379,6 +389,20 @@ export class Group extends AbleObject<GroupData> {
     }
 
     if (
+      xor(
+        incoming.filter((ability) => ability.startsWith('system/')),
+        this.abilities?.filter((ability) => ability.startsWith('system/')) ??
+          [],
+      ).length &&
+      (!tilmeld.currentUser ||
+        !tilmeld.currentUser.abilities?.includes('system/admin'))
+    ) {
+      throw new BadDataError(
+        "You don't have the authority to grant or revoke system abilities.",
+      );
+    }
+
+    if (
       incoming.includes('tilmeld/admin') !==
         this.abilities?.includes('tilmeld/admin') &&
       (!tilmeld.currentUser ||
@@ -402,10 +426,9 @@ export class Group extends AbleObject<GroupData> {
 
     if (
       xor(
-        incoming.filter((ability: string) => ability.startsWith('tilmeld/')),
-        this.abilities?.filter((ability: string) =>
-          ability.startsWith('tilmeld/'),
-        ) ?? [],
+        incoming.filter((ability) => ability.startsWith('tilmeld/')),
+        this.abilities?.filter((ability) => ability.startsWith('tilmeld/')) ??
+          [],
       ).length &&
       (!tilmeld.currentUser ||
         (!tilmeld.currentUser.abilities?.includes('system/admin') &&
@@ -422,14 +445,21 @@ export class Group extends AbleObject<GroupData> {
     sdata?: SerializedEntityData,
     source?: 'server',
   ) {
-    super.$putData(data, sdata, source);
+    let newData = { ...data };
+    let newSdata = sdata && { ...sdata };
     // TODO: Fix these being added by the drivers.
     // @ts-ignore
-    delete this.acRead;
+    delete newData.acRead;
     // @ts-ignore
-    delete this.acWrite;
+    delete newData.acWrite;
     // @ts-ignore
-    delete this.acFull;
+    delete newData.acFull;
+    if (newSdata) {
+      delete newSdata.acRead;
+      delete newSdata.acWrite;
+      delete newSdata.acFull;
+    }
+    super.$putData(newData, newSdata, source);
     if (source === 'server') {
       this.$originalGroupname = this.groupname;
     }
@@ -437,13 +467,10 @@ export class Group extends AbleObject<GroupData> {
   }
 
   /**
-   * Update the data protection arrays for a user.
-   *
-   * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
+   * Update the data protection arrays for the current user.
    */
-  public $updateDataProtection(givenUser?: UserClass) {
+  public $updateDataProtection() {
     const tilmeld = enforceTilmeld(this);
-    let user = givenUser ?? tilmeld.User.current();
     let [_groupname, domain] = tilmeld.config.domainSupport
       ? splitn(this.groupname ?? '', '@', 2)
       : [this.groupname, null];
@@ -460,25 +487,23 @@ export class Group extends AbleObject<GroupData> {
     }
 
     if (
-      user != null &&
-      (user.abilities?.includes('tilmeld/admin') ||
-        user.abilities?.includes('system/admin'))
+      tilmeld.gatekeeper('tilmeld/admin') ||
+      tilmeld.gatekeeper('system/admin')
     ) {
       // Users who can edit groups can see their data.
       this.$privateData = [];
       this.$allowlistData = undefined;
     } else if (
       this.user != null &&
-      user != null &&
-      this.user.guid === user.guid
+      tilmeld.currentUser != null &&
+      this.user.guid === tilmeld.currentUser.guid
     ) {
       // Users can see their group's data.
       this.$privateData = [];
     } else if (
-      user != null &&
       tilmeld.config.domainSupport &&
       domain &&
-      user.abilities?.includes(`tilmeld/domain/${domain}/admin`)
+      tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
     ) {
       // Domain admins can see their groups' data.
       this.$privateData = [];
@@ -914,7 +939,7 @@ export class Group extends AbleObject<GroupData> {
     }
 
     // Groups should never have 'system/admin', 'tilmeld/admin',
-    // 'tilmeld/switch', or domain admin abilities.
+    // 'tilmeld/switch', or system abilities.
     this.abilities = (this.abilities ?? []).filter((ability) => {
       if (
         ['system/admin', 'tilmeld/admin', 'tilmeld/switch'].indexOf(ability) !==
@@ -925,7 +950,7 @@ export class Group extends AbleObject<GroupData> {
       if (ability == null) {
         return false;
       }
-      if (ability.startsWith('tilmeld/domain/') && ability.endsWith('/admin')) {
+      if (ability.startsWith('system/')) {
         return false;
       }
       return true;

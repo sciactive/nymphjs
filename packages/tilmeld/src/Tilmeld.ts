@@ -165,7 +165,7 @@ export default class Tilmeld implements TilmeldInterface {
       const currentUserCDate = this.currentUser.cdate;
       const currentUserMDate = this.currentUser.mdate;
       const currentUserTags = this.currentUser.tags;
-      const currentUserData = this.currentUser.$getData();
+      const currentUserData = this.currentUser.$getData(false);
       const currentUserSData = this.currentUser.$getSData();
 
       const user = this.User.factorySync();
@@ -373,7 +373,6 @@ export default class Tilmeld implements TilmeldInterface {
             !tilmeld.checkPermissions(
               entity,
               TilmeldAccessLevels.FULL_ACCESS,
-              undefined,
               originalAc,
             )
           ) {
@@ -740,7 +739,7 @@ export default class Tilmeld implements TilmeldInterface {
   }
 
   /**
-   * Check an entity's permissions for a user.
+   * Check an entity's permissions for the current user.
    *
    * This will check the AC (Access Control) properties of the entity. These
    * include the following properties:
@@ -800,37 +799,26 @@ export default class Tilmeld implements TilmeldInterface {
    *
    * @param entity The entity to check.
    * @param type The lowest level of permission to consider a pass.
-   * @param user The user to check permissions for. If null, uses the current user. If false, checks for public access.
    * @param acProperties The acProperties to use instead of getting them from the entity.
    * @returns Whether the current user has at least `type` permission for the entity.
    */
   public checkPermissions(
     entity: EntityInterface,
     type: TilmeldAccessLevels = TilmeldAccessLevels.READ_ACCESS,
-    user?: User | false,
     acProperties?: ACProperties,
   ) {
     if (!acProperties) {
       acProperties = entity.$getCurrentAcValues() as ACProperties;
     }
 
-    let userOrNull: User | null = null;
-    let userOrEmpty: User = this.User.factorySync();
-    // Calculate the user.
-    if (user == null) {
-      userOrNull = this.currentUser;
-      userOrEmpty = this.User.current(true);
-    } else if (user !== false) {
-      userOrNull = user;
-      userOrEmpty = user;
-    }
+    let userOrEmpty: User = this.User.current(true);
 
     // Users and groups are always readable. Editable by Tilmeld admins.
     if (
       (entity instanceof User || entity instanceof Group) &&
       (type === TilmeldAccessLevels.READ_ACCESS ||
-        userOrEmpty.abilities?.includes('tilmeld/admin') ||
-        userOrEmpty.abilities?.includes('system/admin'))
+        this.gatekeeper('tilmeld/admin') ||
+        this.gatekeeper('system/admin'))
     ) {
       return true;
     }
@@ -848,10 +836,7 @@ export default class Tilmeld implements TilmeldInterface {
         '@',
         2,
       );
-      if (
-        domain &&
-        userOrEmpty.abilities?.includes(`tilmeld/domain/${domain}/admin`)
-      ) {
+      if (domain && this.gatekeeper(`tilmeld/domain/${domain}/admin`)) {
         return true;
       }
     }
@@ -861,7 +846,7 @@ export default class Tilmeld implements TilmeldInterface {
     const acGroup = acProperties.acGroup ?? TilmeldAccessLevels.READ_ACCESS;
     const acOther = acProperties.acOther ?? TilmeldAccessLevels.NO_ACCESS;
 
-    if (userOrNull == null) {
+    if (this.currentUser == null) {
       return acOther >= type;
     }
 
@@ -931,7 +916,10 @@ export default class Tilmeld implements TilmeldInterface {
     }
 
     // Check ownership ac properties.
-    if (acProperties.user != null && acProperties.user === userOrNull.guid) {
+    if (
+      acProperties.user != null &&
+      acProperties.user === this.currentUser.guid
+    ) {
       return acUser >= type;
     }
     if (acProperties.group != null && allGids.includes(acProperties.group)) {
@@ -1013,10 +1001,26 @@ export default class Tilmeld implements TilmeldInterface {
    * @param user The user.
    */
   public async fillSession(user: User) {
-    this.currentUser = user;
+    // Clear any currently logged in user.
+    const oldUser = this.currentUser;
+    this.currentUser = null;
+    this.gatekeeperCache = null;
+    if (oldUser) {
+      oldUser.$updateDataProtection();
+      oldUser.$updateGroupDataProtection();
+    }
+
+    // Update data protection on the incoming user.
+    user.$updateDataProtection();
+    user.$updateGroupDataProtection();
+
+    // Get the gatekeeper cache for incoming user.
     this.gatekeeperCache = await user.$getGatekeeperCache();
 
-    // Now update the data protection on the user and all the groups.
+    // Now we're ready to set the current user.
+    this.currentUser = user;
+
+    // And update the data protection on the user and all the groups.
     this.currentUser.$updateDataProtection();
     this.currentUser.$updateGroupDataProtection();
   }

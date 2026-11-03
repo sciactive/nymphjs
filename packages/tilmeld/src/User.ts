@@ -927,19 +927,12 @@ export class User extends AbleObject<UserData> {
       if (domain) {
         domain = domain.toLowerCase();
       }
-      const user = tilmeld.User.current();
-      const isCurrentUser = user != null && user.$is(this);
-      // While loading, accessing abilities on the current user will infinitely
-      // loop, but if this is the current user, we can use its abilities.
-      const abilities =
-        (isCurrentUser || user == null ? this.abilities : user?.abilities) ??
-        [];
+      const isCurrentUser = this.$is(tilmeld.currentUser);
       const isNewUser = input.guid == null;
       const isDomainUser =
         !isCurrentUser &&
-        user != null &&
         domain &&
-        abilities.includes(`tilmeld/domain/${domain}/admin`);
+        tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`);
 
       reloadDataProtection = !!(isNewUser && isDomainUser);
     }
@@ -1045,14 +1038,21 @@ export class User extends AbleObject<UserData> {
     sdata?: SerializedEntityData,
     source?: 'server',
   ) {
-    super.$putData(data, sdata, source);
+    let newData = { ...data };
+    let newSdata = sdata && { ...sdata };
     // TODO: Fix these being added by the drivers.
     // @ts-ignore
-    delete this.acRead;
+    delete newData.acRead;
     // @ts-ignore
-    delete this.acWrite;
+    delete newData.acWrite;
     // @ts-ignore
-    delete this.acFull;
+    delete newData.acFull;
+    if (newSdata) {
+      delete newSdata.acRead;
+      delete newSdata.acWrite;
+      delete newSdata.acFull;
+    }
+    super.$putData(newData, newSdata, source);
     if (source === 'server') {
       this.$originalEmail = this.email;
       this.$originalUsername = this.username;
@@ -1061,13 +1061,10 @@ export class User extends AbleObject<UserData> {
   }
 
   /**
-   * Update the data protection arrays for a user.
-   *
-   * @param givenUser User to update protection for. If undefined, will use the currently logged in user.
+   * Update the data protection arrays for the current user.
    */
-  public $updateDataProtection(givenUser?: User) {
+  public $updateDataProtection() {
     const tilmeld = enforceTilmeld(this);
-    let user = givenUser ?? tilmeld.User.current();
     let [_username, domain] = tilmeld.config.domainSupport
       ? splitn(this.$originalUsername ?? this.username ?? '', '@', 2)
       : [this.$originalUsername ?? this.username, null];
@@ -1084,18 +1081,13 @@ export class User extends AbleObject<UserData> {
       this.$privateData.push('username');
     }
 
-    const isCurrentUser = user != null && user.$is(this);
-    // While loading, accessing abilities on the current user will infinitely
-    // loop, but if this is the current user, we can use its abilities.
-    const abilities =
-      (isCurrentUser || user == null ? this.abilities : user?.abilities) ?? [];
+    const isCurrentUser = this.$is(tilmeld.currentUser);
     const isNewUser = this.guid == null;
     const isDomainUser =
       tilmeld.config.domainSupport &&
       !isCurrentUser &&
-      user != null &&
       domain &&
-      abilities.includes(`tilmeld/domain/${domain}/admin`);
+      tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`);
 
     if (isCurrentUser) {
       // Users can check to see what abilities they have.
@@ -1121,9 +1113,8 @@ export class User extends AbleObject<UserData> {
     }
 
     if (
-      user != null &&
-      (abilities.includes('tilmeld/admin') ||
-        abilities.includes('system/admin'))
+      tilmeld.gatekeeper('tilmeld/admin') ||
+      tilmeld.gatekeeper('system/admin')
     ) {
       // Users who can edit other users can see most of their data.
       this.$privateData = ['password', 'salt', 'totpSecret'];
@@ -1229,10 +1220,9 @@ export class User extends AbleObject<UserData> {
     }
 
     if (
-      user != null &&
       !isCurrentUser &&
-      (abilities.includes('tilmeld/switch') ||
-        abilities.includes('system/admin'))
+      (tilmeld.gatekeeper('tilmeld/switch') ||
+        tilmeld.gatekeeper('system/admin'))
     ) {
       // Users with this ability can switch to other users.
       this.$clientEnabledMethods.push('$switchUser');
@@ -1647,14 +1637,42 @@ export class User extends AbleObject<UserData> {
    * @param data The input data from the client.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
-  public async $revokeCurrentTokens(data: {
+  public async $revokeCurrentTokens(data?: {
     password: string;
   }): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
+
     if (!tilmeld.gatekeeper()) {
       return { result: false, message: 'You must be logged in.' };
     }
-    if (!(await this.$checkPassword(data.password ?? ''))) {
+
+    if (this.guid == null) {
+      return { result: false, message: 'This user has not been saved.' };
+    }
+
+    // Work on real data.
+    await this.$refresh();
+
+    let [_username, domain] = tilmeld.config.domainSupport
+      ? splitn(this.$originalUsername ?? this.username ?? '', '@', 2)
+      : [this.$originalUsername ?? this.username, null];
+    // Lowercase the domain part.
+    if (domain) {
+      domain = domain.toLowerCase();
+    }
+
+    const isAdmin = tilmeld.gatekeeper('tilmeld/admin');
+    const isDomainUser =
+      tilmeld.config.domainSupport &&
+      !this.$is(tilmeld.currentUser) &&
+      domain &&
+      tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`);
+
+    if (
+      !isAdmin &&
+      !isDomainUser &&
+      (data == null || !(await this.$checkPassword(data.password ?? '')))
+    ) {
       return { result: false, message: 'Incorrect password.' };
     }
 

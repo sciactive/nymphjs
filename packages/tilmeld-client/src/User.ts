@@ -310,7 +310,7 @@ export class User extends Entity<UserData> {
     return await this.$serverCall('$changePassword', [data]);
   }
 
-  public async $revokeCurrentTokens(data: {
+  public async $revokeCurrentTokens(data?: {
     password: string;
   }): Promise<{ result: boolean; message: string }> {
     return await this.$serverCall('$revokeCurrentTokens', [data]);
