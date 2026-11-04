@@ -3,6 +3,7 @@ import type {
   EntityConstructor,
   EntityInterface,
   EntityJson,
+  EntityPatch,
   ServerCallResponse,
   ServerCallStaticResponse,
 } from './Entity.types.js';
@@ -206,7 +207,11 @@ export default class Nymph {
 
   public async saveEntity(entity: EntityInterface) {
     let method: 'POST' | 'PUT' = entity.guid == null ? 'POST' : 'PUT';
-    return await this.requestWithMethod(entity, method, entity, false);
+    let json = entity.toJSON();
+    if (Array.isArray(json)) {
+      throw new InvalidRequestError("Can't save sleeping references.");
+    }
+    return await this.requestWithMethod(entity, method, json, false);
   }
 
   public async saveEntities(entities: EntityInterface[]) {
@@ -226,7 +231,14 @@ export default class Nymph {
         );
       }
     });
-    return await this.requestWithMethod(entities, method, entities, true);
+    let jsons = entities.map((e) => {
+      const json = e.toJSON();
+      if (Array.isArray(json)) {
+        throw new InvalidRequestError("Can't save sleeping references.");
+      }
+      return json;
+    });
+    return await this.requestWithMethod(entities, method, jsons, true);
   }
 
   public async patchEntity(entity: EntityInterface) {
@@ -260,19 +272,19 @@ export default class Nymph {
   private async requestWithMethod<T extends EntityInterface>(
     entity: T,
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-    data: { [k: string]: any },
+    data: EntityJson | EntityPatch,
     plural: false,
   ): Promise<T>;
   private async requestWithMethod<T extends EntityInterface>(
     entity: T[],
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-    data: { [k: string]: any },
+    data: (EntityJson | EntityPatch)[],
     plural: true,
   ): Promise<T[]>;
   private async requestWithMethod<T extends EntityInterface>(
     entity: T | T[],
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
-    data: { [k: string]: any },
+    data: (EntityJson | EntityPatch) | (EntityJson | EntityPatch)[],
     plural: boolean,
   ): Promise<T | T[]> {
     const response = await this.requester[method]({
@@ -605,7 +617,13 @@ export default class Nymph {
     entity: EntityInterface,
     method: string,
     params: any[],
-    stateless = false,
+    {
+      pushState = false,
+      pullState = false,
+    }: {
+      pushState?: boolean;
+      pullState?: boolean;
+    },
   ): Promise<ServerCallResponse> {
     const data = await this.requester.POST({
       url: this.restUrl,
@@ -614,8 +632,14 @@ export default class Nymph {
       data: {
         action: 'method',
         data: {
-          entity,
-          stateless,
+          ...(pushState
+            ? { entity }
+            : {
+                class: entityConstructorsToClassNames(entity.constructor),
+                guid: entity.guid,
+              }),
+          pushState: !!pushState,
+          pullState: !!pullState,
           method,
           params: entityConstructorsToClassNames(entitiesToReferences(params)),
         },

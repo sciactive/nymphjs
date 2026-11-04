@@ -220,19 +220,27 @@ export class User extends Entity<UserData> {
   }
 
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$checkUsername', [], true);
+    return await this.$serverCall('$checkUsername', [], {
+      pushState: true,
+    });
   }
 
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$checkEmail', [], true);
+    return await this.$serverCall('$checkEmail', [], {
+      pushState: true,
+    });
   }
 
   public async $checkPhone(): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$checkPhone', [], true);
+    return await this.$serverCall('$checkPhone', [], {
+      pushState: true,
+    });
   }
 
   public async $getAvatar(): Promise<string> {
-    return await this.$serverCall('$getAvatar', [], true);
+    return await this.$serverCall('$getAvatar', [], {
+      pushState: true,
+    });
   }
 
   public async $register(data: {
@@ -246,7 +254,10 @@ export class User extends Entity<UserData> {
       );
     }
 
-    const response = await this.$serverCall('$register', [data]);
+    const response = await this.$serverCall('$register', [data], {
+      pushState: true,
+      pullState: true,
+    });
     if (response.result) {
       for (let i = 0; i < store.registerCallbacks.length; i++) {
         store.registerCallbacks[i] && store.registerCallbacks[i](this);
@@ -300,7 +311,7 @@ export class User extends Entity<UserData> {
   }
 
   public async $gatekeeper(ability?: string): Promise<boolean> {
-    return await this.$serverCall('$gatekeeper', [ability], true);
+    return await this.$serverCall('$gatekeeper', [ability]);
   }
 
   public async $changePassword(data: {
@@ -308,17 +319,21 @@ export class User extends Entity<UserData> {
     currentPassword: string;
     revokeCurrentTokens?: boolean;
   }): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$changePassword', [data]);
+    return await this.$serverCall('$changePassword', [data], {
+      pullState: true,
+    });
   }
 
   public async $revokeCurrentTokens(data?: {
     password: string;
   }): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$revokeCurrentTokens', [data]);
+    return await this.$serverCall('$revokeCurrentTokens', [data], {
+      pullState: true,
+    });
   }
 
   public async $hasTOTPSecret(): Promise<boolean> {
-    return await this.$serverCall('$hasTOTPSecret', [], true);
+    return await this.$serverCall('$hasTOTPSecret', []);
   }
 
   public async $getNewTOTPSecret(): Promise<{
@@ -326,7 +341,7 @@ export class User extends Entity<UserData> {
     qrcode: string;
     secret: string;
   }> {
-    return await this.$serverCall('$getNewTOTPSecret', [], true);
+    return await this.$serverCall('$getNewTOTPSecret', []);
   }
 
   public async $saveTOTPSecret(data: {
@@ -334,16 +349,22 @@ export class User extends Entity<UserData> {
     secret: string;
     code: string;
   }): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$saveTOTPSecret', [data]);
+    return await this.$serverCall('$saveTOTPSecret', [data], {
+      pullState: true,
+    });
   }
 
   public async $removeTOTPSecret(data?: {
     password: string;
     code: string;
   }): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$removeTOTPSecret', [
-      ...(data ? [data] : []),
-    ]);
+    return await this.$serverCall(
+      '$removeTOTPSecret',
+      [...(data ? [data] : [])],
+      {
+        pullState: true,
+      },
+    );
   }
 
   public static async current(

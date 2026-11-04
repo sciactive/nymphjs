@@ -3,6 +3,7 @@ import express, { NextFunction, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import {
   Nymph,
+  Entity,
   EntityConflictError,
   EntityConstructor,
   EntityInterface,
@@ -484,18 +485,22 @@ export function createServer(
             }
           } else {
             let entity: EntityInterface & EntityData;
+            const guid = data.pushState ? data.entity.guid : data.guid;
             try {
-              entity = await loadEntity(
-                classNamesToEntityConstructors(
-                  response.locals.nymph,
-                  referencesToEntities(
-                    data.entity,
+              const EntityClass = data.pushState
+                ? classNamesToEntityConstructors(
                     response.locals.nymph,
-                    false,
+                    data.entity.class,
                     true,
-                  ),
-                  true,
-                ),
+                  )
+                : classNamesToEntityConstructors(
+                    response.locals.nymph,
+                    data.class,
+                    true,
+                  );
+              entity = await getEntity(
+                EntityClass,
+                guid,
                 response.locals.nymph,
               );
             } catch (e: any) {
@@ -514,8 +519,8 @@ export function createServer(
               }
               return;
             }
-            if (data.entity.guid && !entity.guid) {
-              httpError(response, 400);
+            if (guid && !entity.guid) {
+              httpError(response, 404);
               return;
             }
             if (entity.$getClientEnabledMethods().indexOf(data.method) === -1) {
@@ -529,6 +534,34 @@ export function createServer(
               httpError(response, 400);
               return;
             }
+            if (data.pullState && !entity[data.method].sendStateToClient) {
+              httpError(response, 403);
+              return;
+            }
+            if (data.pushState) {
+              if (!entity[data.method].acceptStateFromClient) {
+                httpError(response, 403);
+                return;
+              }
+              try {
+                entity.$jsonAcceptData(data.entity as EntityJson, false);
+              } catch (e: any) {
+                if (e instanceof EntityConflictError) {
+                  httpError(response, 409, e);
+                } else if (e instanceof ForbiddenClassError) {
+                  httpError(response, 403, e);
+                } else if (e.message === NOT_FOUND_ERROR) {
+                  httpError(response, 404, e);
+                } else if (e instanceof InvalidParametersError) {
+                  httpError(response, 400, e);
+                } else if (e.message === 'Not accessible.') {
+                  httpError(response, 403);
+                } else {
+                  httpError(response, 500, e);
+                }
+                return;
+              }
+            }
             try {
               const result = entity[data.method](...params);
               let ret = result;
@@ -537,10 +570,10 @@ export function createServer(
               }
               response.status(200);
               response.setHeader('Content-Type', 'application/json');
-              if (data.stateless) {
-                response.send({ return: ret });
-              } else {
+              if (data.pullState) {
                 response.send({ entity: entity, return: ret });
+              } else {
+                response.send({ return: ret });
               }
             } catch (e: any) {
               httpError(response, 500, e);
@@ -874,6 +907,9 @@ export function createServer(
     allowConflict = false,
   ): Promise<EntityInterface> {
     let EntityClass = entityData.class;
+    if (!(EntityClass.prototype instanceof Entity)) {
+      throw new ForbiddenClassError('Invalid class.');
+    }
     if (EntityClass.class === 'Entity') {
       // Don't let clients use the `Entity` class, since it has no validity/AC checks.
       throw new ForbiddenClassError(
@@ -902,6 +938,41 @@ export function createServer(
       entity.$jsonAcceptPatch(entityData as EntityPatch, allowConflict);
     } else {
       entity.$jsonAcceptData(entityData as EntityJson, allowConflict);
+    }
+    return entity;
+  }
+
+  async function getEntity(
+    EntityClass: EntityConstructor,
+    guid: string | null,
+    nymph: Nymph,
+  ): Promise<EntityInterface> {
+    if (!(EntityClass.prototype instanceof Entity)) {
+      throw new ForbiddenClassError('Invalid class.');
+    }
+    if (EntityClass.class === 'Entity') {
+      // Don't let clients use the `Entity` class, since it has no validity/AC checks.
+      throw new ForbiddenClassError(
+        "Can't use Entity class directly from the front end.",
+      );
+    }
+    if (!EntityClass.restEnabled) {
+      throw new ForbiddenClassError('Not accessible.');
+    }
+    let entity: EntityInterface | null;
+    if (guid) {
+      entity = await nymph.getEntity(
+        { class: EntityClass, source: 'client' },
+        {
+          type: '&',
+          guid: `${guid}`,
+        },
+      );
+      if (entity === null) {
+        throw new Error(NOT_FOUND_ERROR);
+      }
+    } else {
+      entity = await EntityClass.factory();
     }
     return entity;
   }

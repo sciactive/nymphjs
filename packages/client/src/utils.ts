@@ -13,7 +13,10 @@ export function uniqueStrings(array: string[]) {
 export function entityConstructorsToClassNames(item: any): any {
   if (item == null) {
     return item;
-  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+  } else if (
+    typeof item === 'function' &&
+    (item.prototype instanceof Entity || item === Entity)
+  ) {
     // Convert entity classes to class references.
     return ['nymph_class_reference', item.class];
   } else if (item instanceof Entity) {
@@ -51,7 +54,10 @@ export function classNamesToEntityConstructors<T extends any>(
   } else if (item instanceof Entity) {
     // Don't touch entities.
     return item;
-  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+  } else if (
+    typeof item === 'function' &&
+    (item.prototype instanceof Entity || (item as any) === Entity)
+  ) {
     // Don't touch Entity classes.
     return item;
   } else if (Array.isArray(item)) {
@@ -76,7 +82,10 @@ export function entitiesToReferences(item: any): any {
   } else if (item instanceof Entity) {
     // Convert entities to references.
     return item.$toReference();
-  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+  } else if (
+    typeof item === 'function' &&
+    (item.prototype instanceof Entity || item === Entity)
+  ) {
     // Don't touch Entity classes.
     return item;
   } else if (Array.isArray(item)) {
@@ -112,7 +121,10 @@ export function referencesToEntities(item: any, nymph: Nymph): any {
   } else if (item instanceof Entity) {
     // Don't touch entities.
     return item;
-  } else if (typeof item === 'function' && item.prototype instanceof Entity) {
+  } else if (
+    typeof item === 'function' &&
+    (item.prototype instanceof Entity || item === Entity)
+  ) {
     // Don't touch Entity classes.
     return item;
   } else if (item instanceof Object) {

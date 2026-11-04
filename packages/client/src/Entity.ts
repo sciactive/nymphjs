@@ -832,19 +832,23 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
   public async $serverCall(
     method: string,
     params: Iterable<any>,
-    stateless = false,
+    {
+      pushState = false,
+      pullState = false,
+    }: {
+      pushState?: boolean;
+      pullState?: boolean;
+    } = {},
   ) {
     this.$check();
     // Turn the params into a real array, in case an arguments object was
     // passed.
     const paramArray = Array.prototype.slice.call(params);
-    const data: any = await this.$nymph.serverCall(
-      this,
-      method,
-      paramArray,
-      stateless,
-    );
-    if (!stateless && data.entity) {
+    const data: any = await this.$nymph.serverCall(this, method, paramArray, {
+      pushState,
+      pullState,
+    });
+    if (pullState && data.entity) {
       this.$init(data.entity, false);
     }
     return data.return;

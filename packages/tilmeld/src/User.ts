@@ -2,6 +2,8 @@ import crypto from 'node:crypto';
 import {
   type EntityJson,
   type EntityPatch,
+  acceptStateFromClient,
+  sendStateToClient,
   type Selector,
   type SerializedEntityData,
   transaction,
@@ -849,6 +851,7 @@ export class User extends AbleObject<UserData> {
     return { result: true, message: 'You have been logged out.' };
   }
 
+  @acceptStateFromClient
   public $getAvatar(): string {
     if (this.avatar != null && this.avatar !== '') {
       return this.avatar;
@@ -1553,6 +1556,7 @@ export class User extends AbleObject<UserData> {
    * @param data The input data from the client.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @sendStateToClient
   public async $changePassword(data: {
     newPassword: string;
     currentPassword: string;
@@ -1644,6 +1648,7 @@ export class User extends AbleObject<UserData> {
    * @param data The input data from the client.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @sendStateToClient
   public async $revokeCurrentTokens(data?: {
     password: string;
   }): Promise<{ result: boolean; message: string }> {
@@ -1656,9 +1661,6 @@ export class User extends AbleObject<UserData> {
     if (this.guid == null) {
       return { result: false, message: 'This user has not been saved.' };
     }
-
-    // Work on real data.
-    await this.$refresh();
 
     let [_username, domain] = tilmeld.config.domainSupport
       ? splitn(this.$originalUsername ?? this.username ?? '', '@', 2)
@@ -1773,6 +1775,7 @@ export class User extends AbleObject<UserData> {
    * @param data The input data from the client.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @sendStateToClient
   public async $saveTOTPSecret(data: {
     password: string;
     secret: string;
@@ -1834,6 +1837,7 @@ export class User extends AbleObject<UserData> {
    * @param data The input data from the client.
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @sendStateToClient
   public async $removeTOTPSecret(data?: {
     password: string;
     code: string;
@@ -1891,6 +1895,7 @@ export class User extends AbleObject<UserData> {
    *
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @acceptStateFromClient
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
@@ -2034,6 +2039,7 @@ export class User extends AbleObject<UserData> {
    *
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @acceptStateFromClient
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
@@ -2079,6 +2085,7 @@ export class User extends AbleObject<UserData> {
    *
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @acceptStateFromClient
   public async $checkPhone(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
 
@@ -2118,6 +2125,8 @@ export class User extends AbleObject<UserData> {
     };
   }
 
+  @acceptStateFromClient
+  @sendStateToClient
   public async $register(data: {
     password: string;
     additionalData?: { [k: string]: any };

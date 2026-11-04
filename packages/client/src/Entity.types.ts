@@ -197,19 +197,36 @@ export interface EntityInterface extends DataObjectInterface {
   /**
    * Call an instance method on the server version of this entity.
    *
-   * The entity's data will be sent up to the server as well, so the server's
-   * state can match the client's state. It won't be propagated into the DB,
-   * though.
+   * If you want the entity's state to be pushed to the server side, use the
+   * acceptStateFromClient decorator on the method and set pushState to true.
+   * Then, the entity's data will be sent up to the server as well, so the
+   * server's state can match the client's state. It won't be propagated into
+   * the DB, though.
+   *
+   * Likewise, if you want the entity's data to be pulled to the client side
+   * after the method is run, use the sendStateToClient decorator on the method
+   * and set pullState to true. Then, the entity's data will be sent down from
+   * the server after the method runs.
+   *
+   * Be careful using pushState. The data in the entity should _not_ be
+   * trusted if you use it, because the client can include anything that can be
+   * represented in JSON.
    *
    * @param method The name of the method.
    * @param params The parameters to call the method with.
-   * @param stateless Whether the server should return, and the client update, the data in the entity after the method has run.
+   * @param options pushState: Whether the client should send its state up
+   *                to the server to fill the entity.
+   *                pullState: Whether the server should send its state down
+   *                to the client to fill the entity.
    * @returns The value that the method on the server returned.
    */
   $serverCall(
     method: string,
     params: Iterable<any>,
-    stateless: boolean,
+    options?: {
+      pushState?: boolean;
+      pullState?: boolean;
+    },
   ): Promise<any>;
   /**
    * Return a Nymph Entity Reference for this entity.

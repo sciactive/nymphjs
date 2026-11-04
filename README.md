@@ -82,6 +82,8 @@ The GUID and unique code generators are used to generate new GUIDs for Nymph obj
 
 # Breaking Changes
 
+In version 1.0.0-beta.141, the way state transfer works in client enabled methods changed dramatically. Methods no longer accept state from the client by default or send their state back by default. You must use the acceptStateFromClient and sendStateToClient decorators on the method on the server, and the pushState and pullState `$serverCall` options on the method on the client.
+
 Not really a breaking change, but in 1.0.0-beta.133, the TypeScript defintions changed, and now you can (and should) define and use an entity without the ".$data." part inside entity functions. Using that still works, so this change only causes TS to complain.
 
 In version 1.0.0-beta.122, the "$save()", "$patch()", and "$delete()" entity methods stopped returning a boolean, and instead throw an error on failure. The "$refresh()" method stopped returning 0 and instead throws an error on failure.

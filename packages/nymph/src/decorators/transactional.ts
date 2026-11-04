@@ -12,12 +12,34 @@ import Entity from '../Entity.js';
  * return to the original instance after the transaction is committed or rolled
  * back.
  */
-export function transactional(
-  target: (...args: any[]) => Promise<any>,
-  context: ClassMethodDecoratorContext,
+export function transactional<This extends Entity, Args extends any[], Return>(
+  target: (this: This, ...args: Args) => Promise<Return>,
+  context: ClassMethodDecoratorContext<
+    This,
+    (this: This, ...args: Args) => Promise<Return>
+  >,
+  descriptor?: PropertyDescriptor,
 ) {
-  const name = String(context.name);
-  return async function (this: Entity, ...args: unknown[]) {
+  let name: string;
+  let method: (this: This, ...args: Args) => Promise<Return>;
+  if (descriptor == null || typeof context !== 'string') {
+    if (context.kind !== 'method') {
+      throw new Error('This is a method decorator only.');
+    }
+
+    // Using Stage 3 style decorators.
+    name = String(context.name);
+    method = target;
+  } else {
+    // Using Stage 2 style decorators.
+    const entity = target as unknown as Entity;
+    const propName = context as unknown as keyof Entity;
+
+    name = propName;
+    method = entity[propName] as (this: This, ...args: Args) => Promise<Return>;
+  }
+
+  return async function (this: This, ...args: Args): Promise<Return> {
     const transactionName = `${name}-${nanoid()}`;
     const nymph = this.$nymph;
     nymph.config.debugInfo(
@@ -29,7 +51,7 @@ export function transactional(
     let committed = false;
     let result: any;
     try {
-      result = await target.apply(this, args);
+      result = await method.apply(this, args);
       nymph.config.debugInfo(
         'nymph:transactional',
         `Committing transaction ${transactionName}`,

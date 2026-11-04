@@ -95,31 +95,37 @@ export class Group extends Entity<GroupData> {
     result: boolean;
     message: string;
   }> {
-    return await this.$serverCall('$checkGroupname', [], true);
+    return await this.$serverCall('$checkGroupname', [], {
+      pushState: true,
+    });
   }
 
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
-    return await this.$serverCall('$checkEmail', [], true);
+    return await this.$serverCall('$checkEmail', [], {
+      pushState: true,
+    });
   }
 
   public async $getAvatar(): Promise<string> {
-    return await this.$serverCall('$getAvatar', [], true);
+    return await this.$serverCall('$getAvatar', [], {
+      pushState: true,
+    });
   }
 
   public async $getChildren(): Promise<Group[]> {
-    return await this.$serverCall('$getChildren', [], true);
+    return await this.$serverCall('$getChildren', []);
   }
 
   public async $getDescendants(andSelf = false): Promise<Group[]> {
-    return await this.$serverCall('$getDescendants', [andSelf], true);
+    return await this.$serverCall('$getDescendants', [andSelf]);
   }
 
   public async $getLevel(): Promise<number> {
-    return await this.$serverCall('$getLevel', [], true);
+    return await this.$serverCall('$getLevel', []);
   }
 
   public async $isDescendant(givenGroup: Group | string): Promise<boolean> {
-    return await this.$serverCall('$isDescendant', [givenGroup], true);
+    return await this.$serverCall('$isDescendant', [givenGroup]);
   }
 
   public static async getPrimaryGroups(

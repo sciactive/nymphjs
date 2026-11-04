@@ -2,6 +2,8 @@ import {
   Entity as EntityServer,
   EntityInvalidDataError,
   HttpError,
+  acceptStateFromClient,
+  sendStateToClient,
 } from '@nymphjs/nymph';
 import { Entity } from '@nymphjs/client';
 
@@ -102,12 +104,20 @@ export class EmployeeModel extends EntityServer<EmployeeModelData> {
   }
 
   public $testMethodStateless(value: number) {
-    this.name = 'bad name';
+    if (this.title === 'Hello from Client') {
+      throw new Error("Client data accepted when it shouldn't be.");
+    }
+    this.title = 'Hello from Server';
     return value + 1;
   }
 
+  @acceptStateFromClient
+  @sendStateToClient
   public $testMethod(value: number) {
-    this.current = false;
+    if (this.title !== 'Hello from Client') {
+      throw new Error('Client data not accepted when it should be.');
+    }
+    this.title = 'Hello from Server';
     return value + 2;
   }
 
@@ -183,11 +193,16 @@ export class Employee extends Entity<EmployeeData> {
   }
 
   $testMethod(value: number) {
-    return this.$serverCall('$testMethod', [value]);
+    this.title = 'Hello from Client';
+    return this.$serverCall('$testMethod', [value], {
+      pushState: true,
+      pullState: true,
+    });
   }
 
   $testMethodStateless(value: number) {
-    return this.$serverCall('$testMethodStateless', [value], true);
+    this.title = 'Hello from Client';
+    return this.$serverCall('$testMethodStateless', [value]);
   }
 
   $throwError() {

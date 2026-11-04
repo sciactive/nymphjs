@@ -632,21 +632,21 @@ describe('Nymph REST Server and Client', () => {
     expect(true).toBeTruthy();
   });
 
-  it('call a stateless server side method', async () => {
+  it('call a non-synced server side method', async () => {
     const jane = await createJane();
 
     const data = await jane?.$testMethodStateless(5);
     expect(data).toEqual(6);
-    expect(jane?.name).toEqual('Jane Doe');
+    expect(jane?.title).toEqual('Hello from Client');
   });
 
-  it('call a server side method', async () => {
+  it('call a synced server side method', async () => {
     const jane = await createJane();
 
     expect(jane?.current).toEqual(true);
     const data = await jane?.$testMethod(5);
     expect(data).toEqual(7);
-    expect(jane?.current).toEqual(false);
+    expect(jane?.title).toEqual('Hello from Server');
   });
 
   it('refresh an entity', async () => {

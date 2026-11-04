@@ -3,6 +3,7 @@ import {
   clearSearchRestrictedData,
   type EntityJson,
   type EntityPatch,
+  acceptStateFromClient,
   type Options,
   type Selector,
   type SerializedEntityData,
@@ -319,6 +320,7 @@ export class Group extends AbleObject<GroupData> {
     return uniques;
   }
 
+  @acceptStateFromClient
   public $getAvatar(): string {
     if (this.avatar != null && this.avatar !== '') {
       return this.avatar;
@@ -657,6 +659,7 @@ export class Group extends AbleObject<GroupData> {
    *
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @acceptStateFromClient
   public async $checkGroupname(): Promise<{
     result: boolean;
     message: string;
@@ -801,6 +804,7 @@ export class Group extends AbleObject<GroupData> {
    *
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
+  @acceptStateFromClient
   public async $checkEmail(): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
     if (this.email === '') {
