@@ -1367,31 +1367,33 @@ export default abstract class NymphDriver {
                   cdate,
                   mdate,
                   tags,
-                  ...classNamesToEntityConstructors(
-                    this.nymph,
-                    referencesToEntities(
-                      data,
+                  data: {
+                    ...classNamesToEntityConstructors(
                       this.nymph,
-                      !!newOptions.skipAc,
-                      false,
-                    ),
-                    false,
-                  ),
-                  ...Object.fromEntries(
-                    Object.entries(sdata).map(([name, value]) => [
-                      name,
-                      classNamesToEntityConstructors(
+                      referencesToEntities(
+                        data,
                         this.nymph,
-                        referencesToEntities(
-                          JSON.parse(value),
-                          this.nymph,
-                          !!newOptions.skipAc,
-                          false,
-                        ),
+                        !!newOptions.skipAc,
                         false,
                       ),
-                    ]),
-                  ),
+                      false,
+                    ),
+                    ...Object.fromEntries(
+                      Object.entries(sdata).map(([name, value]) => [
+                        name,
+                        classNamesToEntityConstructors(
+                          this.nymph,
+                          referencesToEntities(
+                            JSON.parse(value),
+                            this.nymph,
+                            !!newOptions.skipAc,
+                            false,
+                          ),
+                          false,
+                        ),
+                      ]),
+                    ),
+                  },
                 } as EntityObjectType<T>);
               } else {
                 const entity =

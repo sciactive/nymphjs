@@ -28,7 +28,7 @@ export type EntityObject = {
   cdate: number | null;
   mdate: number | null;
   tags: string[];
-  [k: string]: any;
+  data: EntityData;
 };
 
 export type EntityJson = {

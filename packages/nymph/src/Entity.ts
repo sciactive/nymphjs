@@ -37,7 +37,9 @@ export type EntityInstanceType<T extends EntityConstructor> =
   T extends new () => infer E ? E & EntityDataType<E> : never;
 
 export type EntityObjectType<T extends EntityConstructor> =
-  T extends new () => infer E ? EntityObject & EntityDataType<E> : never;
+  T extends new () => infer E
+    ? EntityObject & { data: EntityDataType<E> }
+    : never;
 
 /**
  * Database abstraction object.
@@ -1109,7 +1111,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     }
   }
 
-  public $putData(data: T, sdata?: SerializedEntityData, _source?: 'server') {
+  public $putData(data: T, sdata?: SerializedEntityData, source?: 'server') {
     this.$check();
 
     for (const name in this.$dataStore) {
@@ -1132,8 +1134,8 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       }
     }
     this.$sdata = sdata ?? {};
-    // Set original AC values if not set..
-    if (this.$originalAcValues == null) {
+    // Set original AC values if data is coming from server.
+    if (source === 'server') {
       this.$originalAcValues = this.$getCurrentAcValues();
     }
   }
@@ -1200,7 +1202,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       );
       this.$wakePromise = this.$nymph
         .getEntity(
-          { class: EntityClass, skipAc: this.$skipAc },
+          { class: EntityClass, skipAc: this.$skipAc, return: 'object' },
           { type: '&', guid: this.$sleepingReference[1] },
         )
         .then((entity) => {
@@ -1217,11 +1219,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
           this.tags = entity.tags;
           this.cdate = entity.cdate;
           this.mdate = entity.mdate;
-          this.$putData(
-            entity.$getData(false) as T,
-            entity.$getSData(),
-            'server',
-          );
+          this.$putData(entity.data as T, {}, 'server');
 
           return this;
         })
@@ -1298,16 +1296,17 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       {
         class: this.constructor as EntityConstructor,
         skipAc: this.$skipAc,
+        return: 'object',
       },
       { type: '&', guid: this.guid },
     );
-    if (refresh == null) {
+    if (refresh == null || refresh.guid == null) {
       throw new MethodFailedError("The entity's data could not be refreshed.");
     }
     this.tags = refresh.tags;
     this.cdate = refresh.cdate;
     this.mdate = refresh.mdate;
-    this.$putData(refresh.$getData(false) as T, refresh.$getSData(), 'server');
+    this.$putData(refresh.data as T, {}, 'server');
     return true;
   }
 

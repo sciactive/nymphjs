@@ -60,30 +60,51 @@ export class MockNymphDriver {
       return null;
     }
 
-    const entity = (
-      (options.class ?? this.nymph.getEntityClass('Entity')) as T
-    ).factorySync();
     const entityJson = entities[guid];
-    entity.guid = guid;
-    entity.cdate = entityJson.cdate;
-    entity.mdate = entityJson.mdate;
-    entity.tags = entityJson.tags;
-    entity.$putData(
-      classNamesToEntityConstructors(
-        this.nymph as unknown as Nymph,
-        referencesToEntities(
-          entityJson.data,
+    if (options.return === 'object') {
+      const entity = {
+        guid,
+        cdate: entityJson.cdate,
+        mdate: entityJson.mdate,
+        tags: entityJson.tags,
+        data: classNamesToEntityConstructors(
           this.nymph as unknown as Nymph,
-          !!options.skipAc,
+          referencesToEntities(
+            entityJson.data,
+            this.nymph as unknown as Nymph,
+            !!options.skipAc,
+            false,
+          ),
           false,
         ),
-        false,
-      ),
-      {},
-      'server',
-    );
+      };
 
-    return entity as EntityInstanceType<T>;
+      return entity as EntityObjectType<T>;
+    } else {
+      const entity = (
+        (options.class ?? this.nymph.getEntityClass('Entity')) as T
+      ).factorySync();
+      entity.guid = guid;
+      entity.cdate = entityJson.cdate;
+      entity.mdate = entityJson.mdate;
+      entity.tags = entityJson.tags;
+      entity.$putData(
+        classNamesToEntityConstructors(
+          this.nymph as unknown as Nymph,
+          referencesToEntities(
+            entityJson.data,
+            this.nymph as unknown as Nymph,
+            !!options.skipAc,
+            false,
+          ),
+          false,
+        ),
+        {},
+        'server',
+      );
+
+      return entity as EntityInstanceType<T>;
+    }
   }
 }
 

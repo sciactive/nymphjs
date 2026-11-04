@@ -9,6 +9,10 @@ import {
   TilmeldAccessLevels,
   TilmeldAccessRequest,
   ACProperties,
+  entitiesToReferences,
+  entityConstructorsToClassNames,
+  classNamesToEntityConstructors,
+  referencesToEntities,
 } from '@nymphjs/nymph';
 import { Request, Response } from 'express';
 import { xor } from 'lodash-es';
@@ -165,15 +169,53 @@ export default class Tilmeld implements TilmeldInterface {
       const currentUserCDate = this.currentUser.cdate;
       const currentUserMDate = this.currentUser.mdate;
       const currentUserTags = this.currentUser.tags;
-      const currentUserData = this.currentUser.$getData(false);
+      const currentUserData = entityConstructorsToClassNames(
+        entitiesToReferences(this.currentUser.$getData(false), true),
+      );
       const currentUserSData = this.currentUser.$getSData();
+      const currentUserOriginalAcValues =
+        this.currentUser.$getOriginalAcValues();
 
       const user = this.User.factorySync();
       user.guid = currentUserGUID;
       user.cdate = currentUserCDate;
       user.mdate = currentUserMDate;
       user.tags = currentUserTags;
-      user.$putData(currentUserData, currentUserSData);
+      // First, put the trusted original AC values in with the server flag.
+      Entity.factorySync().$putData.call(
+        user,
+        {
+          ...currentUserOriginalAcValues,
+          user:
+            currentUserOriginalAcValues.user != null
+              ? this.User.factoryReference([
+                  'nymph_entity_reference',
+                  currentUserOriginalAcValues.user,
+                  this.User.class,
+                ])
+              : undefined,
+          group:
+            currentUserOriginalAcValues.group != null
+              ? this.Group.factoryReference([
+                  'nymph_entity_reference',
+                  currentUserOriginalAcValues.group,
+                  this.Group.class,
+                ])
+              : undefined,
+        },
+        {},
+        'server',
+      );
+      // Now put the real data in, that could potentially have been altered from
+      // the client.
+      user.$putData(
+        classNamesToEntityConstructors(
+          this.nymph,
+          referencesToEntities(currentUserData, this.nymph, false, false),
+          false,
+        ),
+        currentUserSData,
+      );
       user.$originalEmail = this.currentUser.$originalEmail;
       user.$originalUsername = this.currentUser.$originalUsername;
       this.currentUser = user;

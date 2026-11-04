@@ -2004,7 +2004,7 @@ export function EntitiesTest(
       expect(resultObject).toBeInstanceOf(Object);
       expect(resultObject).not.toBeInstanceOf(TestModel);
       expect(Array.isArray(resultObject?.tags)).toBeTruthy();
-      expect(resultObject?.string).toEqual('test');
+      expect(resultObject?.data.string).toEqual('test');
     });
 
     it('deep selector', async () => {
