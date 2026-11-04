@@ -143,10 +143,6 @@ export class Group extends AbleObject<GroupData> {
     '$checkGroupname',
     '$checkEmail',
     '$getAvatar',
-    '$getChildren',
-    '$getDescendants',
-    '$getLevel',
-    '$isDescendant',
   ];
   public static clientEnabledStaticMethods = [
     'getPrimaryGroups',
@@ -495,6 +491,13 @@ export class Group extends AbleObject<GroupData> {
       // Users who can edit groups can see their data.
       this.$privateData = [];
       this.$allowlistData = undefined;
+      this.$clientEnabledMethods.push(
+        '$getChildren',
+        '$getDescendants',
+        '$getLevel',
+        '$isDescendant',
+        '$getUsers',
+      );
     } else if (
       this.user != null &&
       tilmeld.currentUser != null &&
@@ -509,6 +512,13 @@ export class Group extends AbleObject<GroupData> {
     ) {
       // Domain admins can see their groups' data.
       this.$privateData = [];
+      this.$clientEnabledMethods.push(
+        '$getChildren',
+        '$getDescendants',
+        '$getLevel',
+        '$isDescendant',
+        '$getUsers',
+      );
     }
   }
 
@@ -547,17 +557,47 @@ export class Group extends AbleObject<GroupData> {
   /**
    * Gets an array of the group's child groups.
    *
+   * @param limit The limit for the query.
+   * @param offset The offset for the query.
+   * @param reverse Reverse the sort.
+   * @param sort Sort the results.
+   * @param enabled If set, return enabled/disabled groups only.
    * @returns An array of groups.
    */
-  public async $getChildren(): Promise<Group[]> {
+  public async $getChildren(
+    limit?: number,
+    offset?: number,
+    reverse?: boolean,
+    sort?: string,
+    enabled?: boolean,
+  ): Promise<Group[]> {
     const tilmeld = enforceTilmeld(this);
+
+    limit = Number(limit);
+    if (isNaN(limit)) {
+      limit = undefined;
+    }
+    offset = Number(offset);
+    if (isNaN(offset)) {
+      offset = undefined;
+    }
+    reverse = !!reverse;
+    sort = typeof sort === 'string' ? sort : undefined;
+    enabled = enabled == null ? undefined : !!enabled;
+
+    if (sort != null && tilmeld.Group.searchRestrictedData.includes(sort)) {
+      sort = undefined;
+    }
+
     return await this.$nymph.getEntities(
-      { class: tilmeld.Group },
+      { class: tilmeld.Group, limit, offset, reverse, sort },
       {
         type: '&',
-        equal: ['enabled', true],
         ref: ['parent', this],
       },
+      ...(enabled == null
+        ? []
+        : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
     );
   }
 
@@ -618,30 +658,48 @@ export class Group extends AbleObject<GroupData> {
   }
 
   /**
-   * Gets an array of enabled users in the group.
+   * Gets an array of users in the group.
    *
    * @param descendants Include users in all descendant groups too.
    * @param limit The limit for the query.
    * @param offset The offset for the query.
+   * @param reverse Reverse the sort.
+   * @param sort Sort the results.
+   * @param enabled If set, return enabled/disabled users only.
    * @returns An array of users.
    */
   public async $getUsers(
     descendants = false,
     limit?: number,
     offset?: number,
+    reverse?: boolean,
+    sort?: string,
+    enabled?: boolean,
   ): Promise<UserClass[]> {
     const tilmeld = enforceTilmeld(this);
     let groups: Group[] = [];
     if (descendants) {
       groups = await this.$getDescendants();
     }
+
+    limit = Number(limit);
+    if (isNaN(limit)) {
+      limit = undefined;
+    }
+    offset = Number(offset);
+    if (isNaN(offset)) {
+      offset = undefined;
+    }
+    reverse = !!reverse;
+    sort = typeof sort === 'string' ? sort : undefined;
+    enabled = enabled == null ? undefined : !!enabled;
+
+    if (sort != null && tilmeld.User.searchRestrictedData.includes(sort)) {
+      sort = undefined;
+    }
+
     return await this.$nymph.getEntities(
-      {
-        class: tilmeld.User,
-        limit,
-        offset,
-      },
-      { type: '&', equal: ['enabled', true] },
+      { class: tilmeld.User, limit, offset, reverse, sort },
       {
         type: '|',
         ref: [
@@ -651,6 +709,9 @@ export class Group extends AbleObject<GroupData> {
           ...groups.map((group): [string, Group] => ['groups', group]),
         ],
       },
+      ...(enabled == null
+        ? []
+        : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
     );
   }
 

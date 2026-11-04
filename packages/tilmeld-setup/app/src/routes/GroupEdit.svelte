@@ -317,11 +317,8 @@
               </Cell>
             {/if}
             {#if $clientConfig.userFields.includes('email')}
-              <Cell columnId="child-email">
+              <Cell columnId="child-email" sortable={false}>
                 <Label>Email</Label>
-                <IconButton>
-                  <Icon class="material-icons">arrow_upward</Icon>
-                </IconButton>
               </Cell>
             {/if}
             <Cell columnId="child-enabled">
@@ -502,11 +499,8 @@
               </Cell>
             {/if}
             {#if $clientConfig.userFields.includes('email')}
-              <Cell columnId="user-email">
+              <Cell columnId="user-email" sortable={false}>
                 <Label>Email</Label>
-                <IconButton>
-                  <Icon class="material-icons">arrow_upward</Icon>
-                </IconButton>
               </Cell>
             {/if}
             <Cell columnId="user-enabled">
@@ -777,6 +771,8 @@
   }
 
   async function readyEntity() {
+    await $entity.$wakeAll(1);
+
     // Make sure all fields are defined.
     if ($entity.enabled == null) {
       $entity.enabled = false;
@@ -805,8 +801,8 @@
     if ($entity.unverifiedSecondary == null) {
       $entity.unverifiedSecondary = false;
     }
+
     avatar = await $entity.$getAvatar();
-    await $entity.$wakeAll(1);
     $entity = $entity;
 
     await fillUsers();
@@ -825,15 +821,15 @@
       const query = queryParser({
         query: parentSearch,
         entityClass: Group,
-        defaultFields: ['groupname', 'name', 'email'],
+        defaultFields: ['groupname', 'name'],
         qrefMap: {
           User: {
             class: User,
-            defaultFields: ['username', 'name', 'email'],
+            defaultFields: ['username', 'name'],
           },
           Group: {
             class: Group,
-            defaultFields: ['groupname', 'name', 'email'],
+            defaultFields: ['groupname', 'name'],
           },
         },
       });
@@ -937,18 +933,11 @@
         $children = [];
         childrenLength = 0;
       } else {
-        $children = await nymph.getEntities(
-          {
-            class: Group,
-            sort: childrenSort.slice('child-'.length),
-            reverse: childrenSortDirection === 'descending',
-            limit: childrenPerPage,
-            offset: childrenPerPage * childrenCurrentPage,
-          },
-          {
-            type: '&',
-            ref: ['parent', $entity],
-          },
+        $children = await $entity.$getChildren(
+          childrenPerPage,
+          childrenPerPage * childrenCurrentPage,
+          childrenSortDirection === 'descending',
+          childrenSort.slice('child-'.length),
         );
 
         if (childrenLength === 0) {
@@ -981,21 +970,12 @@
         $users = [];
         usersLength = 0;
       } else {
-        $users = await nymph.getEntities(
-          {
-            class: User,
-            sort: usersSort.slice('user-'.length),
-            reverse: usersSortDirection === 'descending',
-            limit: usersPerPage,
-            offset: usersPerPage * usersCurrentPage,
-          },
-          {
-            type: '|',
-            ref: [
-              ['group', $entity],
-              ['groups', $entity],
-            ],
-          },
+        $users = await $entity.$getUsers(
+          false,
+          usersPerPage,
+          usersPerPage * usersCurrentPage,
+          usersSortDirection === 'descending',
+          usersSort.slice('user-'.length),
         );
 
         if (usersLength === 0) {

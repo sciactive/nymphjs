@@ -112,8 +112,18 @@ export class Group extends Entity<GroupData> {
     });
   }
 
-  public async $getChildren(): Promise<Group[]> {
-    return await this.$serverCall('$getChildren', []);
+  public async $getChildren(
+    limit?: number,
+    offset?: number,
+    reverse?: boolean,
+    sort?: string,
+  ): Promise<Group[]> {
+    return await this.$serverCall('$getChildren', [
+      limit,
+      offset,
+      reverse,
+      sort,
+    ]);
   }
 
   public async $getDescendants(andSelf = false): Promise<Group[]> {
@@ -126,6 +136,24 @@ export class Group extends Entity<GroupData> {
 
   public async $isDescendant(givenGroup: Group | string): Promise<boolean> {
     return await this.$serverCall('$isDescendant', [givenGroup]);
+  }
+
+  public async $getUsers(
+    descendants = false,
+    limit?: number,
+    offset?: number,
+    reverse?: boolean,
+    sort?: string,
+    enabled?: boolean,
+  ): Promise<User[]> {
+    return await this.$serverCall('$getUsers', [
+      descendants,
+      limit,
+      offset,
+      reverse,
+      sort,
+      enabled,
+    ]);
   }
 
   public static async getPrimaryGroups(

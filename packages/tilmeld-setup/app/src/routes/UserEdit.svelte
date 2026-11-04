@@ -841,6 +841,8 @@
   }
 
   async function readyEntity() {
+    await $entity.$wakeAll(1);
+
     // Make sure all fields are defined.
     if ($entity.enabled == null) {
       $entity.enabled = false;
@@ -890,10 +892,10 @@
     if ($entity.revokeTokenDate == null) {
       $entity.revokeTokenDate = 0;
     }
+
     [avatar, hasTOTPSecret] = await Promise.all([
       $entity.$getAvatar(),
       (!!$entity.guid && $entity?.$hasTOTPSecret()) || Promise.resolve(false),
-      $entity.$wakeAll(1),
     ]);
     $entity = $entity;
   }
@@ -910,15 +912,15 @@
       const [options, ...selectors] = queryParser({
         query: primaryGroupSearch,
         entityClass: Group,
-        defaultFields: ['groupname', 'name', 'email'],
+        defaultFields: ['groupname', 'name'],
         qrefMap: {
           User: {
             class: User,
-            defaultFields: ['username', 'name', 'email'],
+            defaultFields: ['username', 'name'],
           },
           Group: {
             class: Group,
-            defaultFields: ['groupname', 'name', 'email'],
+            defaultFields: ['groupname', 'name'],
           },
         },
       });
@@ -949,15 +951,15 @@
       const [options, ...selectors] = queryParser({
         query: secondaryGroupSearch,
         entityClass: Group,
-        defaultFields: ['groupname', 'name', 'email'],
+        defaultFields: ['groupname', 'name'],
         qrefMap: {
           User: {
             class: User,
-            defaultFields: ['username', 'name', 'email'],
+            defaultFields: ['username', 'name'],
           },
           Group: {
             class: Group,
-            defaultFields: ['groupname', 'name', 'email'],
+            defaultFields: ['groupname', 'name'],
           },
         },
       });
