@@ -1117,7 +1117,14 @@ export class User extends AbleObject<UserData> {
       tilmeld.gatekeeper('system/admin')
     ) {
       // Users who can edit other users can see most of their data.
-      this.$privateData = ['password', 'salt', 'totpSecret'];
+      this.$privateData = [
+        'newEmailSecret',
+        'cancelEmailSecret',
+        'recoverSecret',
+        'salt',
+        'password',
+        'totpSecret',
+      ];
       this.$clientEnabledMethods.push('$hasTOTPSecret');
       this.$clientEnabledMethods.push('$removeTOTPSecret');
       this.$allowlistData = undefined;

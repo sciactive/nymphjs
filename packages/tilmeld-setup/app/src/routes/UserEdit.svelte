@@ -524,8 +524,8 @@
           <LayoutCell span={12}>
             <h5>Verification</h5>
             <p>
-              The email verification secret is the code emailed to the user to
-              verify their address when they first sign up.
+              This email verification secret is the code emailed to the user to
+              verify their address when they first signed up.
             </p>
           </LayoutCell>
           <LayoutCell span={12}>
@@ -540,21 +540,13 @@
           <LayoutCell span={12}>
             <h5>Account Recovery</h5>
             <p>
-              The account recovery secret is the code emailed to the user to
-              allow them to change their password and recover their account. The
-              date is used to determine if the code has expired.
+              An account recovery secret is a code emailed to the user to allow
+              them to change their password and recover their account. The date
+              here is used to determine if the code has expired. (If it's unset,
+              the user has not tried to recover their account.)
             </p>
           </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={$entity.recoverSecret}
-              label="Account Recovery Secret"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
+          <LayoutCell span={12}>
             <Textfield
               bind:value={$entity.recoverSecretDate}
               label="Account Recovery Date (Timestamp)"
@@ -577,10 +569,10 @@
             <p>
               An email change uses all of the following properties. The email
               change date is used to rate limit email changes and to allow the
-              user to cancel the change within the rate limit time. The new
-              secret is emailed to the new address, and when the user clicks the
-              link, that email address is set for their account. The cancel
-              secret is emailed to the old address and will reset the user's
+              user to cancel the change within the rate limit time. A "new
+              secret" is emailed to the new address, and when the user clicks
+              the link, that email address is set for their account. A "cancel
+              secret" is emailed to the old address and will reset the user's
               email to the cancel address if the link is clicked in time.
             </p>
           </LayoutCell>
@@ -604,27 +596,9 @@
           </LayoutCell>
           <LayoutCell span={6}>
             <Textfield
-              bind:value={$entity.newEmailSecret}
-              label="New Email Verification Secret"
-              type="text"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
               bind:value={$entity.newEmailAddress}
               label="New Email Address"
               type="email"
-              style="width: 100%;"
-              input$autocomplete="off"
-            />
-          </LayoutCell>
-          <LayoutCell span={6}>
-            <Textfield
-              bind:value={$entity.cancelEmailSecret}
-              label="Cancel Email Verification Secret"
-              type="text"
               style="width: 100%;"
               input$autocomplete="off"
             />
@@ -904,20 +878,11 @@
     if ($entity.emailChangeDate == null) {
       $entity.emailChangeDate = 0;
     }
-    if ($entity.newEmailSecret == null) {
-      $entity.newEmailSecret = '';
-    }
     if ($entity.newEmailAddress == null) {
       $entity.newEmailAddress = '';
     }
-    if ($entity.cancelEmailSecret == null) {
-      $entity.cancelEmailSecret = '';
-    }
     if ($entity.cancelEmailAddress == null) {
       $entity.cancelEmailAddress = '';
-    }
-    if ($entity.recoverSecret == null) {
-      $entity.recoverSecret = '';
     }
     if ($entity.recoverSecretDate == null) {
       $entity.recoverSecretDate = 0;
