@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.140](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.139...v1.0.0-beta.140) (2026-11-04)
+
+### Bug Fixes
+
+- put some restrictions on property names ([afb6a3a](https://forge.sciactive.com/sciactive/nymphjs/commits/afb6a3a00641973433cf58c3ef9443faa581d809))
+- put some restrictions on tags ([518baf3](https://forge.sciactive.com/sciactive/nymphjs/commits/518baf3b8f10cf0979791b9517f7c09c9351fffd))
+
 # [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
 
 ### Bug Fixes

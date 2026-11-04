@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.140](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.139...v1.0.0-beta.140) (2026-11-04)
+
+### Bug Fixes
+
+- don't allow email change cancel if email change date is null ([b3bccd3](https://forge.sciactive.com/sciactive/nymphjs/commits/b3bccd3187a940284b1799eb4edd79539dc3d9f4))
+- don't show account recovery secrets to admins ([07e0c35](https://forge.sciactive.com/sciactive/nymphjs/commits/07e0c359171a42492e931729fe9a691c8c33db4c))
+- ensure original ac values are updated whenever data from the server is loaded ([e89aba3](https://forge.sciactive.com/sciactive/nymphjs/commits/e89aba336a259d4c05d6d6eb46e2f7eafc3d4b07))
+- make sure auth is redone and cache is cleared when switch token changes ([4a543a5](https://forge.sciactive.com/sciactive/nymphjs/commits/4a543a5ad05f17ba6fcafa25f4a217a0650bc74f))
+- properly await delete permission check ([85b2b57](https://forge.sciactive.com/sciactive/nymphjs/commits/85b2b57a3aba4fc3a5f91586e4bce3921bb32abc))
+- put some restrictions on property names ([afb6a3a](https://forge.sciactive.com/sciactive/nymphjs/commits/afb6a3a00641973433cf58c3ef9443faa581d809))
+- put some restrictions on tags ([518baf3](https://forge.sciactive.com/sciactive/nymphjs/commits/518baf3b8f10cf0979791b9517f7c09c9351fffd))
+
+### Features
+
+- make domain admin an ability that can be inherited ([5b5a219](https://forge.sciactive.com/sciactive/nymphjs/commits/5b5a2190ccc0b59638130e456fc063bd59df1e82))
+
 # [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
 
 ### Bug Fixes

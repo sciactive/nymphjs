@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.140](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.139...v1.0.0-beta.140) (2026-11-04)
+
+### Bug Fixes
+
+- make sure auth is redone and cache is cleared when switch token changes ([4a543a5](https://forge.sciactive.com/sciactive/nymphjs/commits/4a543a5ad05f17ba6fcafa25f4a217a0650bc74f))
+
+### Features
+
+- make domain admin an ability that can be inherited ([5b5a219](https://forge.sciactive.com/sciactive/nymphjs/commits/5b5a2190ccc0b59638130e456fc063bd59df1e82))
+
 # [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-client

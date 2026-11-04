@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.140](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.139...v1.0.0-beta.140) (2026-11-04)
+
+### Bug Fixes
+
+- don't show account recovery secrets to admins ([07e0c35](https://forge.sciactive.com/sciactive/nymphjs/commits/07e0c359171a42492e931729fe9a691c8c33db4c))
+- ensure original ac values are updated whenever data from the server is loaded ([e89aba3](https://forge.sciactive.com/sciactive/nymphjs/commits/e89aba336a259d4c05d6d6eb46e2f7eafc3d4b07))
+- properly await delete permission check ([85b2b57](https://forge.sciactive.com/sciactive/nymphjs/commits/85b2b57a3aba4fc3a5f91586e4bce3921bb32abc))
+
+### Features
+
+- make domain admin an ability that can be inherited ([5b5a219](https://forge.sciactive.com/sciactive/nymphjs/commits/5b5a2190ccc0b59638130e456fc063bd59df1e82))
+
 # [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
 
 ### Bug Fixes

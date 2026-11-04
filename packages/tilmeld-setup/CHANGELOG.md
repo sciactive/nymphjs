@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.140](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.139...v1.0.0-beta.140) (2026-11-04)
+
+### Bug Fixes
+
+- don't allow email change cancel if email change date is null ([b3bccd3](https://forge.sciactive.com/sciactive/nymphjs/commits/b3bccd3187a940284b1799eb4edd79539dc3d9f4))
+- don't show account recovery secrets to admins ([07e0c35](https://forge.sciactive.com/sciactive/nymphjs/commits/07e0c359171a42492e931729fe9a691c8c33db4c))
+
 # [1.0.0-beta.139](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.138...v1.0.0-beta.139) (2026-11-03)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-setup
