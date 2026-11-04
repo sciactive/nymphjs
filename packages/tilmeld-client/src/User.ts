@@ -142,6 +142,7 @@ type InstanceStore = {
   clientConfigPromise?: Promise<ClientConfig>;
   removeNymphResponseListener?: () => void;
   currentToken?: string;
+  switchToken?: string;
 };
 
 export interface User extends UserData {}
@@ -457,7 +458,7 @@ export class User extends Entity<UserData> {
     } else {
       return;
     }
-    if (store.currentToken != token) {
+    if (store.currentToken != token || store.switchToken != switchToken) {
       if (token == null || token === '') {
         if (store.currentToken != null) {
           delete this.nymph.headers['X-Xsrf-Token'];
@@ -469,6 +470,7 @@ export class User extends Entity<UserData> {
           // Make sure entities requested under a previous user are not reused.
           this.nymph.clearCaches();
           delete store.currentToken;
+          delete store.switchToken;
         }
       } else {
         const base64Url = token.split('.')[1];
@@ -492,6 +494,7 @@ export class User extends Entity<UserData> {
         // Make sure entities requested under a previous user are not reused.
         this.nymph.clearCaches();
         store.currentToken = token;
+        store.switchToken = switchToken ?? undefined;
       }
     }
   }
