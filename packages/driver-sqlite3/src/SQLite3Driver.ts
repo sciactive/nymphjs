@@ -1074,7 +1074,7 @@ export default class SQLite3Driver extends NymphDriver {
     const fTable = `f${tableSuffix}`;
     const ieTable = `ie${tableSuffix}`;
     const sTable = `s${tableSuffix}`;
-    const sort = options.sort === undefined ? 'cdate' : options.sort;
+    const sort = options.sort == null ? 'cdate' : `${options.sort}`;
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
       ({ key, value, typeIsOr, typeIsNot }) => {
@@ -2243,11 +2243,11 @@ export default class SQLite3Driver extends NymphDriver {
         query = '(' + queryParts.join(') AND (') + ')';
       } else {
         let limit = '';
-        if ('limit' in options) {
+        if ('limit' in options && options.limit != null) {
           limit = ` LIMIT ${Math.floor(Number(options.limit))}`;
         }
         let offset = '';
-        if ('offset' in options) {
+        if ('offset' in options && options.offset != null) {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
         const whereClause = queryParts.join(') AND (');
@@ -2321,11 +2321,11 @@ export default class SQLite3Driver extends NymphDriver {
         query = '';
       } else {
         let limit = '';
-        if ('limit' in options) {
+        if ('limit' in options && options.limit != null) {
           limit = ` LIMIT ${Math.floor(Number(options.limit))}`;
         }
         let offset = '';
-        if ('offset' in options) {
+        if ('offset' in options && options.offset != null) {
           offset = ` OFFSET ${Math.floor(Number(options.offset))}`;
         }
         const guidClause = guidSelector

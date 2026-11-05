@@ -575,24 +575,22 @@ export class User extends AbleObject<UserData> {
    */
   public static async getDomainUsers(
     domain: string,
-    options?: {
+    {
+      limit = undefined,
+      offset = undefined,
+      reverse = undefined,
+      sort = undefined,
+    }: {
       limit?: number;
       offset?: number;
       sort?: string;
       reverse?: boolean;
-    },
+    } = {},
   ) {
     const tilmeld = enforceTilmeld(this);
 
     if (!tilmeld.config.domainSupport) {
       throw new AccessControlError('Domain support is not enabled.');
-    }
-
-    if (
-      options?.sort != null &&
-      User.searchRestrictedData.includes(options.sort)
-    ) {
-      throw new AccessControlError("Can't sort by that property.");
     }
 
     if (!domain) {
@@ -604,6 +602,16 @@ export class User extends AbleObject<UserData> {
       throw new BadDataError(tilmeld.config.validDomainRegexNotice);
     }
 
+    limit = limit == null || isNaN(Number(limit)) ? undefined : Number(limit);
+    offset =
+      offset == null || isNaN(Number(offset)) ? undefined : Number(offset);
+    reverse = reverse == null ? undefined : !!reverse;
+    sort =
+      typeof sort === 'string' &&
+      !tilmeld.User.searchRestrictedData.includes(sort)
+        ? sort
+        : undefined;
+
     if (!tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)) {
       throw new AccessControlError(
         'You do not have the authority to manage this domain.',
@@ -611,13 +619,7 @@ export class User extends AbleObject<UserData> {
     }
 
     return await this.nymph.getEntities(
-      {
-        class: User,
-        ...(options?.limit != null ? { limit: options.limit } : {}),
-        ...(options?.offset != null ? { offset: options.offset } : {}),
-        ...(options?.sort != null ? { sort: options.sort } : {}),
-        ...(options?.reverse != null ? { reverse: options.reverse } : {}),
-      },
+      { class: User, limit, offset, reverse, sort },
       {
         type: '&',
         like: ['username', `%@${domain.replace(/([\\%_])/g, (s) => `\\${s}`)}`],

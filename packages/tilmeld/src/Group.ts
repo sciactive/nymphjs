@@ -573,21 +573,16 @@ export class Group extends AbleObject<GroupData> {
   ): Promise<Group[]> {
     const tilmeld = enforceTilmeld(this);
 
-    limit = Number(limit);
-    if (isNaN(limit)) {
-      limit = undefined;
-    }
-    offset = Number(offset);
-    if (isNaN(offset)) {
-      offset = undefined;
-    }
-    reverse = !!reverse;
-    sort = typeof sort === 'string' ? sort : undefined;
+    limit = limit == null || isNaN(Number(limit)) ? undefined : Number(limit);
+    offset =
+      offset == null || isNaN(Number(offset)) ? undefined : Number(offset);
+    reverse = reverse == null ? undefined : !!reverse;
+    sort =
+      typeof sort === 'string' &&
+      !tilmeld.User.searchRestrictedData.includes(sort)
+        ? sort
+        : undefined;
     enabled = enabled == null ? undefined : !!enabled;
-
-    if (sort != null && tilmeld.Group.searchRestrictedData.includes(sort)) {
-      sort = undefined;
-    }
 
     return await this.$nymph.getEntities(
       { class: tilmeld.Group, limit, offset, reverse, sort },
@@ -682,21 +677,16 @@ export class Group extends AbleObject<GroupData> {
       groups = await this.$getDescendants();
     }
 
-    limit = Number(limit);
-    if (isNaN(limit)) {
-      limit = undefined;
-    }
-    offset = Number(offset);
-    if (isNaN(offset)) {
-      offset = undefined;
-    }
-    reverse = !!reverse;
-    sort = typeof sort === 'string' ? sort : undefined;
+    limit = limit == null || isNaN(Number(limit)) ? undefined : Number(limit);
+    offset =
+      offset == null || isNaN(Number(offset)) ? undefined : Number(offset);
+    reverse = reverse == null ? undefined : !!reverse;
+    sort =
+      typeof sort === 'string' &&
+      !tilmeld.User.searchRestrictedData.includes(sort)
+        ? sort
+        : undefined;
     enabled = enabled == null ? undefined : !!enabled;
-
-    if (sort != null && tilmeld.User.searchRestrictedData.includes(sort)) {
-      sort = undefined;
-    }
 
     return await this.$nymph.getEntities(
       { class: tilmeld.User, limit, offset, reverse, sort },

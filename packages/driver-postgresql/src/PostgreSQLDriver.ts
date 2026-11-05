@@ -1546,7 +1546,7 @@ export default class PostgreSQLDriver extends NymphDriver {
     const ieTable = `ie${tableSuffix}`;
     const countTable = `count${tableSuffix}`;
     const sTable = `s${tableSuffix}`;
-    const sort = options.sort === undefined ? 'cdate' : options.sort;
+    const sort = options.sort == null ? 'cdate' : `${options.sort}`;
     const queryParts = this.iterateSelectorsForQuery(
       formattedSelectors,
       ({ key, value, typeIsOr, typeIsNot }) => {
@@ -2718,13 +2718,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         query = '(' + queryParts.join(') AND (') + ')';
       } else {
         let limit = '';
-        if ('limit' in options) {
+        if ('limit' in options && options.limit != null) {
           limit = ` LIMIT ${Math.floor(
             isNaN(Number(options.limit)) ? 0 : Number(options.limit),
           )}`;
         }
         let offset = '';
-        if ('offset' in options) {
+        if ('offset' in options && options.offset != null) {
           offset = ` OFFSET ${Math.floor(
             isNaN(Number(options.offset)) ? 0 : Number(options.offset),
           )}`;
@@ -2806,13 +2806,13 @@ export default class PostgreSQLDriver extends NymphDriver {
         query = '';
       } else {
         let limit = '';
-        if ('limit' in options) {
+        if ('limit' in options && options.limit != null) {
           limit = ` LIMIT ${Math.floor(
             isNaN(Number(options.limit)) ? 0 : Number(options.limit),
           )}`;
         }
         let offset = '';
-        if ('offset' in options) {
+        if ('offset' in options && options.offset != null) {
           offset = ` OFFSET ${Math.floor(
             isNaN(Number(options.offset)) ? 0 : Number(options.offset),
           )}`;
