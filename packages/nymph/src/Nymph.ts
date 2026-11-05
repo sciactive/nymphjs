@@ -241,7 +241,7 @@ export default class Nymph {
    */
   public addEntityClass<T extends EntityConstructor>(EntityClass: T): T {
     if (EntityClass.class in this.entityClasses) {
-      this.config.debugLog(
+      this.config.debugError(
         'nymph',
         `Adding duplicate class "${EntityClass.class}". This may be a mistake.`,
       );
@@ -253,7 +253,7 @@ export default class Nymph {
         EntityClass.ETYPE === ExistingClass.ETYPE &&
         EntityClass.class !== EntityClass.class
       ) {
-        this.config.debugLog(
+        this.config.debugError(
           'nymph',
           `Adding class "${EntityClass.class}" with same etype as existing class "${ExistingClass.class}". This may be a mistake.`,
         );

@@ -19,6 +19,7 @@ function getDebuggers(source: string) {
 
   debuggers[source].info.log = console.info.bind(console);
   debuggers[source].log.log = console.log.bind(console);
+  debuggers[source].error.log = console.error.bind(console);
 
   return debuggers[source];
 }

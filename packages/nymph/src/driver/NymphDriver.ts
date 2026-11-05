@@ -999,9 +999,7 @@ export default abstract class NymphDriver {
             const QrefEntityClass =
               qrefOptions.class == null
                 ? this.nymph.getEntityClass('Entity')
-                : typeof qrefOptions.class === 'string'
-                  ? this.nymph.getEntityClass(qrefOptions.class)
-                  : this.nymph.getEntityClass(qrefOptions.class.class);
+                : this.nymph.getEntityClass(qrefOptions.class);
             const newOptions = {
               ...qrefOptions,
               class: QrefEntityClass,
@@ -1255,9 +1253,7 @@ export default abstract class NymphDriver {
     const EntityClass = (
       options.class == null
         ? this.nymph.getEntityClass('Entity')
-        : typeof options.class === 'string'
-          ? this.nymph.getEntityClass(options.class)
-          : this.nymph.getEntityClass(options.class.class)
+        : this.nymph.getEntityClass(options.class)
     ) as T;
     if (
       typeof EntityClass !== 'function' ||

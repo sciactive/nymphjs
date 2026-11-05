@@ -12,7 +12,6 @@ import {
 import {
   TestBModel as TestBModelClass,
   TestModel as TestModelClass,
-  TestModelData,
   TestEmptyModel as TestEmptyModelClass,
 } from '../testArtifacts.js';
 import {
@@ -31,8 +30,7 @@ export function EntitiesTest(
     const TestModel = nymph.addEntityClass(TestModelClass);
     const TestBModel = nymph.addEntityClass(TestBModelClass);
     const TestEmptyModel = nymph.addEntityClass(TestEmptyModelClass);
-
-    let testEntity: TestModelClass & TestModelData;
+    let testEntity: TestModelClass;
     let testGuid: string;
     let refGuid: string;
     let createdMultiple = false;
@@ -67,8 +65,7 @@ export function EntitiesTest(
       expect(testEntity.guid).not.toBeNull();
       testGuid = testEntity.guid as string;
 
-      const entityReferenceTest: TestModelClass & TestModelData =
-        new TestModel();
+      const entityReferenceTest: TestModelClass = new TestModel();
       entityReferenceTest.string = 'ref string';
       entityReferenceTest.timestamp = (strtotime('-2 days') || 0) * 1000;
       await entityReferenceTest.$save();
@@ -84,8 +81,8 @@ export function EntitiesTest(
       testEntity = (await nymph.getEntity(
         { class: TestModel },
         testGuid,
-      )) as TestModelClass & TestModelData;
-      expect(testEntity).toBeInstanceOf(TestModel);
+      )) as TestModelClass;
+      expect(testEntity).toBeInstanceOf(TestModelClass);
       expect(testEntity.guid).toEqual(testGuid);
     }
 
@@ -374,7 +371,7 @@ export function EntitiesTest(
       testEntity = (await transaction.getEntity(
         { class: TestModel },
         testGuid,
-      )) as TestModelClass & TestModelData;
+      )) as TestModelClass;
 
       expect(testEntity.guid).toEqual(testGuid);
 
