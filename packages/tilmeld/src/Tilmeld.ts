@@ -273,9 +273,9 @@ export default class Tilmeld implements TilmeldInterface {
               (!tilmeld.currentUser.abilities?.includes('tilmeld/admin') &&
                 !tilmeld.currentUser.abilities?.includes('system/admin'))) && // The user is not an admin.
               ((!tilmeld.config.enableUserSearch &&
-                options.class.prototype instanceof User) || // The use is searching for a user and searching is disabled.
+                options.class.ETYPE === User.ETYPE) || // The use is searching for a user and searching is disabled.
                 (!tilmeld.config.enableGroupSearch &&
-                  options.class.prototype instanceof Group)) && // Or the same, but for a group.
+                  options.class.ETYPE === Group.ETYPE)) && // Or the same, but for a group.
               (selectors.length > 1 || // There's more than one selector.
                 selectors[0] == null || // Or no selector specified.
                 selectors[0].type !== '&' || // Or the type is not and.
@@ -619,8 +619,8 @@ export default class Tilmeld implements TilmeldInterface {
     } else if (options.class.class === 'Entity') {
       throw new Error("Can't use Entity class directly.");
     } else if (
-      options.class.prototype instanceof User ||
-      options.class.prototype instanceof Group
+      options.class.ETYPE === User.ETYPE ||
+      options.class.ETYPE === Group.ETYPE
     ) {
       // They are requesting a user/group. Always accessible for reading.
       return;
