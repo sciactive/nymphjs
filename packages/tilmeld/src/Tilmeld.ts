@@ -268,24 +268,25 @@ export default class Tilmeld implements TilmeldInterface {
       ) {
         if (options?.source === 'client') {
           if (
-            (!tilmeld.currentUser ||
+            !(options.class?.prototype instanceof Entity) || // The user did not provide a class.
+            ((!tilmeld.currentUser ||
               (!tilmeld.currentUser.abilities?.includes('tilmeld/admin') &&
                 !tilmeld.currentUser.abilities?.includes('system/admin'))) && // The user is not an admin.
-            ((!tilmeld.config.enableUserSearch &&
-              options.class?.factorySync() instanceof User) || // The use is searching for a user and searching is disabled.
-              (!tilmeld.config.enableGroupSearch &&
-                options.class?.factorySync() instanceof Group)) && // Or the same, but for a group.
-            (selectors.length > 1 || // There's more than one selector.
-              selectors[0] == null || // Or no selector specified.
-              selectors[0].type !== '&' || // Or the type is not and.
-              Object.keys(selectors[0]).length > 2 || // Or there's more than one clause.
-              (!('guid' in selectors[0]) && !('equal' in selectors[0])) || // Or they're searching for something other than guid or equal.
-              ('guid' in selectors[0] &&
-                (!selectors[0].guid?.length ||
-                  !selectors[0].guid?.[0]?.length)) || // Or they're not searching for a specific guid.
-              ('equal' in selectors[0] &&
-                selectors[0].equal?.[0]?.[0] !== 'username' &&
-                selectors[0].equal?.[0]?.[0] !== 'groupname')) // Or they're not searching for a specific username/groupname.
+              ((!tilmeld.config.enableUserSearch &&
+                options.class.prototype instanceof User) || // The use is searching for a user and searching is disabled.
+                (!tilmeld.config.enableGroupSearch &&
+                  options.class.prototype instanceof Group)) && // Or the same, but for a group.
+              (selectors.length > 1 || // There's more than one selector.
+                selectors[0] == null || // Or no selector specified.
+                selectors[0].type !== '&' || // Or the type is not and.
+                Object.keys(selectors[0]).length > 2 || // Or there's more than one clause.
+                (!('guid' in selectors[0]) && !('equal' in selectors[0])) || // Or they're searching for something other than guid or equal.
+                ('guid' in selectors[0] &&
+                  (!selectors[0].guid?.length ||
+                    !selectors[0].guid?.[0]?.length)) || // Or they're not searching for a specific guid.
+                ('equal' in selectors[0] &&
+                  selectors[0].equal?.[0]?.[0] !== 'username' &&
+                  selectors[0].equal?.[0]?.[0] !== 'groupname'))) // Or they're not searching for a specific username/groupname.
           ) {
             // If the user is not specifically searching for a GUID or username,
             // and they're not allowed to search, it should fail.
@@ -618,8 +619,8 @@ export default class Tilmeld implements TilmeldInterface {
     } else if (options.class.class === 'Entity') {
       throw new Error("Can't use Entity class directly.");
     } else if (
-      options.class.factorySync() instanceof User ||
-      options.class.factorySync() instanceof Group
+      options.class.prototype instanceof User ||
+      options.class.prototype instanceof Group
     ) {
       // They are requesting a user/group. Always accessible for reading.
       return;
