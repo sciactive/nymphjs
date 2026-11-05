@@ -996,9 +996,12 @@ export default abstract class NymphDriver {
           for (let i = 0; i < tmpArr.length; i++) {
             const name = tmpArr[i][0];
             const [qrefOptions, ...qrefSelectors] = tmpArr[i][1];
-            const QrefEntityClass = qrefOptions.class
-              ? this.nymph.getEntityClass(qrefOptions.class)
-              : this.nymph.getEntityClass('Entity');
+            const QrefEntityClass =
+              qrefOptions.class == null
+                ? this.nymph.getEntityClass('Entity')
+                : typeof qrefOptions.class === 'string'
+                  ? this.nymph.getEntityClass(qrefOptions.class)
+                  : this.nymph.getEntityClass(qrefOptions.class.class);
             const newOptions = {
               ...qrefOptions,
               class: QrefEntityClass,
@@ -1249,8 +1252,13 @@ export default abstract class NymphDriver {
     let entities: EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] =
       [];
     let count = 0;
-    const EntityClass =
-      options.class ?? (this.nymph.getEntityClass('Entity') as T);
+    const EntityClass = (
+      options.class == null
+        ? this.nymph.getEntityClass('Entity')
+        : typeof options.class === 'string'
+          ? this.nymph.getEntityClass(options.class)
+          : this.nymph.getEntityClass(options.class.class)
+    ) as T;
     if (
       typeof EntityClass !== 'function' ||
       !(EntityClass.prototype instanceof Entity)
