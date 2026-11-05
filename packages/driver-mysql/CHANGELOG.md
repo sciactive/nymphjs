@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.144](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.143...v1.0.0-beta.144) (2026-11-05)
+
+### Bug Fixes
+
+- handle null values in query options ([442bf87](https://forge.sciactive.com/sciactive/nymphjs/commits/442bf871cec50d39d4929ecbc18ff7f0cba539cf))
+
 # [1.0.0-beta.143](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.142...v1.0.0-beta.143) (2026-11-05)
 
 **Note:** Version bump only for package @nymphjs/driver-mysql

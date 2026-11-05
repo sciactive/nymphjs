@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.144](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.143...v1.0.0-beta.144) (2026-11-05)
+
+### Bug Fixes
+
+- correctly get entity class ([4483681](https://forge.sciactive.com/sciactive/nymphjs/commits/4483681f6374addca80e1a239482bb9c5e128955))
+- get correct entity class in get queries ([dd0b406](https://forge.sciactive.com/sciactive/nymphjs/commits/dd0b406ace5b1a2e8464baf944622b2733e10954))
+
 # [1.0.0-beta.143](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.142...v1.0.0-beta.143) (2026-11-05)
 
 **Note:** Version bump only for package @nymphjs/nymph
