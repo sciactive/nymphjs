@@ -468,19 +468,19 @@ export class User extends Entity<UserData> {
     const switchCookiePattern =
       /(?:(?:^|.*;\s*)TILMELDSWITCH\s*=\s*([^;]*).*$)|^.*$/;
     if (response && response.headers.has('X-TILMELDAUTH')) {
-      token = response.headers.get('X-TILMELDAUTH');
-      switchToken = response.headers.get('X-TILMELDSWITCH');
+      token = response.headers.get('X-TILMELDAUTH') || null;
+      switchToken = response.headers.get('X-TILMELDSWITCH') || null;
     } else if (
       typeof document !== 'undefined' &&
       document.cookie.match(authCookiePattern)
     ) {
-      token = document.cookie.replace(authCookiePattern, '$1');
-      switchToken = document.cookie.replace(switchCookiePattern, '$1');
+      token = document.cookie.replace(authCookiePattern, '$1') || null;
+      switchToken = document.cookie.replace(switchCookiePattern, '$1') || null;
     } else {
       return;
     }
     if (store.currentToken != token || store.switchToken != switchToken) {
-      if (token == null || token === '') {
+      if (token == null) {
         if (store.currentToken != null) {
           delete this.nymph.headers['X-Xsrf-Token'];
           delete this.nymph.headers['X-TILMELDAUTH'];

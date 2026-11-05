@@ -642,8 +642,8 @@ export default class PubSub {
     data: AuthenticateMessageData,
   ) {
     // Save the user's auth token in session storage.
-    const authToken = data.authToken;
-    const switchToken = data.switchToken;
+    const authToken = data.authToken || undefined;
+    const switchToken = data.switchToken || undefined;
     if (authToken != null) {
       this.sessions.set(from, { authToken, switchToken });
     } else if (this.sessions.has(from)) {
