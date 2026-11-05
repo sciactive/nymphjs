@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.143](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.142...v1.0.0-beta.143) (2026-11-05)
+
+### Bug Fixes
+
+- don't instantiate entity just to check class ([2f00733](https://forge.sciactive.com/sciactive/nymphjs/commits/2f007334c954f9f23c3bc3f3ef5a4efafa5a3299))
+
 # [1.0.0-beta.142](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.141...v1.0.0-beta.142) (2026-11-05)
 
 **Note:** Version bump only for package @nymphjs/tilmeld
