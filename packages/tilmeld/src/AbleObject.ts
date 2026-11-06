@@ -1,7 +1,7 @@
 import { Entity } from '@nymphjs/nymph';
 
 export interface AbleObjectData {
-  abilities?: string[];
+  abilities: string[];
 }
 
 export interface AbleObject<T extends {}> extends AbleObjectData {}

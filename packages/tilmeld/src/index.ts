@@ -14,6 +14,6 @@ export { Tilmeld };
 
 export * from './Tilmeld.types.js';
 
-export * from './tilmeldJoiProps.js';
+export * from './tilmeldValibotProps.js';
 
 export * from './User.js';

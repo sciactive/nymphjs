@@ -36,9 +36,9 @@ export function GroupTest(
     it('new group passes validation', async () => {
       const validGroup = await makeNewGroup();
 
-      expect(() => {
-        defaults.validatorGroup({ config: defaults } as Tilmeld, validGroup);
-      }).not.toThrow();
+      await expect(async () => {
+        await validGroup.$validate();
+      }).resolves.not.toThrow();
     });
 
     it("doesn't allow unknown keys", async () => {
@@ -47,9 +47,11 @@ export function GroupTest(
       // @ts-ignore: testing unknown keys
       invalidGroup.unknown = 'I should cause an error.';
 
-      expect(() => {
-        defaults.validatorGroup({ config: defaults } as Tilmeld, invalidGroup);
-      }).toThrow('Invalid Group:  "unknown" is not allowed');
+      await expect(async () => {
+        await invalidGroup.$validate();
+      }).rejects.toThrow(
+        'Invalid Group: "unknown": Invalid key: Expected never but received "unknown"',
+      );
     });
 
     it("doesn't allow duplicate groupnames", async () => {

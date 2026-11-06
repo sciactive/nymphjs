@@ -16,7 +16,6 @@ export * from './Nymph.js';
 import Nymph from './Nymph.js';
 export { Nymph };
 
-import nymphJoiProps from './nymphJoiProps.js';
-export { nymphJoiProps };
+export * from './nymphValibotProps.js';
 
 export * from './utils.js';

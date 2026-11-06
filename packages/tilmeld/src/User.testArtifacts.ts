@@ -40,9 +40,9 @@ export function UserTest(
     it('new user passes validation', async () => {
       const validUser = await makeNewUser();
 
-      expect(() => {
-        defaults.validatorUser({ config: defaults } as Tilmeld, validUser);
-      }).not.toThrow();
+      await expect(async () => {
+        await validUser.$validate();
+      }).resolves.not.toThrow();
     });
 
     it("doesn't allow unknown keys", async () => {
@@ -51,9 +51,11 @@ export function UserTest(
       // @ts-ignore: testing unknown keys
       invalidUser.unknown = 'I should cause an error.';
 
-      expect(() => {
-        defaults.validatorUser({ config: defaults } as Tilmeld, invalidUser);
-      }).toThrow('Invalid User:  "unknown" is not allowed');
+      await expect(async () => {
+        await invalidUser.$validate();
+      }).rejects.toThrow(
+        'Invalid User: "unknown": Invalid key: Expected never but received "unknown"',
+      );
     });
 
     it("doesn't allow duplicate usernames", async () => {

@@ -1,7 +1,6 @@
 import type { EmailOptions, EmailConfig } from 'email-templates';
 
 import type Tilmeld from '../Tilmeld.js';
-import type { Group } from '../Group.js';
 import type { User } from '../User.js';
 
 /**
@@ -369,14 +368,6 @@ export interface Config {
       additionalData?: { [k: string]: any };
     },
   ) => Promise<void>;
-  /**
-   * The validator used to check groups before saving.
-   */
-  validatorGroup: (tilmeld: Tilmeld, group: Group) => void;
-  /**
-   * The validator used to check users before saving.
-   */
-  validatorUser: (tilmeld: Tilmeld, user: User) => void;
 }
 
 import defaults from './defaults.js';

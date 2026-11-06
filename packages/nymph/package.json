@@ -46,10 +46,10 @@
     "@nymphjs/guid": "^1.0.0-beta.144",
     "@sciactive/tokenizer": "^3.4.0",
     "debug": "^4.4.3",
-    "joi": "^18.2.5",
     "locutus": "^3.0.36",
     "lodash-es": "^4.18.1",
-    "n-readlines": "^3.4.1"
+    "n-readlines": "^3.4.1",
+    "valibot": "^1.5.0"
   },
   "devDependencies": {
     "@swc/core": "^1.16.1",

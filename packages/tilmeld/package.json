@@ -45,13 +45,13 @@
     "@sciactive/splitn": "^3.1.0",
     "email-templates": "^13.0.1",
     "express": "^5.2.1",
-    "joi": "^18.2.5",
     "jsonwebtoken": "^9.0.3",
     "locutus": "^3.0.36",
     "lodash-es": "^4.18.1",
     "otpauth": "^9.5.1",
     "pug": "^3.0.4",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "valibot": "^1.5.0"
   },
   "devDependencies": {
     "@nymphjs/client": "^1.0.0-beta.144",

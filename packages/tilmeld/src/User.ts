@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {
+  type EntityConstructor,
   type EntityJson,
   type EntityPatch,
   acceptStateFromClient,
@@ -8,6 +9,7 @@ import {
   type SerializedEntityData,
   transaction,
   transactional,
+  nymphValibotProps,
 } from '@nymphjs/nymph';
 import { humanSecret, nanoid } from '@nymphjs/guid';
 import type { EmailOptions } from 'email-templates';
@@ -16,6 +18,7 @@ import { difference, xor } from 'lodash-es';
 import { TOTP, Secret } from 'otpauth';
 import { toDataURL } from 'qrcode';
 import { splitn } from '@sciactive/splitn';
+import * as v from 'valibot';
 
 import { enforceTilmeld } from './enforceTilmeld.js';
 import { AbleObject } from './AbleObject.js';
@@ -106,117 +109,310 @@ export type TilmeldBeforeDeleteCallback = (user: User) => Promise<void>;
  */
 export type TilmeldAfterDeleteCallback = (user: User) => Promise<void>;
 
-export interface UserData {
-  /**
-   * The abilities granted to the user.
-   */
-  abilities?: string[];
+const UserSchema = v.strictObject({
+  ...nymphValibotProps,
+
   /**
    * The user's username.
    */
-  username?: string;
+  username: v.pipe(
+    v.string(),
+    v.nonEmpty(),
+    v.check(
+      (input) => input === input.trim(),
+      'String must not contain leading or trailing whitespace.',
+    ),
+  ),
+
   /**
    * The user's first name.
    */
-  nameFirst?: string;
+  nameFirst: v.pipe(
+    v.string(),
+    v.nonEmpty(),
+    v.regex(
+      /^(?!.*[\x00-\x1F\x7F]).*$/,
+      'String must not contain control characters.',
+    ),
+    v.check(
+      (input) => input === input.trim(),
+      'String must not contain leading or trailing whitespace.',
+    ),
+    v.maxLength(512),
+  ),
   /**
    * The user's middle name.
    */
-  nameMiddle?: string;
+  nameMiddle: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.maxLength(512),
+    ),
+  ),
   /**
    * The user's last name.
    */
-  nameLast?: string;
+  nameLast: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.maxLength(512),
+    ),
+  ),
   /**
    * The user's full name. This is generated from the first, middle, and last
    * names.
    */
-  name?: string;
+  name: v.pipe(
+    v.string(),
+    v.nonEmpty(),
+    v.regex(
+      /^(?!.*[\x00-\x1F\x7F]).*$/,
+      'String must not contain control characters.',
+    ),
+    v.check(
+      (input) => input === input.trim(),
+      'String must not contain leading or trailing whitespace.',
+    ),
+    v.maxLength(512),
+  ),
+
   /**
    * The user's email address.
    */
-  email?: string;
-  /**
-   * The user's avatar URL. (Use $getAvatar() to support Gravatar.)
-   */
-  avatar?: string;
-  /**
-   * The user's telephone number.
-   */
-  phone?: string;
-  /**
-   * The user's primary group.
-   */
-  group?: GroupClass;
-  /**
-   * The user's secondary groups.
-   */
-  groups?: GroupClass[];
-  /**
-   * Whether the user should inherit the abilities of his groups.
-   */
-  inheritAbilities?: boolean;
-
-  /**
-   * Whether the user can log in.
-   */
-  enabled?: boolean;
+  email: v.pipe(v.string(), v.nonEmpty(), v.rfcEmail()),
   /**
    * A verification secret.
    */
-  secret?: string;
+  secret: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.length(21),
+    ),
+  ),
   /**
    * The timestamp of when the email address was last changed.
    */
-  emailChangeDate?: number;
+  emailChangeDate: v.exactOptional(v.number()),
   /**
    * An email change proceed secret.
    */
-  newEmailSecret?: string;
+  newEmailSecret: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.length(21),
+    ),
+  ),
   /**
    * If the user has changed their email address, this is the new one, awaiting
    * verification.
    */
-  newEmailAddress?: string;
+  newEmailAddress: v.exactOptional(
+    v.pipe(v.string(), v.nonEmpty(), v.rfcEmail()),
+  ),
   /**
    * An email change cancellation secret.
    */
-  cancelEmailSecret?: string;
+  cancelEmailSecret: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.length(21),
+    ),
+  ),
   /**
    * The old email address.
    */
-  cancelEmailAddress?: string;
+  cancelEmailAddress: v.exactOptional(
+    v.pipe(v.string(), v.nonEmpty(), v.rfcEmail()),
+  ),
   /**
    * A recovery secret.
    */
-  recoverSecret?: string;
+  recoverSecret: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.length(10),
+    ),
+  ),
   /**
    * The timestamp of when the recovery secret was issued.
    */
-  recoverSecretDate?: number;
+  recoverSecretDate: v.exactOptional(v.number()),
+
+  /**
+   * The user's telephone number.
+   */
+  phone: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^\+?[1-9]\d{1,14}$/,
+        'Phone number must be only number with optional plus at the start.',
+      ),
+    ),
+  ),
+
+  /**
+   * Whether the user can log in.
+   */
+  enabled: v.boolean(),
+  /**
+   * The user's avatar URL. (Use $getAvatar() to support Gravatar.)
+   */
+  avatar: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.url(),
+      v.maxLength(1024),
+    ),
+  ),
+  /**
+   * The user's primary group.
+   */
+  group: v.exactOptional(v.lazy(() => v.instance(GroupClass))),
+  /**
+   * The user's secondary groups.
+   */
+  groups: v.array(v.lazy(() => v.instance(GroupClass))),
+  /**
+   * The abilities granted to the user.
+   */
+  abilities: v.array(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.regex(/^(?!.*\n).*$/, 'String must not contain new line.'),
+      v.maxLength(256),
+    ),
+  ),
+  /**
+   * Whether the user should inherit the abilities of his groups.
+   */
+  inheritAbilities: v.exactOptional(v.boolean()),
   /**
    * The password hash salt.
    */
-  salt?: string;
+  salt: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+    ),
+  ),
   /**
    * The password or password hash.
    */
-  password?: string;
+  password: v.pipe(
+    v.string(),
+    v.nonEmpty(),
+    v.check(
+      (input) => input === input.trim(),
+      'String must not contain leading or trailing whitespace.',
+    ),
+  ),
+  /**
+   * If set, this timestamp is the cutoff point for JWT issue dates. Any token
+   * issued before this date will not authenticate the user.
+   */
+  revokeTokenDate: v.exactOptional(v.number()),
+  /**
+   * Two factor auth secret.
+   */
+  totpSecret: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.minLength(24),
+      v.maxLength(40),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.base64('Must be base32 encoded unpadded.'),
+    ),
+  ),
+});
+
+type UserData = Omit<
+  v.InferInput<typeof UserSchema>,
+  keyof typeof nymphValibotProps
+> & {
   /**
    * Temporary storage for passwords. This will be hashed before going into the
    * database.
    */
   passwordTemp?: string;
-  /**
-   * If set, this timestamp is the cutoff point for JWT issue dates. Any token
-   * issued before this date will not authenticate the user.
-   */
-  revokeTokenDate?: number;
-  /**
-   * Two factor auth secret.
-   */
-  totpSecret?: string;
-}
+};
 
 export interface User extends UserData {}
 
@@ -405,7 +601,7 @@ export class User extends AbleObject<UserData> {
       // Create a username recovery email.
 
       const getUser = await this.nymph.getEntity(
-        { class: tilmeld.User, skipAc: true },
+        { class: User, skipAc: true },
         {
           type: '&',
           ilike: ['email', data.account.replace(/([\\%_])/g, (s) => `\\${s}`)],
@@ -1984,7 +2180,7 @@ export class User extends AbleObject<UserData> {
         selector['!guid'] = this.guid;
       }
       const test = await this.$nymph.getEntity(
-        { class: tilmeld.User, skipAc: true },
+        { class: User, skipAc: true },
         selector,
       );
       if (test != null) {
@@ -2065,7 +2261,7 @@ export class User extends AbleObject<UserData> {
       selector['!guid'] = this.guid;
     }
     const test = await this.$nymph.getEntity(
-      { class: tilmeld.User, skipAc: true },
+      { class: User, skipAc: true },
       selector,
     );
     if (test != null) {
@@ -2089,8 +2285,6 @@ export class User extends AbleObject<UserData> {
    */
   @acceptStateFromClient
   public async $checkPhone(): Promise<{ result: boolean; message: string }> {
-    const tilmeld = enforceTilmeld(this);
-
     this.$nymph.config.debugInfo('tilmeld', `Phone check "${this.phone}".`);
 
     if (this.phone == null || !this.phone.length) {
@@ -2113,7 +2307,7 @@ export class User extends AbleObject<UserData> {
       selector['!guid'] = this.guid;
     }
     const test = await this.$nymph.getEntity(
-      { class: tilmeld.User, skipAc: true },
+      { class: User, skipAc: true },
       selector,
     );
     if (test != null) {
@@ -2210,7 +2404,7 @@ export class User extends AbleObject<UserData> {
           let madeAdmin = false;
           if (tilmeld.config.createAdmin) {
             const otherUsers = await this.$nymph.getEntities({
-              class: tilmeld.User,
+              class: User,
               skipAc: true,
               limit: 1,
               return: 'guid',
@@ -2329,6 +2523,68 @@ export class User extends AbleObject<UserData> {
     }
   }
 
+  public async $validate() {
+    let tilmeld = enforceTilmeld(this);
+
+    // Verification.
+    const unCheck = await this.$checkUsername();
+    if (!unCheck.result) {
+      throw new BadUsernameError(unCheck.message);
+    }
+    if (
+      !tilmeld.config.emailUsernames &&
+      tilmeld.config.userFields.includes('email')
+    ) {
+      const emCheck = await this.$checkEmail();
+      if (!emCheck.result) {
+        throw new BadEmailError(emCheck.message);
+      }
+    }
+
+    let MySchema: v.StrictObjectSchema<any, any> = UserSchema;
+
+    const nameField = tilmeld.config.userFields.includes('name');
+    if (!nameField) {
+      MySchema = v.omit(MySchema, [
+        'nameFirst',
+        'nameMiddle',
+        'nameLast',
+        'name',
+      ]);
+    }
+    const emailField = tilmeld.config.userFields.includes('email');
+    if (!emailField) {
+      MySchema = v.omit(MySchema, [
+        'email',
+        'secret',
+        'emailChangeDate',
+        'newEmailSecret',
+        'newEmailAddress',
+        'cancelEmailSecret',
+        'cancelEmailAddress',
+        'recoverSecret',
+        'recoverSecretDate',
+      ]);
+    }
+    const phoneField = tilmeld.config.userFields.includes('phone');
+    if (!phoneField) {
+      MySchema = v.omit(MySchema, ['phone']);
+    }
+
+    try {
+      v.parse(MySchema, this.$getValidatable());
+    } catch (e: any) {
+      throw new BadDataError(
+        `Invalid ${(this.constructor as EntityConstructor).class}: ` +
+          (e instanceof v.ValiError
+            ? Object.entries(v.flatten(e.issues).nested || {})
+                .map(([field, messages]) => `"${field}": ${messages}`)
+                .join(', ')
+            : e?.message),
+      );
+    }
+  }
+
   public async $save() {
     let tilmeld = enforceTilmeld(this);
     if (this.username == null || !this.username.trim().length) {
@@ -2418,6 +2674,7 @@ export class User extends AbleObject<UserData> {
 
     // Clear empty values.
     if (this.nameFirst === '' || !tilmeld.config.userFields.includes('name')) {
+      // @ts-ignore
       delete this.nameFirst;
     }
     if (this.nameMiddle === '' || !tilmeld.config.userFields.includes('name')) {
@@ -2427,9 +2684,11 @@ export class User extends AbleObject<UserData> {
       delete this.nameLast;
     }
     if (this.name === '' || !tilmeld.config.userFields.includes('name')) {
+      // @ts-ignore
       delete this.name;
     }
     if (this.email === '' || !tilmeld.config.userFields.includes('email')) {
+      // @ts-ignore
       delete this.email;
     }
     if (this.avatar === '') {
@@ -2483,29 +2742,11 @@ export class User extends AbleObject<UserData> {
     ) {
       delete this.recoverSecretDate;
     }
-    if (this.password === '') {
-      delete this.password;
-    }
     if (this.passwordTemp === '') {
       delete this.passwordTemp;
     }
     if (this.inheritAbilities === false) {
       delete this.inheritAbilities;
-    }
-
-    // Verification.
-    const unCheck = await this.$checkUsername();
-    if (!unCheck.result) {
-      throw new BadUsernameError(unCheck.message);
-    }
-    if (
-      !tilmeld.config.emailUsernames &&
-      tilmeld.config.userFields.includes('email')
-    ) {
-      const emCheck = await this.$checkEmail();
-      if (!emCheck.result) {
-        throw new BadEmailError(emCheck.message);
-      }
     }
 
     // Email changes.
@@ -2599,6 +2840,10 @@ export class User extends AbleObject<UserData> {
       throw new BadDataError('A password is required.');
     }
 
+    // Validate before transaction, to catch issues early.
+    await this.$validate();
+
+    const isNewUser = this.guid == null;
     let preGuid = this.guid;
     let preCdate = this.cdate;
     let preMdate = this.mdate;
@@ -2608,7 +2853,6 @@ export class User extends AbleObject<UserData> {
       async (nymph) => {
         this.$setNymph(nymph);
         const tilmeld = enforceTilmeld(this);
-        const Group = this.$nymph.getEntityClass(GroupClass);
 
         let group = this.group;
         if (group != null) {
@@ -2621,13 +2865,13 @@ export class User extends AbleObject<UserData> {
             }
           }
         }
-        if (group == null && this.guid == null) {
+        if (group == null && isNewUser) {
           if (tilmeld.config.generatePrimary) {
             // Generate a new primary group for the user.
-            group = await Group.factory();
+            group = await tilmeld.Group.factory();
             group.user = this;
             const parent = await this.$nymph.getEntity(
-              { class: Group },
+              { class: tilmeld.Group },
               { type: '&', equal: ['defaultPrimary', true] },
             );
             if (parent != null) {
@@ -2636,7 +2880,7 @@ export class User extends AbleObject<UserData> {
           } else {
             // Add the default primary.
             const group = await this.$nymph.getEntity(
-              { class: Group },
+              { class: tilmeld.Group },
               { type: '&', equal: ['defaultPrimary', true] },
             );
             if (group != null) {
@@ -2682,7 +2926,7 @@ export class User extends AbleObject<UserData> {
           this.group = group;
         }
 
-        if (this.groups == null || this.groups.length === 0) {
+        if ((this.groups == null || this.groups.length === 0) && isNewUser) {
           // Add secondary groups.
           if (
             tilmeld.config.userFields.includes('email') &&
@@ -2692,22 +2936,16 @@ export class User extends AbleObject<UserData> {
           ) {
             // Add the default secondaries for unverified users.
             this.groups = await this.$nymph.getEntities(
-              { class: Group },
+              { class: tilmeld.Group },
               { type: '&', equal: ['unverifiedSecondary', true] },
             );
           } else {
             // Add the default secondaries.
             this.groups = await this.$nymph.getEntities(
-              { class: Group },
+              { class: tilmeld.Group },
               { type: '&', equal: ['defaultSecondary', true] },
             );
           }
-        }
-
-        try {
-          tilmeld.config.validatorUser(tilmeld, this);
-        } catch (e: any) {
-          throw new BadDataError(e?.message);
         }
 
         for (let callback of (this.constructor as typeof User)
@@ -2716,6 +2954,9 @@ export class User extends AbleObject<UserData> {
             await callback(this);
           }
         }
+
+        // Validate again within transaction, to catch any issues before saving.
+        await this.$validate();
 
         await super.$save();
 

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import {
   clearSearchRestrictedData,
+  type EntityConstructor,
   type EntityJson,
   type EntityPatch,
   acceptStateFromClient,
@@ -9,10 +10,12 @@ import {
   type SerializedEntityData,
   transaction,
   transactional,
+  nymphValibotProps,
 } from '@nymphjs/nymph';
 import { nanoid } from '@nymphjs/guid';
 import { difference, xor } from 'lodash-es';
 import { splitn } from '@sciactive/splitn';
+import * as v from 'valibot';
 
 import { enforceTilmeld } from './enforceTilmeld.js';
 import { AbleObject } from './AbleObject.js';
@@ -63,57 +66,131 @@ export type TilmeldBeforeGroupDeleteCallback = (group: Group) => Promise<void>;
  */
 export type TilmeldAfterGroupDeleteCallback = (group: Group) => Promise<void>;
 
-export interface GroupData {
-  /**
-   * The abilities granted to the group.
-   */
-  abilities?: string[];
+const GroupSchema = v.strictObject({
+  ...nymphValibotProps,
+
   /**
    * The group's groupname.
    */
-  groupname?: string;
+  groupname: v.pipe(
+    v.string(),
+    v.nonEmpty(),
+    v.check(
+      (input) => input === input.trim(),
+      'String must not contain leading or trailing whitespace.',
+    ),
+  ),
+
   /**
    * The group's name.
    */
-  name?: string;
+  name: v.pipe(
+    v.string(),
+    v.nonEmpty(),
+    v.regex(
+      /^(?!.*[\x00-\x1F\x7F]).*$/,
+      'String must not contain control characters.',
+    ),
+    v.check(
+      (input) => input === input.trim(),
+      'String must not contain leading or trailing whitespace.',
+    ),
+    v.maxLength(512),
+  ),
   /**
    * The group's email address.
    */
-  email?: string;
-  /**
-   * The group's avatar URL. (Use getAvatar() to support Gravatar.)
-   */
-  avatar?: string;
+  email: v.pipe(v.string(), v.nonEmpty(), v.rfcEmail()),
   /**
    * The group's telephone number.
    */
-  phone?: string;
-  /**
-   * The group's parent.
-   */
-  parent?: Group;
-  /**
-   * If generatePrimary is on, this will be the user who generated this group.
-   */
-  user?: UserClass | null;
+  phone: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^\+?[1-9]\d{1,14}$/,
+        'Phone number must be only number with optional plus at the start.',
+      ),
+    ),
+  ),
 
   /**
    * Whether the group can be used.
    */
-  enabled?: boolean;
+  enabled: v.boolean(),
+  /**
+   * The group's avatar URL. (Use getAvatar() to support Gravatar.)
+   */
+  avatar: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.url(),
+      v.maxLength(1024),
+    ),
+  ),
+  /**
+   * The group's parent.
+   */
+  parent: v.exactOptional(v.lazy(() => v.instance(Group))),
+  /**
+   * If generatePrimary is on, this will be the user who generated this group.
+   */
+  user: v.exactOptional(v.lazy(() => v.instance(UserClass))),
+  /**
+   * The abilities granted to the group.
+   */
+  abilities: v.array(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.regex(/^(?!.*\n).*$/, 'String must not contain new line.'),
+      v.check(
+        (input) => !input.startsWith('system/'),
+        'Invalid Group: Groups cannot have system abilities.',
+      ),
+      v.check(
+        (input) => input !== 'tilmeld/admin',
+        'Invalid Group: Groups cannot have Tilmeld admin ability.',
+      ),
+      v.check(
+        (input) => input !== 'tilmeld/switch',
+        'Invalid Group: Groups cannot have Tilmeld switch ability.',
+      ),
+      v.maxLength(256),
+    ),
+  ),
   /**
    * Whether this group is the default primary group for new users.
    */
-  defaultPrimary?: boolean;
+  defaultPrimary: v.exactOptional(v.boolean()),
   /**
    * Whether this group is a default secondary group for new users.
    */
-  defaultSecondary?: boolean;
+  defaultSecondary: v.exactOptional(v.boolean()),
   /**
    * Whether this group is a default secondary group for unverified users.
    */
-  unverifiedSecondary?: boolean;
-}
+  unverifiedSecondary: v.exactOptional(v.boolean()),
+});
+
+type GroupData = Omit<
+  v.InferInput<typeof GroupSchema>,
+  keyof typeof nymphValibotProps
+>;
 
 export interface Group extends GroupData {}
 
@@ -220,7 +297,7 @@ export class Group extends AbleObject<GroupData> {
 
     return await this.getAssignableGroups(
       tilmeld.config.highestPrimary,
-      { ...options, class: tilmeld.Group, return: 'entity' },
+      { ...options, class: Group, return: 'entity' },
       [...(selectors ?? [])],
     );
   }
@@ -243,7 +320,7 @@ export class Group extends AbleObject<GroupData> {
 
     return await this.getAssignableGroups(
       tilmeld.config.highestSecondary,
-      { ...options, class: tilmeld.Group, return: 'entity' },
+      { ...options, class: Group, return: 'entity' },
       [...(selectors ?? [])],
     );
   }
@@ -253,7 +330,6 @@ export class Group extends AbleObject<GroupData> {
     options: Options<typeof Group>,
     selectors: Selector[],
   ) {
-    const tilmeld = enforceTilmeld(this);
     let assignableGroups: Group[] = [];
 
     if (highestParent === false) {
@@ -266,7 +342,7 @@ export class Group extends AbleObject<GroupData> {
     }));
 
     assignableGroups = await this.nymph.getEntities(
-      { ...options, class: tilmeld.Group },
+      { ...options, class: Group },
       ...selectors,
     );
     if (highestParent !== true) {
@@ -585,7 +661,7 @@ export class Group extends AbleObject<GroupData> {
     enabled = enabled == null ? undefined : !!enabled;
 
     return await this.$nymph.getEntities(
-      { class: tilmeld.Group, limit, offset, reverse, sort },
+      { class: Group, limit, offset, reverse, sort },
       {
         type: '&',
         ref: ['parent', this],
@@ -607,10 +683,9 @@ export class Group extends AbleObject<GroupData> {
     andSelf = false,
     andDisabled = false,
   ): Promise<Group[]> {
-    const tilmeld = enforceTilmeld(this);
     let groups: Group[] = [];
     const entities = await this.$nymph.getEntities(
-      { class: tilmeld.Group },
+      { class: Group },
       {
         type: '&',
         ...(andDisabled ? {} : { equal: ['enabled', true] }),
@@ -798,7 +873,7 @@ export class Group extends AbleObject<GroupData> {
         selector['!guid'] = this.guid;
       }
       const test = await this.$nymph.getEntity(
-        { class: tilmeld.Group, skipAc: true },
+        { class: Group, skipAc: true },
         selector,
       );
       if (test != null) {
@@ -878,7 +953,7 @@ export class Group extends AbleObject<GroupData> {
       selector['!guid'] = this.guid;
     }
     const test = await this.$nymph.getEntity(
-      { class: tilmeld.Group, skipAc: true },
+      { class: Group, skipAc: true },
       selector,
     );
     if (test != null) {
@@ -893,6 +968,67 @@ export class Group extends AbleObject<GroupData> {
       message:
         this.guid != null ? 'Email is valid.' : 'Email address is valid!',
     };
+  }
+
+  public async $validate() {
+    let tilmeld = enforceTilmeld(this);
+
+    // Verification.
+    const unCheck = await this.$checkGroupname();
+    if (!unCheck.result) {
+      throw new BadUsernameError(unCheck.message);
+    }
+    if (
+      !tilmeld.config.emailUsernames &&
+      tilmeld.config.userFields.includes('email')
+    ) {
+      const emCheck = await this.$checkEmail();
+      if (!emCheck.result) {
+        throw new BadEmailError(emCheck.message);
+      }
+    }
+
+    // Validate group parent. Make sure it's not a descendant of this group.
+    const parent = this.parent;
+    await parent?.$wake();
+    if (
+      parent &&
+      (parent.cdate == null ||
+        this.$is(parent) ||
+        (await parent.$isDescendant(this)))
+    ) {
+      throw new BadDataError(
+        "Group parent can't be itself or descendant of itself.",
+      );
+    }
+
+    let MySchema: v.StrictObjectSchema<any, any> = GroupSchema;
+
+    const nameField = tilmeld.config.userFields.includes('name');
+    if (!nameField) {
+      MySchema = v.omit(MySchema, ['name']);
+    }
+    const emailField = tilmeld.config.userFields.includes('email');
+    if (!emailField) {
+      MySchema = v.omit(MySchema, ['email']);
+    }
+    const phoneField = tilmeld.config.userFields.includes('phone');
+    if (!phoneField) {
+      MySchema = v.omit(MySchema, ['phone']);
+    }
+
+    try {
+      v.parse(MySchema, this.$getValidatable());
+    } catch (e: any) {
+      throw new BadDataError(
+        `Invalid ${(this.constructor as EntityConstructor).class}: ` +
+          (e instanceof v.ValiError
+            ? Object.entries(v.flatten(e.issues).nested || {})
+                .map(([field, messages]) => `"${field}": ${messages}`)
+                .join(', ')
+            : e?.message),
+      );
+    }
   }
 
   public async $save() {
@@ -966,9 +1102,11 @@ export class Group extends AbleObject<GroupData> {
 
     // Clear empty values.
     if (this.name === '' || !tilmeld.config.userFields.includes('name')) {
+      // @ts-ignore
       delete this.name;
     }
     if (this.email === '' || !tilmeld.config.userFields.includes('email')) {
+      // @ts-ignore
       delete this.email;
     }
     if (this.avatar === '') {
@@ -993,81 +1131,8 @@ export class Group extends AbleObject<GroupData> {
       delete this.unverifiedSecondary;
     }
 
-    // Groups should never have 'system/admin', 'tilmeld/admin',
-    // 'tilmeld/switch', or system abilities.
-    this.abilities = (this.abilities ?? []).filter((ability) => {
-      if (
-        ['system/admin', 'tilmeld/admin', 'tilmeld/switch'].indexOf(ability) !==
-        -1
-      ) {
-        return false;
-      }
-      if (ability == null) {
-        return false;
-      }
-      if (ability.startsWith('system/')) {
-        return false;
-      }
-      return true;
-    }) as string[];
-
-    // Verification.
-    const unCheck = await this.$checkGroupname();
-    if (!unCheck.result) {
-      throw new BadUsernameError(unCheck.message);
-    }
-    if (
-      !tilmeld.config.emailUsernames &&
-      tilmeld.config.userFields.includes('email')
-    ) {
-      const emCheck = await this.$checkEmail();
-      if (!emCheck.result) {
-        throw new BadEmailError(emCheck.message);
-      }
-    }
-
-    // Validate group parent. Make sure it's not a descendant of this group.
-    const parent = this.parent;
-    await parent?.$wake();
-    if (
-      parent &&
-      (parent.cdate == null ||
-        this.$is(parent) ||
-        (await parent.$isDescendant(this)))
-    ) {
-      throw new BadDataError(
-        "Group parent can't be itself or descendant of itself.",
-      );
-    }
-
-    try {
-      tilmeld.config.validatorGroup(tilmeld, this);
-    } catch (e: any) {
-      throw new BadDataError(e?.message);
-    }
-
-    // Only one default primary group is allowed.
-    if (this.defaultPrimary) {
-      const currentPrimary = await this.$nymph.getEntity(
-        { class: tilmeld.Group },
-        { type: '&', truthy: 'defaultPrimary' },
-      );
-      if (currentPrimary != null && !this.$is(currentPrimary)) {
-        currentPrimary.defaultPrimary = false;
-        try {
-          if (this.$skipAcWhenSaving) {
-            await currentPrimary.$saveSkipAC();
-          } else {
-            await currentPrimary.$save();
-          }
-        } catch (e: any) {
-          throw new CouldNotChangeDefaultPrimaryGroupError(
-            'Could not change new user primary group from ' +
-              `${currentPrimary.groupname}.`,
-          );
-        }
-      }
-    }
+    // Validate before transaction, to catch issues early.
+    await this.$validate();
 
     let preGuid = this.guid;
     let preCdate = this.cdate;
@@ -1078,12 +1143,38 @@ export class Group extends AbleObject<GroupData> {
       async (nymph) => {
         this.$setNymph(nymph);
 
+        // Only one default primary group is allowed.
+        if (this.defaultPrimary) {
+          const currentPrimary = await this.$nymph.getEntity(
+            { class: Group },
+            { type: '&', truthy: 'defaultPrimary' },
+          );
+          if (currentPrimary != null && !this.$is(currentPrimary)) {
+            currentPrimary.defaultPrimary = false;
+            try {
+              if (this.$skipAcWhenSaving) {
+                await currentPrimary.$saveSkipAC();
+              } else {
+                await currentPrimary.$save();
+              }
+            } catch (e: any) {
+              throw new CouldNotChangeDefaultPrimaryGroupError(
+                'Could not change new user primary group from ' +
+                  `${currentPrimary.groupname}.`,
+              );
+            }
+          }
+        }
+
         for (let callback of (this.constructor as typeof Group)
           .beforeSaveCallbacks) {
           if (callback) {
             await callback(this);
           }
         }
+
+        // Validate again within transaction, to catch any issues before saving.
+        await this.$validate();
 
         await super.$save();
 
@@ -1149,7 +1240,7 @@ export class Group extends AbleObject<GroupData> {
 
     // Delete children.
     const children = await this.$nymph.getEntities(
-      { class: tilmeld.Group, skipAc: true },
+      { class: Group, skipAc: true },
       { type: '&', ref: ['parent', this] },
     );
     if (children.length) {
