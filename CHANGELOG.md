@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.145](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.144...v1.0.0-beta.145) (2026-11-07)
+
+### Features
+
+- added query data validation and incoming rest client data validation ([d6820b2](https://forge.sciactive.com/sciactive/nymphjs/commits/d6820b2cb905b951e716f9bb0d3a80744fc47dcc))
+- migrate from joi to valibot ([b2e1cde](https://forge.sciactive.com/sciactive/nymphjs/commits/b2e1cde0b56af2c6b13114b43d8b1da549d1ada6))
+
 # [1.0.0-beta.144](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.143...v1.0.0-beta.144) (2026-11-05)
 
 ### Bug Fixes
