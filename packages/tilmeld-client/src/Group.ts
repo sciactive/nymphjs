@@ -161,7 +161,7 @@ export class Group extends Entity<GroupData> {
     selectors?: Selector[],
   ): Promise<Group[]> {
     return await this.serverCallStatic('getPrimaryGroups', [
-      { options, class: this.class },
+      { ...options, class: this.class },
       selectors,
     ]);
   }
@@ -171,7 +171,7 @@ export class Group extends Entity<GroupData> {
     selectors?: Selector[],
   ): Promise<Group[]> {
     return await this.serverCallStatic('getSecondaryGroups', [
-      { options, class: this.class },
+      { ...options, class: this.class },
       selectors,
     ]);
   }

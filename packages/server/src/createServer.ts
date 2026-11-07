@@ -1,6 +1,7 @@
 import type { OptionsJson } from 'body-parser';
 import express, { NextFunction, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
+import * as v from 'valibot';
 import {
   Nymph,
   Entity,
@@ -21,6 +22,17 @@ import {
 import { EntityInvalidDataError } from '@nymphjs/nymph';
 
 import { statusDescriptions } from './statusDescriptions.js';
+import {
+  NymphDeleteUidRequestSchema,
+  NymphEntityDeleteRequestSchema,
+  NymphEntityMethodRequestSchema,
+  NymphEntityQueryRequestSchema,
+  NymphEntityServerCallRequestSchema,
+  NymphGetUidRequestSchema,
+  NymphNewUidRequestSchema,
+  NymphRequestSchema,
+  NymphSetUidRequestSchema,
+} from './schemas.js';
 
 type NymphResponse = Response<any, { nymph: Nymph }>;
 
@@ -31,6 +43,14 @@ export class ForbiddenClassError extends Error {
     super(message);
 
     this.name = 'ForbiddenClassError';
+  }
+}
+
+export class InvalidRequestError extends Error {
+  constructor(message: string) {
+    super(message);
+
+    this.name = 'InvalidRequestError';
   }
 }
 
@@ -99,26 +119,54 @@ export function createServer(
     next();
   }
 
-  function getActionData(request: Request): { action: string; data: any } {
+  function getActionData(request: Request) {
+    let data: any;
     if (request.method === 'GET') {
       if (
         typeof request.query?.action !== 'string' ||
         typeof request.query?.data !== 'string'
       ) {
-        return {
-          action: '',
-          data: {},
-        };
+        throw new InvalidRequestError(
+          'Invalid Request: Query parameters missing or not singular.',
+        );
       }
-      return {
-        action: JSON.parse(request.query.action) ?? '',
-        data: JSON.parse(request.query.data),
-      };
+
+      try {
+        data = {
+          action: JSON.parse(request.query?.action) ?? '',
+          data: JSON.parse(request.query?.data) ?? {},
+        };
+      } catch (e: any) {
+        throw new InvalidRequestError(`Invalid Request: ${e.message}`);
+      }
     } else {
-      return {
-        action: request.body.action ?? '',
-        data: request.body.data,
-      };
+      data = { ...request.body };
+    }
+
+    checkSchema(NymphRequestSchema, data);
+
+    return data;
+  }
+
+  function checkSchema<T extends v.BaseSchema<any, any, any>>(
+    schema: T,
+    input: any,
+  ) {
+    try {
+      v.parse(schema, input);
+      return input as v.InferInput<T>;
+    } catch (e: any) {
+      console.log(e);
+      console.log(JSON.stringify(e.issues, null, 2));
+      console.log(input);
+      throw new InvalidRequestError(
+        'Invalid Request: ' +
+          (e instanceof v.ValiError
+            ? Object.entries(v.flatten(e.issues).nested || {})
+                .map(([field, messages]) => `"${field}": ${messages}`)
+                .join(', ')
+            : e?.message),
+      );
     }
   }
 
@@ -136,6 +184,7 @@ export function createServer(
         return;
       }
       if (['entity', 'entities'].indexOf(action) !== -1) {
+        checkSchema(NymphEntityQueryRequestSchema, { action, data });
         if (!Array.isArray(data)) {
           httpError(response, 400);
           return;
@@ -219,6 +268,9 @@ export function createServer(
             );
           }
         } catch (e: any) {
+          if (e instanceof InvalidParametersError) {
+            httpError(response, 400, e);
+          }
           httpError(response, 500, e);
           return;
         }
@@ -234,6 +286,7 @@ export function createServer(
         response.setHeader('Content-Type', 'application/json');
         response.send(JSON.stringify(result));
       } else {
+        checkSchema(NymphGetUidRequestSchema, { action, data });
         if (typeof data !== 'string') {
           httpError(response, 400);
           return;
@@ -267,7 +320,7 @@ export function createServer(
         response.send(`${result}`);
       }
     } catch (e: any) {
-      httpError(response, 500, e);
+      httpError(response, e instanceof InvalidRequestError ? 400 : 500, e);
       return;
     }
   });
@@ -275,15 +328,16 @@ export function createServer(
   rest.post('/', async (request, response: NymphResponse) => {
     try {
       const { action, data: dataConst } = getActionData(request);
-      let data = dataConst;
       if (['entity', 'entities', 'uid', 'method'].indexOf(action) === -1) {
         httpError(response, 400);
         return;
       }
       if (['entity', 'entities'].indexOf(action) !== -1) {
-        if (action === 'entity') {
-          data = [data];
-        }
+        const { data } = checkSchema(NymphEntityMethodRequestSchema, {
+          action,
+          data: dataConst,
+        });
+        let dataArray = Array.isArray(data) ? data : [data];
         const created = [];
         let hadSuccess = false;
         let invalidRequest = false;
@@ -291,7 +345,7 @@ export function createServer(
         let notfound = false;
         let forbidden = false;
         let lastException = null;
-        for (let entData of data) {
+        for (let entData of dataArray) {
           if (entData.guid) {
             invalidRequest = true;
             created.push(null);
@@ -377,10 +431,10 @@ export function createServer(
           response.send(created);
         }
       } else if (action === 'method') {
-        if (!Array.isArray(data.params)) {
-          httpError(response, 400);
-          return;
-        }
+        const { data } = checkSchema(NymphEntityServerCallRequestSchema, {
+          action,
+          data: dataConst,
+        });
         try {
           const params = classNamesToEntityConstructors(
             response.locals.nymph,
@@ -485,19 +539,20 @@ export function createServer(
             }
           } else {
             let entity: EntityInterface & EntityData;
-            const guid = data.pushState ? data.entity.guid : data.guid;
+            const guid =
+              'pushState' in data && data.pushState
+                ? data.entity.guid
+                : data.guid;
             try {
-              const EntityClass = data.pushState
-                ? classNamesToEntityConstructors(
-                    response.locals.nymph,
-                    data.entity.class,
-                    true,
-                  )
-                : classNamesToEntityConstructors(
-                    response.locals.nymph,
-                    data.class,
-                    true,
-                  );
+              const EntityClass = (
+                data.pushState
+                  ? classNamesToEntityConstructors(
+                      response.locals.nymph,
+                      data.entity.class,
+                      true,
+                    )
+                  : response.locals.nymph.getEntityClass(data.class)
+              ) as EntityConstructor;
               entity = await getEntity(
                 EntityClass,
                 guid,
@@ -544,7 +599,10 @@ export function createServer(
                 return;
               }
               try {
-                entity.$jsonAcceptData(data.entity as EntityJson, false);
+                entity.$jsonAcceptData(
+                  data.entity as unknown as EntityJson,
+                  false,
+                );
               } catch (e: any) {
                 if (e instanceof EntityConflictError) {
                   httpError(response, 409, e);
@@ -590,6 +648,10 @@ export function createServer(
           }
         }
       } else {
+        const { data } = checkSchema(NymphNewUidRequestSchema, {
+          action,
+          data: dataConst,
+        });
         if (typeof data !== 'string') {
           httpError(response, 400);
           return;
@@ -621,7 +683,7 @@ export function createServer(
         response.send(`${result}`);
       }
     } catch (e: any) {
-      httpError(response, 500, e);
+      httpError(response, e instanceof InvalidRequestError ? 400 : 500, e);
       return;
     }
   });
@@ -635,7 +697,7 @@ export function createServer(
       }
       await doPutOrPatch(response, action, data, false);
     } catch (e: any) {
-      httpError(response, 500, e);
+      httpError(response, e instanceof InvalidRequestError ? 400 : 500, e);
       return;
     }
   });
@@ -649,7 +711,7 @@ export function createServer(
       }
       await doPutOrPatch(response, action, data, true);
     } catch (e: any) {
-      httpError(response, 500, e);
+      httpError(response, e instanceof InvalidRequestError ? 400 : 500, e);
       return;
     }
   });
@@ -657,10 +719,14 @@ export function createServer(
   async function doPutOrPatch(
     response: NymphResponse,
     action: string,
-    data: any,
+    clientData: any,
     patch: boolean,
   ) {
     if (action === 'uid') {
+      const { data } = checkSchema(NymphSetUidRequestSchema, {
+        action,
+        data: clientData,
+      });
       if (typeof data.name !== 'string' || typeof data.value !== 'number') {
         httpError(response, 400);
         return;
@@ -691,9 +757,11 @@ export function createServer(
       response.setHeader('Content-Type', 'text/plain');
       response.send(`${result}`);
     } else {
-      if (action === 'entity') {
-        data = [data];
-      }
+      const { data } = checkSchema(NymphEntityMethodRequestSchema, {
+        action,
+        data: clientData,
+      });
+      let dataArray = Array.isArray(data) ? data : [data];
       const saved = [];
       let hadSuccess = false;
       let invalidRequest = false;
@@ -701,7 +769,7 @@ export function createServer(
       let forbidden = false;
       let notfound = false;
       let lastException = null;
-      for (let entData of data) {
+      for (let entData of dataArray) {
         if (entData.guid && entData.guid.length != 24) {
           invalidRequest = true;
           saved.push(null);
@@ -784,21 +852,22 @@ export function createServer(
   rest.delete('/', async (request, response: NymphResponse) => {
     try {
       const { action, data: dataConst } = getActionData(request);
-      let data = dataConst;
       if (['entity', 'entities', 'uid'].indexOf(action) === -1) {
         httpError(response, 400);
         return;
       }
       if (['entity', 'entities'].indexOf(action) !== -1) {
-        if (action === 'entity') {
-          data = [data];
-        }
+        const { data } = checkSchema(NymphEntityDeleteRequestSchema, {
+          action,
+          data: dataConst,
+        });
+        let dataArray = Array.isArray(data) ? data : [data];
         const deleted = [];
         let failures = false;
         let invalidRequest = false;
         let notfound = false;
         let lastException = null;
-        for (let entData of data) {
+        for (let entData of dataArray) {
           if (entData.guid && entData.guid.length != 24) {
             invalidRequest = true;
             continue;
@@ -861,6 +930,10 @@ export function createServer(
           response.send(deleted);
         }
       } else {
+        const { data } = checkSchema(NymphDeleteUidRequestSchema, {
+          action,
+          data: dataConst,
+        });
         if (typeof data !== 'string') {
           httpError(response, 400);
           return;
@@ -892,7 +965,7 @@ export function createServer(
         response.send(JSON.stringify(result));
       }
     } catch (e: any) {
-      httpError(response, 500, e);
+      httpError(response, e instanceof InvalidRequestError ? 400 : 500, e);
       return;
     }
   });
@@ -1016,7 +1089,6 @@ export function createServer(
 
     if (!res.headersSent) {
       res.status(status);
-      res.setHeader('Content-Type', 'application/json');
     }
 
     res.send(errorResponse);

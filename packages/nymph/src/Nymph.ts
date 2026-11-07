@@ -1,3 +1,5 @@
+import * as v from 'valibot';
+
 import { Config, ConfigDefaults as defaults } from './conf/index.js';
 import type { NymphDriver } from './driver/index.js';
 import Entity, {
@@ -13,44 +15,46 @@ import {
   ClassNotAvailableError,
   InvalidParametersError,
 } from './errors/index.js';
-import type {
-  Selector,
-  Options,
-  NymphConnectCallback,
-  NymphDisconnectCallback,
-  NymphBeforeGetEntityCallback,
-  NymphBeforeGetEntitiesCallback,
-  NymphBeforeSaveEntityCallback,
-  NymphAfterSaveEntityCallback,
-  NymphFailedSaveEntityCallback,
-  NymphBeforeDeleteEntityCallback,
-  NymphAfterDeleteEntityCallback,
-  NymphFailedDeleteEntityCallback,
-  NymphBeforeDeleteEntityByIDCallback,
-  NymphAfterDeleteEntityByIDCallback,
-  NymphFailedDeleteEntityByIDCallback,
-  NymphBeforeNewUIDCallback,
-  NymphAfterNewUIDCallback,
-  NymphFailedNewUIDCallback,
-  NymphBeforeSetUIDCallback,
-  NymphAfterSetUIDCallback,
-  NymphFailedSetUIDCallback,
-  NymphBeforeRenameUIDCallback,
-  NymphAfterRenameUIDCallback,
-  NymphFailedRenameUIDCallback,
-  NymphBeforeDeleteUIDCallback,
-  NymphAfterDeleteUIDCallback,
-  NymphFailedDeleteUIDCallback,
-  NymphBeforeStartTransactionCallback,
-  NymphAfterStartTransactionCallback,
-  NymphBeforeCommitTransactionCallback,
-  NymphAfterCommitTransactionCallback,
-  NymphBeforeRollbackTransactionCallback,
-  NymphAfterRollbackTransactionCallback,
-  NymphEventType,
-  NymphQueryCallback,
-  FormattedSelector,
-  TilmeldInterface,
+import {
+  type Selector,
+  type Options,
+  type NymphConnectCallback,
+  type NymphDisconnectCallback,
+  type NymphBeforeGetEntityCallback,
+  type NymphBeforeGetEntitiesCallback,
+  type NymphBeforeSaveEntityCallback,
+  type NymphAfterSaveEntityCallback,
+  type NymphFailedSaveEntityCallback,
+  type NymphBeforeDeleteEntityCallback,
+  type NymphAfterDeleteEntityCallback,
+  type NymphFailedDeleteEntityCallback,
+  type NymphBeforeDeleteEntityByIDCallback,
+  type NymphAfterDeleteEntityByIDCallback,
+  type NymphFailedDeleteEntityByIDCallback,
+  type NymphBeforeNewUIDCallback,
+  type NymphAfterNewUIDCallback,
+  type NymphFailedNewUIDCallback,
+  type NymphBeforeSetUIDCallback,
+  type NymphAfterSetUIDCallback,
+  type NymphFailedSetUIDCallback,
+  type NymphBeforeRenameUIDCallback,
+  type NymphAfterRenameUIDCallback,
+  type NymphFailedRenameUIDCallback,
+  type NymphBeforeDeleteUIDCallback,
+  type NymphAfterDeleteUIDCallback,
+  type NymphFailedDeleteUIDCallback,
+  type NymphBeforeStartTransactionCallback,
+  type NymphAfterStartTransactionCallback,
+  type NymphBeforeCommitTransactionCallback,
+  type NymphAfterCommitTransactionCallback,
+  type NymphBeforeRollbackTransactionCallback,
+  type NymphAfterRollbackTransactionCallback,
+  type NymphEventType,
+  type NymphQueryCallback,
+  type FormattedSelector,
+  type TilmeldInterface,
+  OptionsSchema,
+  SelectorSchema,
 } from './Nymph.types.js';
 
 /**
@@ -918,6 +922,31 @@ export default class Nymph {
   ): Promise<
     EntityInstanceType<T>[] | EntityObjectType<T>[] | string[] | number
   > {
+    try {
+      v.parse(OptionsSchema, options);
+    } catch (e: any) {
+      throw new InvalidParametersError(
+        `Invalid Options: ` +
+          (e instanceof v.ValiError
+            ? Object.entries(v.flatten(e.issues).nested || {})
+                .map(([field, messages]) => `"${field}": ${messages}`)
+                .join(', ')
+            : e?.message),
+      );
+    }
+    try {
+      v.parse(v.array(SelectorSchema), selectors);
+    } catch (e: any) {
+      throw new InvalidParametersError(
+        `Invalid Selector: ` +
+          (e instanceof v.ValiError
+            ? Object.entries(v.flatten(e.issues).nested || {})
+                .map(([field, messages]) => `"${field}": ${messages}`)
+                .join(', ')
+            : e?.message),
+      );
+    }
+
     if (options.source === 'client' && options.return === 'object') {
       throw new InvalidParametersError(
         'Object return type not allowed from client.',
@@ -996,6 +1025,32 @@ export default class Nymph {
         selectors = [{ type: '&', guid: selectors[0] }];
       }
       options.limit = 1;
+
+      try {
+        v.parse(OptionsSchema, options);
+      } catch (e: any) {
+        throw new InvalidParametersError(
+          `Invalid Options: ` +
+            (e instanceof v.ValiError
+              ? Object.entries(v.flatten(e.issues).nested || {})
+                  .map(([field, messages]) => `"${field}": ${messages}`)
+                  .join(', ')
+              : e?.message),
+        );
+      }
+      try {
+        v.parse(v.array(SelectorSchema), selectors);
+      } catch (e: any) {
+        throw new InvalidParametersError(
+          `Invalid Selector: ` +
+            (e instanceof v.ValiError
+              ? Object.entries(v.flatten(e.issues).nested || {})
+                  .map(([field, messages]) => `"${field}": ${messages}`)
+                  .join(', ')
+              : e?.message),
+        );
+      }
+
       for (let callback of this.beforeGetEntityCallbacks) {
         if (callback) {
           await callback(this, { options, selectors: selectors as Selector[] });

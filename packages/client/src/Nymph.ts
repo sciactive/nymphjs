@@ -26,6 +26,92 @@ import {
   entityConstructorsToClassNames,
 } from './utils.js';
 
+type NymphNewUidRequest = { action: 'uid'; data: string };
+type NymphSetUidRequest = {
+  action: 'uid';
+  data: { name: string; value: number };
+};
+type NymphGetUidRequest = { action: 'uid'; data: string };
+type NymphDeleteUidRequest = { action: 'uid'; data: string };
+type NymphUidRequest =
+  | NymphNewUidRequest
+  | NymphSetUidRequest
+  | NymphGetUidRequest
+  | NymphDeleteUidRequest;
+
+type NymphEntityMethodRequestPlural = {
+  action: 'entities';
+  data: (EntityJson | EntityPatch)[];
+};
+type NymphEntityMethodRequestSingular = {
+  action: 'entity';
+  data: EntityJson | EntityPatch;
+};
+type NymphEntityMethodRequest =
+  NymphEntityMethodRequestPlural | NymphEntityMethodRequestSingular;
+
+type NymphEntityDeleteRequestPlural = {
+  action: 'entities';
+  data: { guid: string; class: string }[];
+};
+type NymphEntityDeleteRequestSingular = {
+  action: 'entity';
+  data: { guid: string; class: string };
+};
+type NymphEntityDeleteRequest =
+  NymphEntityDeleteRequestPlural | NymphEntityDeleteRequestSingular;
+
+type NymphEntityQueryRequest = {
+  action: 'entity' | 'entities';
+  data: [Options, ...Selector[]];
+};
+
+type NymphEntityServerCallRequestPushState = {
+  action: 'method';
+  data: {
+    entity: EntityInterface | EntityJson;
+    pushState: true;
+    pullState: boolean;
+    method: string;
+    params: any[];
+  };
+};
+type NymphEntityServerCallRequestNoPushState = {
+  action: 'method';
+  data: {
+    class: string;
+    guid: string | null;
+    pushState: false;
+    pullState: boolean;
+    method: string;
+    params: any[];
+  };
+};
+type NymphEntityServerCallRequestStatic = {
+  action: 'method';
+  data: {
+    class: string;
+    static: true;
+    method: string;
+    params: any[];
+  };
+};
+type NymphEntityServerCallRequestStaticIterator = {
+  action: 'method';
+  data: {
+    class: string;
+    static: true;
+    iterator: true;
+    method: string;
+    params: any[];
+  };
+};
+type NymphEntityServerCallRequest =
+  | NymphEntityServerCallRequestPushState
+  | NymphEntityServerCallRequestNoPushState
+  | NymphEntityServerCallRequestStatic
+  | NymphEntityServerCallRequestStaticIterator;
+
 export default class Nymph {
   /**
    * And optional PubSub client instance.
@@ -156,28 +242,30 @@ export default class Nymph {
   }
 
   public async newUID(name: string) {
-    const data = await this.requester.POST({
+    const data: NymphNewUidRequest = { action: 'uid', data: name };
+    const result = await this.requester.POST({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'text',
-      data: { action: 'uid', data: name },
+      data,
     });
-    return Number(data);
+    return Number(result);
   }
 
   public async setUID(name: string, value: number) {
+    const data: NymphSetUidRequest = { action: 'uid', data: { name, value } };
     return await this.requester.PUT({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
-      data: { action: 'uid', data: { name, value } },
+      data,
     });
   }
 
   public async getUID(name: string) {
-    const query = { action: 'uid', data: name };
+    const data: NymphGetUidRequest = { action: 'uid', data: name };
     let promise: Promise<any> | null = null;
-    const queryJSON = JSON.stringify(query);
+    const queryJSON = JSON.stringify(data);
     if (this.weakCache) {
       promise = this.queryCache.get(queryJSON);
     }
@@ -186,22 +274,23 @@ export default class Nymph {
         url: this.restUrl,
         headers: { ...this.headers },
         dataType: 'text',
-        data: query,
+        data,
       });
       if (this.weakCache) {
         this.queryCache.set(queryJSON, promise);
       }
     }
-    const data = await promise;
-    return Number(data);
+    const result = await promise;
+    return Number(result);
   }
 
   public async deleteUID(name: string) {
+    const data: NymphDeleteUidRequest = { action: 'uid', data: name };
     return await this.requester.DELETE({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'text',
-      data: { action: 'uid', data: name },
+      data,
     });
   }
 
@@ -287,14 +376,26 @@ export default class Nymph {
     data: (EntityJson | EntityPatch) | (EntityJson | EntityPatch)[],
     plural: boolean,
   ): Promise<T | T[]> {
+    let body: NymphEntityMethodRequest;
+    if (plural && Array.isArray(data)) {
+      body = {
+        action: 'entities',
+        data,
+      };
+    } else {
+      if (Array.isArray(data)) {
+        throw new Error('Plural not specified, but data is an array.');
+      }
+      body = {
+        action: 'entity',
+        data,
+      };
+    }
     const response = await this.requester[method]({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
-      data: {
-        action: plural ? 'entities' : 'entity',
-        data,
-      },
+      data: body,
     });
     if (plural && Array.isArray(entity) && entity.length === response.length) {
       return entity.map((e, i) =>
@@ -406,7 +507,7 @@ export default class Nymph {
     if (typeof selectors[0] === 'string') {
       selectors = [{ type: '&', guid: selectors[0] }];
     }
-    const query = {
+    const query: NymphEntityQueryRequest = {
       action: 'entity',
       data: [
         entityConstructorsToClassNames(options),
@@ -456,7 +557,7 @@ export default class Nymph {
   ): Promise<EntityInstanceType<T>[] | string[] | number> {
     let data = null;
     try {
-      const query = {
+      const query: NymphEntityQueryRequest = {
         action: 'entities',
         data: [
           entityConstructorsToClassNames(options),
@@ -587,25 +688,40 @@ export default class Nymph {
 
   public async deleteEntity(
     entity: EntityInterface | EntityInterface[],
-    _plural = false,
+    plural = false,
   ) {
+    let data: NymphEntityDeleteRequest;
+    if (plural && Array.isArray(entity)) {
+      data = {
+        action: 'entities',
+        data: entity.map((e) => {
+          if (e.guid == null) {
+            throw new Error('Guid is null.');
+          }
+          return {
+            guid: e.guid,
+            class: (e.constructor as EntityConstructor).class,
+          };
+        }),
+      };
+    } else {
+      const guid = (entity as EntityInterface).guid;
+      if (guid == null) {
+        throw new Error('Guid is null.');
+      }
+      data = {
+        action: 'entity',
+        data: {
+          guid,
+          class: (entity.constructor as EntityConstructor).class,
+        },
+      };
+    }
     return await this.requester.DELETE({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
-      data: {
-        action: _plural ? 'entities' : 'entity',
-        data:
-          _plural && Array.isArray(entity)
-            ? entity.map((e) => ({
-                guid: e.guid,
-                class: (e.constructor as EntityConstructor).class,
-              }))
-            : {
-                guid: (entity as EntityInterface).guid,
-                class: (entity.constructor as EntityConstructor).class,
-              },
-      },
+      data,
     });
   }
 
@@ -625,30 +741,42 @@ export default class Nymph {
       pullState?: boolean;
     },
   ): Promise<ServerCallResponse> {
-    const data = await this.requester.POST({
-      url: this.restUrl,
-      headers: { ...this.headers },
-      dataType: 'json',
-      data: {
+    let data: NymphEntityServerCallRequest;
+    if (pushState) {
+      data = {
         action: 'method',
         data: {
-          ...(pushState
-            ? { entity }
-            : {
-                class: entityConstructorsToClassNames(entity.constructor),
-                guid: entity.guid,
-              }),
-          pushState: !!pushState,
+          entity,
+          pushState: true,
           pullState: !!pullState,
           method,
           params: entityConstructorsToClassNames(entitiesToReferences(params)),
         },
-      },
+      };
+    } else {
+      data = {
+        action: 'method',
+        data: {
+          class: (entity.constructor as EntityConstructor).class,
+          guid: entity.guid,
+          pushState: false,
+          pullState: !!pullState,
+          method,
+          params: entityConstructorsToClassNames(entitiesToReferences(params)),
+        },
+      };
+    }
+
+    const result = await this.requester.POST({
+      url: this.restUrl,
+      headers: { ...this.headers },
+      dataType: 'json',
+      data,
     });
 
     return {
-      ...data,
-      return: this.initEntitiesFromData(data.return, false),
+      ...result,
+      return: this.initEntitiesFromData(result.return, false),
     };
   }
 
@@ -657,22 +785,23 @@ export default class Nymph {
     method: string,
     params: any[],
   ): Promise<ServerCallStaticResponse> {
-    const data = await this.requester.POST({
+    const data: NymphEntityServerCallRequestStatic = {
+      action: 'method',
+      data: {
+        class: className,
+        static: true,
+        method: method,
+        params: entityConstructorsToClassNames(entitiesToReferences(params)),
+      },
+    };
+    const result = await this.requester.POST({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
-      data: {
-        action: 'method',
-        data: {
-          class: className,
-          static: true,
-          method: method,
-          params: entityConstructorsToClassNames(entitiesToReferences(params)),
-        },
-      },
+      data,
     });
 
-    return this.initEntitiesFromData(data, false);
+    return this.initEntitiesFromData(result, false);
   }
 
   public async serverCallStaticIterator(
@@ -680,20 +809,21 @@ export default class Nymph {
     method: string,
     params: any[],
   ): Promise<AbortableAsyncIterator<ServerCallStaticResponse>> {
+    const data: NymphEntityServerCallRequestStaticIterator = {
+      action: 'method',
+      data: {
+        class: className,
+        static: true,
+        method: method,
+        iterator: true,
+        params: entityConstructorsToClassNames(entitiesToReferences(params)),
+      },
+    };
     const iterable = await this.requester.POST_ITERATOR({
       url: this.restUrl,
       headers: { ...this.headers },
       dataType: 'json',
-      data: {
-        action: 'method',
-        data: {
-          class: className,
-          static: true,
-          method: method,
-          iterator: true,
-          params: entityConstructorsToClassNames(entitiesToReferences(params)),
-        },
-      },
+      data,
     });
 
     const that = this;

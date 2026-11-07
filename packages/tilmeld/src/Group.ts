@@ -145,7 +145,9 @@ const GroupSchema = v.strictObject({
   /**
    * If generatePrimary is on, this will be the user who generated this group.
    */
-  user: v.exactOptional(v.lazy(() => v.instance(UserClass))),
+  user: v.exactOptional(
+    v.lazy(() => v.instance(UserClass)),
+  ) as unknown as v.GenericSchema<UserClass | undefined>,
   /**
    * The abilities granted to the group.
    */

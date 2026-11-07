@@ -144,12 +144,15 @@ describe('Tilmeld Client', () => {
 
       admin = User.factorySync() as UserClass & CurrentUserData;
       admin.username = 'admin';
+      admin.email = 'hello@example.com@example.com';
       result = await admin.$register({
         password: 'supersecretadminpassword',
       });
       expect(result.result).toBeFalsy();
       expect(result.loggedin).toBeFalsy();
-      expect(result.message).toEqual('Please specify a valid email.');
+      expect(result.message).toEqual(
+        'Email must be a correctly formatted address.',
+      );
       expect(admin.guid).toBeNull();
 
       admin = User.factorySync() as UserClass & CurrentUserData;
@@ -160,7 +163,9 @@ describe('Tilmeld Client', () => {
       });
       expect(result.result).toBeFalsy();
       expect(result.loggedin).toBeFalsy();
-      expect(result.message).toEqual('Invalid Group:  "name" is required');
+      expect(result.message).toEqual(
+        'Invalid User: "nameFirst": Invalid key: Expected "nameFirst" but received undefined, "name": Invalid key: Expected "name" but received undefined',
+      );
       expect(admin.guid).toBeNull();
     } catch (e: any) {
       console.error('Error running test: ', e);

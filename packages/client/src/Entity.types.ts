@@ -19,7 +19,7 @@ export type SerializedEntityData = {
 };
 
 export type EntityJson<T extends EntityConstructor = EntityConstructor> = {
-  class: T['class'];
+  class: ['nymph_class_reference', T['class']];
   guid: string | null;
   cdate: number | null;
   mdate: number | null;
@@ -28,7 +28,7 @@ export type EntityJson<T extends EntityConstructor = EntityConstructor> = {
 };
 
 export type EntityPatch = {
-  class: string;
+  class: ['nymph_class_reference', string];
   guid: string;
   mdate: number | null;
   set: EntityData;

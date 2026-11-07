@@ -1,5 +1,60 @@
+import * as v from 'valibot';
+
 import type { EntityConstructor, EntityInterface } from './Entity.types.js';
 import type Nymph from './Nymph.js';
+import Entity from './Entity.js';
+
+export enum TilmeldAccessLevels {
+  NO_ACCESS = 0,
+  READ_ACCESS = 1,
+  WRITE_ACCESS = 2,
+  // Keeping 3 open in case we ever need one between write and full.
+  FULL_ACCESS = 4,
+}
+
+export enum TilmeldAccessRequest {
+  /**
+   * The default level, any possible entity readable by the user.
+   *
+   * This is the same as or-ing together all of the levels listed below.
+   */
+  ALL_LEVELS = 0,
+  /**
+   * Owned by and accessible to the user.
+   *
+   * This is always enabled, so not including it has no effect. It's here to
+   * allow the selection of _only_ user owned entities.
+   */
+  USER_OWNED = 1,
+  /**
+   * Owned by and accessible to the user's primary group.
+   */
+  PRIMARY_GROUP_OWNED = 2,
+  /**
+   * Owned by and accessible to one of the user's secondary groups.
+   */
+  SECONDARY_GROUP_OWNED = 4,
+  /**
+   * The user is listed in an access control list.
+   */
+  USER_ACCESSIBLE = 8,
+  /**
+   * The user's primary group is listed in an access control list.
+   */
+  PRIMARY_GROUP_ACCESSIBLE = 16,
+  /**
+   * One of the user's secondary groups is listed in an access control list.
+   */
+  SECONDARY_GROUP_ACCESSIBLE = 32,
+  /**
+   * The entity is accessible to any user.
+   */
+  OTHER_ACCESSIBLE = 64,
+  /**
+   * The entity is not owned by anyone.
+   */
+  UNOWNED = 128,
+}
 
 export type NymphEventType =
   | 'connect'
@@ -180,25 +235,25 @@ export type NymphAfterRollbackTransactionCallback = (
   result: boolean,
 ) => Promise<void>;
 
-export type Options<T extends EntityConstructor = EntityConstructor> = {
+export const OptionsSchema = v.strictObject({
   /**
    * The Entity class to query.
    */
-  class?: T;
+  class: v.exactOptional(v.any()),
   /**
    * The limit of entities to be returned. Not needed when using `getEntity`, as
    * it always returns only one.
    */
-  limit?: number;
+  limit: v.optional(v.number()),
   /**
    * The offset from the first matching entity, in order, to start retrieving.
    */
-  offset?: number;
+  offset: v.optional(v.number()),
   /**
    * If true, entities will be retrieved from newest to oldest/largest to
    * smallest (with regard to `sort`).
    */
-  reverse?: boolean;
+  reverse: v.optional(v.boolean()),
   /**
    * How to sort the entities. Should be "cdate", "mdate", or the name of a
    * property.
@@ -207,7 +262,7 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
    * really up to the DB how the results are returned. In this case, limit and
    * offset may work for pagination, but shouldn't be relied on.
    */
-  sort?: 'cdate' | 'mdate' | string | null;
+  sort: v.optional(v.nullable(v.string())),
   /**
    * What to return, the entities with their data, just the entity data, just
    * the GUIDs, or just a count.
@@ -217,30 +272,100 @@ export type Options<T extends EntityConstructor = EntityConstructor> = {
    * object. You should only use it for operations where instantiating the
    * entities has an unacceptable performance cost.
    */
-  return?: 'entity' | 'object' | 'guid' | 'count';
+  return: v.optional(v.picklist(['entity', 'object', 'guid', 'count'])),
   /**
    * Will be 'client' if the query came from a REST request or the PubSub
    * server. (Mainly used in Tilmeld for access control.)
    */
-  source?: string;
+  source: v.optional(v.literal('client')),
   /**
    * The level(s) of access control requested.
    *
    * Limiting the access control can significantly improve the performance of
    * the query.
    */
-  acRequest?: TilmeldAccessRequest;
+  acRequest: v.optional(v.number()),
   /**
    * If true, Tilmeld will not filter returned entities according to access
    * controls. (If Tilmeld is installed.) (This is always set to false by the
    * REST endpoint and PubSub server.)
    */
-  skipAc?: boolean;
-};
+  skipAc: v.optional(v.boolean()),
+});
+export type Options<T extends EntityConstructor = EntityConstructor> =
+  v.InferInput<typeof OptionsSchema> & {
+    class?: T;
+  };
 
-export type Clause<C> = C | Exclude<C, undefined>[];
+type Clause<C> = C | Exclude<C, undefined>[];
 
-export type OrWithTime<T> = T | [string, null, string];
+const ClauseSchema = <T extends v.BaseSchema<any, any, any>>(schema: T) =>
+  v.union([schema, v.array(schema)]);
+
+type OrWithTime<T> = T | [string, null, string];
+
+const OrWithTimeSchema = <T extends v.BaseSchema<any, any, any>>(schema: T) =>
+  v.union([schema, RelativeTimeSchema]);
+
+export const PropertyNameSchema = v.pipe(
+  v.string(),
+  v.nonEmpty(),
+  v.check(
+    (input) => input === input.trim(),
+    'Property names must not contain leading or trailing whitespace.',
+  ),
+  v.regex(/^[^=]+$/, 'Property names must not contain equals signs.'),
+);
+export const TagSchema = v.pipe(
+  v.string(),
+  v.regex(
+    /^[^\x00-\x1F\x7F\[\],]+$/,
+    'Tags must be non-empty strings without square brackets, control characters, or commas.',
+  ),
+);
+
+type JsonData =
+  string | number | boolean | null | { [key: string]: JsonData } | JsonData[];
+export const JsonSchema: v.GenericSchema<JsonData> = v.lazy(() =>
+  v.union([
+    v.string(),
+    v.number(),
+    v.boolean(),
+    v.null(),
+    v.record(v.string(), JsonSchema),
+    v.array(JsonSchema),
+  ]),
+);
+
+export const GUIDSchema = v.pipe(v.string(), v.length(24), v.hexadecimal());
+const RelativeTimeSchema = v.tuple([PropertyNameSchema, v.null(), v.string()]);
+
+const PrimitiveGuidClause = GUIDSchema;
+const PrimitiveTagClause = TagSchema;
+const PrimitiveDefinedClause = PropertyNameSchema;
+const PrimitiveTruthyClause = PropertyNameSchema;
+const PrimitiveEqualClause = v.tuple([PropertyNameSchema, JsonSchema]);
+const PrimitiveContainClause = v.tuple([PropertyNameSchema, JsonSchema]);
+const PrimitiveSearchClause = v.tuple([PropertyNameSchema, v.string()]);
+const PrimitiveMatchClause = v.tuple([PropertyNameSchema, v.string()]);
+const PrimitiveIMatchClause = v.tuple([PropertyNameSchema, v.string()]);
+const PrimitiveLikeClause = v.tuple([PropertyNameSchema, v.string()]);
+const PrimitiveILikeClause = v.tuple([PropertyNameSchema, v.string()]);
+const PrimitiveGTClause = v.tuple([PropertyNameSchema, v.number()]);
+const PrimitiveGTEClause = v.tuple([PropertyNameSchema, v.number()]);
+const PrimitiveLTClause = v.tuple([PropertyNameSchema, v.number()]);
+const PrimitiveLTEClause = v.tuple([PropertyNameSchema, v.number()]);
+const PrimitiveRefClause = v.tuple([
+  PropertyNameSchema,
+  v.union([v.instance(Entity), GUIDSchema]),
+]);
+const PrimitiveQRefClause = v.tuple([
+  PropertyNameSchema,
+  v.tupleWithRest(
+    [OptionsSchema],
+    v.lazy(() => PrimitiveSelectorSchema),
+  ),
+]);
 
 type PrimitiveSelector = {
   guid?: string;
@@ -297,6 +422,52 @@ type PrimitiveSelector = {
   selector?: PrimitiveSelector;
   '!selector'?: PrimitiveSelector['selector'];
 };
+const PrimitiveSelectorSchema: v.GenericSchema<PrimitiveSelector> = v.object({
+  guid: v.exactOptional(PrimitiveGuidClause),
+  '!guid': v.exactOptional(PrimitiveGuidClause),
+  tag: v.exactOptional(PrimitiveTagClause),
+  '!tag': v.exactOptional(PrimitiveTagClause),
+  defined: v.exactOptional(PrimitiveDefinedClause),
+  '!defined': v.exactOptional(PrimitiveDefinedClause),
+  truthy: v.exactOptional(PrimitiveTruthyClause),
+  '!truthy': v.exactOptional(PrimitiveTruthyClause),
+  equal: v.exactOptional(PrimitiveEqualClause),
+  '!equal': v.exactOptional(PrimitiveEqualClause),
+  contain: v.exactOptional(PrimitiveContainClause),
+  '!contain': v.exactOptional(PrimitiveContainClause),
+  search: v.exactOptional(PrimitiveSearchClause),
+  '!search': v.exactOptional(PrimitiveSearchClause),
+  match: v.exactOptional(PrimitiveMatchClause),
+  '!match': v.exactOptional(PrimitiveMatchClause),
+  imatch: v.exactOptional(PrimitiveIMatchClause),
+  '!imatch': v.exactOptional(PrimitiveIMatchClause),
+  like: v.exactOptional(PrimitiveLikeClause),
+  '!like': v.exactOptional(PrimitiveLikeClause),
+  ilike: v.exactOptional(PrimitiveILikeClause),
+  '!ilike': v.exactOptional(PrimitiveILikeClause),
+  gt: v.exactOptional(PrimitiveGTClause),
+  '!gt': v.exactOptional(PrimitiveGTClause),
+  gte: v.exactOptional(PrimitiveGTEClause),
+  '!gte': v.exactOptional(PrimitiveGTEClause),
+  lt: v.exactOptional(PrimitiveLTClause),
+  '!lt': v.exactOptional(PrimitiveLTClause),
+  lte: v.exactOptional(PrimitiveLTEClause),
+  '!lte': v.exactOptional(PrimitiveLTEClause),
+  ref: v.exactOptional(PrimitiveRefClause),
+  '!ref': v.exactOptional(PrimitiveRefClause),
+  qref: v.exactOptional(PrimitiveQRefClause),
+  '!qref': v.exactOptional(PrimitiveQRefClause),
+  selector: v.exactOptional(v.lazy(() => PrimitiveSelectorSchema)),
+  '!selector': v.exactOptional(v.lazy(() => PrimitiveSelectorSchema)),
+});
+
+const QRefClause = v.tuple([
+  PropertyNameSchema,
+  v.tupleWithRest(
+    [OptionsSchema],
+    v.lazy(() => SelectorSchema),
+  ),
+]);
 
 export type Selector = {
   type: '&' | '|' | '!&' | '!|';
@@ -355,6 +526,52 @@ export type Selector = {
   selector?: Clause<Selector>;
   '!selector'?: Selector['selector'];
 };
+export const SelectorSchema: v.GenericSchema<Selector> = v.object({
+  type: v.picklist(['&', '|', '!&', '!|']),
+
+  guid: v.exactOptional(ClauseSchema(PrimitiveGuidClause)),
+  '!guid': v.exactOptional(ClauseSchema(PrimitiveGuidClause)),
+  tag: v.exactOptional(ClauseSchema(PrimitiveTagClause)),
+  '!tag': v.exactOptional(ClauseSchema(PrimitiveTagClause)),
+  defined: v.exactOptional(ClauseSchema(PrimitiveDefinedClause)),
+  '!defined': v.exactOptional(ClauseSchema(PrimitiveDefinedClause)),
+  truthy: v.exactOptional(ClauseSchema(PrimitiveTruthyClause)),
+  '!truthy': v.exactOptional(ClauseSchema(PrimitiveTruthyClause)),
+  equal: v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveEqualClause))),
+  '!equal': v.exactOptional(
+    ClauseSchema(OrWithTimeSchema(PrimitiveEqualClause)),
+  ),
+  contain: v.exactOptional(
+    ClauseSchema(OrWithTimeSchema(PrimitiveContainClause)),
+  ),
+  '!contain': v.exactOptional(
+    ClauseSchema(OrWithTimeSchema(PrimitiveContainClause)),
+  ),
+  search: v.exactOptional(ClauseSchema(PrimitiveSearchClause)),
+  '!search': v.exactOptional(ClauseSchema(PrimitiveSearchClause)),
+  match: v.exactOptional(ClauseSchema(PrimitiveMatchClause)),
+  '!match': v.exactOptional(ClauseSchema(PrimitiveMatchClause)),
+  imatch: v.exactOptional(ClauseSchema(PrimitiveIMatchClause)),
+  '!imatch': v.exactOptional(ClauseSchema(PrimitiveIMatchClause)),
+  like: v.exactOptional(ClauseSchema(PrimitiveLikeClause)),
+  '!like': v.exactOptional(ClauseSchema(PrimitiveLikeClause)),
+  ilike: v.exactOptional(ClauseSchema(PrimitiveILikeClause)),
+  '!ilike': v.exactOptional(ClauseSchema(PrimitiveILikeClause)),
+  gt: v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveGTClause))),
+  '!gt': v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveGTClause))),
+  gte: v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveGTEClause))),
+  '!gte': v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveGTEClause))),
+  lt: v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveLTClause))),
+  '!lt': v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveLTClause))),
+  lte: v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveLTEClause))),
+  '!lte': v.exactOptional(ClauseSchema(OrWithTimeSchema(PrimitiveLTEClause))),
+  ref: v.exactOptional(ClauseSchema(PrimitiveRefClause)),
+  '!ref': v.exactOptional(ClauseSchema(PrimitiveRefClause)),
+  qref: v.exactOptional(ClauseSchema(QRefClause)),
+  '!qref': v.exactOptional(ClauseSchema(QRefClause)),
+  selector: v.exactOptional(ClauseSchema(v.lazy(() => SelectorSchema))),
+  '!selector': v.exactOptional(ClauseSchema(v.lazy(() => SelectorSchema))),
+});
 
 export type FormattedSelector = {
   type: '&' | '|' | '!&' | '!|';
@@ -413,58 +630,6 @@ export type FormattedSelector = {
   selector?: FormattedSelector[];
   '!selector'?: FormattedSelector['selector'];
 };
-
-export enum TilmeldAccessLevels {
-  NO_ACCESS = 0,
-  READ_ACCESS = 1,
-  WRITE_ACCESS = 2,
-  // Keeping 3 open in case we ever need one between write and full.
-  FULL_ACCESS = 4,
-}
-
-export enum TilmeldAccessRequest {
-  /**
-   * The default level, any possible entity readable by the user.
-   *
-   * This is the same as or-ing together all of the levels listed below.
-   */
-  ALL_LEVELS = 0,
-  /**
-   * Owned by and accessible to the user.
-   *
-   * This is always enabled, so not including it has no effect. It's here to
-   * allow the selection of _only_ user owned entities.
-   */
-  USER_OWNED = 1,
-  /**
-   * Owned by and accessible to the user's primary group.
-   */
-  PRIMARY_GROUP_OWNED = 2,
-  /**
-   * Owned by and accessible to one of the user's secondary groups.
-   */
-  SECONDARY_GROUP_OWNED = 4,
-  /**
-   * The user is listed in an access control list.
-   */
-  USER_ACCESSIBLE = 8,
-  /**
-   * The user's primary group is listed in an access control list.
-   */
-  PRIMARY_GROUP_ACCESSIBLE = 16,
-  /**
-   * One of the user's secondary groups is listed in an access control list.
-   */
-  SECONDARY_GROUP_ACCESSIBLE = 32,
-  /**
-   * The entity is accessible to any user.
-   */
-  OTHER_ACCESSIBLE = 64,
-  /**
-   * The entity is not owned by anyone.
-   */
-  UNOWNED = 128,
-}
 
 export interface TilmeldInterface {
   nymph: Nymph;
