@@ -24,7 +24,7 @@
     tabs={['General', 'Groups', 'Abilities', 'Security']}
     bind:active={activeTab}
   >
-    {#snippet tab(tab)}
+    {#snippet tab(tab: string)}
       <Tab {tab}>
         <Label>{tab}</Label>
       </Tab>
@@ -779,8 +779,8 @@
 
   let { params }: { params: { guid: string } } = $props();
 
-  let entity: Writable<UserClass & AdminUserData> = writable(
-    User.factorySync(),
+  let entity: Writable<UserClass & AdminUserData> = $state(
+    writable(User.factorySync()),
   );
   let sysAdmin = $state(false);
   let tilmeldSwitchUser = $state(false);
@@ -812,8 +812,11 @@
       'userStore',
     );
 
+  let previousParamGuid: string | null = null;
   $effect(() => {
-    if (params) {
+    fillEmptyFields();
+    if (params?.guid != previousParamGuid) {
+      previousParamGuid = params?.guid;
       handleGuidParam();
     }
   });
@@ -840,9 +843,7 @@
     loading = false;
   }
 
-  async function readyEntity() {
-    await $entity.$wakeAll(1);
-
+  function fillEmptyFields() {
     // Make sure all fields are defined.
     if ($entity.enabled == null) {
       $entity.enabled = false;
@@ -892,6 +893,12 @@
     if ($entity.revokeTokenDate == null) {
       $entity.revokeTokenDate = 0;
     }
+  }
+
+  async function readyEntity() {
+    await $entity.$wakeAll(1);
+
+    fillEmptyFields();
 
     [avatar, hasTOTPSecret] = await Promise.all([
       $entity.$getAvatar(),

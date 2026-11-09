@@ -34,7 +34,7 @@
     tabs={['General', 'Parent', 'Children', 'Abilities', 'Users']}
     bind:active={activeTab}
   >
-    {#snippet tab(tab)}
+    {#snippet tab(tab: string)}
       <Tab {tab}>
         <Label>{tab}</Label>
       </Tab>
@@ -681,8 +681,8 @@
 
   let { params }: { params: { guid: string } } = $props();
 
-  let entity: Writable<GroupClass & AdminGroupData> = writable(
-    Group.factorySync(),
+  let entity: Writable<GroupClass & AdminGroupData> = $state(
+    writable(Group.factorySync()),
   );
   let activeTab: 'General' | 'Parent' | 'Children' | 'Abilities' | 'Users' =
     $state('General');
@@ -735,8 +735,11 @@
       'userStore',
     );
 
+  let previousParamGuid: string | null = null;
   $effect(() => {
-    if (params) {
+    fillEmptyFields();
+    if (params?.guid != previousParamGuid) {
+      previousParamGuid = params?.guid;
       handleGuidParam();
     }
   });
@@ -770,9 +773,7 @@
     loading = false;
   }
 
-  async function readyEntity() {
-    await $entity.$wakeAll(1);
-
+  function fillEmptyFields() {
     // Make sure all fields are defined.
     if ($entity.enabled == null) {
       $entity.enabled = false;
@@ -801,6 +802,12 @@
     if ($entity.unverifiedSecondary == null) {
       $entity.unverifiedSecondary = false;
     }
+  }
+
+  async function readyEntity() {
+    await $entity.$wakeAll(1);
+
+    fillEmptyFields();
 
     avatar = await $entity.$getAvatar();
     $entity = $entity;
