@@ -5,13 +5,13 @@ import { User } from './User.js';
 import { Group } from './Group.js';
 
 export const tilmeldRequiredOwnershipValibotProps = {
-  user: v.instance(User),
-  group: v.instance(Group),
+  user: v.lazy(() => v.instance(User)),
+  group: v.lazy(() => v.instance(Group)),
 };
 
 export const tilmeldOptionalOwnershipValibotProps = {
-  user: v.exactOptional(v.instance(User)),
-  group: v.exactOptional(v.instance(Group)),
+  user: v.exactOptional(v.lazy(() => v.instance(User))),
+  group: v.exactOptional(v.lazy(() => v.instance(Group))),
 };
 
 export const tilmeldRequiredAccessValibotProps = {
