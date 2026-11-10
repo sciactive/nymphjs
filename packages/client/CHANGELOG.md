@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.146](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.145...v1.0.0-beta.146) (2026-11-10)
+
+### Bug Fixes
+
+- reference and dereference causing extra prototype chains ([da50373](https://forge.sciactive.com/sciactive/nymphjs/commits/da5037317c549cf2ca44d01d0cd760aefea7562e))
+
 # [1.0.0-beta.145](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.144...v1.0.0-beta.145) (2026-11-07)
 
 ### Features

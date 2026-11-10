@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.146](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.145...v1.0.0-beta.146) (2026-11-10)
+
+### Bug Fixes
+
+- use lazy loading for tilmeld valibot properties ([b79d99c](https://forge.sciactive.com/sciactive/nymphjs/commits/b79d99cbe98fdf7bb4f40ed423ab3d9e01971812))
+
 # [1.0.0-beta.145](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.144...v1.0.0-beta.145) (2026-11-07)
 
 ### Features
