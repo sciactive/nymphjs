@@ -26,7 +26,7 @@ export function entityConstructorsToClassNames(item: any): any {
     // Recurse into lower arrays.
     return item.map((entry) => entityConstructorsToClassNames(entry));
   } else if (item instanceof Object) {
-    let newObj = Object.create(item);
+    let newObj = Object.create(Object.getPrototypeOf(item));
     for (let [key, value] of Object.entries(item)) {
       newObj[key] = entityConstructorsToClassNames(value);
     }
@@ -66,7 +66,7 @@ export function classNamesToEntityConstructors<T extends any>(
       classNamesToEntityConstructors(nymph, entry),
     ) as T;
   } else if (item instanceof Object) {
-    let newObj = Object.create(item);
+    let newObj = Object.create(Object.getPrototypeOf(item));
     for (let [key, value] of Object.entries(item)) {
       newObj[key] = classNamesToEntityConstructors(nymph, value);
     }
@@ -92,7 +92,7 @@ export function entitiesToReferences(item: any): any {
     // Recurse into lower arrays.
     return item.map((entry) => entitiesToReferences(entry));
   } else if (item instanceof Object) {
-    let newObj = Object.create(item);
+    let newObj = Object.create(Object.getPrototypeOf(item));
     for (let [key, value] of Object.entries(item)) {
       newObj[key] = entitiesToReferences(value);
     }
@@ -128,7 +128,7 @@ export function referencesToEntities(item: any, nymph: Nymph): any {
     // Don't touch Entity classes.
     return item;
   } else if (item instanceof Object) {
-    let newObj = Object.create(item);
+    let newObj = Object.create(Object.getPrototypeOf(item));
     for (let [key, value] of Object.entries(item)) {
       newObj[key] = referencesToEntities(value, nymph);
     }
