@@ -338,28 +338,32 @@ export const JsonSchema: v.GenericSchema<JsonData> = v.lazy(() =>
 );
 
 export const GUIDSchema = v.pipe(v.string(), v.length(24), v.hexadecimal());
-const RelativeTimeSchema = v.tuple([PropertyNameSchema, v.null(), v.string()]);
+const RelativeTimeSchema = v.strictTuple([
+  PropertyNameSchema,
+  v.null(),
+  v.string(),
+]);
 
 const PrimitiveGuidClause = GUIDSchema;
 const PrimitiveTagClause = TagSchema;
 const PrimitiveDefinedClause = PropertyNameSchema;
 const PrimitiveTruthyClause = PropertyNameSchema;
-const PrimitiveEqualClause = v.tuple([PropertyNameSchema, JsonSchema]);
-const PrimitiveContainClause = v.tuple([PropertyNameSchema, JsonSchema]);
-const PrimitiveSearchClause = v.tuple([PropertyNameSchema, v.string()]);
-const PrimitiveMatchClause = v.tuple([PropertyNameSchema, v.string()]);
-const PrimitiveIMatchClause = v.tuple([PropertyNameSchema, v.string()]);
-const PrimitiveLikeClause = v.tuple([PropertyNameSchema, v.string()]);
-const PrimitiveILikeClause = v.tuple([PropertyNameSchema, v.string()]);
-const PrimitiveGTClause = v.tuple([PropertyNameSchema, v.number()]);
-const PrimitiveGTEClause = v.tuple([PropertyNameSchema, v.number()]);
-const PrimitiveLTClause = v.tuple([PropertyNameSchema, v.number()]);
-const PrimitiveLTEClause = v.tuple([PropertyNameSchema, v.number()]);
-const PrimitiveRefClause = v.tuple([
+const PrimitiveEqualClause = v.strictTuple([PropertyNameSchema, JsonSchema]);
+const PrimitiveContainClause = v.strictTuple([PropertyNameSchema, JsonSchema]);
+const PrimitiveSearchClause = v.strictTuple([PropertyNameSchema, v.string()]);
+const PrimitiveMatchClause = v.strictTuple([PropertyNameSchema, v.string()]);
+const PrimitiveIMatchClause = v.strictTuple([PropertyNameSchema, v.string()]);
+const PrimitiveLikeClause = v.strictTuple([PropertyNameSchema, v.string()]);
+const PrimitiveILikeClause = v.strictTuple([PropertyNameSchema, v.string()]);
+const PrimitiveGTClause = v.strictTuple([PropertyNameSchema, v.number()]);
+const PrimitiveGTEClause = v.strictTuple([PropertyNameSchema, v.number()]);
+const PrimitiveLTClause = v.strictTuple([PropertyNameSchema, v.number()]);
+const PrimitiveLTEClause = v.strictTuple([PropertyNameSchema, v.number()]);
+const PrimitiveRefClause = v.strictTuple([
   PropertyNameSchema,
   v.union([v.instance(Entity), GUIDSchema]),
 ]);
-const PrimitiveQRefClause = v.tuple([
+const PrimitiveQRefClause = v.strictTuple([
   PropertyNameSchema,
   v.tupleWithRest(
     [OptionsSchema],
@@ -461,7 +465,7 @@ const PrimitiveSelectorSchema: v.GenericSchema<PrimitiveSelector> = v.object({
   '!selector': v.exactOptional(v.lazy(() => PrimitiveSelectorSchema)),
 });
 
-const QRefClause = v.tuple([
+const QRefClause = v.strictTuple([
   PropertyNameSchema,
   v.tupleWithRest(
     [OptionsSchema],

@@ -16,7 +16,7 @@ const JsonSchema: v.GenericSchema<JsonData> = v.lazy(() =>
 );
 
 export const EntityJsonSchema = v.strictObject({
-  class: v.tuple([v.literal('nymph_class_reference'), v.string()]),
+  class: v.strictTuple([v.literal('nymph_class_reference'), v.string()]),
   guid: v.nullable(GUIDSchema),
   cdate: v.nullable(v.number()),
   mdate: v.nullable(v.number()),
@@ -25,7 +25,7 @@ export const EntityJsonSchema = v.strictObject({
 });
 
 export const EntityPatchSchema = v.strictObject({
-  class: v.tuple([v.literal('nymph_class_reference'), v.string()]),
+  class: v.strictTuple([v.literal('nymph_class_reference'), v.string()]),
   guid: GUIDSchema,
   mdate: v.nullable(v.number()),
   set: v.record(PropertyNameSchema, JsonSchema),
