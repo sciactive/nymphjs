@@ -52,17 +52,17 @@
     "valibot": "^1.5.0"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.1",
+    "@swc/core": "^1.16.22",
     "@swc/jest": "^0.2.39",
     "@tsconfig/recommended": "^1.0.13",
     "@types/debug": "^4.1.13",
     "@types/jest": "^30.0.0",
     "@types/locutus": "^0.0.8",
     "@types/lodash-es": "^4.17.12",
-    "@types/n-readlines": "^1.0.6",
-    "@types/node": "^26.2.0",
+    "@types/n-readlines": "^3.0.0",
+    "@types/node": "^26.6.6",
     "cross-env": "^10.1.0",
-    "jest": "^30.4.2",
+    "jest": "^30.5.2",
     "ts-node": "^10.9.2",
     "typescript": "^7.0.2"
   }
