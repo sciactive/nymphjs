@@ -600,7 +600,16 @@ export function createServer(
               }
               try {
                 entity.$jsonAcceptData(
-                  data.entity as unknown as EntityJson,
+                  classNamesToEntityConstructors(
+                    response.locals.nymph,
+                    referencesToEntities(
+                      data.entity as unknown as EntityJson,
+                      response.locals.nymph,
+                      false,
+                      true,
+                    ),
+                    true,
+                  ),
                   false,
                 );
               } catch (e: any) {
