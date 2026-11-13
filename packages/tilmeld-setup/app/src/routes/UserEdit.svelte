@@ -671,14 +671,8 @@
       </LayoutGrid>
     {/if}
 
-    {#if failureMessage}
-      <div class="tilmeld-failure">
-        {failureMessage}
-      </div>
-    {/if}
-
     <div
-      style="margin-top: 36px; display: flex; justify-content: space-between;"
+      style="margin-top: 36px; display: flex; flex-direction: row; flex-wrap: wrap; gap: 1em; justify-content: space-between;"
     >
       <div>
         <Button variant="raised" onclick={saveEntity} disabled={saving}>
@@ -688,9 +682,6 @@
           <Button onclick={deleteEntity} disabled={saving}>
             <Label>Delete</Label>
           </Button>
-        {/if}
-        {#if success}
-          <span>Successfully saved!</span>
         {/if}
       </div>
       {#if tilmeldSwitchUser && $entity.guid && !$entity.$is($user)}
@@ -741,6 +732,7 @@
   import { writable } from 'svelte/store';
   import { getContext } from 'svelte';
   import { link, pop, replace } from 'svelte-spa-router';
+  import { ClientError } from '@nymphjs/client';
   import type {
     AdminGroupData,
     AdminUserData,
@@ -773,6 +765,7 @@
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
   import Dialog, { Title, Content, Actions } from '@smui/dialog';
+  import type Kitchen from '@smui/snackbar/kitchen';
   import { Icon, Label } from '@smui/common';
 
   import { User, Group } from '../nymph.js';
@@ -792,7 +785,6 @@
   let ability = $state('');
   let avatar = $state('https://secure.gravatar.com/avatar/?d=mm&s=40');
   let hasTOTPSecret: boolean | undefined = $state();
-  let failureMessage: string | undefined = $state();
   let passwordVerify = $state('');
   let passwordVerified: boolean | undefined = $state();
   let usernameTimer: number | undefined = undefined;
@@ -802,8 +794,9 @@
   let emailVerified: boolean | undefined = $state();
   let emailVerifiedMessage: string | undefined = $state();
   let saving = $state(false);
-  let success: boolean | undefined = $state();
   let loading = $state(true);
+
+  let kitchen = getContext<Promise<Kitchen>>('kitchen');
 
   const clientConfig =
     getContext<Writable<ClientConfig | undefined>>('clientConfigStore');
@@ -828,7 +821,6 @@
 
   async function handleGuidParam() {
     loading = true;
-    failureMessage = undefined;
     try {
       $entity =
         params.guid === '+' || params.guid === ' ' || params.guid === '%20'
@@ -838,7 +830,12 @@
       oldEmail = $entity.email;
       await readyEntity();
     } catch (e: any) {
-      failureMessage = e.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     loading = false;
   }
@@ -911,7 +908,6 @@
   let primaryGroups: (GroupClass & AdminGroupData)[] | undefined = $state();
   async function searchPrimaryGroups() {
     primaryGroupsSearching = true;
-    failureMessage = undefined;
     if (primaryGroupSearch.trim() == '') {
       return;
     }
@@ -937,7 +933,12 @@
         },
       );
     } catch (e: any) {
-      failureMessage = e?.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     primaryGroupsSearching = false;
   }
@@ -950,7 +951,6 @@
   let secondaryGroups: (GroupClass & AdminGroupData)[] | undefined = $state();
   async function searchSecondaryGroups() {
     secondaryGroupsSearching = true;
-    failureMessage = undefined;
     if (secondaryGroupSearch.trim() == '') {
       return;
     }
@@ -976,7 +976,12 @@
         return !group.$inArray($entity.groups ?? []);
       });
     } catch (e: any) {
-      failureMessage = e?.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     secondaryGroupsSearching = false;
   }
@@ -1081,7 +1086,6 @@
   }
 
   async function removeTOTPSecret() {
-    failureMessage = undefined;
     if (confirm("Are you sure you want to remove the user's 2FA?")) {
       saving = true;
       try {
@@ -1090,10 +1094,20 @@
         if (result.result) {
           hasTOTPSecret = false;
         } else {
-          failureMessage = result.message;
+          (await kitchen).push({
+            label: result.message,
+            props: {
+              class: 'warning',
+            },
+          });
         }
       } catch (e: any) {
-        failureMessage = e?.message;
+        (await kitchen).push({
+          label: e?.message ?? 'An error occurred.',
+          props: {
+            class: e instanceof ClientError ? 'warning' : 'error',
+          },
+        });
       }
       saving = false;
     }
@@ -1104,40 +1118,55 @@
       ($entity.passwordTemp != null || $entity.passwordTemp !== '') &&
       $entity.passwordTemp !== passwordVerify
     ) {
-      failureMessage = "Passwords don't match!";
+      (await kitchen).push({
+        label: "Passwords don't match!",
+        props: {
+          class: 'warning',
+        },
+      });
       return;
     }
 
     saving = true;
-    failureMessage = undefined;
     const newEntity = $entity.guid == null;
     try {
       await $entity.$save();
       await readyEntity();
-      success = true;
+      (await kitchen).push({
+        label: 'Saved.',
+        props: {
+          class: 'success',
+        },
+      });
       passwordVerify = '';
       if (newEntity) {
         replace(`/users/edit/${encodeURIComponent($entity.guid || '')}`);
       }
-      setTimeout(() => {
-        success = undefined;
-      }, 1000);
     } catch (e: any) {
       console.log('error:', e);
-      failureMessage = e?.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     saving = false;
   }
 
   async function deleteEntity() {
-    failureMessage = undefined;
     if (confirm('Are you sure you want to delete this?')) {
       saving = true;
       try {
         await $entity.$delete();
         pop();
       } catch (e: any) {
-        failureMessage = e?.message;
+        (await kitchen).push({
+          label: e?.message ?? 'An error occurred.',
+          props: {
+            class: e instanceof ClientError ? 'warning' : 'error',
+          },
+        });
       }
       saving = false;
     }
@@ -1156,10 +1185,20 @@
             (window as unknown as { appUrl: string }).appUrl ||
             window.location.href;
         } else {
-          failureMessage = result.message;
+          (await kitchen).push({
+            label: result.message,
+            props: {
+              class: 'warning',
+            },
+          });
         }
       } catch (e: any) {
-        failureMessage = e?.message;
+        (await kitchen).push({
+          label: e?.message ?? 'An error occurred.',
+          props: {
+            class: e instanceof ClientError ? 'warning' : 'error',
+          },
+        });
       }
       saving = false;
     }

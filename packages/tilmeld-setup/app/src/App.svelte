@@ -131,6 +131,9 @@
   </AppContent>
 </div>
 
+{/* @ts-ignore */ null}
+<Kitchen bind:this={kitchen} dismissIcon$class="material-icons"></Kitchen>
+
 <script lang="ts">
   import type { Component } from 'svelte';
   import { onMount, setContext } from 'svelte';
@@ -149,6 +152,7 @@
   import IconButton from '@smui/icon-button';
   import List, { Item, Text, Separator } from '@smui/list';
   import Menu from '@smui/menu';
+  import Kitchen from '@smui/snackbar/kitchen';
   import { Icon } from '@smui/common';
 
   import { User } from './nymph.js';
@@ -172,6 +176,15 @@
   let userAvatar: string = $state(DEFAULT_AVATAR);
   let tilmeldAdmin: boolean | undefined = $state();
   let accountOpen = $state(false);
+  let kitchen: Kitchen = $state(undefined as unknown as Kitchen);
+  setContext(
+    'kitchen',
+    new Promise((resolve) => {
+      onMount(() => {
+        resolve(kitchen);
+      });
+    }),
+  );
 
   setContext('clientConfigStore', clientConfig);
   setContext('userStore', user);

@@ -43,12 +43,6 @@
     </Fab>
   </div>
   <section>
-    {#if failureMessage}
-      <div class="tilmeld-failure">
-        {failureMessage}
-      </div>
-    {/if}
-
     {#if entitiesSearching}
       <div style="display: flex; justify-content: center; align-items: center;">
         <CircularProgress style="height: 32px; width: 32px;" indeterminate />
@@ -125,22 +119,21 @@
   import type { Writable } from 'svelte/store';
   import { getContext } from 'svelte';
   import { link, push } from 'svelte-spa-router';
+  import { ClientError } from '@nymphjs/client';
   import queryParser from '@nymphjs/query-parser';
   import type {
     AdminUserData,
     ClientConfig,
     CurrentUserData,
   } from '@nymphjs/tilmeld-client';
-  import type {
-    Group as GroupClass,
-    User as UserClass,
-  } from '@nymphjs/tilmeld-client';
+  import type { User as UserClass } from '@nymphjs/tilmeld-client';
   import { mdiMagnify, mdiArrowRight, mdiPlus } from '@mdi/js';
   import CircularProgress from '@smui/circular-progress';
   import Paper from '@smui/paper';
   import DataTable, { Head, Body, Row, Cell } from '@smui/data-table';
   import { Input } from '@smui/textfield';
   import Fab from '@smui/fab';
+  import type Kitchen from '@smui/snackbar/kitchen';
   import { Icon } from '@smui/common';
 
   import { nymph, User, Group } from '../nymph.js';
@@ -148,7 +141,8 @@
   let { params }: { params: { query?: string } } = $props();
 
   let entitySearch = $derived(params.query ?? '');
-  let failureMessage: string | undefined = $state();
+
+  let kitchen = getContext<Promise<Kitchen>>('kitchen');
 
   const clientConfig =
     getContext<Writable<ClientConfig | undefined>>('clientConfigStore');
@@ -166,7 +160,6 @@
   async function handleSearchParam() {
     if (params.query && params.query !== '') {
       entitiesSearching = true;
-      failureMessage = undefined;
       try {
         const query = queryParser({
           query: params.query,
@@ -185,7 +178,12 @@
         });
         entities = await nymph.getEntities(...query);
       } catch (e: any) {
-        failureMessage = e?.message;
+        (await kitchen).push({
+          label: e?.message ?? 'An error occurred.',
+          props: {
+            class: e instanceof ClientError ? 'warning' : 'error',
+          },
+        });
       }
       entitiesSearching = false;
     }

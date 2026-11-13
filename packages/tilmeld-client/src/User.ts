@@ -214,9 +214,9 @@ export class User extends Entity<UserData> {
     super();
 
     this.enabled = true;
-    (this as CurrentUserData).abilities = [];
-    (this as CurrentUserData).groups = [];
-    (this as CurrentUserData).inheritAbilities = true;
+    (this as User & CurrentUserData).abilities = [];
+    (this as User & CurrentUserData).groups = [];
+    (this as User & CurrentUserData).inheritAbilities = true;
   }
 
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {

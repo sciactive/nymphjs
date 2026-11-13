@@ -608,13 +608,9 @@
       </DataTable>
     {/if}
 
-    {#if failureMessage}
-      <div class="tilmeld-failure">
-        {failureMessage}
-      </div>
-    {/if}
-
-    <div style="margin-top: 36px;">
+    <div
+      style="margin-top: 36px; display: flex; flex-direction: row; flex-wrap: wrap; gap: 1em;"
+    >
       <Button variant="raised" onclick={saveEntity} disabled={saving}>
         <Label>Save Group</Label>
       </Button>
@@ -622,9 +618,6 @@
         <Button onclick={deleteEntity} disabled={saving}>
           <Label>Delete</Label>
         </Button>
-      {/if}
-      {#if success}
-        <span>Successfully saved!</span>
       {/if}
     </div>
   </section>
@@ -635,6 +628,7 @@
   import { writable } from 'svelte/store';
   import { getContext } from 'svelte';
   import { link, pop, replace } from 'svelte-spa-router';
+  import { ClientError } from '@nymphjs/client';
   import type {
     AdminGroupData,
     ClientConfig,
@@ -675,6 +669,7 @@
   import IconButton from '@smui/icon-button';
   import Button from '@smui/button';
   import LinearProgress from '@smui/linear-progress';
+  import type Kitchen from '@smui/snackbar/kitchen';
   import { Icon, Label } from '@smui/common';
 
   import { nymph, Group, User } from '../nymph.js';
@@ -689,7 +684,6 @@
   let parentSearch = $state('');
   let ability = $state('');
   let avatar = $state('https://secure.gravatar.com/avatar/?d=mm&s=40');
-  let failureMessage: string | undefined = $state();
   let groupnameTimer: number | undefined = undefined;
   let groupnameVerified: boolean | undefined = $state();
   let groupnameVerifiedMessage: string | undefined = $state();
@@ -725,8 +719,9 @@
   );
   let usersLoaded = $state(false);
   let saving = $state(false);
-  let success: boolean | undefined = $state();
   let loading = $state(true);
+
+  let kitchen = getContext<Promise<Kitchen>>('kitchen');
 
   const clientConfig =
     getContext<Writable<ClientConfig | undefined>>('clientConfigStore');
@@ -758,7 +753,6 @@
 
   async function handleGuidParam() {
     loading = true;
-    failureMessage = undefined;
     try {
       $entity =
         params.guid === '+' || params.guid === ' ' || params.guid === '%20'
@@ -768,7 +762,12 @@
       oldEmail = $entity.email;
       await readyEntity();
     } catch (e: any) {
-      failureMessage = e.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     loading = false;
   }
@@ -820,7 +819,6 @@
   let parents: (GroupClass & AdminGroupData)[] | undefined = $state();
   async function searchParents() {
     parentsSearching = true;
-    failureMessage = undefined;
     if (parentSearch.trim() == '') {
       return;
     }
@@ -844,7 +842,12 @@
         return !group.$is($entity) && !group.$is($entity.parent);
       });
     } catch (e: any) {
-      failureMessage = e?.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     parentsSearching = false;
   }
@@ -903,21 +906,44 @@
     }
   });
 
-  function addAbility() {
+  async function addAbility() {
     if (ability === '') {
       return;
     }
-    failureMessage = undefined;
     if (ability === 'system/admin') {
-      failureMessage = "Groups aren't allowed to be system admins.";
+      (await kitchen).push({
+        label: "Groups aren't allowed to be system admins.",
+        props: {
+          class: 'warning',
+        },
+      });
+      return;
+    }
+    if (ability.startsWith('system/')) {
+      (await kitchen).push({
+        label: "Groups aren't allowed to have system abilities.",
+        props: {
+          class: 'warning',
+        },
+      });
       return;
     }
     if (ability === 'tilmeld/admin') {
-      failureMessage = "Groups aren't allowed to be Tilmeld admins.";
+      (await kitchen).push({
+        label: "Groups aren't allowed to be Tilmeld admins.",
+        props: {
+          class: 'warning',
+        },
+      });
       return;
     }
     if (ability === 'tilmeld/switch') {
-      failureMessage = "Groups aren't allowed to have switch user ability.";
+      (await kitchen).push({
+        label: "Groups aren't allowed to have switch user ability.",
+        props: {
+          class: 'warning',
+        },
+      });
       return;
     }
     $entity.abilities?.push(ability);
@@ -961,7 +987,12 @@
         }
       }
     } catch (e: any) {
-      failureMessage = e.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     childrenLoaded = true;
   }
@@ -1002,34 +1033,44 @@
         }
       }
     } catch (e: any) {
-      failureMessage = e.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     usersLoaded = true;
   }
 
   async function saveEntity() {
     saving = true;
-    failureMessage = undefined;
     const newEntity = $entity.guid == null;
     try {
       await $entity.$save();
       await readyEntity();
-      success = true;
+      (await kitchen).push({
+        label: 'Saved.',
+        props: {
+          class: 'success',
+        },
+      });
       if (newEntity) {
         replace(`/groups/edit/${encodeURIComponent($entity.guid || '')}`);
       }
-      setTimeout(() => {
-        success = undefined;
-      }, 1000);
     } catch (e: any) {
       console.log('error:', e);
-      failureMessage = e?.message;
+      (await kitchen).push({
+        label: e?.message ?? 'An error occurred.',
+        props: {
+          class: e instanceof ClientError ? 'warning' : 'error',
+        },
+      });
     }
     saving = false;
   }
 
   async function deleteEntity() {
-    failureMessage = undefined;
     if (
       confirm(
         'Are you sure you want to delete this? All descendant groups will be deleted too, and users will be removed.',
@@ -1040,7 +1081,12 @@
         await $entity.$delete();
         pop();
       } catch (e: any) {
-        failureMessage = e?.message;
+        (await kitchen).push({
+          label: e?.message ?? 'An error occurred.',
+          props: {
+            class: e instanceof ClientError ? 'warning' : 'error',
+          },
+        });
       }
       saving = false;
     }

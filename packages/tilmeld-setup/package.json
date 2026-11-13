@@ -76,6 +76,7 @@
     "@smui/menu": "^9.0.6",
     "@smui/paper": "^9.0.6",
     "@smui/radio": "^9.0.6",
+    "@smui/snackbar": "^9.0.6",
     "@smui/tab": "^9.0.6",
     "@smui/tab-bar": "^9.0.6",
     "@smui/textfield": "^9.0.6",
