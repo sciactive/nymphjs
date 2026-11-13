@@ -528,8 +528,6 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
   }
 
   public $arraySearch(array: any[], strict = false) {
-    this.$check();
-
     if (!Array.isArray(array)) {
       return -1;
     }
@@ -641,28 +639,33 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
   }
 
   public $is(object: any) {
-    this.$check();
-
     if (!(object instanceof Entity)) {
       return false;
     }
-    if (this.guid || object.guid) {
-      return this.guid === object.guid;
-    } else if (typeof object.toJSON !== 'function') {
-      return false;
-    } else {
-      const obData = sortObj(object.toJSON());
-      if ('tags' in obData) {
-        obData.tags?.sort();
-      }
-      // obData.data = sortObj(obData.data);
-      const myData = sortObj(this.toJSON());
-      if ('tags' in myData) {
-        myData.tags?.sort();
-      }
-      // myData.data = sortObj(myData.data);
-      return isEqual(obData, myData);
+
+    if (this === object) {
+      return true;
     }
+
+    if (this.guid != null || object.guid != null) {
+      return this.guid === object.guid;
+    }
+
+    if (typeof object.toJSON !== 'function') {
+      return false;
+    }
+
+    const obData = sortObj(object.toJSON());
+    if ('tags' in obData) {
+      obData.tags?.sort();
+    }
+    // obData.data = sortObj(obData.data);
+    const myData = sortObj(this.toJSON());
+    if ('tags' in myData) {
+      myData.tags?.sort();
+    }
+    // myData.data = sortObj(myData.data);
+    return isEqual(obData, myData);
   }
 
   public async $patch() {

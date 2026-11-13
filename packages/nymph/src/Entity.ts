@@ -707,8 +707,6 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
   }
 
   public $arraySearch(array: any[], strict = false) {
-    this.$check();
-
     if (!Array.isArray(array)) {
       return -1;
     }
@@ -909,23 +907,22 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       return this.guid === object.guid;
     }
 
-    this.$check();
     if (typeof object.$getData !== 'function') {
       return false;
-    } else {
-      const obTags = [...object.tags].sort();
-      const myTags = [...this.tags].sort();
-      if (!isEqual(obTags, myTags)) {
-        return false;
-      }
-      const obData = entityConstructorsToClassNames(
-        entitiesToReferences(object.$getData(true), true),
-      );
-      const myData = entityConstructorsToClassNames(
-        entitiesToReferences(this.$getData(true), true),
-      );
-      return isEqual(obData, myData);
     }
+
+    const obTags = [...object.tags].sort();
+    const myTags = [...this.tags].sort();
+    if (!isEqual(obTags, myTags)) {
+      return false;
+    }
+    const obData = entityConstructorsToClassNames(
+      entitiesToReferences(object.$getData(true), true),
+    );
+    const myData = entityConstructorsToClassNames(
+      entitiesToReferences(this.$getData(true), true),
+    );
+    return isEqual(obData, myData);
   }
 
   public $jsonAcceptData(input: EntityJson, allowConflict = false) {
