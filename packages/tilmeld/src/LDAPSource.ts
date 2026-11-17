@@ -642,10 +642,7 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     const client = new Client(options);
 
     if (this.encryption === 'starttls') {
-      await client.startTLS({
-        minVersion: 'TLSv1.2',
-        rejectUnauthorized: !this.ignoreCertificateErrors,
-      });
+      await client.startTLS(options.tlsOptions);
     }
 
     if (authenticate) {
