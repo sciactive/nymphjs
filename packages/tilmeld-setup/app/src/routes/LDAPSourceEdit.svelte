@@ -471,18 +471,6 @@
         </LayoutCell>
       </LayoutGrid>
 
-      <div>
-        <FormField>
-          <Checkbox bind:checked={$entity.usernameIncludesDomain} />
-          {#snippet label()}
-            The username in the LDAP server includes the domain. Generally, if
-            you are using <code>sAMAccountName</code>, it does not, and if you
-            are using
-            <code>userPrincipalName</code>, it does.
-          {/snippet}
-        </FormField>
-      </div>
-
       <div
         style="display: flex; flex-direction: column; gap: 1em; margin-top: 1em;"
       >
@@ -1162,26 +1150,15 @@
         $users = [];
         usersLength = 0;
       } else {
-        $users = await $entity.$getUsers(
-          false,
+        const result = await $entity.$getUsers(
           usersPerPage,
           usersPerPage * usersCurrentPage,
           usersSortDirection === 'descending',
           usersSort.slice('user-'.length),
         );
 
-        if (usersLength === 0) {
-          usersLength = await nymph.getEntities(
-            {
-              class: User,
-              return: 'count',
-            },
-            {
-              type: '&',
-              ref: ['source', $entity],
-            },
-          );
-        }
+        $users = result.entities;
+        usersLength = result.count;
       }
     } catch (e: any) {
       (await kitchen).push({

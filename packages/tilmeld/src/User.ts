@@ -60,7 +60,11 @@ export type TilmeldCheckUsernameCallback = (
  */
 export type TilmeldBeforeRegisterCallback = (
   user: User,
-  data: { password: string; additionalData?: { [k: string]: any } },
+  data: {
+    password: string;
+    additionalData?: { [k: string]: any };
+    source?: LDAPSourceClass;
+  },
 ) => Promise<void>;
 /**
  * This is run before the transaction is committed, and you can perform
@@ -886,37 +890,41 @@ export class User extends AbleObject<UserData> {
     additionalData?: { [k: string]: any };
   }) {
     const tilmeld = enforceTilmeld(this);
+    // If a new user is being registered through a source, this will be set to
+    // that source.
+    let newUserSource: LDAPSourceClass | null = null;
     if (this.guid == null) {
-      // A null guid means the user wasn't found. Let's check all the LDAP
-      // sources to try to find a matching one there.
-      const ldapSources = await this.$nymph.getEntities(
-        { class: LDAPSourceClass, skipAc: true },
-        {
-          type: '&',
-          equal: ['enabled', true],
-        },
-      );
+      if (tilmeld.config.ldapSupport) {
+        // A null guid means the user wasn't found. Let's check all the LDAP
+        // sources to try to find a matching one there.
+        const ldapSources = await this.$nymph.getEntities(
+          { class: LDAPSourceClass, skipAc: true },
+          {
+            type: '&',
+            equal: ['enabled', true],
+          },
+        );
 
-      let ldapAuthSuccessful = false;
-      for (let ldapSource of ldapSources) {
-        // The username and source needs to be set on the user.
-        this.username = data.username;
-        this.source = ldapSource;
+        for (let ldapSource of ldapSources) {
+          // The username and source needs to be set on the user.
+          this.username = data.username;
+          this.source = ldapSource;
 
-        const result = await ldapSource.$authenticate({
-          user: this,
-          password: data.password,
-        });
+          const result = await ldapSource.$authenticate({
+            user: this,
+            password: data.password,
+          });
 
-        if (result) {
-          ldapAuthSuccessful = true;
-          break;
-        } else {
-          delete this.source;
+          if (result) {
+            newUserSource = ldapSource;
+            break;
+          } else {
+            delete this.source;
+          }
         }
       }
 
-      if (!ldapAuthSuccessful) {
+      if (newUserSource == null) {
         await tilmeld.config.failedLoginAttempt(null, data);
         return { result: false, message: 'Incorrect login/password.' };
       }
@@ -952,15 +960,37 @@ export class User extends AbleObject<UserData> {
       }
     }
 
-    try {
+    if (newUserSource != null) {
+      // This is a brand new user logging in through LDAP for the first time, so
+      // run the register callbacks, since the user isn't going through the
+      // normal registration flow.
       for (let callback of (this.constructor as typeof User)
-        .beforeLoginCallbacks) {
+        .beforeRegisterCallbacks) {
         if (callback) {
-          await callback(this, data);
+          await callback(this, {
+            password: data.password,
+            additionalData: data.additionalData,
+            source: newUserSource,
+          });
         }
       }
-    } catch (e: any) {
-      return { result: false, message: e.message };
+
+      // Since none of the register callbacks threw, we can now save this new
+      // user into the system.
+      await this.$saveSkipAC();
+    } else {
+      // This is an existing user logging in through the normal login flow, so
+      // run the login callbacks.
+      try {
+        for (let callback of (this.constructor as typeof User)
+          .beforeLoginCallbacks) {
+          if (callback) {
+            await callback(this, data);
+          }
+        }
+      } catch (e: any) {
+        return { result: false, message: e.message };
+      }
     }
 
     this.$nymph.config.debugLog(
@@ -973,10 +1003,24 @@ export class User extends AbleObject<UserData> {
       return { result: false, message: 'Incorrect login/password.' };
     }
 
-    for (let callback of (this.constructor as typeof User)
-      .afterLoginCallbacks) {
-      if (callback) {
-        await callback(this);
+    const result = {
+      loggedin: true,
+      message: 'You are logged in.',
+    };
+
+    if (newUserSource != null) {
+      for (let callback of (this.constructor as typeof User)
+        .afterRegisterCallbacks) {
+        if (callback) {
+          await callback(this, result);
+        }
+      }
+    } else {
+      for (let callback of (this.constructor as typeof User)
+        .afterLoginCallbacks) {
+        if (callback) {
+          await callback(this);
+        }
       }
     }
 
@@ -993,7 +1037,7 @@ export class User extends AbleObject<UserData> {
     }
 
     // Login was successful.
-    return { result: true, message: 'You are logged in.' };
+    return { result: result.loggedin, message: result.message };
   }
 
   public async $switchUser(data?: {
@@ -2707,6 +2751,10 @@ export class User extends AbleObject<UserData> {
     }
 
     if (this.source != null) {
+      if (!tilmeld.config.ldapSupport) {
+        throw new BadDataError('LDAP support is not enabled on this server.');
+      }
+
       if (this.abilities?.includes('system/admin')) {
         throw new AccessControlError('LDAP users cannot be system admins.');
       }

@@ -117,7 +117,7 @@ export class Group extends Entity<GroupData> {
     offset?: number,
     reverse?: boolean,
     sort?: string,
-  ): Promise<Group[]> {
+  ): Promise<{ entities: Group[]; count: number }> {
     return await this.$serverCall('$getChildren', [
       limit,
       offset,
@@ -145,7 +145,7 @@ export class Group extends Entity<GroupData> {
     reverse?: boolean,
     sort?: string,
     enabled?: boolean,
-  ): Promise<User[]> {
+  ): Promise<{ entities: User[]; count: number }> {
     return await this.$serverCall('$getUsers', [
       descendants,
       limit,

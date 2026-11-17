@@ -11,7 +11,13 @@ import {
   transactional,
 } from '@nymphjs/nymph';
 import { nanoid } from '@nymphjs/guid';
-import { Client, ClientOptions, type Entry, Filter } from 'ldapts';
+import {
+  Client,
+  ClientOptions,
+  type Entry,
+  Filter,
+  InvalidCredentialsError,
+} from 'ldapts';
 import { fileTypeFromBuffer } from 'file-type';
 import * as v from 'valibot';
 import * as evalEstreeExpression from 'eval-estree-expression';
@@ -188,13 +194,6 @@ const LDAPSourceSchema = v.strictObject({
       'String must not contain leading or trailing whitespace.',
     ),
   ),
-  /**
-   * Whether the username in the LDAP server includes the domain.
-   *
-   * Generally, if you are using `sAMAccountName`, it does not, and if you are
-   * using `userPrincipalName`, it does.
-   */
-  usernameIncludesDomain: v.boolean(),
   /**
    * The user attribute listing group memberships.
    *
@@ -460,7 +459,6 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     'searchBase',
     'userFilter',
     'userSearchFilter',
-    'usernameIncludesDomain',
     'groupAttributeOnUser',
     'groupAttributeOnGroup',
     'restrictRegistrationToMappedUsers',
@@ -555,7 +553,6 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     this.searchBase = 'DC=example,DC=com';
     this.userFilter = '(objectClass=organizationalPerson)';
     this.userSearchFilter = '(sAMAccountName={0})';
-    this.usernameIncludesDomain = false;
     this.groupAttributeOnUser = 'memberOf';
     this.restrictRegistrationToMappedUsers = false;
     this.groupMap = [];
@@ -970,8 +967,16 @@ export class LDAPSource extends Entity<LDAPSourceData> {
      */
     password: string;
   }): Promise<boolean> {
+    const tilmeld = enforceTilmeld(this);
+
     if (!this.$is(user.source)) {
       throw new BadDataError('This LDAP source is not the source of the user.');
+    }
+
+    if (!tilmeld.config.ldapSupport) {
+      throw new AccessControlError(
+        'LDAP support is not enabled on this server.',
+      );
     }
 
     if (
@@ -1004,8 +1009,11 @@ export class LDAPSource extends Entity<LDAPSourceData> {
       await client.bind(userInfo.dn, password);
       await client.unbind();
     } catch (e: any) {
-      // Couldn't bind with the user.
-      return false;
+      if (e instanceof InvalidCredentialsError) {
+        // Couldn't bind with the user.
+        return false;
+      }
+      throw e;
     }
 
     // We've successfully bound, which means the user has given the right
@@ -1022,9 +1030,11 @@ export class LDAPSource extends Entity<LDAPSourceData> {
       return false;
     }
 
-    // If we get here, everything was successful. Now we save the user with the
-    // updated info.
-    await user.$saveSkipAC();
+    if (user.guid != null) {
+      // If we get here, everything was successful and the user already existed.
+      // Now we save the user with the updated info.
+      await user.$saveSkipAC();
+    }
 
     return true;
   }
@@ -1045,7 +1055,7 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     reverse?: boolean,
     sort?: string,
     enabled?: boolean,
-  ): Promise<UserClass[]> {
+  ): Promise<{ entities: UserClass[]; count: number }> {
     let tilmeld = enforceTilmeld(this);
     if (!tilmeld.gatekeeper('system/admin')) {
       throw new AccessControlError(
@@ -1064,7 +1074,7 @@ export class LDAPSource extends Entity<LDAPSourceData> {
         : undefined;
     enabled = enabled == null ? undefined : !!enabled;
 
-    return await this.$nymph.getEntities(
+    const entities = await this.$nymph.getEntities(
       { class: tilmeld.User, limit, offset, reverse, sort },
       {
         type: '&',
@@ -1074,6 +1084,19 @@ export class LDAPSource extends Entity<LDAPSourceData> {
         ? []
         : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
     );
+
+    const count = await this.$nymph.getEntities(
+      { class: tilmeld.User, return: 'count' },
+      {
+        type: '&',
+        ref: ['source', this],
+      },
+      ...(enabled == null
+        ? []
+        : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
+    );
+
+    return { entities, count };
   }
 
   public async $validate() {
@@ -1154,9 +1177,9 @@ export class LDAPSource extends Entity<LDAPSourceData> {
       );
     }
 
-    if (!tilmeld.config.domainSupport) {
+    if (!tilmeld.config.ldapSupport) {
       throw new AccessControlError(
-        'Domain support is not enabled on this server.',
+        'LDAP support is not enabled on this server.',
       );
     }
 

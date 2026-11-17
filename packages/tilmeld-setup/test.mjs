@@ -18,6 +18,7 @@ const nymph = new Nymph(
     setupPath: '/user',
     emailUsernames: false,
     domainSupport: true,
+    ldapSupport: true,
     clientEnabledUIDs: ['test'],
     verifyRedirect: 'http://localhost:8080',
     verifyChangeRedirect: 'http://localhost:8080',

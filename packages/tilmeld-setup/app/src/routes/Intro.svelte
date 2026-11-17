@@ -102,6 +102,12 @@
     Remember that a user must log in again to synchronize their group membership
     after it is changed on the LDAP server.
   </p>
+
+  <p style="font-style: italic;">
+    Keep in mind, this front end app does not know whether the server has
+    enabled LDAP support, so it will show a section for LDAP sources, even if
+    support is disabled.
+  </p>
 </section>
 
 <script lang="ts">

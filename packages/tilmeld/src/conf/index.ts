@@ -66,6 +66,22 @@ export interface Config {
    */
   domainSupport: boolean;
   /**
+   * Enable LDAP authentication support.
+   *
+   * If the usernames in your LDAP server(s) include domain names (like
+   * `userPrincipalName` in Active Directory), you also need to enable
+   * email usernames or domain support.
+   *
+   * Allow Registration being off does not prevent new LDAP users from becoming
+   * registered. LDAP users are registered the first time they try to log in and
+   * are successfully authenticated against the LDAP server.
+   *
+   * If you previously had LDAP support enabled, and you disable it, all users
+   * who previously logged in through LDAP will be permanently stuck, unable to
+   * be edited. Doing that will make you very sad.
+   */
+  ldapSupport: boolean;
+  /**
    * Allow users to register.
    */
   allowRegistration: boolean;

@@ -64,13 +64,6 @@ export interface LDAPSourceData extends AccessControlData {
    */
   userSearchFilter: string;
   /**
-   * Whether the username in the LDAP server includes the domain.
-   *
-   * Generally, if you are using `sAMAccountName`, it does not, and if you are
-   * using `userPrincipalName`, it does.
-   */
-  usernameIncludesDomain: boolean;
-  /**
    * The user attribute listing group memberships.
    *
    * Use `memberOf` for Active Directory.
@@ -139,7 +132,6 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     this.searchBase = 'DC=example,DC=com';
     this.userFilter = '(objectClass=organizationalPerson)';
     this.userSearchFilter = '(sAMAccountName={0})';
-    this.usernameIncludesDomain = false;
     this.groupAttributeOnUser = 'memberOf';
     this.restrictRegistrationToMappedUsers = false;
     this.groupMap = [];
@@ -206,7 +198,6 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     this.port = 389;
     this.encryption = 'none';
     this.ignoreCertificateErrors = false;
-    this.usernameIncludesDomain = false;
     this.restrictRegistrationToMappedUsers = false;
     this.groupMap = [];
     this.enabled = true;
@@ -239,15 +230,13 @@ export class LDAPSource extends Entity<LDAPSourceData> {
   }
 
   public async $getUsers(
-    descendants = false,
     limit?: number,
     offset?: number,
     reverse?: boolean,
     sort?: string,
     enabled?: boolean,
-  ): Promise<User[]> {
+  ): Promise<{ entities: User[]; count: number }> {
     return await this.$serverCall('$getUsers', [
-      descendants,
       limit,
       offset,
       reverse,

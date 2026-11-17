@@ -17,6 +17,7 @@ export default {
   createAdmin: true,
   emailUsernames: true,
   domainSupport: false,
+  ldapSupport: false,
   allowRegistration: true,
   allowUsernameChange: true,
   enableUserSearch: false,

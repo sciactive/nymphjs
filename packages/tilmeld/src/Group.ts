@@ -648,7 +648,7 @@ export class Group extends AbleObject<GroupData> {
     reverse?: boolean,
     sort?: string,
     enabled?: boolean,
-  ): Promise<Group[]> {
+  ): Promise<{ entities: Group[]; count: number }> {
     const tilmeld = enforceTilmeld(this);
 
     limit = limit == null || isNaN(Number(limit)) ? undefined : Number(limit);
@@ -662,7 +662,7 @@ export class Group extends AbleObject<GroupData> {
         : undefined;
     enabled = enabled == null ? undefined : !!enabled;
 
-    return await this.$nymph.getEntities(
+    const entities = await this.$nymph.getEntities(
       { class: Group, limit, offset, reverse, sort },
       {
         type: '&',
@@ -672,6 +672,19 @@ export class Group extends AbleObject<GroupData> {
         ? []
         : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
     );
+
+    const count = await this.$nymph.getEntities(
+      { class: Group, return: 'count' },
+      {
+        type: '&',
+        ref: ['parent', this],
+      },
+      ...(enabled == null
+        ? []
+        : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
+    );
+
+    return { entities, count };
   }
 
   /**
@@ -747,7 +760,7 @@ export class Group extends AbleObject<GroupData> {
     reverse?: boolean,
     sort?: string,
     enabled?: boolean,
-  ): Promise<UserClass[]> {
+  ): Promise<{ entities: UserClass[]; count: number }> {
     const tilmeld = enforceTilmeld(this);
     let groups: Group[] = [];
     if (descendants) {
@@ -765,7 +778,7 @@ export class Group extends AbleObject<GroupData> {
         : undefined;
     enabled = enabled == null ? undefined : !!enabled;
 
-    return await this.$nymph.getEntities(
+    const entities = await this.$nymph.getEntities(
       { class: tilmeld.User, limit, offset, reverse, sort },
       {
         type: '|',
@@ -780,6 +793,24 @@ export class Group extends AbleObject<GroupData> {
         ? []
         : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
     );
+
+    const count = await this.$nymph.getEntities(
+      { class: tilmeld.User, return: 'count' },
+      {
+        type: '|',
+        ref: [
+          ['group', this],
+          ['groups', this],
+          ...groups.map((group): [string, Group] => ['group', group]),
+          ...groups.map((group): [string, Group] => ['groups', group]),
+        ],
+      },
+      ...(enabled == null
+        ? []
+        : [{ type: '&', equal: ['enabled', enabled] } as Selector]),
+    );
+
+    return { entities, count };
   }
 
   /**

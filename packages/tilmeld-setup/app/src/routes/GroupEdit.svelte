@@ -966,25 +966,15 @@
         $children = [];
         childrenLength = 0;
       } else {
-        $children = await $entity.$getChildren(
+        const result = await $entity.$getChildren(
           childrenPerPage,
           childrenPerPage * childrenCurrentPage,
           childrenSortDirection === 'descending',
           childrenSort.slice('child-'.length),
         );
 
-        if (childrenLength === 0) {
-          childrenLength = await nymph.getEntities(
-            {
-              class: Group,
-              return: 'count',
-            },
-            {
-              type: '&',
-              ref: ['parent', $entity],
-            },
-          );
-        }
+        $children = result.entities;
+        childrenLength = result.count;
       }
     } catch (e: any) {
       (await kitchen).push({
@@ -1008,7 +998,7 @@
         $users = [];
         usersLength = 0;
       } else {
-        $users = await $entity.$getUsers(
+        const result = await $entity.$getUsers(
           false,
           usersPerPage,
           usersPerPage * usersCurrentPage,
@@ -1016,21 +1006,8 @@
           usersSort.slice('user-'.length),
         );
 
-        if (usersLength === 0) {
-          usersLength = await nymph.getEntities(
-            {
-              class: User,
-              return: 'count',
-            },
-            {
-              type: '|',
-              ref: [
-                ['group', $entity],
-                ['groups', $entity],
-              ],
-            },
-          );
-        }
+        $users = result.entities;
+        usersLength = result.count;
       }
     } catch (e: any) {
       (await kitchen).push({
