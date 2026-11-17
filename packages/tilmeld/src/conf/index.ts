@@ -163,6 +163,10 @@ export interface Config {
    */
   pwRecoveryTimeLimit: string;
   /**
+   * How long a user needs to wait to request a new password recovery link.
+   */
+  pwRecoveryRateLimit: string;
+  /**
    * Method used to store passwords. Salt is the most secure if the database is
    * compromised.
    *

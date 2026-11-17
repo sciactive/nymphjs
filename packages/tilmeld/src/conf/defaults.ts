@@ -34,6 +34,7 @@ export default {
   emailRateLimit: '1 day',
   pwRecovery: true,
   pwRecoveryTimeLimit: '12 hours',
+  pwRecoveryRateLimit: '10 minutes',
   pwMethod: 'salt',
   generatePrimary: true,
   highestPrimary: true,

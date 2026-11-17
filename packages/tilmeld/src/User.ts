@@ -647,6 +647,17 @@ export class User extends AbleObject<UserData> {
         };
       }
 
+      if (
+        getUser.recoverSecretDate != null &&
+        getUser.recoverSecretDate >
+          (strtotime('-' + tilmeld.config.pwRecoveryRateLimit) || 0) * 1000
+      ) {
+        return {
+          result: false,
+          message: `You have already requested a code within the last ${tilmeld.config.pwRecoveryRateLimit}. Please wait.`,
+        };
+      }
+
       // Create a unique secret.
       getUser.recoverSecret = humanSecret();
       getUser.recoverSecretDate = Date.now();
@@ -1983,10 +1994,10 @@ export class User extends AbleObject<UserData> {
       if (tilmeld.switchedUser == null) {
         await tilmeld.login(this, true);
       }
-        return {
-          result: true,
-          message: 'You have logged out of all other sessions.',
-        };
+      return {
+        result: true,
+        message: 'You have logged out of all other sessions.',
+      };
     } catch (e: any) {
       return { result: false, message: "Couldn't save revocation date." };
     }
