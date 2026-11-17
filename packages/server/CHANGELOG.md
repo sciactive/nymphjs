@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.148](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.147...v1.0.0-beta.148) (2026-11-17)
+
+### Bug Fixes
+
+- dereference entity state from client ([fa619a5](https://forge.sciactive.com/sciactive/nymphjs/commits/fa619a547031e20d5768c4d77ae5a9c7418febae))
+
 # [1.0.0-beta.147](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.146...v1.0.0-beta.147) (2026-11-11)
 
 **Note:** Version bump only for package @nymphjs/server

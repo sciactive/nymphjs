@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.148](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.147...v1.0.0-beta.148) (2026-11-17)
+
+### Bug Fixes
+
+- dereference entity state from client ([fa619a5](https://forge.sciactive.com/sciactive/nymphjs/commits/fa619a547031e20d5768c4d77ae5a9c7418febae))
+- is and non-strict array seaches should not require awake entities ([4ebe607](https://forge.sciactive.com/sciactive/nymphjs/commits/4ebe607ad48e3d5e3fcb2eca5fab2a071d439dcb))
+- protect againt admins being issued valid user auth tokens through token revocation ([d9d10a9](https://forge.sciactive.com/sciactive/nymphjs/commits/d9d10a91a361ccff5a1392a5f68d57a0fb24525b))
+- rate limit password recovery attempts ([c5bc898](https://forge.sciactive.com/sciactive/nymphjs/commits/c5bc89897af5b3e9ba8c15fd06bd924503c15096))
+
+### Features
+
+- add ldap user source, ldap authentication support ([f03f59f](https://forge.sciactive.com/sciactive/nymphjs/commits/f03f59f4a2c4e2f7124b4b8ba1dccb377c0112b0))
+- make ldap support optional, fix listing methods in tilmeld, run register callbacks for ldap ([6a2fa58](https://forge.sciactive.com/sciactive/nymphjs/commits/6a2fa5809a0f6c8dcbe4c67007934be1cde2727a))
+- use snackbars for messages in tilmeld setup ([8df74a6](https://forge.sciactive.com/sciactive/nymphjs/commits/8df74a61ad30d166525a81aee010e172fa30096a))
+
 # [1.0.0-beta.147](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.146...v1.0.0-beta.147) (2026-11-11)
 
 **Note:** Version bump only for package nymphjs

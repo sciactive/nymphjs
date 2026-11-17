@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.148](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.147...v1.0.0-beta.148) (2026-11-17)
+
+### Features
+
+- add ldap user source, ldap authentication support ([f03f59f](https://forge.sciactive.com/sciactive/nymphjs/commits/f03f59f4a2c4e2f7124b4b8ba1dccb377c0112b0))
+- make ldap support optional, fix listing methods in tilmeld, run register callbacks for ldap ([6a2fa58](https://forge.sciactive.com/sciactive/nymphjs/commits/6a2fa5809a0f6c8dcbe4c67007934be1cde2727a))
+- use snackbars for messages in tilmeld setup ([8df74a6](https://forge.sciactive.com/sciactive/nymphjs/commits/8df74a61ad30d166525a81aee010e172fa30096a))
+
 # [1.0.0-beta.147](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.146...v1.0.0-beta.147) (2026-11-11)
 
 **Note:** Version bump only for package @nymphjs/tilmeld-setup

@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.148](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.147...v1.0.0-beta.148) (2026-11-17)
+
+### Bug Fixes
+
+- is and non-strict array seaches should not require awake entities ([4ebe607](https://forge.sciactive.com/sciactive/nymphjs/commits/4ebe607ad48e3d5e3fcb2eca5fab2a071d439dcb))
+
 # [1.0.0-beta.147](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.146...v1.0.0-beta.147) (2026-11-11)
 
 **Note:** Version bump only for package @nymphjs/nymph
