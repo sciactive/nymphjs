@@ -46,10 +46,25 @@ export default class Tilmeld implements TilmeldInterface {
    */
   public config: Config;
 
+  #currentUser: User | null = null;
   /**
    * The currently logged in user.
    */
-  public currentUser: User | null = null;
+  get currentUser() {
+    return this.#currentUser;
+  }
+
+  #switchedUser: User | null = null;
+  /**
+   * The admin account that switched to the currently logged in user.
+   *
+   * What this means is that the user in `currentUser` is not the user taking
+   * actions performed, but is an identity that the admin listed here has
+   * switched to.
+   */
+  get switchedUser() {
+    return this.#switchedUser;
+  }
 
   /**
    * The user class for this instance of Tilmeld.
@@ -138,7 +153,8 @@ export default class Tilmeld implements TilmeldInterface {
     const tilmeld = new Tilmeld(this.config);
     tilmeld.request = this.request;
     tilmeld.response = this.response;
-    tilmeld.currentUser = this.currentUser;
+    tilmeld.#currentUser = this.currentUser;
+    tilmeld.#switchedUser = this.switchedUser;
     tilmeld.gatekeeperCache = this.gatekeeperCache;
 
     return tilmeld;
@@ -171,42 +187,40 @@ export default class Tilmeld implements TilmeldInterface {
       this.LDAPSource = this.nymph.addEntityClass(LDAPSource);
     }
 
-    // Clone the current user so its Nymph instance is correct.
-    if (this.currentUser) {
-      const currentUserGUID = this.currentUser.guid;
-      const currentUserCDate = this.currentUser.cdate;
-      const currentUserMDate = this.currentUser.mdate;
-      const currentUserTags = this.currentUser.tags;
-      const currentUserData = entityConstructorsToClassNames(
-        entitiesToReferences(this.currentUser.$getData(false), true),
+    const cloneUser = (userToClone: User) => {
+      const cloneGUID = userToClone.guid;
+      const cloneCDate = userToClone.cdate;
+      const cloneMDate = userToClone.mdate;
+      const cloneTags = userToClone.tags;
+      const cloneData = entityConstructorsToClassNames(
+        entitiesToReferences(userToClone.$getData(false), true),
       );
-      const currentUserSData = this.currentUser.$getSData();
-      const currentUserOriginalAcValues =
-        this.currentUser.$getOriginalAcValues();
+      const cloneSData = userToClone.$getSData();
+      const cloneOriginalAcValues = userToClone.$getOriginalAcValues();
 
       const user = this.User.factorySync();
-      user.guid = currentUserGUID;
-      user.cdate = currentUserCDate;
-      user.mdate = currentUserMDate;
-      user.tags = currentUserTags;
+      user.guid = cloneGUID;
+      user.cdate = cloneCDate;
+      user.mdate = cloneMDate;
+      user.tags = cloneTags;
       // First, put the trusted original AC values in with the server flag.
       Entity.factorySync().$putData.call(
         user,
         {
-          ...currentUserOriginalAcValues,
+          ...cloneOriginalAcValues,
           user:
-            currentUserOriginalAcValues.user != null
+            cloneOriginalAcValues.user != null
               ? this.User.factoryReference([
                   'nymph_entity_reference',
-                  currentUserOriginalAcValues.user,
+                  cloneOriginalAcValues.user,
                   this.User.class,
                 ])
               : undefined,
           group:
-            currentUserOriginalAcValues.group != null
+            cloneOriginalAcValues.group != null
               ? this.Group.factoryReference([
                   'nymph_entity_reference',
-                  currentUserOriginalAcValues.group,
+                  cloneOriginalAcValues.group,
                   this.Group.class,
                 ])
               : undefined,
@@ -219,16 +233,26 @@ export default class Tilmeld implements TilmeldInterface {
       user.$putData(
         classNamesToEntityConstructors(
           this.nymph,
-          referencesToEntities(currentUserData, this.nymph, false, false),
+          referencesToEntities(cloneData, this.nymph, false, false),
           false,
         ),
-        currentUserSData,
+        cloneSData,
       );
-      user.$originalEmail = this.currentUser.$originalEmail;
-      user.$originalUsername = this.currentUser.$originalUsername;
-      this.currentUser = user;
-      this.currentUser.$updateDataProtection();
-      this.currentUser.$updateGroupDataProtection();
+      user.$originalEmail = userToClone.$originalEmail;
+      user.$originalUsername = userToClone.$originalUsername;
+      return user;
+    };
+
+    // Clone the switch user so its Nymph instance is correct.
+    if (this.#switchedUser) {
+      this.#switchedUser = cloneUser(this.#switchedUser);
+    }
+
+    // Clone the current user so its Nymph instance is correct.
+    if (this.#currentUser) {
+      this.#currentUser = cloneUser(this.#currentUser);
+      this.#currentUser.$updateDataProtection();
+      this.#currentUser.$updateGroupDataProtection();
     }
 
     // Set up access control hooks when Nymph is called.
@@ -1065,8 +1089,8 @@ export default class Tilmeld implements TilmeldInterface {
    */
   public async fillSession(user: User) {
     // Clear any currently logged in user.
-    const oldUser = this.currentUser;
-    this.currentUser = null;
+    const oldUser = this.#currentUser;
+    this.#currentUser = null;
     this.gatekeeperCache = null;
     if (oldUser) {
       oldUser.$updateDataProtection();
@@ -1081,19 +1105,19 @@ export default class Tilmeld implements TilmeldInterface {
     this.gatekeeperCache = await user.$getGatekeeperCache();
 
     // Now we're ready to set the current user.
-    this.currentUser = user;
+    this.#currentUser = user;
 
     // And update the data protection on the user and all the groups.
-    this.currentUser.$updateDataProtection();
-    this.currentUser.$updateGroupDataProtection();
+    this.#currentUser.$updateDataProtection();
+    this.#currentUser.$updateGroupDataProtection();
   }
 
   /**
    * Clear session user data.
    */
   public clearSession() {
-    const user = this.currentUser;
-    this.currentUser = null;
+    const user = this.#currentUser;
+    this.#currentUser = null;
     this.gatekeeperCache = null;
     if (user) {
       user.$updateDataProtection();
@@ -1188,6 +1212,7 @@ export default class Tilmeld implements TilmeldInterface {
     ) {
       // The user has already been authenticated through some other means.
       const user = this.response.locals.user;
+      this.#switchedUser = null;
       await this.fillSession(user);
       return true;
     }
@@ -1273,6 +1298,7 @@ export default class Tilmeld implements TilmeldInterface {
       ) {
         await this.logoutSwitch();
       } else {
+        this.#switchedUser = user;
         await this.fillSession(switchUser);
 
         if (this.response) {
@@ -1292,6 +1318,7 @@ export default class Tilmeld implements TilmeldInterface {
       // a new one.
       await this.login(user, fromAuthHeader);
     } else {
+      this.#switchedUser = null;
       await this.fillSession(user);
     }
 
@@ -1320,6 +1347,13 @@ export default class Tilmeld implements TilmeldInterface {
       if (!user.source.enabled) {
         return false;
       }
+    }
+
+    if ('TILMELDSWITCH' in (this.request?.cookies ?? {})) {
+      // Users who have a switch token should not be using this method.
+      throw new AccessControlError(
+        'Called login on request with switch token.',
+      );
     }
 
     if (this.response) {
@@ -1392,6 +1426,7 @@ export default class Tilmeld implements TilmeldInterface {
         this.response.locals.user = target;
       }
 
+      this.#switchedUser = user;
       await this.fillSession(target);
       return true;
     }
@@ -1443,7 +1478,10 @@ export default class Tilmeld implements TilmeldInterface {
       }
       this.response.locals.user = null;
 
-      await this.authenticate(false, true);
+      // We are specifically not filling the session with `switchedUser` here,
+      // because there could be state outside of Tilmeld that would become
+      // unsafe in that scenario. The user should refresh the page after they
+      // log out of their switch user.
     }
   }
 }

@@ -1842,22 +1842,35 @@ export class User extends AbleObject<UserData> {
     revokeCurrentTokens?: boolean;
   }): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
+
     if (!tilmeld.gatekeeper()) {
       return { result: false, message: 'You must be logged in.' };
     }
+
     if (this.guid == null) {
       return { result: false, message: 'This user has not been saved.' };
     }
+
+    if (!this.$is(tilmeld.currentUser)) {
+      return {
+        result: false,
+        message: 'You can only change your own password.',
+      };
+    }
+
     if (this.source != null) {
       return { result: false, message: 'Incorrect password.' };
     }
+
     this.$nymph.config.debugLog(
       'tilmeld',
       `Password change request for "${this.username}".`,
     );
+
     if (!('newPassword' in data) || !data.newPassword.length) {
       return { result: false, message: 'Please specify a password.' };
     }
+
     if (!(await this.$checkPassword(data.currentPassword ?? ''))) {
       this.$nymph.config.debugLog(
         'tilmeld',
@@ -1865,13 +1878,15 @@ export class User extends AbleObject<UserData> {
       );
       return { result: false, message: 'Incorrect password.' };
     }
+
     this.passwordTemp = data.newPassword;
     if (data.revokeCurrentTokens) {
       this.revokeTokenDate = Date.now();
     }
+
     try {
       await this.$save();
-      if (data.revokeCurrentTokens && this.$is(tilmeld.currentUser)) {
+      if (data.revokeCurrentTokens && tilmeld.switchedUser == null) {
         await tilmeld.login(this, true);
       }
       return {
@@ -1953,12 +1968,8 @@ export class User extends AbleObject<UserData> {
       return { result: false, message: 'This user has not been saved.' };
     }
 
-    let [_username, domain] = tilmeld.config.domainSupport
-      ? splitn(this.$originalUsername ?? this.username ?? '', '@', 2)
-      : [this.$originalUsername ?? this.username, null];
-    // Lowercase the domain part.
-    if (domain) {
-      domain = domain.toLowerCase();
+    if (!this.$is(tilmeld.currentUser)) {
+      return { result: false, message: 'You can only revoke your own tokens.' };
     }
 
     if (data == null || !(await this.$checkPassword(data.password ?? ''))) {
@@ -1969,18 +1980,13 @@ export class User extends AbleObject<UserData> {
 
     try {
       await this.$save();
-      if (this.$is(tilmeld.currentUser)) {
+      if (tilmeld.switchedUser == null) {
         await tilmeld.login(this, true);
+      }
         return {
           result: true,
           message: 'You have logged out of all other sessions.',
         };
-      } else {
-        return {
-          result: true,
-          message: 'The user has been logged out of all sessions.',
-        };
-      }
     } catch (e: any) {
       return { result: false, message: "Couldn't save revocation date." };
     }
