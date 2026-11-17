@@ -23,8 +23,10 @@ import * as v from 'valibot';
 import { enforceTilmeld } from './enforceTilmeld.js';
 import { AbleObject } from './AbleObject.js';
 import { Group as GroupClass } from './Group.js';
+import { LDAPSource as LDAPSourceClass } from './LDAPSource.js';
 import {
   AccessControlError,
+  AmbiguousUserError,
   BadDataError,
   BadEmailError,
   BadUsernameError,
@@ -127,18 +129,20 @@ const UserSchema = v.strictObject({
   /**
    * The user's first name.
    */
-  nameFirst: v.pipe(
-    v.string(),
-    v.nonEmpty(),
-    v.regex(
-      /^(?!.*[\x00-\x1F\x7F]).*$/,
-      'String must not contain control characters.',
+  nameFirst: v.exactOptional(
+    v.pipe(
+      v.string(),
+      v.nonEmpty(),
+      v.regex(
+        /^(?!.*[\x00-\x1F\x7F]).*$/,
+        'String must not contain control characters.',
+      ),
+      v.check(
+        (input) => input === input.trim(),
+        'String must not contain leading or trailing whitespace.',
+      ),
+      v.maxLength(512),
     ),
-    v.check(
-      (input) => input === input.trim(),
-      'String must not contain leading or trailing whitespace.',
-    ),
-    v.maxLength(512),
   ),
   /**
    * The user's middle name.
@@ -401,6 +405,13 @@ const UserSchema = v.strictObject({
       v.base64('Must be base32 encoded unpadded.'),
     ),
   ),
+
+  /**
+   * The source of this user.
+   */
+  source: v.exactOptional(
+    v.lazy(() => v.instance(LDAPSourceClass)),
+  ) as unknown as v.GenericSchema<LDAPSourceClass | undefined>,
 });
 
 type UserData = Omit<
@@ -475,6 +486,7 @@ export class User extends AbleObject<UserData> {
     'passwordTemp',
     'revokeTokenDate',
     'totpSecret',
+    'source',
   ];
   private static DEFAULT_ALLOWLIST_DATA: string[] = [];
 
@@ -545,6 +557,7 @@ export class User extends AbleObject<UserData> {
         'passwordTemp',
         'revokeTokenDate',
         'totpSecret',
+        'source',
       ].indexOf(name) !== -1
     ) {
       return null;
@@ -608,7 +621,7 @@ export class User extends AbleObject<UserData> {
         },
       );
 
-      if (getUser == null) {
+      if (getUser == null || getUser.source != null) {
         return {
           result: false,
           message: 'Requested account is not accessible.',
@@ -627,7 +640,7 @@ export class User extends AbleObject<UserData> {
 
       const getUser = await tilmeld.User.factoryUsername(data.account);
 
-      if (getUser.guid == null) {
+      if (getUser.guid == null || getUser.source != null) {
         return {
           result: false,
           message: 'Requested account is not accessible.',
@@ -695,6 +708,7 @@ export class User extends AbleObject<UserData> {
 
     if (
       user.guid == null ||
+      user.source != null ||
       user.recoverSecret == null ||
       data.secret !== user.recoverSecret ||
       (strtotime(
@@ -862,12 +876,44 @@ export class User extends AbleObject<UserData> {
   }) {
     const tilmeld = enforceTilmeld(this);
     if (this.guid == null) {
-      await tilmeld.config.failedLoginAttempt(null, data);
-      return { result: false, message: 'Incorrect login/password.' };
-    }
-    if (!(await this.$checkPassword(data.password))) {
-      await tilmeld.config.failedLoginAttempt(this, data);
-      return { result: false, message: 'Incorrect login/password.' };
+      // A null guid means the user wasn't found. Let's check all the LDAP
+      // sources to try to find a matching one there.
+      const ldapSources = await this.$nymph.getEntities(
+        { class: LDAPSourceClass, skipAc: true },
+        {
+          type: '&',
+          equal: ['enabled', true],
+        },
+      );
+
+      let ldapAuthSuccessful = false;
+      for (let ldapSource of ldapSources) {
+        // The username and source needs to be set on the user.
+        this.username = data.username;
+        this.source = ldapSource;
+
+        const result = await ldapSource.$authenticate({
+          user: this,
+          password: data.password,
+        });
+
+        if (result) {
+          ldapAuthSuccessful = true;
+          break;
+        } else {
+          delete this.source;
+        }
+      }
+
+      if (!ldapAuthSuccessful) {
+        await tilmeld.config.failedLoginAttempt(null, data);
+        return { result: false, message: 'Incorrect login/password.' };
+      }
+    } else {
+      if (!(await this.$checkPassword(data.password))) {
+        await tilmeld.config.failedLoginAttempt(this, data);
+        return { result: false, message: 'Incorrect login/password.' };
+      }
     }
     if (!this.enabled) {
       return { result: false, message: 'Your account is disabled.' };
@@ -926,6 +972,7 @@ export class User extends AbleObject<UserData> {
     // Check if the password uses the old hash method.
     if (
       tilmeld.config.pwMethod === 'salt' &&
+      this.source == null &&
       !this.password?.startsWith('scrypt$')
     ) {
       // Update the password hash with one using the new method.
@@ -1377,6 +1424,7 @@ export class User extends AbleObject<UserData> {
         // 'passwordTemp',
         // 'revokeTokenDate',
         'totpSecret',
+        'source',
       ];
     } else if (isCurrentUser || isNewUser) {
       // Users can see their own data, and edit some of it.
@@ -1424,7 +1472,25 @@ export class User extends AbleObject<UserData> {
         'passwordTemp',
         // 'revokeTokenDate',
         'totpSecret',
+        'source',
       ];
+    }
+
+    if (this.source != null) {
+      // LDAP users cannot be edited through Nymph except for abilities and to
+      // be logged out.
+      if (
+        tilmeld.gatekeeper('tilmeld/admin') ||
+        tilmeld.gatekeeper('system/admin')
+      ) {
+        this.$allowlistData = [
+          'abilities',
+          'inheritAbilities',
+          'revokeTokenDate',
+        ];
+      } else {
+        this.$allowlistData = [];
+      }
     }
 
     if (
@@ -1630,6 +1696,21 @@ export class User extends AbleObject<UserData> {
    */
   public async $checkPassword(password: string) {
     const tilmeld = enforceTilmeld(this);
+
+    if (this.guid == null) {
+      return false;
+    }
+
+    if (this.source != null) {
+      // This user is from an LDAP server.
+      await this.source.$wakeSkipAc();
+
+      return await this.source.$authenticate({
+        user: this,
+        password,
+      });
+    }
+
     switch (tilmeld.config.pwMethod) {
       case 'plain':
         return crypto.timingSafeEqual(
@@ -1764,6 +1845,12 @@ export class User extends AbleObject<UserData> {
     if (!tilmeld.gatekeeper()) {
       return { result: false, message: 'You must be logged in.' };
     }
+    if (this.guid == null) {
+      return { result: false, message: 'This user has not been saved.' };
+    }
+    if (this.source != null) {
+      return { result: false, message: 'Incorrect password.' };
+    }
     this.$nymph.config.debugLog(
       'tilmeld',
       `Password change request for "${this.username}".`,
@@ -1805,6 +1892,12 @@ export class User extends AbleObject<UserData> {
    * @returns The resulting password or hash which is stored in the entity.
    */
   public async $password(password: string) {
+    if (this.source != null) {
+      throw new AmbiguousUserError(
+        'Attempting to change nymph password on LDAP user.',
+      );
+    }
+
     const tilmeld = enforceTilmeld(this);
     switch (tilmeld.config.pwMethod) {
       case 'plain':
@@ -1847,7 +1940,7 @@ export class User extends AbleObject<UserData> {
    * @returns An object with a boolean 'result' entry and a 'message' entry.
    */
   @sendStateToClient
-  public async $revokeCurrentTokens(data?: {
+  public async $revokeCurrentTokens(data: {
     password: string;
   }): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
@@ -1868,18 +1961,7 @@ export class User extends AbleObject<UserData> {
       domain = domain.toLowerCase();
     }
 
-    const isAdmin = tilmeld.gatekeeper('tilmeld/admin');
-    const isDomainUser =
-      tilmeld.config.domainSupport &&
-      !this.$is(tilmeld.currentUser) &&
-      domain &&
-      tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`);
-
-    if (
-      !isAdmin &&
-      !isDomainUser &&
-      (data == null || !(await this.$checkPassword(data.password ?? '')))
-    ) {
+    if (data == null || !(await this.$checkPassword(data.password ?? ''))) {
       return { result: false, message: 'Incorrect password.' };
     }
 
@@ -1979,6 +2061,10 @@ export class User extends AbleObject<UserData> {
     secret: string;
     code: string;
   }): Promise<{ result: boolean; message: string }> {
+    if (this.guid == null) {
+      return { result: false, message: 'This user has not been saved.' };
+    }
+
     if (!(await this.$checkPassword(data.password ?? ''))) {
       return { result: false, message: 'Incorrect password.' };
     }
@@ -2041,6 +2127,10 @@ export class User extends AbleObject<UserData> {
     code: string;
   }): Promise<{ result: boolean; message: string }> {
     const tilmeld = enforceTilmeld(this);
+
+    if (this.guid == null) {
+      return { result: false, message: 'This user has not been saved.' };
+    }
 
     if (data) {
       if (!(await this.$checkPassword(data.password ?? ''))) {
@@ -2541,37 +2631,45 @@ export class User extends AbleObject<UserData> {
       }
     }
 
-    let MySchema: v.StrictObjectSchema<any, any> = UserSchema;
-
-    const nameField = tilmeld.config.userFields.includes('name');
-    if (!nameField) {
-      MySchema = v.omit(MySchema, [
-        'nameFirst',
-        'nameMiddle',
-        'nameLast',
-        'name',
-      ]);
-    }
-    const emailField = tilmeld.config.userFields.includes('email');
-    if (!emailField) {
-      MySchema = v.omit(MySchema, [
-        'email',
-        'secret',
-        'emailChangeDate',
-        'newEmailSecret',
-        'newEmailAddress',
-        'cancelEmailSecret',
-        'cancelEmailAddress',
-        'recoverSecret',
-        'recoverSecretDate',
-      ]);
-    }
-    const phoneField = tilmeld.config.userFields.includes('phone');
-    if (!phoneField) {
-      MySchema = v.omit(MySchema, ['phone']);
-    }
-
     try {
+      let MySchema: v.StrictObjectSchema<any, any> = UserSchema;
+
+      const nameField = tilmeld.config.userFields.includes('name');
+      if (!nameField) {
+        MySchema = v.omit(MySchema, [
+          'nameFirst',
+          'nameMiddle',
+          'nameLast',
+          'name',
+        ]);
+      } else {
+        // Either nameFirst or nameLast needs to be present.
+        if (
+          (this.nameFirst == null || this.nameFirst.trim() == '') &&
+          (this.nameLast == null || this.nameLast.trim() == '')
+        ) {
+          throw new Error('One of first name or last name is required.');
+        }
+      }
+      const emailField = tilmeld.config.userFields.includes('email');
+      if (!emailField) {
+        MySchema = v.omit(MySchema, [
+          'email',
+          'secret',
+          'emailChangeDate',
+          'newEmailSecret',
+          'newEmailAddress',
+          'cancelEmailSecret',
+          'cancelEmailAddress',
+          'recoverSecret',
+          'recoverSecretDate',
+        ]);
+      }
+      const phoneField = tilmeld.config.userFields.includes('phone');
+      if (!phoneField) {
+        MySchema = v.omit(MySchema, ['phone']);
+      }
+
       v.parse(MySchema, this.$getValidatable());
     } catch (e: any) {
       throw new BadDataError(
@@ -2589,6 +2687,23 @@ export class User extends AbleObject<UserData> {
     let tilmeld = enforceTilmeld(this);
     if (this.username == null || !this.username.trim().length) {
       throw new BadUsernameError('Username must not be empty.');
+    }
+
+    if (this.source != null) {
+      if (this.abilities?.includes('system/admin')) {
+        throw new AccessControlError('LDAP users cannot be system admins.');
+      }
+      if (this.abilities?.find((ability) => ability.startsWith('system/'))) {
+        throw new AccessControlError(
+          'LDAP users cannot have system abilities.',
+        );
+      }
+      if (this.abilities?.includes('tilmeld/admin')) {
+        throw new AccessControlError('LDAP users cannot be Tilmeld admins.');
+      }
+      if (this.abilities?.includes('tilmeld/switch')) {
+        throw new AccessControlError('LDAP users cannot have switch ability.');
+      }
     }
 
     if (
@@ -2752,7 +2867,9 @@ export class User extends AbleObject<UserData> {
     // Email changes.
     if (
       !tilmeld.gatekeeper('tilmeld/admin') &&
-      tilmeld.config.userFields.includes('email')
+      tilmeld.config.userFields.includes('email') &&
+      // LDAP users' emails are managed through LDAP.
+      this.source == null
     ) {
       // The user isn't an admin, so email address changes should contain some
       // security measures.

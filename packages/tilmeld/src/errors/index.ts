@@ -1,5 +1,7 @@
 export * from './AccessControlError.js';
 
+export * from './AmbiguousUserError.js';
+
 export * from './BadDataError.js';
 
 export * from './BadEmailError.js';

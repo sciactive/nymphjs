@@ -22,6 +22,7 @@ import { Config, ConfigDefaults as defaults } from './conf/index.js';
 import { AccessControlError } from './errors/index.js';
 import { Group } from './Group.js';
 import { User } from './User.js';
+import { LDAPSource } from './LDAPSource.js';
 import { AccessControlData } from './Tilmeld.types.js';
 import { enforceTilmeld } from './enforceTilmeld.js';
 
@@ -59,6 +60,11 @@ export default class Tilmeld implements TilmeldInterface {
    * The group class for this instance of Tilmeld.
    */
   public Group: typeof Group = Group;
+
+  /**
+   * The LDAP source class for this instance of Tilmeld.
+   */
+  public LDAPSource: typeof LDAPSource = LDAPSource;
 
   /**
    * If you will be performing authentication functions (logging in/out), you
@@ -157,10 +163,12 @@ export default class Tilmeld implements TilmeldInterface {
       // This is a cloned Nymph, it should have classes already.
       this.User = this.nymph.getEntityClass(User);
       this.Group = this.nymph.getEntityClass(Group);
+      this.LDAPSource = this.nymph.getEntityClass(LDAPSource);
     } else {
       // This is a new Nymph, add the classes.
       this.User = this.nymph.addEntityClass(User);
       this.Group = this.nymph.addEntityClass(Group);
+      this.LDAPSource = this.nymph.addEntityClass(LDAPSource);
     }
 
     // Clone the current user so its Nymph instance is correct.
@@ -290,6 +298,13 @@ export default class Tilmeld implements TilmeldInterface {
           ) {
             // If the user is not specifically searching for a GUID or username,
             // and they're not allowed to search, it should fail.
+            throw new AccessControlError('No permission to search.');
+          }
+
+          if (
+            options.class.ETYPE === LDAPSource.ETYPE &&
+            !tilmeld.gatekeeper('system/admin')
+          ) {
             throw new AccessControlError('No permission to search.');
           }
         }
@@ -856,6 +871,11 @@ export default class Tilmeld implements TilmeldInterface {
 
     let userOrEmpty: User = this.User.current(true);
 
+    // LDAP Sources are readable and editable only by system admins.
+    if (entity instanceof LDAPSource) {
+      return this.gatekeeper('system/admin');
+    }
+
     // Users and groups are always readable. Editable by Tilmeld admins.
     if (
       (entity instanceof User || entity instanceof Group) &&
@@ -1129,6 +1149,13 @@ export default class Tilmeld implements TilmeldInterface {
       return { user: null, extract };
     }
 
+    if (user.source != null && enforceUserRestrictions) {
+      await user.source.$wakeSkipAc();
+      if (!user.source.enabled) {
+        return { user: null, extract };
+      }
+    }
+
     return { user, extract };
   }
 
@@ -1284,35 +1311,43 @@ export default class Tilmeld implements TilmeldInterface {
    * @returns True on success, false on failure.
    */
   public async login(user: User, sendAuthHeader: boolean, sendCookie = true) {
-    if (user.guid != null && user.enabled) {
-      if (this.response) {
-        if (!this.response.headersSent) {
-          const token = this.config.jwtBuilder(this.config, user);
+    if (user.guid == null || !user.enabled) {
+      return false;
+    }
 
-          if (sendCookie) {
-            const appUrl = new URL(this.config.appUrl);
-            this.response.cookie('TILMELDAUTH', token, {
-              domain: this.config.cookieDomain,
-              path: this.config.cookiePath,
-              maxAge: this.config.jwtExpire * 1000,
-              secure: appUrl.protocol === 'https:',
-              httpOnly: false, // Allow JS access (for CSRF protection).
-              sameSite: appUrl.protocol === 'https:' ? 'lax' : 'strict',
-            });
-          }
+    if (user.source != null) {
+      await user.source.$wakeSkipAc();
+      if (!user.source.enabled) {
+        return false;
+      }
+    }
 
-          if (sendAuthHeader) {
-            this.response.set('X-TILMELDAUTH', token);
-          }
+    if (this.response) {
+      if (!this.response.headersSent) {
+        const token = this.config.jwtBuilder(this.config, user);
+
+        if (sendCookie) {
+          const appUrl = new URL(this.config.appUrl);
+          this.response.cookie('TILMELDAUTH', token, {
+            domain: this.config.cookieDomain,
+            path: this.config.cookiePath,
+            maxAge: this.config.jwtExpire * 1000,
+            secure: appUrl.protocol === 'https:',
+            httpOnly: false, // Allow JS access (for CSRF protection).
+            sameSite: appUrl.protocol === 'https:' ? 'lax' : 'strict',
+          });
         }
 
-        this.response.locals.user = user;
+        if (sendAuthHeader) {
+          this.response.set('X-TILMELDAUTH', token);
+        }
       }
 
-      await this.fillSession(user);
-      return true;
+      this.response.locals.user = user;
     }
-    return false;
+
+    await this.fillSession(user);
+    return true;
   }
 
   /**

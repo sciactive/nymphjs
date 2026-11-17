@@ -70,6 +70,38 @@
     user with the same groupname as their username and the same name. When the
     user is changed, that information is propagated to the group.
   </p>
+
+  <h3>LDAP Authentication</h3>
+  <p>
+    LDAP authentication is a two step process. First, Nymph will bind to the
+    server with the service account to look up the user, then Nymph will rebind
+    to the server as the user to validate their credentials.
+  </p>
+
+  <p>
+    Local users will take precendence over LDAP users, so if a new LDAP user
+    tries to log in, and their username is already taken by a local user, they
+    will not be able to log in.
+  </p>
+
+  <p>
+    LDAP users are synchronized with the server every time they log in. If you
+    need to force a synchronization, you can expire the user's auth tokens to
+    force them to log in again, which will synchronize their account.
+  </p>
+
+  <p>
+    Two factor authentication is managed by Nymph. LDAP users can configure two
+    factor authentication for their account, but that will only be enforced by
+    Nymph; it does not get synchronized with the LDAP server.
+  </p>
+
+  <p>
+    LDAP users' groups cannot be managed locally. Their primary group exists
+    locally, but all of their secondary groups only come from the group mapping.
+    Remember that a user must log in again to synchronize their group membership
+    after it is changed on the LDAP server.
+  </p>
 </section>
 
 <script lang="ts">

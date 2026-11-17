@@ -20,6 +20,20 @@
     </h2>
   </div>
 
+  {#if $entity.source}
+    {#await $entity.source.$wake() then _source}
+      <div style="padding: 12px;" class="mdc-typography--subtitle1">
+        User from LDAP source <a
+          href="/ldapsources/edit/{encodeURIComponent(
+            $entity.source.guid || '',
+          )}"
+          use:link>{$entity.source.host}</a
+        >. Most of the following fields are not editable, since they are synced
+        with the LDAP server.
+      </div>
+    {/await}
+  {/if}
+
   <TabBar
     tabs={['General', 'Groups', 'Abilities', 'Security']}
     bind:active={activeTab}
@@ -40,7 +54,10 @@
         </LayoutCell>
         <LayoutCell span={4}>
           <FormField>
-            <Checkbox bind:checked={$entity.enabled} />
+            <Checkbox
+              bind:checked={$entity.enabled}
+              disabled={!!$entity.source}
+            />
             {#snippet label()}
               Enabled (Able to log in)
             {/snippet}
@@ -65,6 +82,7 @@
               input$autocomplete="off"
               input$autocapitalize="off"
               input$spellcheck="false"
+              disabled={!!$entity.source}
             >
               {#snippet helper()}
                 <HelperText persistent>
@@ -86,6 +104,7 @@
               input$autocomplete="off"
               input$autocapitalize="off"
               input$spellcheck="false"
+              disabled={!!$entity.source}
             >
               {#snippet helper()}
                 <HelperText persistent>
@@ -103,6 +122,7 @@
               type="text"
               style="width: 100%;"
               input$autocomplete="off"
+              disabled={!!$entity.source}
             />
           </LayoutCell>
           <LayoutCell span={4}>
@@ -112,6 +132,7 @@
               type="text"
               style="width: 100%;"
               input$autocomplete="off"
+              disabled={!!$entity.source}
             />
           </LayoutCell>
           <LayoutCell span={4}>
@@ -121,6 +142,7 @@
               type="text"
               style="width: 100%;"
               input$autocomplete="off"
+              disabled={!!$entity.source}
             />
           </LayoutCell>
         {/if}
@@ -131,6 +153,7 @@
             type="text"
             style="width: 100%;"
             input$autocomplete="off"
+            disabled={!!$entity.source}
           />
         </LayoutCell>
         {#if $clientConfig.userFields.includes('phone')}
@@ -141,29 +164,32 @@
               type="tel"
               style="width: 100%;"
               input$autocomplete="off"
+              disabled={!!$entity.source}
             />
           </LayoutCell>
         {/if}
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={$entity.passwordTemp}
-            label={`${$entity.guid ? 'Update ' : ''}Password`}
-            type="password"
-            style="width: 100%;"
-            input$autocomplete="off"
-          />
-        </LayoutCell>
-        <LayoutCell span={6}>
-          <Textfield
-            bind:value={passwordVerify}
-            label="Repeat Password"
-            type="password"
-            style="width: 100%;"
-            invalid={passwordVerified === false}
-            input$autocomplete="off"
-            onblur={doVerifyPassword}
-          />
-        </LayoutCell>
+        {#if !$entity.source}
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={$entity.passwordTemp}
+              label={`${$entity.guid ? 'Update ' : ''}Password`}
+              type="password"
+              style="width: 100%;"
+              input$autocomplete="off"
+            />
+          </LayoutCell>
+          <LayoutCell span={6}>
+            <Textfield
+              bind:value={passwordVerify}
+              label="Repeat Password"
+              type="password"
+              style="width: 100%;"
+              invalid={passwordVerified === false}
+              input$autocomplete="off"
+              onblur={doVerifyPassword}
+            />
+          </LayoutCell>
+        {/if}
       </LayoutGrid>
     {/if}
 
@@ -201,6 +227,7 @@
               delete $entity.group;
               $entity = $entity;
             }}
+            disabled={!!$entity.source}
           >
             <Icon tag="svg" viewBox="0 0 24 24">
               <path fill="currentColor" d={mdiMinus} />
@@ -209,75 +236,80 @@
         {/if}
       </Paper>
 
-      <h6>Change Primary Group</h6>
+      {#if !$entity.source}
+        <h6>Change Primary Group</h6>
 
-      <div class="solo-search-container solo-container">
-        <Paper class="solo-paper" elevation={1}>
-          <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
-            <path fill="currentColor" d={mdiMagnify} />
-          </Icon>
-          <Input
-            bind:value={primaryGroupSearch}
-            onkeydown={primaryGroupSearchKeyDown}
-            placeholder="Primary Group Search"
-            class="solo-input"
-          />
-        </Paper>
-        <IconButton
-          onclick={searchPrimaryGroups}
-          disabled={primaryGroupSearch === ''}
-          class="solo-fab"
-          title="Search"
-        >
-          <Icon tag="svg" viewBox="0 0 24 24">
-            <path fill="currentColor" d={mdiArrowRight} />
-          </Icon>
-        </IconButton>
-      </div>
-
-      {#if primaryGroupsSearching}
-        <div
-          style="display: flex; justify-content: center; align-items: center;"
-        >
-          <CircularProgress style="height: 32px; width: 32px;" indeterminate />
+        <div class="solo-search-container solo-container">
+          <Paper class="solo-paper" elevation={1}>
+            <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
+              <path fill="currentColor" d={mdiMagnify} />
+            </Icon>
+            <Input
+              bind:value={primaryGroupSearch}
+              onkeydown={primaryGroupSearchKeyDown}
+              placeholder="Primary Group Search"
+              class="solo-input"
+            />
+          </Paper>
+          <IconButton
+            onclick={searchPrimaryGroups}
+            disabled={primaryGroupSearch === ''}
+            class="solo-fab"
+            title="Search"
+          >
+            <Icon tag="svg" viewBox="0 0 24 24">
+              <path fill="currentColor" d={mdiArrowRight} />
+            </Icon>
+          </IconButton>
         </div>
-      {:else if primaryGroups != null}
-        <DataTable table$aria-label="Primary group list" style="width: 100%;">
-          <Head>
-            <Row>
-              {#if !$clientConfig.emailUsernames}
-                <Cell>Groupname</Cell>
-              {/if}
-              {#if $clientConfig.userFields.includes('name')}
-                <Cell>Name</Cell>
-              {/if}
-              {#if $clientConfig.userFields.includes('email')}
-                <Cell>Email</Cell>
-              {/if}
-              <Cell>Enabled</Cell>
-            </Row>
-          </Head>
-          <Body>
-            <!-- Purposefully not making these links. -->
-            {#each primaryGroups as curEntity (curEntity.guid)}
-              <Row
-                onclick={() => ($entity.group = curEntity)}
-                style="cursor: pointer;"
-              >
+
+        {#if primaryGroupsSearching}
+          <div
+            style="display: flex; justify-content: center; align-items: center;"
+          >
+            <CircularProgress
+              style="height: 32px; width: 32px;"
+              indeterminate
+            />
+          </div>
+        {:else if primaryGroups != null}
+          <DataTable table$aria-label="Primary group list" style="width: 100%;">
+            <Head>
+              <Row>
                 {#if !$clientConfig.emailUsernames}
-                  <Cell>{curEntity.groupname}</Cell>
+                  <Cell>Groupname</Cell>
                 {/if}
                 {#if $clientConfig.userFields.includes('name')}
-                  <Cell>{curEntity.name}</Cell>
+                  <Cell>Name</Cell>
                 {/if}
                 {#if $clientConfig.userFields.includes('email')}
-                  <Cell>{curEntity.email}</Cell>
+                  <Cell>Email</Cell>
                 {/if}
-                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+                <Cell>Enabled</Cell>
               </Row>
-            {/each}
-          </Body>
-        </DataTable>
+            </Head>
+            <Body>
+              <!-- Purposefully not making these links. -->
+              {#each primaryGroups as curEntity (curEntity.guid)}
+                <Row
+                  onclick={() => ($entity.group = curEntity)}
+                  style="cursor: pointer;"
+                >
+                  {#if !$clientConfig.emailUsernames}
+                    <Cell>{curEntity.groupname}</Cell>
+                  {/if}
+                  {#if $clientConfig.userFields.includes('name')}
+                    <Cell>{curEntity.name}</Cell>
+                  {/if}
+                  {#if $clientConfig.userFields.includes('email')}
+                    <Cell>{curEntity.email}</Cell>
+                  {/if}
+                  <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+                </Row>
+              {/each}
+            </Body>
+          </DataTable>
+        {/if}
       {/if}
 
       <h5>Secondary Groups</h5>
@@ -341,6 +373,7 @@
                     $entity.groups?.splice(index, 1);
                     $entity = $entity;
                   }}
+                  disabled={!!$entity.source}
                 >
                   <Icon tag="svg" viewBox="0 0 24 24">
                     <path fill="currentColor" d={mdiMinus} />
@@ -363,79 +396,87 @@
         </Body>
       </DataTable>
 
-      <h6>Add Secondary Groups</h6>
+      {#if !$entity.source}
+        <h6>Add Secondary Groups</h6>
 
-      <div class="solo-search-container solo-container">
-        <Paper class="solo-paper" elevation={1}>
-          <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
-            <path fill="currentColor" d={mdiMagnify} />
-          </Icon>
-          <Input
-            bind:value={secondaryGroupSearch}
-            onkeydown={secondaryGroupSearchKeyDown}
-            placeholder="Secondary Group Search"
-            class="solo-input"
-          />
-        </Paper>
-        <IconButton
-          onclick={searchSecondaryGroups}
-          disabled={secondaryGroupSearch === ''}
-          class="solo-fab"
-          title="Search"
-        >
-          <Icon tag="svg" viewBox="0 0 24 24">
-            <path fill="currentColor" d={mdiArrowRight} />
-          </Icon>
-        </IconButton>
-      </div>
-
-      {#if secondaryGroupsSearching}
-        <div
-          style="display: flex; justify-content: center; align-items: center;"
-        >
-          <CircularProgress style="height: 32px; width: 32px;" indeterminate />
+        <div class="solo-search-container solo-container">
+          <Paper class="solo-paper" elevation={1}>
+            <Icon class="solo-icon" tag="svg" viewBox="0 0 24 24">
+              <path fill="currentColor" d={mdiMagnify} />
+            </Icon>
+            <Input
+              bind:value={secondaryGroupSearch}
+              onkeydown={secondaryGroupSearchKeyDown}
+              placeholder="Secondary Group Search"
+              class="solo-input"
+            />
+          </Paper>
+          <IconButton
+            onclick={searchSecondaryGroups}
+            disabled={secondaryGroupSearch === ''}
+            class="solo-fab"
+            title="Search"
+          >
+            <Icon tag="svg" viewBox="0 0 24 24">
+              <path fill="currentColor" d={mdiArrowRight} />
+            </Icon>
+          </IconButton>
         </div>
-      {:else if secondaryGroups != null}
-        <DataTable table$aria-label="Secondary group list" style="width: 100%;">
-          <Head>
-            <Row>
-              {#if !$clientConfig.emailUsernames}
-                <Cell>Groupname</Cell>
-              {/if}
-              {#if $clientConfig.userFields.includes('name')}
-                <Cell>Name</Cell>
-              {/if}
-              {#if $clientConfig.userFields.includes('email')}
-                <Cell>Email</Cell>
-              {/if}
-              <Cell>Enabled</Cell>
-            </Row>
-          </Head>
-          <Body>
-            <!-- Purposefully not making these links. -->
-            {#each secondaryGroups as curEntity, index (curEntity.guid)}
-              <Row
-                onclick={() => {
-                  $entity.groups?.push(curEntity);
-                  secondaryGroups?.splice(index, 1);
-                  $entity = $entity;
-                }}
-                style="cursor: pointer;"
-              >
+
+        {#if secondaryGroupsSearching}
+          <div
+            style="display: flex; justify-content: center; align-items: center;"
+          >
+            <CircularProgress
+              style="height: 32px; width: 32px;"
+              indeterminate
+            />
+          </div>
+        {:else if secondaryGroups != null}
+          <DataTable
+            table$aria-label="Secondary group list"
+            style="width: 100%;"
+          >
+            <Head>
+              <Row>
                 {#if !$clientConfig.emailUsernames}
-                  <Cell>{curEntity.groupname}</Cell>
+                  <Cell>Groupname</Cell>
                 {/if}
                 {#if $clientConfig.userFields.includes('name')}
-                  <Cell>{curEntity.name}</Cell>
+                  <Cell>Name</Cell>
                 {/if}
                 {#if $clientConfig.userFields.includes('email')}
-                  <Cell>{curEntity.email}</Cell>
+                  <Cell>Email</Cell>
                 {/if}
-                <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+                <Cell>Enabled</Cell>
               </Row>
-            {/each}
-          </Body>
-        </DataTable>
+            </Head>
+            <Body>
+              <!-- Purposefully not making these links. -->
+              {#each secondaryGroups as curEntity, index (curEntity.guid)}
+                <Row
+                  onclick={() => {
+                    $entity.groups?.push(curEntity);
+                    secondaryGroups?.splice(index, 1);
+                    $entity = $entity;
+                  }}
+                  style="cursor: pointer;"
+                >
+                  {#if !$clientConfig.emailUsernames}
+                    <Cell>{curEntity.groupname}</Cell>
+                  {/if}
+                  {#if $clientConfig.userFields.includes('name')}
+                    <Cell>{curEntity.name}</Cell>
+                  {/if}
+                  {#if $clientConfig.userFields.includes('email')}
+                    <Cell>{curEntity.email}</Cell>
+                  {/if}
+                  <Cell>{curEntity.enabled ? 'Yes' : 'No'}</Cell>
+                </Row>
+              {/each}
+            </Body>
+          </DataTable>
+        {/if}
       {/if}
     {/if}
 
@@ -483,7 +524,7 @@
             <path fill="currentColor" d={mdiPlus} />
           </Icon>
         </IconButton>
-        {#if sysAdmin}
+        {#if sysAdmin && !$entity.source}
           <Button
             onclick={addSystemAdminAbility}
             title="System Admins have all abilities. Gatekeeper checks always return true."
@@ -520,7 +561,7 @@
 
     {#if activeTab === 'Security'}
       <LayoutGrid style="padding: 0;">
-        {#if $clientConfig.userFields.includes('email')}
+        {#if $clientConfig.userFields.includes('email') && !$entity.source}
           <LayoutCell span={12}>
             <h5>Verification</h5>
             <p>

@@ -1,6 +1,7 @@
 import { Nymph, Entity } from '@nymphjs/client';
 
 import type { Group, AdminGroupData, CurrentGroupData } from './Group.js';
+import { LDAPSource } from './LDAPSource.js';
 
 export type EventType = 'register' | 'login' | 'logout';
 export type RegisterCallback = (user: User & CurrentUserData) => void;
@@ -132,6 +133,11 @@ export interface AdminUserData extends CurrentUserData {
    * issued before this date will not authenticate the user.
    */
   revokeTokenDate?: number;
+
+  /**
+   * The source of this user.
+   */
+  source?: LDAPSource;
 }
 
 type InstanceStore = {

@@ -9,6 +9,8 @@ export * from './AbleObject.js';
 
 export * from './Group.js';
 
+export * from './LDAPSource.js';
+
 import Tilmeld from './Tilmeld.js';
 export { Tilmeld };
 

@@ -161,6 +161,8 @@
   import UserEdit from './routes/UserEdit.svelte';
   import Groups from './routes/Groups.svelte';
   import GroupEdit from './routes/GroupEdit.svelte';
+  import LDAPSources from './routes/LDAPSources.svelte';
+  import LDAPSourceEdit from './routes/LDAPSourceEdit.svelte';
   import NotFound from './routes/NotFound.svelte';
 
   const DEFAULT_AVATAR = 'https://secure.gravatar.com/avatar/?d=mm&s=40';
@@ -210,6 +212,8 @@
     '/users/:query?': Users,
     '/groups/edit/:guid': GroupEdit,
     '/groups/:query?': Groups,
+    '/ldapsources/edit/:guid': LDAPSourceEdit,
+    '/ldapsources/:query?': LDAPSources,
     '*': NotFound,
   };
 
@@ -251,6 +255,11 @@
     {
       name: 'Groups',
       href: '/groups/',
+      indent: 0,
+    },
+    {
+      name: 'LDAP Sources',
+      href: '/ldapsources/',
       indent: 0,
     },
   ];
