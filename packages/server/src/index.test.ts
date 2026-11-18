@@ -154,7 +154,7 @@ describe('Nymph REST Server and Client', () => {
   });
 
   it('add, check, and remove tags', async () => {
-    const entity = await Entity.factory();
+    const entity = await Employee.factory();
     entity.$addTag('test');
     expect(entity.$hasTag('test')).toEqual(true);
     entity.$addTag('test', 'test2');
@@ -169,7 +169,11 @@ describe('Nymph REST Server and Client', () => {
     expect(!entity.$hasTag('test3', 'test4')).toEqual(true);
     entity.$removeTag('test5', 'test6');
     expect(!entity.$hasTag('test5', 'test6')).toEqual(true);
-    expect(!(entity.tags < ['test'] || entity.tags > ['test'])).toEqual(true);
+    expect(
+      !(
+        entity.tags < ['employee', 'test'] || entity.tags > ['employee', 'test']
+      ),
+    ).toEqual(true);
   });
 
   it('wake a sleeping reference', async () => {

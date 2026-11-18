@@ -164,7 +164,7 @@ describe('Tilmeld Client', () => {
       expect(result.result).toBeFalsy();
       expect(result.loggedin).toBeFalsy();
       expect(result.message).toEqual(
-        'Invalid User: "nameFirst": Invalid key: Expected "nameFirst" but received undefined, "name": Invalid key: Expected "name" but received undefined',
+        'Invalid User: One of first name or last name is required.',
       );
       expect(admin.guid).toBeNull();
     } catch (e: any) {
