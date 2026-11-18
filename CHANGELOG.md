@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.149](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.148...v1.0.0-beta.149) (2026-11-18)
+
+### Features
+
+- fix client reference and cache errors, add clean method to reset data ([7550faa](https://forge.sciactive.com/sciactive/nymphjs/commits/7550faa9f046debad48c98ef937aed120115f6d2))
+
 # [1.0.0-beta.148](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.147...v1.0.0-beta.148) (2026-11-17)
 
 ### Bug Fixes
