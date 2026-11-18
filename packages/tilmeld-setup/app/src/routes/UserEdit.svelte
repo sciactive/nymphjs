@@ -74,6 +74,7 @@
           >
             <Textfield
               bind:value={$entity.username}
+              input$emptyValueUndefined
               label="Username"
               type="text"
               style="width: 100%;"
@@ -96,6 +97,7 @@
           <LayoutCell span={$clientConfig.emailUsernames ? 12 : 6}>
             <Textfield
               bind:value={$entity.email}
+              input$emptyValueUndefined
               label="Email"
               type="email"
               style="width: 100%;"
@@ -118,6 +120,7 @@
           <LayoutCell span={4}>
             <Textfield
               bind:value={$entity.nameFirst}
+              input$emptyValueUndefined
               label="First Name"
               type="text"
               style="width: 100%;"
@@ -128,6 +131,7 @@
           <LayoutCell span={4}>
             <Textfield
               bind:value={$entity.nameMiddle}
+              input$emptyValueUndefined
               label="Middle Name"
               type="text"
               style="width: 100%;"
@@ -138,6 +142,7 @@
           <LayoutCell span={4}>
             <Textfield
               bind:value={$entity.nameLast}
+              input$emptyValueUndefined
               label="Last Name"
               type="text"
               style="width: 100%;"
@@ -149,6 +154,7 @@
         <LayoutCell span={$clientConfig.userFields.includes('phone') ? 8 : 12}>
           <Textfield
             bind:value={$entity.avatar}
+            input$emptyValueUndefined
             label="Avatar"
             type="text"
             style="width: 100%;"
@@ -160,6 +166,7 @@
           <LayoutCell span={4}>
             <Textfield
               bind:value={$entity.phone}
+              input$emptyValueUndefined
               label="Phone"
               type="tel"
               style="width: 100%;"
@@ -172,6 +179,7 @@
           <LayoutCell span={6}>
             <Textfield
               bind:value={$entity.passwordTemp}
+              input$emptyValueUndefined
               label={`${$entity.guid ? 'Update ' : ''}Password`}
               type="password"
               style="width: 100%;"
@@ -572,6 +580,7 @@
           <LayoutCell span={12}>
             <Textfield
               bind:value={$entity.secret}
+              input$emptyValueUndefined
               label="Email Verification Secret"
               type="text"
               style="width: 100%;"
@@ -590,6 +599,7 @@
           <LayoutCell span={12}>
             <Textfield
               bind:value={$entity.recoverSecretDate}
+              input$emptyValueUndefined
               label="Account Recovery Date (Timestamp)"
               type="number"
               style="width: 100%;"
@@ -620,6 +630,7 @@
           <LayoutCell span={12}>
             <Textfield
               bind:value={$entity.emailChangeDate}
+              input$emptyValueUndefined
               label="Email Change Date (Timestamp)"
               type="number"
               style="width: 100%;"
@@ -638,6 +649,7 @@
           <LayoutCell span={6}>
             <Textfield
               bind:value={$entity.newEmailAddress}
+              input$emptyValueUndefined
               label="New Email Address"
               type="email"
               style="width: 100%;"
@@ -647,6 +659,7 @@
           <LayoutCell span={6}>
             <Textfield
               bind:value={$entity.cancelEmailAddress}
+              input$emptyValueUndefined
               label="Cancel Email Address"
               type="email"
               style="width: 100%;"
@@ -669,6 +682,7 @@
             <div style="flex-grow: 1;">
               <Textfield
                 bind:value={$entity.revokeTokenDate}
+                input$emptyValueUndefined
                 label="Token Revocation Date (Timestamp)"
                 type="number"
                 style="width: 100%;"
@@ -848,7 +862,6 @@
 
   let previousParamGuid: string | null = null;
   $effect(() => {
-    fillEmptyFields();
     if (params?.guid != previousParamGuid) {
       previousParamGuid = params?.guid;
       handleGuidParam();
@@ -858,6 +871,29 @@
   onMount(async () => {
     sysAdmin = (await $user?.$gatekeeper('system/admin')) ?? false;
     tilmeldSwitchUser = (await $user?.$gatekeeper('tilmeld/switch')) ?? false;
+  });
+
+  onMount(() => {
+    const navigationCheck = (event: NavigateEvent) => {
+      if (
+        !$entity.$isDirty() ||
+        !event.canIntercept ||
+        event.downloadRequest ||
+        event.formData ||
+        confirm(
+          'Are you sure you want to navigate away? You will lose your unsaved changes.',
+        )
+      ) {
+        $entity.$clean();
+        return;
+      }
+
+      event.preventDefault();
+    };
+    navigation.addEventListener('navigate', navigationCheck);
+    return () => {
+      navigation.removeEventListener('navigate', navigationCheck);
+    };
   });
 
   async function handleGuidParam() {
@@ -881,62 +917,8 @@
     loading = false;
   }
 
-  function fillEmptyFields() {
-    // Make sure all fields are defined.
-    if ($entity.enabled == null) {
-      $entity.enabled = false;
-    }
-    if ($entity.username == null) {
-      $entity.username = '';
-    }
-    if ($entity.email == null) {
-      $entity.email = '';
-    }
-    if ($entity.nameFirst == null) {
-      $entity.nameFirst = '';
-    }
-    if ($entity.nameMiddle == null) {
-      $entity.nameMiddle = '';
-    }
-    if ($entity.nameLast == null) {
-      $entity.nameLast = '';
-    }
-    if ($entity.avatar == null) {
-      $entity.avatar = '';
-    }
-    if ($entity.phone == null) {
-      $entity.phone = '';
-    }
-    if ($entity.passwordTemp == null) {
-      $entity.passwordTemp = '';
-    }
-    if ($entity.inheritAbilities == null) {
-      $entity.inheritAbilities = false;
-    }
-    if ($entity.secret == null) {
-      $entity.secret = '';
-    }
-    if ($entity.emailChangeDate == null) {
-      $entity.emailChangeDate = 0;
-    }
-    if ($entity.newEmailAddress == null) {
-      $entity.newEmailAddress = '';
-    }
-    if ($entity.cancelEmailAddress == null) {
-      $entity.cancelEmailAddress = '';
-    }
-    if ($entity.recoverSecretDate == null) {
-      $entity.recoverSecretDate = 0;
-    }
-    if ($entity.revokeTokenDate == null) {
-      $entity.revokeTokenDate = 0;
-    }
-  }
-
   async function readyEntity() {
     await $entity.$wakeAll(1);
-
-    fillEmptyFields();
 
     [avatar, hasTOTPSecret] = await Promise.all([
       $entity.$getAvatar(),
@@ -1156,7 +1138,8 @@
 
   async function saveEntity() {
     if (
-      ($entity.passwordTemp != null || $entity.passwordTemp !== '') &&
+      $entity.passwordTemp != null &&
+      $entity.passwordTemp !== '' &&
       $entity.passwordTemp !== passwordVerify
     ) {
       (await kitchen).push({

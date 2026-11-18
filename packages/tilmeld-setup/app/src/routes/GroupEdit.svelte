@@ -73,6 +73,7 @@
           >
             <Textfield
               bind:value={$entity.groupname}
+              input$emptyValueUndefined
               label="Groupname"
               type="text"
               style="width: 100%;"
@@ -95,6 +96,7 @@
           <LayoutCell span={$clientConfig.emailUsernames ? 12 : 6}>
             <Textfield
               bind:value={$entity.email}
+              input$emptyValueUndefined
               label="Email"
               type="email"
               style="width: 100%;"
@@ -117,6 +119,7 @@
           <LayoutCell span={12}>
             <Textfield
               bind:value={$entity.name}
+              input$emptyValueUndefined
               label="Display Name"
               type="text"
               style="width: 100%;"
@@ -128,6 +131,7 @@
         <LayoutCell span={$clientConfig.userFields.includes('phone') ? 8 : 12}>
           <Textfield
             bind:value={$entity.avatar}
+            input$emptyValueUndefined
             label="Avatar"
             type="text"
             style="width: 100%;"
@@ -139,6 +143,7 @@
           <LayoutCell span={4}>
             <Textfield
               bind:value={$entity.phone}
+              input$emptyValueUndefined
               label="Phone"
               type="tel"
               style="width: 100%;"
@@ -149,7 +154,12 @@
         {/if}
         <LayoutCell span={12}>
           <FormField>
-            <Checkbox bind:checked={$entity.defaultPrimary} />
+            <Checkbox
+              checked={$entity.defaultPrimary ?? null}
+              indeterminate={$entity.defaultPrimary == null}
+              onchange={(event: Event & { target: any }) =>
+                ($entity.defaultPrimary = !!event.target?.checked)}
+            />
             {#snippet label()}
               Default primary group for newly registered users. <small
                 class="form-text text-muted"
@@ -160,7 +170,12 @@
         </LayoutCell>
         <LayoutCell span={12}>
           <FormField>
-            <Checkbox bind:checked={$entity.defaultSecondary} />
+            <Checkbox
+              checked={$entity.defaultSecondary ?? null}
+              indeterminate={$entity.defaultSecondary == null}
+              onchange={(event: Event & { target: any }) =>
+                ($entity.defaultSecondary = !!event.target?.checked)}
+            />
             {#snippet label()}
               Default secondary group for newly registered{$clientConfig?.userFields.includes(
                 'email',
@@ -175,7 +190,12 @@
         {#if $clientConfig.userFields.includes('email') && $clientConfig.verifyEmail && $clientConfig.unverifiedAccess}
           <LayoutCell span={12}>
             <FormField>
-              <Checkbox bind:checked={$entity.unverifiedSecondary} />
+              <Checkbox
+                checked={$entity.unverifiedSecondary ?? null}
+                indeterminate={$entity.unverifiedSecondary == null}
+                onchange={(event: Event & { target: any }) =>
+                  ($entity.unverifiedSecondary = !!event.target?.checked)}
+              />
               {#snippet label()}
                 Default secondary group for newly registered, unverified users.
               {/snippet}
@@ -626,7 +646,7 @@
 <script lang="ts">
   import type { Writable } from 'svelte/store';
   import { writable } from 'svelte/store';
-  import { getContext } from 'svelte';
+  import { onMount, getContext } from 'svelte';
   import { link, pop, replace } from 'svelte-spa-router';
   import { ClientError } from '@nymphjs/client';
   import type {
@@ -732,7 +752,6 @@
 
   let previousParamGuid: string | null = null;
   $effect(() => {
-    fillEmptyFields();
     if (params?.guid != previousParamGuid) {
       previousParamGuid = params?.guid;
       handleGuidParam();
@@ -749,6 +768,29 @@
     if (childrenCurrentPage >= 0 && childrenPerPage >= 0) {
       fillChildren();
     }
+  });
+
+  onMount(() => {
+    const navigationCheck = (event: NavigateEvent) => {
+      if (
+        !$entity.$isDirty() ||
+        !event.canIntercept ||
+        event.downloadRequest ||
+        event.formData ||
+        confirm(
+          'Are you sure you want to navigate away? You will lose your unsaved changes.',
+        )
+      ) {
+        $entity.$clean();
+        return;
+      }
+
+      event.preventDefault();
+    };
+    navigation.addEventListener('navigate', navigationCheck);
+    return () => {
+      navigation.removeEventListener('navigate', navigationCheck);
+    };
   });
 
   async function handleGuidParam() {
@@ -772,41 +814,8 @@
     loading = false;
   }
 
-  function fillEmptyFields() {
-    // Make sure all fields are defined.
-    if ($entity.enabled == null) {
-      $entity.enabled = false;
-    }
-    if ($entity.groupname == null) {
-      $entity.groupname = '';
-    }
-    if ($entity.email == null) {
-      $entity.email = '';
-    }
-    if ($entity.name == null) {
-      $entity.name = '';
-    }
-    if ($entity.avatar == null) {
-      $entity.avatar = '';
-    }
-    if ($entity.phone == null) {
-      $entity.phone = '';
-    }
-    if ($entity.defaultPrimary == null) {
-      $entity.defaultPrimary = false;
-    }
-    if ($entity.defaultSecondary == null) {
-      $entity.defaultSecondary = false;
-    }
-    if ($entity.unverifiedSecondary == null) {
-      $entity.unverifiedSecondary = false;
-    }
-  }
-
   async function readyEntity() {
     await $entity.$wakeAll(1);
-
-    fillEmptyFields();
 
     avatar = await $entity.$getAvatar();
     $entity = $entity;

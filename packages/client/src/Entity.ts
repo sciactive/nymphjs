@@ -62,9 +62,9 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
    */
   protected $originalTags: string[] = [];
   /**
-   * A map of props to whether they're dirty (for patch).
+   * A map of props to their original JSON value (for patch and clean).
    */
-  protected $dirty: { [k: string]: boolean } = {};
+  protected $dirty: { [k: string]: string | undefined | false } = {};
   /**
    * The data proxy handler.
    */
@@ -89,6 +89,13 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
    * A promise that resolved when the entity's data is wake.
    */
   protected $wakePromise: Promise<Entity<T>> | null = null;
+  /**
+   * Used to track if this instance has been initialized.
+   *
+   * We need to know whether to fill data during initialization, and being a new
+   * instance is one of the criteria.
+   */
+  private $uninitialized = true;
 
   /**
    * Initialize an entity.
@@ -126,7 +133,13 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
 
         this.$check();
 
-        this.$dirty[name] = true;
+        if (this.$dirty[name] === false && data[name] !== value) {
+          this.$dirty[name] = JSON.stringify(
+            entityConstructorsToClassNames(entitiesToReferences(data[name])),
+          );
+        } else if (!(name in this.$dirty)) {
+          this.$dirty[name] = undefined;
+        }
         data[name] = value;
         return true;
       },
@@ -136,7 +149,11 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
           this.$check();
         }
         if (data.hasOwnProperty(name)) {
-          this.$dirty[name] = true;
+          if (this.$dirty[name] === false) {
+            this.$dirty[name] = JSON.stringify(
+              entityConstructorsToClassNames(entitiesToReferences(data[name])),
+            );
+          }
           return delete data[name];
         }
         return true;
@@ -159,7 +176,13 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
 
         this.$check();
 
-        this.$dirty[name] = true;
+        if (this.$dirty[name] === false) {
+          this.$dirty[name] = JSON.stringify(
+            entityConstructorsToClassNames(entitiesToReferences(data[name])),
+          );
+        } else if (!(name in this.$dirty)) {
+          this.$dirty[name] = undefined;
+        }
 
         Object.defineProperty(data, name, descriptor);
         return true;
@@ -321,9 +344,12 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
             guid,
           )
         : null
-    ) as Entity | null;
+    ) as E | null;
     if (cacheEntity) {
-      return cacheEntity as E;
+      // Refresh the cached entity, so we have fresh data. This also wakes it if
+      // it's a sleeping reference.
+      await cacheEntity.$refresh();
+      return cacheEntity;
     }
     const entity = new this();
     if (guid != null) {
@@ -334,16 +360,25 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
         guid,
         (this as unknown as EntityConstructor).class,
       ];
+      // Save it into the cache.
+      (this as unknown as EntityConstructor).nymph.setEntityToCache(
+        this as unknown as EntityConstructor,
+        entity,
+      );
+      // Wake the sleeping reference, so we have real data.
       await entity.$wake();
     }
-    return entity as E;
+    return (this as unknown as EntityConstructor).nymph.setEntityToCache(
+      this as unknown as EntityConstructor,
+      entity,
+    );
   }
 
   /**
    * Create a new entity instance.
    */
   public static factorySync<E extends Entity>(this: { new (): E }): E {
-    return new this() as E;
+    return new this();
   }
 
   /**
@@ -351,6 +386,9 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
    *
    * Sleeping references won't retrieve their data from the server until they
    * are readied with `$wake()` or a parent's `$wakeAll()`.
+   *
+   * If the entity exists in cache, it will be loaded from there rather than
+   * being instantiated as a sleeping reference.
    *
    * @param reference The Nymph Entity Reference to use to wake.
    * @returns The new instance.
@@ -368,13 +406,16 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
             reference[1],
           )
         : null
-    ) as Entity | null;
+    ) as E | null;
 
     const entity = cacheEntity || new this();
     if (!cacheEntity) {
       entity.$referenceSleep(reference);
     }
-    return entity as E;
+    return (this as unknown as EntityConstructor).nymph.setEntityToCache(
+      this as unknown as EntityConstructor,
+      entity,
+    );
   }
 
   /**
@@ -440,19 +481,35 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       return this;
     }
 
+    if (
+      !this.$asleep() &&
+      this.mdate != null &&
+      this.mdate > (entityJson.mdate || 0)
+    ) {
+      console.warn(
+        'Politely refusing to fill an entity with older data than it has. This',
+        'is probably a result of your database layer. Is it giving old data',
+        'because it lags behind committed transactions? This can happen on',
+        'replicated databases.',
+      );
+      return this;
+    }
+
     this.$isASleepingReference = false;
     this.$sleepingReference = null;
-
-    const instanceIsNew = !this.$originalTags.length;
 
     this.guid = entityJson.guid;
     this.cdate = entityJson.cdate;
     this.mdate = entityJson.mdate;
     if (
       // The instance is new.
-      instanceIsNew ||
+      this.$uninitialized ||
       // The data is coming from a save.
       isFromSave ||
+      // Weak cache is not enabled.
+      !this.$nymph.weakCache ||
+      // Weak cache doesn't keep dirty data.
+      !this.$nymph.weakCacheKeepDirtyData ||
       // The tags haven't been modified.
       JSON.stringify([...this.tags].sort()) ===
         JSON.stringify([...this.$originalTags].sort())
@@ -463,20 +520,20 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
 
     if (
       // The instance is new.
-      instanceIsNew ||
+      this.$uninitialized ||
+      // This data is coming from a save.
+      isFromSave ||
       // Weak cache is not enabled.
       !this.$nymph.weakCache ||
       // Weak cache doesn't keep dirty data.
-      !this.$nymph.weakCacheKeepDirtyData ||
-      // This data is coming from a save.
-      isFromSave
+      !this.$nymph.weakCacheKeepDirtyData
     ) {
       // Clear dirty data tracker.
       this.$dirty = {};
     }
 
     for (let name in this.$dataStore) {
-      if (!this.$dirty[name]) {
+      if (!(name in this.$dirty) || this.$dirty[name] === false) {
         if (name in entityJson.data) {
           this.$dataStore[name] = classNamesToEntityConstructors(
             this.$nymph,
@@ -491,7 +548,10 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     }
 
     for (let name in entityJson.data as T) {
-      if (!(name in this.$dataStore) && !this.$dirty[name]) {
+      if (
+        !(name in this.$dataStore) &&
+        (!(name in this.$dirty) || this.$dirty[name] === false)
+      ) {
         this.$dataStore[name] = classNamesToEntityConstructors(
           this.$nymph,
           referencesToEntities(entityJson.data[name], this.$nymph),
@@ -500,7 +560,25 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
       }
     }
 
-    this.$nymph.setEntityToCache(this.constructor as EntityConstructor, this);
+    this.$uninitialized = false;
+
+    const entityInCache = this.$nymph.setEntityToCache(
+      this.constructor as EntityConstructor,
+      this,
+    ) as Entity;
+
+    if (entityInCache !== this) {
+      console.error(
+        'Entity in cache is not the same instance as entity being initialized.',
+        'This is a problem in your code. You should only initialize existing',
+        'entities through the Nymph methods. This problem usually occurs',
+        'because of an incorrect factory method. Your factory methods should',
+        'always end by calling nymph.setEntityToCache, and returning the',
+        'result, rather than the entity you just instantiated.',
+      );
+      console.error('Entity in cache:', entityInCache);
+      console.error('Entity being initialized:', this);
+    }
 
     return this;
   }
@@ -602,7 +680,7 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     };
 
     for (let [key, dirty] of Object.entries(this.$dirty)) {
-      if (dirty) {
+      if (dirty !== false) {
         if (key in this.$data) {
           patch.set[key] = entityConstructorsToClassNames(
             entitiesToReferences((this.$data as EntityData)[key]),
@@ -630,8 +708,53 @@ export default class Entity<T extends {} = {}> implements EntityInterface {
     return true;
   }
 
-  public $isDirty(property: string) {
-    return property in this.$dirty ? this.$dirty[property] : null;
+  public $isDirty(property?: string) {
+    if (property == null) {
+      for (let name in this.$dirty) {
+        if (this.$dirty[name] !== false) {
+          return true;
+        }
+      }
+      return false;
+    }
+    return property in this.$dirty ? this.$dirty[property] !== false : null;
+  }
+
+  public $clean(property?: string) {
+    const properties = property == null ? Object.keys(this.$dirty) : [property];
+    for (let name of properties) {
+      if (!(name in this.$dirty)) {
+        // Property is not tracked.
+      } else if (this.$dirty[name] === false) {
+        // Property was not changed.
+      } else if (this.$dirty[name] == undefined) {
+        // Property was added.
+        delete (this.$dataStore as { [k: string]: any })[name];
+        delete this.$dirty[name];
+      } else {
+        // Property was changed.
+        (this.$dataStore as { [k: string]: any })[name] =
+          classNamesToEntityConstructors(
+            this.$nymph,
+            referencesToEntities(JSON.parse(this.$dirty[name]), this.$nymph),
+          );
+        this.$dirty[name] = false;
+      }
+    }
+  }
+
+  public $markClean(property?: string) {
+    const properties = property == null ? Object.keys(this.$dirty) : [property];
+    for (let name of properties) {
+      if (!(name in this.$dirty)) {
+        // Property is not tracked.
+      } else if (this.$dirty[name] === false) {
+        // Property was not changed.
+      } else {
+        // Property was added or changed. Marking it clean.
+        this.$dirty[name] = false;
+      }
+    }
   }
 
   public $inArray(array: any[], strict = false) {

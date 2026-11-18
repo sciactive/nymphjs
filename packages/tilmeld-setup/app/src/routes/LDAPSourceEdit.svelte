@@ -58,6 +58,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.port}
+            input$emptyValueUndefined
             label="Remote Port"
             type="number"
             style="width: 100%;"
@@ -194,6 +195,7 @@
           <div>
             <Textfield
               bind:value={$entity.groupAttributeOnUser}
+              input$emptyValueUndefined
               label="Group Attribute on User"
               type="text"
               style="width: 100%;"
@@ -213,6 +215,7 @@
           <div>
             <Textfield
               bind:value={$entity.groupAttributeOnGroup}
+              input$emptyValueUndefined
               label="Group Attribute on Group"
               type="text"
               style="width: 100%;"
@@ -536,6 +539,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.nameFirst}
+            input$emptyValueUndefined
             label="First Name"
             type="text"
             style="width: 100%;"
@@ -546,6 +550,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.nameMiddle}
+            input$emptyValueUndefined
             label="Middle Name"
             type="text"
             style="width: 100%;"
@@ -556,6 +561,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.nameLast}
+            input$emptyValueUndefined
             label="Last Name"
             type="text"
             style="width: 100%;"
@@ -567,6 +573,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.name}
+            input$emptyValueUndefined
             label="Display Name"
             type="text"
             style="width: 100%;"
@@ -577,6 +584,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.phone}
+            input$emptyValueUndefined
             label="Phone Number"
             type="text"
             style="width: 100%;"
@@ -587,6 +595,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.email}
+            input$emptyValueUndefined
             label="Email Address"
             type="text"
             style="width: 100%;"
@@ -609,6 +618,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.avatar}
+            input$emptyValueUndefined
             label="Avatar"
             type="text"
             style="width: 100%;"
@@ -619,6 +629,7 @@
         <LayoutCell span={4}>
           <Textfield
             bind:value={$entity.attributeMap.enabled}
+            input$emptyValueUndefined
             label="Enabled"
             type="text"
             style="width: 100%;"
@@ -850,7 +861,7 @@
 <script lang="ts">
   import type { Writable } from 'svelte/store';
   import { writable } from 'svelte/store';
-  import { getContext } from 'svelte';
+  import { onMount, getContext } from 'svelte';
   import { link, pop, replace } from 'svelte-spa-router';
   import { ClientError } from '@nymphjs/client';
   import type {
@@ -935,7 +946,6 @@
 
   let previousParamGuid: string | null = null;
   $effect(() => {
-    fillEmptyFields();
     if (params?.guid != previousParamGuid) {
       previousParamGuid = params?.guid;
       handleGuidParam();
@@ -946,6 +956,29 @@
     if (usersCurrentPage >= 0 && usersPerPage >= 0) {
       fillUsers();
     }
+  });
+
+  onMount(() => {
+    const navigationCheck = (event: NavigateEvent) => {
+      if (
+        !$entity.$isDirty() ||
+        !event.canIntercept ||
+        event.downloadRequest ||
+        event.formData ||
+        confirm(
+          'Are you sure you want to navigate away? You will lose your unsaved changes.',
+        )
+      ) {
+        $entity.$clean();
+        return;
+      }
+
+      event.preventDefault();
+    };
+    navigation.addEventListener('navigate', navigationCheck);
+    return () => {
+      navigation.removeEventListener('navigate', navigationCheck);
+    };
   });
 
   async function handleGuidParam() {
@@ -967,47 +1000,8 @@
     loading = false;
   }
 
-  function fillEmptyFields() {
-    // Make sure all fields are defined.
-    if ($entity.port == null) {
-      $entity.port = 0;
-    }
-    if ($entity.groupAttributeOnUser == null) {
-      $entity.groupAttributeOnUser = '';
-    }
-    if ($entity.groupAttributeOnGroup == null) {
-      $entity.groupAttributeOnGroup = '';
-    }
-    if ($entity.attributeMap.nameFirst == null) {
-      $entity.attributeMap.nameFirst = '';
-    }
-    if ($entity.attributeMap.nameMiddle == null) {
-      $entity.attributeMap.nameMiddle = '';
-    }
-    if ($entity.attributeMap.nameLast == null) {
-      $entity.attributeMap.nameLast = '';
-    }
-    if ($entity.attributeMap.name == null) {
-      $entity.attributeMap.name = '';
-    }
-    if ($entity.attributeMap.phone == null) {
-      $entity.attributeMap.phone = '';
-    }
-    if ($entity.attributeMap.email == null) {
-      $entity.attributeMap.email = '';
-    }
-    if ($entity.attributeMap.avatar == null) {
-      $entity.attributeMap.avatar = '';
-    }
-    if ($entity.attributeMap.enabled == null) {
-      $entity.attributeMap.enabled = '';
-    }
-  }
-
   async function readyEntity() {
     await $entity.$wakeAll(1);
-
-    fillEmptyFields();
 
     $entity = $entity;
 

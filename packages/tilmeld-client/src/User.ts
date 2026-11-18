@@ -223,6 +223,7 @@ export class User extends Entity<UserData> {
     (this as User & CurrentUserData).abilities = [];
     (this as User & CurrentUserData).groups = [];
     (this as User & CurrentUserData).inheritAbilities = true;
+    this.$markClean();
   }
 
   public async $checkUsername(): Promise<{ result: boolean; message: string }> {

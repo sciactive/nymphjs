@@ -151,7 +151,7 @@ export interface EntityInterface extends DataObjectInterface {
    */
   $hasTag(...tags: string[]): boolean;
   /**
-   * Check whether a property is dirty.
+   * Check whether a given property, or the entity, is dirty.
    *
    * To be a dirty property, it must have been set or deleted since the entity
    * was initialized. A clean property existed on initialization and hasn't been
@@ -161,13 +161,31 @@ export interface EntityInterface extends DataObjectInterface {
    * Note that this doesn't necessarily mean the property has changed. It could
    * have been set to the same value, or created and then deleted.
    *
+   * If you don't pass a property, the return value will be true is any property
+   * is dirty, false otherwise.
+   *
    * Entities are initialized when they are pulled from the server or saved.
    * This is done with the `$init` method.
    *
    * @param property The name of a property.
    * @returns True if it's dirty, false if not, and null if it's not tracked.
    */
-  $isDirty(property: string): boolean | null;
+  $isDirty(property?: string): boolean | null;
+  /**
+   * Cleans a property, or all of the dirty properties, in the entity.
+   *
+   * This will reset the property or the entity's $data back to the state it was
+   * when it was initialized.
+   */
+  $clean(property?: string): void;
+  /**
+   * Marks a property, or all of the dirty properties, in the entity as clean.
+   *
+   * Be super careful with this, because this can result in really weird data
+   * issues. You should probably only use this for marking a brand new entity
+   * without a GUID as clean.
+   */
+  $markClean(property?: string): void;
   /**
    * Initialize this entity from a JSON representation.
    *

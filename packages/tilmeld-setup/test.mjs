@@ -35,6 +35,8 @@ app.use(
   setup(
     {
       restUrl: 'http://localhost:8080/rest',
+      weakCache: true,
+      weakCacheKeepDirtyData: true,
     },
     nymph,
     {
@@ -43,7 +45,11 @@ app.use(
   ),
 );
 
-app.listen(8080, () => {
-  console.log('App is loaded. Go here in your browser:');
-  console.log('    http://localhost:8080/user/');
+app.listen(8080, (e) => {
+  if (e) {
+    console.error(e);
+  } else {
+    console.log('App is loaded. Go here in your browser:');
+    console.log('    http://localhost:8080/user/');
+  }
 });

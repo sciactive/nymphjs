@@ -20,8 +20,17 @@ export class QueryWeakCache {
     }
 
     const weakRef = new WeakRef(promise);
+    promise.finally(() => {
+      this.delete(queryJSON);
+    });
 
     this.queries.set(queryJSON, weakRef);
+  }
+
+  delete(queryJSON: string) {
+    this.clean();
+
+    this.queries.delete(queryJSON);
   }
 
   clean() {

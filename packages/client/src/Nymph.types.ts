@@ -41,8 +41,8 @@ export type NymphOptions = {
    *
    * This could also be a potential source of memory leaks. Although the
    * entities themselves are referenced weakly so they get garbage collected,
-   * the GUID used as a key and the WeakRef object itself are not weak
-   * references, so not destroyed when the instance is garbage collected.
+   * the GUID used as a key is not a weak reference, so not destroyed when the
+   * instance is garbage collected.
    *
    * Queries are also cached with weak references. Practically, what this means
    * is that if you make two identical queries (getEntity, getEntities, or

@@ -89,6 +89,7 @@ export class Group extends Entity<GroupData> {
 
     this.enabled = true;
     (this as CurrentGroupData).abilities = [];
+    this.$markClean();
   }
 
   public async $checkGroupname(): Promise<{

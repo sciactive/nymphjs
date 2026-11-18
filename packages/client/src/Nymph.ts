@@ -33,11 +33,6 @@ type NymphSetUidRequest = {
 };
 type NymphGetUidRequest = { action: 'uid'; data: string };
 type NymphDeleteUidRequest = { action: 'uid'; data: string };
-type NymphUidRequest =
-  | NymphNewUidRequest
-  | NymphSetUidRequest
-  | NymphGetUidRequest
-  | NymphDeleteUidRequest;
 
 type NymphEntityMethodRequestPlural = {
   action: 'entities';
@@ -211,17 +206,22 @@ export default class Nymph {
    * `getEntityClass` to check with `instanceof`. Instead, use the base class
    * that you passed into this method.
    */
-  public addEntityClass<T extends EntityConstructor>(entityClass: T): T {
+  public addEntityClass<T extends EntityConstructor>(EntityClass: T): T {
+    if (EntityClass.class in this.entityClasses) {
+      console.error(
+        `Adding duplicate class "${EntityClass.class}". This may be a mistake.`,
+      );
+    }
+
     const nymph = this;
-    class NymphEntity extends entityClass {
+    this.entityClasses[EntityClass.class] = class extends EntityClass {
       static nymph: Nymph = nymph;
 
       constructor(...args: any[]) {
         super(...args);
       }
-    }
-    this.entityClasses[entityClass.class] = NymphEntity;
-    return NymphEntity;
+    };
+    return this.entityClasses[EntityClass.class] as T;
   }
 
   public getEntityClass<T extends EntityConstructor>(className: T): T;
@@ -238,7 +238,7 @@ export default class Nymph {
     if (key in this.entityClasses) {
       return this.entityClasses[key];
     }
-    throw new ClassNotAvailableError('Tried to use class: ' + key);
+    throw new ClassNotAvailableError(`Tried to use missing class "${key}".`);
   }
 
   public async newUID(name: string) {
@@ -619,11 +619,11 @@ export default class Nymph {
       );
     }
     let entity = EntityClass.factorySync();
-    if (this.weakCache) {
+    if (this.weakCache && entityJSON.guid) {
       // Try to get it from cache.
       const entityFromCache = this.entityCache.get(
         EntityClass,
-        entityJSON.guid || '',
+        entityJSON.guid,
       );
       if (entityFromCache != null) {
         entity = entityFromCache as EntityInstanceType<T>;
@@ -645,12 +645,12 @@ export default class Nymph {
     ) as EntityInstanceType<T> | null;
   }
 
-  public setEntityToCache(
+  public setEntityToCache<E extends EntityInterface>(
     EntityClass: EntityConstructor,
-    entity: EntityInterface,
+    entity: E,
   ) {
     if (!this.weakCache) {
-      return;
+      return entity;
     }
     return this.entityCache.set(EntityClass, entity);
   }
