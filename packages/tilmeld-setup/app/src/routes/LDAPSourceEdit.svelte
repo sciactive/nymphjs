@@ -68,7 +68,7 @@
             {#snippet helper()}
               <HelperText
                 >The port on the server. Default is 389 for plain/StartTLS, 636
-                for LDAPS. 0 to use default.</HelperText
+                for LDAPS. Leave empty to use default.</HelperText
               >
             {/snippet}
           </Textfield>
@@ -135,6 +135,24 @@
             <Label>Test Bind</Label>
           </Button>
         </LayoutCell>
+
+        <LayoutCell span={12}>
+          <Textfield
+            bind:value={$entity.searchBase}
+            label="Search Base"
+            type="text"
+            style="width: 100%;"
+            input$autocapitalize="off"
+            input$autocomplete="off"
+            required
+          >
+            {#snippet helper()}
+              <HelperText
+                >The base Distinguished Name used to search for users.</HelperText
+              >
+            {/snippet}
+          </Textfield>
+        </LayoutCell>
       </LayoutGrid>
 
       <div
@@ -145,8 +163,8 @@
         >
           <div style="flex-grow: 1;">
             <Textfield
-              bind:value={$entity.searchBase}
-              label="Search Base"
+              bind:value={$entity.userFilter}
+              label="User Filter"
               type="text"
               style="width: 100%;"
               input$autocapitalize="off"
@@ -155,7 +173,10 @@
             >
               {#snippet helper()}
                 <HelperText
-                  >The base Distinguished Name used to search for user entries.</HelperText
+                  >The LDAP search filter used to filter for users. Use <code
+                    >{`(objectClass=organizationalPerson)`}</code
+                  > for most directories. This should not return groups, machines,
+                  or service accounts, only real users.</HelperText
                 >
               {/snippet}
             </Textfield>
@@ -429,26 +450,6 @@
       <LayoutGrid style="padding: 0;">
         <LayoutCell span={12}>
           <Textfield
-            bind:value={$entity.userFilter}
-            label="User Filter"
-            type="text"
-            style="width: 100%;"
-            input$autocapitalize="off"
-            input$autocomplete="off"
-            required
-          >
-            {#snippet helper()}
-              <HelperText
-                >The LDAP search filter used to find all users. Use <code
-                  >{`(objectClass=organizationalPerson)`}</code
-                > for most directories.</HelperText
-              >
-            {/snippet}
-          </Textfield>
-        </LayoutCell>
-
-        <LayoutCell span={12}>
-          <Textfield
             bind:value={$entity.userSearchFilter}
             label="User Search Filter"
             type="text"
@@ -467,7 +468,9 @@
                 for Active Directory. Use
                 <code>{`(uid={0})`}</code>
                 for OpenLDAP. Use <code>{`(userPrincipalName={0})`}</code> if usernames
-                in the directory are stored under the "userPrincipalName" attribute.</HelperText
+                in the directory are stored under the "userPrincipalName" attribute.
+                This will be combined with the user filter to only find user accounts
+                that match.</HelperText
               >
             {/snippet}
           </Textfield>

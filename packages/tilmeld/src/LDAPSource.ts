@@ -96,6 +96,8 @@ const LDAPSourceSchema = v.strictObject({
   ),
   /**
    * The port on the server. Default is 389 for plain/StartTLS, 636 for LDAPS.
+   *
+   * Leave empty to use default.
    */
   port: v.exactOptional(v.pipe(v.number(), v.minValue(1), v.maxValue(65535))),
   /**
@@ -142,7 +144,7 @@ const LDAPSourceSchema = v.strictObject({
   ),
 
   /**
-   * The base Distinguished Name used to search for user entries.
+   * The base Distinguished Name used to search for users.
    */
   searchBase: v.pipe(
     v.string(),
@@ -157,9 +159,12 @@ const LDAPSourceSchema = v.strictObject({
     ),
   ),
   /**
-   * The LDAP search filter used to find all users.
+   * The LDAP search filter used to filter for users.
    *
    * Use `(objectClass=organizationalPerson)` for most directories.
+   *
+   * This should not return groups, machines, or service accounts, only real
+   * users.
    */
   userFilter: v.pipe(
     v.string(),
@@ -181,6 +186,9 @@ const LDAPSourceSchema = v.strictObject({
    * Use `(sAMAccountName={0})` for Active Directory. Use `(uid={0})` for
    * OpenLDAP. Use `(userPrincipalName={0})` if usernames in the directory are
    * stored under the "userPrincipalName" attribute.
+   *
+   * This will be combined with the user filter to only find user accounts that
+   * match.
    */
   userSearchFilter: v.pipe(
     v.string(),
@@ -694,6 +702,7 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     const client = await this.$getClient();
 
     const results = await client.search(this.searchBase, {
+      filter: this.userFilter,
       derefAliases: 'search',
     });
 
@@ -748,7 +757,7 @@ export class LDAPSource extends Entity<LDAPSourceData> {
     const client = await this.$getClient();
 
     const results = await client.search(this.searchBase, {
-      filter: this.userSearchFilter.replace('{0}', Filter.escape(username)),
+      filter: `(&${this.userFilter}${this.userSearchFilter.replace('{0}', Filter.escape(username))})`,
       derefAliases: 'search',
     });
 
