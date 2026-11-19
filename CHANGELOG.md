@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.151](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.150...v1.0.0-beta.151) (2026-11-19)
+
+### Bug Fixes
+
+- group creation on ldap users with domain in username ([e752799](https://forge.sciactive.com/sciactive/nymphjs/commits/e752799784a8288bb4ff39e99b1ad84b87fae95d))
+
 # [1.0.0-beta.150](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.149...v1.0.0-beta.150) (2026-11-19)
 
 ### Bug Fixes
