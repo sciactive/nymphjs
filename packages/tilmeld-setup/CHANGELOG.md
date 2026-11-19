@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.150](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.149...v1.0.0-beta.150) (2026-11-19)
+
+### Bug Fixes
+
+- use user filter in ldap searches ([e58f844](https://forge.sciactive.com/sciactive/nymphjs/commits/e58f844ef2ef45997ca41cf8e0818a63fb7e5d3a))
+
 # [1.0.0-beta.149](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.148...v1.0.0-beta.149) (2026-11-18)
 
 ### Features

@@ -1,6 +1,6 @@
 {
   "name": "@nymphjs/tilmeld-client",
-  "version": "1.0.0-beta.149",
+  "version": "1.0.0-beta.150",
   "description": "Nymph.js - Tilmeld Client",
   "type": "module",
   "main": "dist/index.js",
@@ -36,13 +36,13 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "@nymphjs/client": "^1.0.0-beta.149"
+    "@nymphjs/client": "^1.0.0-beta.150"
   },
   "devDependencies": {
-    "@nymphjs/driver-sqlite3": "^1.0.0-beta.149",
-    "@nymphjs/nymph": "^1.0.0-beta.149",
-    "@nymphjs/server": "^1.0.0-beta.149",
-    "@nymphjs/tilmeld": "^1.0.0-beta.149",
+    "@nymphjs/driver-sqlite3": "^1.0.0-beta.150",
+    "@nymphjs/nymph": "^1.0.0-beta.150",
+    "@nymphjs/server": "^1.0.0-beta.150",
+    "@nymphjs/tilmeld": "^1.0.0-beta.150",
     "@swc/core": "^1.16.22",
     "@swc/jest": "^0.2.39",
     "@tsconfig/recommended": "^1.0.13",
