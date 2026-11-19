@@ -884,14 +884,19 @@ export class Group extends AbleObject<GroupData> {
           };
         }
         if (
-          !this.$is(tilmeld.currentUser?.group) &&
+          !tilmeld.currentUser?.$is(this.user) &&
           !tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
         ) {
-          return {
-            result: false,
-            message:
-              "You don't have the authority to manage groups on this domain.",
-          };
+          if (this.user) {
+            await this.user.$wake();
+          }
+          if (this.user?.source == null) {
+            return {
+              result: false,
+              message:
+                "You don't have the authority to manage groups on this domain.",
+            };
+          }
         }
       }
 
@@ -1103,7 +1108,7 @@ export class Group extends AbleObject<GroupData> {
       ) {
         if (
           domain != null &&
-          !this.$is(tilmeld.currentUser) &&
+          !tilmeld.currentUser?.$is(this.user) &&
           !tilmeld.gatekeeper(`tilmeld/domain/${domain}/admin`)
         ) {
           throw new AccessControlError(
