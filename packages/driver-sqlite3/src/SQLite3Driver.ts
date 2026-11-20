@@ -36,12 +36,10 @@ class InternalStore {
   public link: DatabaseSync;
   public linkWrite?: DatabaseSync;
   public connected: boolean = false;
-  public transactionsStarted = 0;
-  public promise: Promise<void>;
+  public transactions: string[] = [];
 
-  constructor(link: DatabaseSync, promise: Promise<void>) {
+  constructor(link: DatabaseSync) {
     this.link = link;
-    this.promise = promise;
   }
 }
 
@@ -53,7 +51,6 @@ export default class SQLite3Driver extends NymphDriver {
   protected prefix: string;
   // @ts-ignore: this is assigned in connect(), which is called by the constructor.
   protected store: InternalStore;
-  protected resolve: () => void = () => {};
 
   static escape(input: string) {
     if (input.indexOf('\x00') !== -1) {
@@ -134,14 +131,7 @@ export default class SQLite3Driver extends NymphDriver {
       };
 
       let link: DatabaseSync;
-      let { promise, resolve } = Promise.withResolvers<void>();
       try {
-        if ((this.store && explicitWrite) || write) {
-          const myTurn = this.store.promise;
-          this.store.promise = promise;
-          this.resolve = resolve;
-          await myTurn;
-        }
         link = new DatabaseSync(filename, {
           readOnly: !explicitWrite && !write,
           timeout,
@@ -178,8 +168,7 @@ export default class SQLite3Driver extends NymphDriver {
             'Tried to open in write without opening in read first.',
           );
         }
-        this.store = new InternalStore(link, promise);
-        this.resolve = resolve;
+        this.store = new InternalStore(link);
       } else if (write) {
         this.store.linkWrite = link;
       } else {
@@ -218,15 +207,14 @@ export default class SQLite3Driver extends NymphDriver {
         this.store.link.exec('PRAGMA optimize;');
       }
       this.store.link.close();
-      this.store.transactionsStarted = 0;
+      this.store.transactions = [];
       this.store.connected = false;
     }
-    this.resolve();
     return this.store.connected;
   }
 
   public async inTransaction() {
-    return this.store.transactionsStarted > 0;
+    return this.store.transactions.length > 0;
   }
 
   /**
@@ -469,7 +457,7 @@ export default class SQLite3Driver extends NymphDriver {
    * @param etype The entity type to create a table for. If this is blank, the default tables are created.
    */
   private createTables(etype: string | null = null) {
-    this.startTransaction('nymph-tablecreation');
+    this.internalTransaction('nymph-tablecreation');
     try {
       if (etype != null) {
         this.createEntitiesTable(etype);
@@ -590,19 +578,21 @@ export default class SQLite3Driver extends NymphDriver {
         'Transaction commit attempted without a name.',
       );
     }
-    if (this.store.transactionsStarted === 0) {
+    if (this.store.transactions.length === 0) {
       return true;
     }
+    const lastTransaction = this.store.transactions.pop();
+    if (lastTransaction !== name) {
+      throw new Error(`Transaction committed out of order: ${name}`);
+    }
     this.queryRun(`RELEASE SAVEPOINT ${SQLite3Driver.escape(name)};`);
-    this.store.transactionsStarted--;
 
-    if (this.store.transactionsStarted === 0 && this.store.linkWrite) {
+    if (this.store.transactions.length === 0 && this.store.linkWrite) {
       if (!this.config.explicitWrite) {
         this.store.linkWrite.exec('PRAGMA optimize;');
         this.store.linkWrite.close();
         this.store.linkWrite = undefined;
       }
-      this.resolve();
     }
 
     return true;
@@ -620,7 +610,7 @@ export default class SQLite3Driver extends NymphDriver {
       EntityClass = className;
     }
     const etype = EntityClass.ETYPE;
-    await this.startTransaction('nymph-delete');
+    await this.internalTransaction('nymph-delete');
     try {
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
@@ -694,7 +684,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (name.length > 128) {
       throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
-    await this.startTransaction('nymph-delete-uid');
+    await this.internalTransaction('nymph-delete-uid');
     this.queryRun(
       `DELETE FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`,
@@ -2869,7 +2859,7 @@ export default class SQLite3Driver extends NymphDriver {
       throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
     try {
-      await this.startTransaction(`nymph-import-uid-${name}`);
+      await this.internalTransaction(`nymph-import-uid-${name}`);
       this.queryRun(
         `DELETE FROM ${SQLite3Driver.escape(
           `${this.prefix}uids`,
@@ -2906,7 +2896,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (name.length > 128) {
       throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
-    await this.startTransaction('nymph-newuid');
+    await this.internalTransaction('nymph-newuid');
     let curUid: number | undefined = undefined;
     try {
       curUid =
@@ -2966,7 +2956,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (oldName.length > 128 || newName.length > 128) {
       throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
-    await this.startTransaction('nymph-rename-uid');
+    await this.internalTransaction('nymph-rename-uid');
     this.queryRun(
       `UPDATE ${SQLite3Driver.escape(
         `${this.prefix}uids`,
@@ -2988,20 +2978,22 @@ export default class SQLite3Driver extends NymphDriver {
         'Transaction rollback attempted without a name.',
       );
     }
-    if (this.store.transactionsStarted === 0) {
+    if (this.store.transactions.length === 0) {
       return true;
+    }
+    const lastTransaction = this.store.transactions.pop();
+    if (lastTransaction !== name) {
+      throw new Error(`Transaction rolled back out of order: ${name}`);
     }
     this.queryRun(`ROLLBACK TO SAVEPOINT ${SQLite3Driver.escape(name)};`);
     this.queryRun(`RELEASE SAVEPOINT ${SQLite3Driver.escape(name)};`);
-    this.store.transactionsStarted--;
 
-    if (this.store.transactionsStarted === 0 && this.store.linkWrite) {
+    if (this.store.transactions.length === 0 && this.store.linkWrite) {
       if (!this.config.explicitWrite) {
         this.store.linkWrite.exec('PRAGMA optimize;');
         this.store.linkWrite.close();
         this.store.linkWrite = undefined;
       }
-      this.resolve();
     }
 
     return true;
@@ -3326,7 +3318,7 @@ export default class SQLite3Driver extends NymphDriver {
           return success;
         },
         async () => {
-          await this.startTransaction('nymph-save');
+          await this.internalTransaction('nymph-save');
           inTransaction = true;
         },
         async (success) => {
@@ -3357,7 +3349,7 @@ export default class SQLite3Driver extends NymphDriver {
     if (name.length > 128) {
       throw new InvalidParametersError('UID name too long. 128 chars max.');
     }
-    await this.startTransaction('nymph-set-uid');
+    await this.internalTransaction('nymph-set-uid');
     this.queryRun(
       `DELETE FROM ${SQLite3Driver.escape(
         `${this.prefix}uids`,
@@ -3397,12 +3389,12 @@ export default class SQLite3Driver extends NymphDriver {
       await this._connect(true);
     }
     this.queryRun(`SAVEPOINT ${SQLite3Driver.escape(name)};`);
-    this.store.transactionsStarted++;
+    this.store.transactions.push(name);
     return this.nymph;
   }
 
   private async removeTilmeldOldRows(etype: string) {
-    await this.startTransaction('nymph-remove-tilmeld-rows');
+    await this.internalTransaction('nymph-remove-tilmeld-rows');
     try {
       for (let name of [
         'user',
