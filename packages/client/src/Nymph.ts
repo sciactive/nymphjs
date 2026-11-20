@@ -277,7 +277,7 @@ export default class Nymph {
         data,
       });
       if (this.weakCache) {
-        this.queryCache.set(queryJSON, promise);
+        promise = this.queryCache.set(queryJSON, promise);
       }
     }
     const result = await promise;
@@ -527,7 +527,7 @@ export default class Nymph {
         data: query,
       });
       if (this.weakCache) {
-        this.queryCache.set(queryJSON, promise);
+        promise = this.queryCache.set(queryJSON, promise);
       }
     }
 
@@ -577,7 +577,7 @@ export default class Nymph {
           data: query,
         });
         if (this.weakCache) {
-          this.queryCache.set(queryJSON, promise);
+          promise = this.queryCache.set(queryJSON, promise);
         }
       }
       data = await promise;

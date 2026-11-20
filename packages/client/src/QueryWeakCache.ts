@@ -12,19 +12,22 @@ export class QueryWeakCache {
     return null;
   }
 
-  set(queryJSON: string, promise: Promise<any>) {
+  set<T extends Promise<any>>(queryJSON: string, promise: T): T {
     this.clean();
 
     if (!(promise instanceof Promise)) {
-      return;
+      return promise;
     }
 
-    const weakRef = new WeakRef(promise);
-    promise.finally(() => {
+    const newPromise = promise.finally(() => {
       this.delete(queryJSON);
     });
 
+    const weakRef = new WeakRef(newPromise);
+
     this.queries.set(queryJSON, weakRef);
+
+    return newPromise as T;
   }
 
   delete(queryJSON: string) {
