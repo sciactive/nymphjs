@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [1.0.0-beta.152](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.151...v1.0.0-beta.152) (2026-11-20)
+
+### Bug Fixes
+
+- clean up query cache before resolving query ([4e8240d](https://forge.sciactive.com/sciactive/nymphjs/commits/4e8240dcb9e14e9940f28f4bb0e58bddc523f3f6))
+
 # [1.0.0-beta.151](https://forge.sciactive.com/sciactive/nymphjs/compare/v1.0.0-beta.150...v1.0.0-beta.151) (2026-11-19)
 
 ### Bug Fixes
